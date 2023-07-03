@@ -1,0 +1,64 @@
+/schema/{dbname}:
+  post:
+    tags:
+      - data
+      - schemas
+    summary: Add a schema definition
+    description: Adds a schema definition to the specified path. This schema will be enabled while the server runs, and cleared upon restart. If you need the schema to be persisted, add it to your server's rules.json file
+    parameters:
+      - name: dbname
+        in: path
+        description: name of the database
+        required: true
+        schema:
+          type: string
+          example: mydb
+    requestBody:
+      description: details about the data and schema to test
+      content:
+        'application/json':
+          schema:
+            type: object
+            properties:
+              action:
+                type: string
+                description: The desired operation `'set'` (optional, deprecated since v1.10.0)
+                example: set
+              path:
+                type: string
+                description: database path to the given value
+                example: collection/item
+              schema:
+                type: string
+                description: When given, tests this schema definition against the passed value instead of ones defined in the database
+                example: "{ name: string, stats?: { size: number, created: Date, modified: Date, deleted?: Date } }"
+              warnOnly:
+                type: boolean
+                description: whether to issue warnings for failing schema checks instead of denying writes. This allows you to add schemas to an existing database and testdrive them without enforcing them yet. Default is `false`
+                example: false
+            required:
+            - path
+            - schema
+    responses:
+      200:
+        description: Returns "200 OK" if the schema was added successfully
+        content:
+          'application/json':
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+      403:
+        description: Returns a "403 Forbidden" if the signed in user is not admin
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/Error'
+      500:
+        description: An error occurred
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/UnexpectedError'

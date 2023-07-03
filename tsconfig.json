@@ -1,0 +1,22 @@
+{
+    "compilerOptions": {
+        "lib": ["esnext","dom"],
+        "listEmittedFiles": false,
+        "noImplicitAny": true,
+        "sourceMap": true,
+        "module": "commonjs",
+        "rootDir": "./src",
+        "outDir": "./dist/esm",
+        "moduleResolution": "node",
+        "target": "es2020",
+        "pretty": true,
+        "declaration": true,
+        "declarationMap": true,
+        "declarationDir": "./dist/types",
+        "resolveJsonModule": true,
+        "skipLibCheck": false
+    },
+    "exclude": [
+        "node_modules"
+    ]
+}
