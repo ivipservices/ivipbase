@@ -1,6 +1,6 @@
-import { RouteInitEnvironment } from "src/types";
-import { addMiddleware as addBearerAuthMiddleware } from "src/Middleware/user";
-import setupAuthentication from "src/lib/Auth";
+import { RouteInitEnvironment } from "../../types";
+import { addMiddleware as addBearerAuthMiddleware } from "../../Middleware/user";
+import setupAuthentication from "../../lib/Auth";
 import { addRoute as addStateRoute } from "./state";
 import { addRoute as addSignInRoute } from "./signin";
 import { addRoute as addSignOutRoute } from "./signout";

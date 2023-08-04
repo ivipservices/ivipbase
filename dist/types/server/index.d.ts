@@ -1,29 +1,17 @@
-import { AceBase } from "acebase";
-import { AceBaseServerAuthenticationSettings, AceBaseServerConfig } from "./settings";
-import { MongodbSettings, MongoDBPreparer } from "../mongodb";
-import { AceBaseServerEmailSettings } from "./settings/email";
-import { DebugLogger, SimpleEventEmitter } from "acebase-core";
-import { HttpApp, HttpRouter, HttpRequest, HttpResponse } from "./shared/http";
-import { OAuth2Provider } from "./oauth-providers/oauth-provider";
-import { PathRuleFunction, PathRuleType } from "./rules";
-import { DbUserAccountDetails } from "./schema/user";
-export declare class AceBaseServerNotReadyError extends Error {
+import { HttpApp, HttpMethod, HttpRequest, HttpResponse, HttpRouter, SyncMongoServerSettings } from "../types";
+import { MongoDBPreparer } from "../Mongo";
+import { SimpleEventEmitter } from "../lib/SimpleEventEmitter";
+import { ServerConfig } from "./settings";
+import { DebugLogger } from "../lib/DebugLogger";
+import { PathRuleFunction, PathRuleType } from "../lib/Rules";
+import type { AceBaseBase } from "acebase-core";
+import { DbUserAccountDetails } from "../Schema/user";
+export declare class ServerNotReadyError extends Error {
     constructor();
 }
-export declare class AceBaseExternalServerError extends Error {
+export declare class ExternalServerError extends Error {
     constructor();
 }
-type HttpMethod = 'get' | 'GET' | 'put' | 'PUT' | 'post' | 'POST' | 'delete' | 'DELETE';
-export type SyncMongoServerSettings = Partial<{
-    host: string;
-    port: number;
-    maxPayloadSize: string;
-    authentication: Partial<AceBaseServerAuthenticationSettings>;
-    email: AceBaseServerEmailSettings;
-    mongodb: MongodbSettings;
-    rulesFilePath: string;
-    cacheSeconds: number;
-}>;
 export declare class SyncMongoServerConfig {
     readonly mongodb: MongoDBPreparer;
     constructor(dbname: string, settings: SyncMongoServerSettings);
@@ -43,27 +31,13 @@ export declare class SyncMongoServer extends SimpleEventEmitter {
     /**
      * Obtém a configuração do servidor ativo
      */
-    readonly config: AceBaseServerConfig;
+    readonly config: ServerConfig;
     /**
      * Obtém a URL em que o servidor está sendo executado
      */
     get url(): string;
     readonly debug: DebugLogger;
-    /**
-     * Obtém acesso direto ao banco de dados, ignorando quaisquer regras de segurança e validadores de esquema.
-     * Isso pode ser usado para adicionar manipuladores de eventos personalizados ("funções na nuvem") diretamente ao seu banco de dados.
-     * OBSERVAÇÃO: seu código será executado na mesma thread do servidor, certifique-se de que não esteja realizando
-     * tarefas pesadas de CPU aqui. Se você precisar fazer tarefas intensivas, crie um aplicativo separado que se conecta
-     * ao seu servidor com um AceBaseClient ou execute em uma thread de trabalhador.
-     * @example
-     * server.db.ref('uploads/images').on('child_added', async snap => {
-     *    const image = snap.val();
-     *    const resizedImages = await createImageSizes(image); // Alguma função que cria várias versões de imagem em uma thread de trabalhador
-     *    const targetRef = await server.db.ref('images').push(resizedImages); // Armazená-las em outro local
-     *    await snap.ref.remove(); // Remover o upload original
-     * });
-     */
-    db: AceBase;
+    db: AceBaseBase;
     /**
      * Expõe o roteador do framework HTTP usado (atualmente Express) para uso externo.
      */
@@ -74,11 +48,10 @@ export declare class SyncMongoServer extends SimpleEventEmitter {
      * Expõe a aplicação do framework http utilizado (atualmente o Express) para uso externo.
      */
     app: HttpApp;
-    private readonly authProviders;
     private rulesFilePath;
-    private cache;
     constructor(dbname: string, options?: Partial<SyncMongoServerSettings>);
-    private init; /**
+    private init;
+    /**
      * Reset a user's password. This can also be done using the auth/reset_password API endpoint
      * @param clientIp ip address of the user
      * @param code reset code that was sent to the user's email address
@@ -133,8 +106,7 @@ export declare class SyncMongoServer extends SimpleEventEmitter {
      * @param settings API key & secret for the OAuth provider
      * @returns Returns the created auth provider instance, which can be used to call non-user specific methods the provider might support. (example: the Spotify auth provider supports getClientAuthToken, which allows API calls to be made to the core (non-user) spotify service)
      */
-    configAuthProvider(providerName: string, settings: any): OAuth2Provider;
+    configAuthProvider(providerName: string, settings: any): void;
     setRule(paths: string | string[], types: PathRuleType | PathRuleType[], callback: PathRuleFunction): void;
 }
-export {};
 //# sourceMappingURL=index.d.ts.map

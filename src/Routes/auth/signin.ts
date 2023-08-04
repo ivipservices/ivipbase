@@ -1,8 +1,8 @@
-import { RouteInitEnvironment, RouteRequest } from "src/types";
-import { User, getPublicAccountDetails } from "src/Schema/user";
-import { sendNotAuthenticatedError, sendUnexpectedError } from "src/lib/Errors";
-import { createPublicAccessToken } from "src/lib/Tokens";
-import { signIn, SignInCredentials } from "src/lib/Signin";
+import { RouteInitEnvironment, RouteRequest } from "../../types";
+import { User, getPublicAccountDetails } from "../../Schema/user";
+import { sendNotAuthenticatedError, sendUnexpectedError } from "../../lib/Errors";
+import { createPublicAccessToken } from "../../lib/Tokens";
+import { signIn, SignInCredentials } from "../../lib/Signin";
 
 export type RequestQuery = never;
 export type RequestBody = { client_id?: string } & (

@@ -1,15 +1,8 @@
-import { AceBaseEmailRequest } from '../shared/email';
-export interface AceBaseServerEmailServerSettings {
-    host: string;
-    port: number;
-    username?: string;
-    password?: string;
-    secure: boolean;
-}
-export interface AceBaseServerEmailSettings {
+import { ServerEmailServerSettings, EmailRequest } from "../../types";
+export interface ServerEmailSettings {
     /** NOT IMPLEMENTED YET - Use send property for your own implementation */
-    server?: AceBaseServerEmailServerSettings;
+    server?: ServerEmailServerSettings;
     /** function to call when an e-mail needs to be sent */
-    send: (request: AceBaseEmailRequest) => Promise<void>;
+    send: (request: EmailRequest) => Promise<void>;
 }
 //# sourceMappingURL=email.d.ts.map

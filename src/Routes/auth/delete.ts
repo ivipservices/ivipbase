@@ -1,5 +1,5 @@
-import { RouteInitEnvironment, RouteRequest } from "src/types";
-import { sendNotAuthenticatedError, sendUnauthorizedError, sendUnexpectedError } from "src/lib/Errors";
+import { RouteInitEnvironment, RouteRequest } from "../../types";
+import { sendNotAuthenticatedError, sendUnauthorizedError, sendUnexpectedError } from "../../lib/Errors";
 
 export class DeleteError extends Error {
 	constructor(public code: "unauthenticated_delete" | "unauthorized_delete", message: string) {

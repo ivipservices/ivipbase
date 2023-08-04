@@ -1,4 +1,4 @@
-import { RouteInitEnvironment, RouteRequest } from "src/types";
+import { RouteInitEnvironment, RouteRequest } from "../types";
 
 export const addMiddleware = (env: RouteInitEnvironment) => {
 	env.router.use((req: RouteRequest, res, next) => {

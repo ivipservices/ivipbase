@@ -1,7 +1,7 @@
 import { AceBase } from "acebase";
 import { QueryOperator } from "acebase-core/dist/types/data-reference";
-import adminOnly from "src/Middleware/admin-only";
-import { RouteInitEnvironment, RouteRequest } from "src/types";
+import adminOnly from "../../Middleware/admin-only";
+import { RouteInitEnvironment, RouteRequest } from "../../types";
 
 type AceBaseLogLine = {
 	action: string;

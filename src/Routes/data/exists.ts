@@ -1,5 +1,5 @@
-import { RouteInitEnvironment, RouteRequest } from "src/types";
-import { sendUnauthorizedError } from "src/lib/Errors";
+import { RouteInitEnvironment, RouteRequest } from "../../types";
+import { sendUnauthorizedError } from "../../lib/Errors";
 
 export type RequestQuery = null;
 export type RequestBody = null;

@@ -1,8 +1,8 @@
 import { ColorStyle } from "./Colorize";
 import { SimpleCache } from "./SimpleCache";
 import { randomBytes } from "crypto";
-import { DbUserAccountDetails } from "src/Schema/user";
-import { RouteInitEnvironment } from "src/types";
+import { DbUserAccountDetails } from "../Schema/user";
+import { RouteInitEnvironment } from "../types";
 import { createPasswordHash, generatePassword, getOldPasswordHash, getPasswordHash } from "./Password";
 
 export const setupAuthentication = async (env: RouteInitEnvironment) => {

@@ -1,6 +1,6 @@
 import { ID } from "acebase-core";
-import { DbUserAccountDetails } from "src/Schema/user";
-import { RouteInitEnvironment, RouteRequest } from "src/types";
+import { DbUserAccountDetails } from "../Schema/user";
+import { RouteInitEnvironment, RouteRequest } from "../types";
 import { createPasswordHash, getOldPasswordHash, getPasswordHash } from "./Password";
 import { decodePublicAccessToken, PublicAccessToken } from "./Tokens";
 

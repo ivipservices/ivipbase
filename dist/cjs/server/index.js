@@ -20,44 +20,49 @@ var __rest = (this && this.__rest) || function (s, e) {
     return t;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SyncMongoServer = exports.SyncMongoServerConfig = exports.AceBaseExternalServerError = exports.AceBaseServerNotReadyError = void 0;
-const acebase_1 = require("acebase");
+exports.SyncMongoServer = exports.SyncMongoServerConfig = exports.ExternalServerError = exports.ServerNotReadyError = void 0;
+const Mongo_1 = require("../Mongo");
+const SimpleEventEmitter_1 = require("../lib/SimpleEventEmitter");
+const settings_1 = require("./settings");
+const DebugLogger_1 = require("../lib/DebugLogger");
+const Colorize_1 = require("../lib/Colorize");
+const Http_1 = require("../lib/Http");
 const http_1 = require("http");
 const https_1 = require("https");
-const settings_1 = require("./settings");
-const mongodb_1 = require("../mongodb");
-const MongoDBTransaction_1 = require("../MongoDBTransaction");
-const acebase_core_1 = require("acebase-core");
-const http_2 = require("./shared/http");
-const logger_1 = require("./logger");
-const rules_1 = require("./rules");
-const connection_1 = require("./middleware/connection");
-const cors_1 = require("./middleware/cors");
-const cache_1 = require("./middleware/cache");
-const auth_1 = require("./auth");
-const auth_2 = require("./routes/auth");
-const meta_1 = require("./routes/meta");
-const data_1 = require("./routes/data");
-const webmanager_1 = require("./routes/webmanager");
-const _404_1 = require("./middleware/404");
-const websocket_1 = require("./websocket");
-const oauth_providers_1 = require("./oauth-providers");
-class AceBaseServerNotReadyError extends Error {
-    constructor() { super('Server is not ready yet'); }
+const Rules_1 = require("../lib/Rules");
+const DatabaseLog_1 = require("../lib/DatabaseLog");
+const connection_1 = require("../Middleware/connection");
+const cors_1 = require("../Middleware/cors");
+const cache_1 = require("../Middleware/cache");
+const _404_1 = require("../Middleware/404");
+const auth_1 = require("../Routes/auth");
+const meta_1 = require("../Routes/meta");
+const docs_1 = require("../Routes/docs");
+const data_1 = require("../Routes/data");
+const webmanager_1 = require("../Routes/webmanager");
+const Websocket_1 = require("../Websocket");
+class ServerNotReadyError extends Error {
+    constructor() {
+        super("Server is not ready yet");
+    }
 }
-exports.AceBaseServerNotReadyError = AceBaseServerNotReadyError;
-class AceBaseExternalServerError extends Error {
-    constructor() { super('This method is not available with an external server'); }
+exports.ServerNotReadyError = ServerNotReadyError;
+class ExternalServerError extends Error {
+    constructor() {
+        super("This method is not available with an external server");
+    }
 }
-exports.AceBaseExternalServerError = AceBaseExternalServerError;
+exports.ExternalServerError = ExternalServerError;
 class SyncMongoServerConfig {
     constructor(dbname, settings) {
-        this.mongodb = new mongodb_1.MongoDBPreparer(Object.assign({ database: dbname }, settings.mongodb));
+        this.mongodb = new Mongo_1.MongoDBPreparer(Object.assign({ database: dbname }, settings.mongodb));
     }
 }
 exports.SyncMongoServerConfig = SyncMongoServerConfig;
-class SyncMongoServer extends acebase_core_1.SimpleEventEmitter {
-    get isReady() { return this._ready; }
+class SyncMongoServer extends SimpleEventEmitter_1.SimpleEventEmitter {
+    get isReady() {
+        return this._ready;
+    }
     /**
      * Aguarda o servidor estar pronto para aceitar conexões de entrada
      * @param callback (opcional) função de retorno que é chamada quando estiver pronto. Você também pode usar a promise retornada.
@@ -66,7 +71,7 @@ class SyncMongoServer extends acebase_core_1.SimpleEventEmitter {
     ready(callback) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!this._ready) {
-                yield this.once('ready');
+                yield this.once("ready");
             }
             callback === null || callback === void 0 ? void 0 : callback();
         });
@@ -75,65 +80,47 @@ class SyncMongoServer extends acebase_core_1.SimpleEventEmitter {
      * Obtém a URL em que o servidor está sendo executado
      */
     get url() {
-        return `http${this.config.https.enabled ? 's' : ''}://${this.config.host}:${this.config.port}/${this.config.rootPath}`;
+        return `http${this.config.https.enabled ? "s" : ""}://${this.config.host}:${this.config.port}/${this.config.rootPath}`;
     }
     constructor(dbname, options) {
         super();
         this.dbname = dbname;
         this.options = options;
         this._ready = false;
-        this.authProviders = {};
         const _a = this.options, { mongodb, rulesFilePath } = _a, serverOptions = __rest(_a, ["mongodb", "rulesFilePath"]);
         this.rulesFilePath = rulesFilePath;
-        this.mongodb = new mongodb_1.MongoDBPreparer(Object.assign({ database: this.dbname }, mongodb));
-        this.config = new settings_1.AceBaseServerConfig(Object.assign({ logLevel: 'verbose', logColors: false, sponsor: true }, serverOptions));
-        this.debug = new acebase_core_1.DebugLogger(this.config.logLevel, `[${dbname}]`.colorize(acebase_core_1.ColorStyle.green));
+        this.mongodb = new Mongo_1.MongoDBPreparer(Object.assign({ database: this.dbname }, mongodb));
+        this.config = new settings_1.ServerConfig(Object.assign({ logLevel: "verbose", logColors: false, sponsor: true }, serverOptions));
+        this.debug = new DebugLogger_1.DebugLogger(this.config.logLevel, `[${dbname}]`.colorize(Colorize_1.ColorStyle.green));
         if (this.config.auth.enabled && !this.config.https.enabled) {
-            this.debug.warn(`WARNING: Authentication is enabled, but the server is not using https. Any password and other data transmitted may be intercepted!`.colorize(acebase_core_1.ColorStyle.red));
+            this.debug.warn(`WARNING: Authentication is enabled, but the server is not using https. Any password and other data transmitted may be intercepted!`.colorize(Colorize_1.ColorStyle.red));
         }
         else if (!this.config.https.enabled) {
-            this.debug.warn(`WARNING: Server is not using https, any data transmitted may be intercepted!`.colorize(acebase_core_1.ColorStyle.red));
+            this.debug.warn(`WARNING: Server is not using https, any data transmitted may be intercepted!`.colorize(Colorize_1.ColorStyle.red));
         }
         if (!this.config.auth.enabled) {
-            this.debug.warn(`WARNING: Authentication is disabled, *anyone* can do *anything* with your data!`.colorize(acebase_core_1.ColorStyle.red));
+            this.debug.warn(`WARNING: Authentication is disabled, *anyone* can do *anything* with your data!`.colorize(Colorize_1.ColorStyle.red));
         }
-        this.cache = new acebase_core_1.SimpleCache(typeof serverOptions.cacheSeconds === 'number' ? serverOptions.cacheSeconds : 60);
-        this.mongodb.connect().then(() => {
-            const getIpc = () => this.db.api.storage.ipc;
-            const dbOptions = {
-                logLevel: 'verbose',
-                logColors: false,
-                info: '',
-                sponsor: true,
-                storage: (0, MongoDBTransaction_1.storageSettings)(this.dbname, this.mongodb, this.cache, getIpc),
-                transactions: {
-                    log: false,
-                    maxAge: 3,
-                    noWait: false
-                }
-            };
-            this.db = new acebase_1.AceBase(this.dbname, dbOptions);
-            const ipc = this.db.api.storage.ipc;
-            this.db.settings.ipcEvents = true;
-            ipc.on('notification', (notification) => __awaiter(this, void 0, void 0, function* () {
-                const message = notification.data;
-                if (typeof message !== 'object') {
-                    return;
-                }
-                if (message.action === 'cache.invalidate') {
-                    for (const path of message.paths) {
-                        this.cache.remove(path);
-                    }
-                }
-            }));
+        this.mongodb
+            .connect()
+            .then(() => {
+            this.db = new Mongo_1.DataBase(this.dbname, {
+                mongodb: this.mongodb,
+                settings: this.config,
+            });
             //.supported = ()=> false;
             // Create Express app
-            this.app = (0, http_2.createApp)({ trustProxy: true, maxPayloadSize: this.config.maxPayloadSize, config: this.config });
-            this.router = (0, http_2.createRouter)();
+            this.app = (0, Http_1.createApp)({
+                trustProxy: true,
+                maxPayloadSize: this.config.maxPayloadSize,
+                config: this.config,
+            });
+            this.router = (0, Http_1.createRouter)();
             this.app.use(`/${this.config.rootPath}`, this.router);
             // Initialize and start server
             this.init();
-        }).catch(e => {
+        })
+            .catch((e) => {
             this.debug.error(e);
         });
     }
@@ -142,19 +129,21 @@ class SyncMongoServer extends acebase_core_1.SimpleEventEmitter {
         return __awaiter(this, void 0, void 0, function* () {
             const config = this.config;
             const db = this.db;
-            // Wait for databases to be ready to use
-            yield db.ready();
             // Create http server
-            (_a = this.config.server) === null || _a === void 0 ? void 0 : _a.on('request', this.app);
+            (_a = this.config.server) === null || _a === void 0 ? void 0 : _a.on("request", this.app);
             const server = this.config.server || (config.https.enabled ? (0, https_1.createServer)(config.https, this.app) : (0, http_1.createServer)(this.app));
             const clients = new Map();
-            const securityRef = db.ref('__auth__/security');
-            const authRef = db.ref('__auth__/accounts');
-            const logRef = db.ref('__log__');
-            const logger = new logger_1.DatabaseLog(logRef);
+            const securityRef = db.ref("__auth__/security");
+            const authRef = db.ref("__auth__/accounts");
+            const logRef = db.ref("__log__");
+            const logger = new DatabaseLog_1.DatabaseLog(logRef);
             // Setup rules
             const rulesFilePath = this.rulesFilePath ? this.rulesFilePath : `${this.config.path}/rules.json`;
-            const rules = new rules_1.PathBasedRules(rulesFilePath, config.auth.defaultAccessRule, { db, debug: this.debug, authEnabled: this.config.auth.enabled });
+            const rules = new Rules_1.PathBasedRules(rulesFilePath, config.auth.defaultAccessRule, {
+                db,
+                debug: this.debug,
+                authEnabled: this.config.auth.enabled,
+            });
             this.setRule = (rulePath, PathruleType, callback) => {
                 return rules.add(rulePath, PathruleType, callback);
             };
@@ -173,7 +162,7 @@ class SyncMongoServer extends acebase_core_1.SimpleEventEmitter {
                 tokenSalt: null,
                 clients,
                 authCache: null,
-                authProviders: this.authProviders,
+                //authProviders: this.authProviders,
                 rules,
                 instance: this,
             };
@@ -184,21 +173,15 @@ class SyncMongoServer extends acebase_core_1.SimpleEventEmitter {
             // Add cache middleware
             (0, cache_1.default)(routeEnv);
             if (config.auth.enabled) {
-                // Setup auth database
-                yield (0, auth_1.default)(routeEnv);
                 // Add auth endpoints
-                const { resetPassword, verifyEmailAddress } = (0, auth_2.default)(routeEnv);
+                const { resetPassword, verifyEmailAddress } = yield (0, auth_1.default)(routeEnv);
                 this.resetPassword = resetPassword;
                 this.verifyEmailAddress = verifyEmailAddress;
             }
             // Add metadata endpoints
             (0, meta_1.default)(routeEnv);
-            // If environment is development, add API docs
-            if (process.env.NODE_ENV && process.env.NODE_ENV.trim() === 'development') {
-                this.debug.warn('DEVELOPMENT MODE: adding API docs endpoint at /docs');
-                (yield Promise.resolve().then(() => require('./routes/docs'))).addRoute(routeEnv);
-                (yield Promise.resolve().then(() => require('./middleware/swagger'))).addMiddleware(routeEnv);
-            }
+            this.debug.warn("DEVELOPMENT MODE: adding API docs endpoint at /docs");
+            (0, docs_1.default)(routeEnv);
             // Add data endpoints
             (0, data_1.default)(routeEnv);
             // Add webmanager endpoints
@@ -210,7 +193,7 @@ class SyncMongoServer extends acebase_core_1.SimpleEventEmitter {
                 this.router[method.toLowerCase()](route, handler);
             };
             // Create websocket server
-            (0, websocket_1.addWebsocketServer)(routeEnv);
+            (0, Websocket_1.addWebsocketServer)(routeEnv);
             // Run init callback to allow user code to call `server.extend`, `server.router.[method]`, `server.setRule` etc before the server starts listening
             yield ((_c = (_b = this.config).init) === null || _c === void 0 ? void 0 : _c.call(_b, this));
             // If we own the server, add 404 handler
@@ -221,27 +204,27 @@ class SyncMongoServer extends acebase_core_1.SimpleEventEmitter {
             let paused = false;
             this.pause = () => __awaiter(this, void 0, void 0, function* () {
                 if (this.config.server) {
-                    throw new AceBaseExternalServerError();
+                    throw new ExternalServerError();
                 }
                 if (paused) {
-                    throw new Error('Server is already paused');
+                    throw new Error("Server is already paused");
                 }
                 server.close();
                 this.debug.warn(`Paused "${db.name}" database server at ${this.url}`);
-                this.emit('pause');
+                this.emit("pause");
                 paused = true;
             });
             this.resume = () => __awaiter(this, void 0, void 0, function* () {
                 if (this.config.server) {
-                    throw new AceBaseExternalServerError();
+                    throw new ExternalServerError();
                 }
                 if (!paused) {
-                    throw new Error('Server is not paused');
+                    throw new Error("Server is not paused");
                 }
-                return new Promise(resolve => {
+                return new Promise((resolve) => {
                     server.listen(config.port, config.host, () => {
                         this.debug.warn(`Resumed "${db.name}" database server at ${this.url}`);
-                        this.emit('resume');
+                        this.emit("resume");
                         paused = false;
                         resolve();
                     });
@@ -249,7 +232,7 @@ class SyncMongoServer extends acebase_core_1.SimpleEventEmitter {
             });
             // Handle SIGINT and shutdown requests
             const shutdown = (request) => __awaiter(this, void 0, void 0, function* () {
-                this.debug.warn('shutting down server');
+                this.debug.warn("shutting down server");
                 routeEnv.rules.stop();
                 const getConnectionsCount = () => {
                     return new Promise((resolve, reject) => {
@@ -271,7 +254,7 @@ class SyncMongoServer extends acebase_core_1.SimpleEventEmitter {
                     //     this.debug.log(`Server still has ${connections} connections`);
                     // }, 5000);
                     // interval.unref();
-                    server.close(err => {
+                    server.close((err) => {
                         if (err) {
                             this.debug.error(`server.close() error: ${err.message}`);
                         }
@@ -292,53 +275,53 @@ class SyncMongoServer extends acebase_core_1.SimpleEventEmitter {
                     this.debug.log(`Closing ${clients.size} websocket connections`);
                     clients.forEach((client, id) => {
                         const socket = client.socket;
-                        socket.once('disconnect', reason => {
+                        socket.once("disconnect", (reason) => {
                             this.debug.log(`Socket ${socket.id} disconnected: ${reason}`);
                         });
                         socket.disconnect(true);
                     });
                 });
-                this.debug.warn('closing database');
+                this.debug.warn("closing database");
                 yield db.close();
-                this.debug.warn('shutdown complete');
+                this.debug.warn("shutdown complete");
                 // Emit events to let the outside world know we shut down.
                 // This is especially important if this instance was running in a Node.js cluster: the process will
                 // not exit automatically after this shutdown because Node.js' IPC channel between worker and master is still open.
                 // By sending these events, the cluster manager can determine if it should (and when to) execute process.exit()
                 // process.emit('acebase-server-shutdown');             // Emit on process
-                process.emit('beforeExit', request.sigint ? 130 : 0); // Emit on process
+                process.emit("beforeExit", request.sigint ? 130 : 0); // Emit on process
                 try {
-                    process.send && process.send('acebase-server-shutdown'); // Send to master process when running in a Node.js cluster
+                    process.send && process.send("acebase-server-shutdown"); // Send to master process when running in a Node.js cluster
                 }
                 catch (err) {
                     // IPC Channel has apparently been closed already
                 }
-                this.emit('shutdown'); // Emit on AceBaseServer instance
+                this.emit("shutdown"); // Emit on AceBaseServer instance
             });
             this.shutdown = () => __awaiter(this, void 0, void 0, function* () {
                 if (this.config.server) {
-                    throw new AceBaseExternalServerError();
+                    throw new ExternalServerError();
                 }
                 yield shutdown({ sigint: false });
             });
             if (this.config.server) {
                 // Offload shutdown control to an external server
-                server.on('close', function close() {
-                    server.off('request', this.app);
-                    server.off('close', close);
+                server.on("close", function close() {
+                    server.off("request", this.app);
+                    server.off("close", close);
                     shutdown({ sigint: false });
                 });
                 const ready = () => {
                     this.debug.log(`"${db.name}" database server running at ${this.url}`);
                     this._ready = true;
                     this.emitOnce(`ready`);
-                    server.off('listening', ready);
+                    server.off("listening", ready);
                 };
                 if (server.listening) {
                     ready();
                 }
                 else {
-                    server.on('listening', ready);
+                    server.on("listening", ready);
                 }
             }
             else {
@@ -349,17 +332,18 @@ class SyncMongoServer extends acebase_core_1.SimpleEventEmitter {
                     this._ready = true;
                     this.emitOnce(`ready`);
                 });
-                process.on('SIGINT', () => shutdown({ sigint: true }));
+                process.on("SIGINT", () => shutdown({ sigint: true }));
             }
         });
-    } /**
+    }
+    /**
      * Reset a user's password. This can also be done using the auth/reset_password API endpoint
      * @param clientIp ip address of the user
      * @param code reset code that was sent to the user's email address
      * @param newPassword new password chosen by the user
      */
     resetPassword(clientIp, code, newPassword) {
-        throw new AceBaseServerNotReadyError();
+        throw new ServerNotReadyError();
     }
     /**
      * Marks a user account's email address as validated. This can also be done using the auth/verify_email API endpoint
@@ -367,7 +351,7 @@ class SyncMongoServer extends acebase_core_1.SimpleEventEmitter {
      * @param code verification code sent to the user's email address
      */
     verifyEmailAddress(clientIp, code) {
-        throw new AceBaseServerNotReadyError();
+        throw new ServerNotReadyError();
     }
     /**
      * Shuts down the server. Stops listening for incoming connections, breaks current connections and closes the database.
@@ -377,19 +361,19 @@ class SyncMongoServer extends acebase_core_1.SimpleEventEmitter {
      * These events can be handled by cluster managing code to `kill` or `exit` the process safely.
      */
     shutdown() {
-        throw new AceBaseServerNotReadyError();
+        throw new ServerNotReadyError();
     }
     /**
      * Temporarily stops the server from handling incoming connections, but keeps existing connections open
      */
     pause() {
-        throw new AceBaseServerNotReadyError();
+        throw new ServerNotReadyError();
     }
     /**
      * Resumes handling incoming connections
      */
     resume() {
-        throw new AceBaseServerNotReadyError();
+        throw new ServerNotReadyError();
     }
     /**
      * Extend the server API with your own custom functions. Your handler will be listening
@@ -411,7 +395,7 @@ class SyncMongoServer extends acebase_core_1.SimpleEventEmitter {
      * @param handler your Express request handler callback
      */
     extend(method, ext_path, handler) {
-        throw new AceBaseServerNotReadyError();
+        throw new ServerNotReadyError();
     }
     /**
      * Configure an auth provider to allow users to sign in with Facebook, Google, etc
@@ -420,21 +404,21 @@ class SyncMongoServer extends acebase_core_1.SimpleEventEmitter {
      * @returns Returns the created auth provider instance, which can be used to call non-user specific methods the provider might support. (example: the Spotify auth provider supports getClientAuthToken, which allows API calls to be made to the core (non-user) spotify service)
      */
     configAuthProvider(providerName, settings) {
-        if (!this.config.auth.enabled) {
-            throw new Error(`Authentication is not enabled`);
-        }
-        try {
-            const AuthProvider = oauth_providers_1.default[providerName];
-            const provider = new AuthProvider(settings);
-            this.authProviders[providerName] = provider;
-            return provider;
-        }
-        catch (err) {
-            throw new Error(`Failed to configure provider ${providerName}: ${err.message}`);
-        }
+        // if (!this.config.auth.enabled) {
+        // 	throw new Error(`Authentication is not enabled`);
+        // }
+        // try {
+        // 	const AuthProvider = oAuth2Providers[providerName];
+        // 	const provider = new AuthProvider(settings);
+        // 	this.authProviders[providerName] = provider;
+        // 	return provider;
+        // } catch (err) {
+        // 	throw new Error(`Failed to configure provider ${providerName}: ${err.message}`);
+        // }
+        throw new ServerNotReadyError();
     }
     setRule(paths, types, callback) {
-        throw new AceBaseServerNotReadyError();
+        throw new ServerNotReadyError();
     }
 }
 exports.SyncMongoServer = SyncMongoServer;

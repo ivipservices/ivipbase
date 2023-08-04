@@ -1,5 +1,5 @@
-import { RouteInitEnvironment, RouteRequest, AceBaseUserSignupEmailRequest } from "src/types";
-import { User, DbUserAccountDetails, getPublicAccountDetails, UserProfilePicture } from "src/Schema/user";
+import { RouteInitEnvironment, RouteRequest, AceBaseUserSignupEmailRequest } from "../../types";
+import { User, DbUserAccountDetails, getPublicAccountDetails, UserProfilePicture } from "../../Schema/user";
 import {
 	emailExistsError,
 	emailOrUsernameExistsError,
@@ -18,11 +18,11 @@ import {
 	isValidSettings,
 	isValidUsername,
 	usernameExistsError,
-} from "src/lib/Validate";
-import { createPasswordHash } from "src/lib/Password";
+} from "../../lib/Validate";
+import { createPasswordHash } from "../../lib/Password";
 import { ID } from "acebase-core";
-import { createPublicAccessToken, createSignedPublicToken } from "src/lib/Tokens";
-import { sendUnauthorizedError, sendUnexpectedError } from "src/lib/Errors";
+import { createPublicAccessToken, createSignedPublicToken } from "../../lib/Tokens";
+import { sendUnauthorizedError, sendUnexpectedError } from "../../lib/Errors";
 
 export class SignupError extends Error {
 	constructor(
@@ -55,8 +55,7 @@ export type RequestBody = {
 	settings: {
 		[name: string]: string | number | boolean;
 	};
-} & // Allow both spellings of display name. display_name is used in the db, displayName in public user detail server responses.
-// displayName is preferred and documented in the OpenAPI docs
+} & // displayName is preferred and documented in the OpenAPI docs // Allow both spellings of display name. display_name is used in the db, displayName in public user detail server responses.
 ({ displayName: string } | { display_name: string });
 
 export type ResponseBody = { access_token: string; user: User } | { code: SignupError["code"]; message: string };

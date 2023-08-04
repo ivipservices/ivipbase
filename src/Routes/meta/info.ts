@@ -1,4 +1,4 @@
-import { RouteInitEnvironment, RouteRequest } from "src/types";
+import { RouteInitEnvironment, RouteRequest } from "../../types";
 import * as os from "os";
 const SERVER_VERSION = "%SERVER_VERSION%"; // Loaded from package.json by npm scripts
 

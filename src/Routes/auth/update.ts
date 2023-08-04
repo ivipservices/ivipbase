@@ -1,5 +1,5 @@
-import { RouteInitEnvironment, RouteRequest } from "src/types";
-import { User, DbUserAccountDetails, getPublicAccountDetails, UserProfilePicture } from "src/Schema/user";
+import { RouteInitEnvironment, RouteRequest } from "../../types";
+import { User, DbUserAccountDetails, getPublicAccountDetails, UserProfilePicture } from "../../Schema/user";
 import {
 	emailExistsError,
 	invalidDisplayNameError,
@@ -15,8 +15,8 @@ import {
 	isValidSettings,
 	isValidUsername,
 	usernameExistsError,
-} from "src/lib/Validate";
-import { sendNotAuthenticatedError, sendUnauthorizedError, sendUnexpectedError } from "src/lib/Errors";
+} from "../../lib/Validate";
+import { sendNotAuthenticatedError, sendUnauthorizedError, sendUnexpectedError } from "../../lib/Errors";
 
 export class UpdateError extends Error {
 	constructor(
@@ -51,8 +51,7 @@ export type RequestBody = {
 	settings?: {
 		[name: string]: string | number | boolean;
 	};
-} & // Allow both spellings of display name. display_name is used in the db, displayName in public user detail server responses.
-// displayName is preferred and documented in the OpenAPI docs
+} & // displayName is preferred and documented in the OpenAPI docs // Allow both spellings of display name. display_name is used in the db, displayName in public user detail server responses.
 ({ displayName: string } | { display_name: string });
 
 export type ResponseBody = { user: User } | { code: UpdateError["code"]; message: string };

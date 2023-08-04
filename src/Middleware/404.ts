@@ -1,4 +1,4 @@
-import { RouteInitEnvironment } from "src/types";
+import { RouteInitEnvironment } from "../types";
 
 /**
  * Adds 404 middleware. This binds to `env.app` so routes added to `env.router` always come first, even if they are added after the 404 handler

@@ -6,12 +6,12 @@ import { Storage, StorageEnv, StorageSettings } from "acebase/dist/types/storage
 import { NodeLock, NodeLocker } from "acebase/dist/types/node-lock";
 import { NodeNotFoundError, NodeRevisionError } from "acebase/dist/types/node-errors";
 import { NodeAddress } from "acebase/dist/types/node-address";
-import { ColorStyle } from "src/lib/Colorize";
-import { PathInfo } from "src/lib/PathInfo";
-import { DebugLogger } from "src/lib/DebugLogger";
-import { StorageNode, StorageNodeMetaData } from "src/lib/StorageNode";
-import { assert } from "src/lib/assert";
-import { NodeValueType, VALUE_TYPES } from "src/lib/StorageNode";
+import { ColorStyle } from "../lib/Colorize";
+import { PathInfo } from "../lib/PathInfo";
+import { DebugLogger } from "../lib/DebugLogger";
+import { StorageNode, StorageNodeMetaData } from "../lib/StorageNode";
+import { assert } from "../lib/assert";
+import { NodeValueType, VALUE_TYPES } from "../lib/StorageNode";
 import { DataIndex } from "acebase/dist/types/data-index";
 
 export class CustomStorageNodeAddress {
@@ -415,7 +415,9 @@ export class CustomStorage extends Storage {
 					const newArrayKeys = changes.update.concat(changes.insert);
 					const isExhaustive = newArrayKeys.every((k, index, arr) => arr.includes(index.toString()));
 					if (!isExhaustive) {
-						throw new Error(`Elements cannot be inserted beyond, or removed before the end of an array. Rewrite the whole array at path "${path}" or change your schema to use an object collection instead`);
+						throw new Error(
+							`Elements cannot be inserted beyond, or removed before the end of an array. Rewrite the whole array at path "${path}" or change your schema to use an object collection instead`,
+						);
 					}
 				}
 
@@ -803,7 +805,8 @@ export class CustomStorage extends Storage {
 					if (
 						include &&
 						options.child_objects === false &&
-						((pathInfo.isParentOf(descPath) && [VALUE_TYPES.OBJECT, VALUE_TYPES.ARRAY].includes(metadata ? metadata.type : (-1 as NodeValueType))) || PathInfo.getPathKeys(descPath).length > pathInfo.pathKeys.length + 1)
+						((pathInfo.isParentOf(descPath) && [VALUE_TYPES.OBJECT, VALUE_TYPES.ARRAY].includes(metadata ? metadata.type : (-1 as NodeValueType))) ||
+							PathInfo.getPathKeys(descPath).length > pathInfo.pathKeys.length + 1)
 					) {
 						include = false;
 					}

@@ -9,21 +9,15 @@
         "sourceMap": true,
         "module": "commonjs",
         "rootDir": "./src",
-        "outDir": "./dist/esm",
+        "outDir": "./src",
         "moduleResolution": "node",
         "target": "es2020",
         "pretty": true,
         "declaration": true,
         "declarationMap": true,
-        "declarationDir": "./dist/types",
+        "declarationDir": "./src",
         "resolveJsonModule": true,
-        "skipLibCheck": false,
-        "baseUrl": ".",
-        "paths": {
-            "src/*": [
-                "./src/*"
-            ]
-        }
+        "skipLibCheck": false
     },
     "include": [
         "src/**/*"

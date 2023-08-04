@@ -1,11 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AceBaseServerConfig = exports.AceBaseServerTransactionSettings = exports.AceBaseServerAuthenticationSettings = exports.AUTH_ACCESS_DEFAULT = exports.AceBaseServerHttpsConfig = void 0;
+exports.ServerConfig = exports.ServerTransactionSettings = exports.ServerAuthenticationSettings = exports.AUTH_ACCESS_DEFAULT = exports.ServerHttpsConfig = void 0;
 const fs_1 = require("fs");
-class AceBaseServerHttpsConfig {
+class ServerHttpsConfig {
     constructor(settings) {
         this.enabled = true;
-        this.enabled = typeof settings === 'object' && settings.enabled !== false;
+        this.enabled = typeof settings === "object" && settings.enabled !== false;
         if (!this.enabled) {
             return;
         }
@@ -19,13 +19,13 @@ class AceBaseServerHttpsConfig {
         }
     }
 }
-exports.AceBaseServerHttpsConfig = AceBaseServerHttpsConfig;
+exports.ServerHttpsConfig = ServerHttpsConfig;
 exports.AUTH_ACCESS_DEFAULT = {
-    DENY_ALL: 'deny',
-    ALLOW_ALL: 'allow',
-    ALLOW_AUTHENTICATED: 'auth',
+    DENY_ALL: "deny",
+    ALLOW_ALL: "allow",
+    ALLOW_AUTHENTICATED: "auth",
 };
-class AceBaseServerAuthenticationSettings {
+class ServerAuthenticationSettings {
     constructor(settings) {
         /**
          * Whether to enable authorization. Without authorization the entire db can be read and written to by anyone (not recommended 🤷🏼‍♂️)
@@ -51,40 +51,40 @@ class AceBaseServerAuthenticationSettings {
          * Whether to use a separate database for auth and logging. 'v2' will store data in auth.db, which is NOT TESTED YET!
          */
         this.separateDb = false;
-        if (typeof settings !== 'object') {
+        if (typeof settings !== "object") {
             settings = {};
         }
-        if (typeof settings.enabled === 'boolean') {
+        if (typeof settings.enabled === "boolean") {
             this.enabled = settings.enabled;
         }
-        if (typeof settings.allowUserSignup === 'boolean') {
+        if (typeof settings.allowUserSignup === "boolean") {
             this.allowUserSignup = settings.allowUserSignup;
         }
-        if (typeof settings.newUserRateLimit === 'number') {
+        if (typeof settings.newUserRateLimit === "number") {
             this.newUserRateLimit = settings.newUserRateLimit;
         }
-        if (typeof settings.tokensExpire === 'number') {
+        if (typeof settings.tokensExpire === "number") {
             this.tokensExpire = settings.tokensExpire;
         }
-        if (typeof settings.defaultAccessRule === 'string') {
+        if (typeof settings.defaultAccessRule === "string") {
             this.defaultAccessRule = settings.defaultAccessRule;
         }
-        if (typeof settings.defaultAdminPassword === 'string') {
+        if (typeof settings.defaultAdminPassword === "string") {
             this.defaultAdminPassword = settings.defaultAdminPassword;
         }
-        if (typeof settings.seperateDb === 'boolean') {
+        if (typeof settings.seperateDb === "boolean") {
             this.separateDb = settings.seperateDb;
         } // Handle previous _wrong_ spelling
-        if (typeof settings.separateDb === 'boolean') {
+        if (typeof settings.separateDb === "boolean") {
             this.separateDb = settings.separateDb;
         }
     }
 }
-exports.AceBaseServerAuthenticationSettings = AceBaseServerAuthenticationSettings;
+exports.ServerAuthenticationSettings = ServerAuthenticationSettings;
 /**
- * TODO: Use AceBaseTransactionLogSettings from acebase
+ * TODO: Use TransactionLogSettings from acebase
  */
-class AceBaseServerTransactionSettings {
+class ServerTransactionSettings {
     constructor(settings) {
         /**
          * Whether to enable transaction logging
@@ -98,79 +98,76 @@ class AceBaseServerTransactionSettings {
          * Whether database write operations should not wait until transaction has been logged
          */
         this.noWait = false;
-        if (typeof settings !== 'object') {
+        if (typeof settings !== "object") {
             return;
         }
-        if (typeof settings.log === 'boolean') {
+        if (typeof settings.log === "boolean") {
             this.log = settings.log;
         }
-        if (typeof settings.maxAge === 'number') {
+        if (typeof settings.maxAge === "number") {
             this.maxAge = settings.maxAge;
         }
-        if (typeof settings.noWait === 'boolean') {
+        if (typeof settings.noWait === "boolean") {
             this.noWait = settings.noWait;
         }
     }
 }
-exports.AceBaseServerTransactionSettings = AceBaseServerTransactionSettings;
-class AceBaseServerConfig {
+exports.ServerTransactionSettings = ServerTransactionSettings;
+class ServerConfig {
     constructor(settings) {
-        this.logLevel = 'log';
-        this.host = 'localhost';
+        this.logLevel = "log";
+        this.host = "localhost";
         this.port = 3000;
-        this.path = '.';
-        this.maxPayloadSize = '10mb';
-        this.allowOrigin = '*';
-        this.rootPath = '';
+        this.path = ".";
+        this.maxPayloadSize = "10mb";
+        this.allowOrigin = "*";
+        this.rootPath = "";
+        //readonly storage?: AceBaseStorageSettings;
         this.sponsor = false;
         this.logColors = true;
-        if (typeof settings !== 'object') {
+        if (typeof settings !== "object") {
             settings = {};
         }
-        if (typeof settings.logLevel === 'string') {
+        if (typeof settings.logLevel === "string") {
             this.logLevel = settings.logLevel;
         }
-        if (typeof settings.host === 'string') {
+        if (typeof settings.host === "string") {
             this.host = settings.host;
         }
-        if (typeof settings.port === 'number') {
+        if (typeof settings.port === "number") {
             this.port = settings.port;
         }
-        if (typeof settings.path === 'string') {
+        if (typeof settings.path === "string") {
             this.path = settings.path;
         }
-        if (typeof settings.server === 'object') {
+        if (typeof settings.server === "object") {
             this.server = settings.server;
         }
-        if (typeof settings.rootPath === 'string') {
-            this.rootPath = settings.rootPath.replace(/^\/|\/$/g, '');
+        if (typeof settings.rootPath === "string") {
+            this.rootPath = settings.rootPath.replace(/^\/|\/$/g, "");
         }
-        this.https = new AceBaseServerHttpsConfig(settings.https);
-        this.auth = new AceBaseServerAuthenticationSettings(settings.authentication);
-        if (typeof settings.maxPayloadSize === 'string') {
+        this.https = new ServerHttpsConfig(settings.https);
+        this.auth = new ServerAuthenticationSettings(settings.authentication);
+        if (typeof settings.maxPayloadSize === "string") {
             this.maxPayloadSize = settings.maxPayloadSize;
         }
-        if (typeof settings.allowOrigin === 'string') {
+        if (typeof settings.allowOrigin === "string") {
             this.allowOrigin = settings.allowOrigin;
         }
-        if (typeof settings.email === 'object') {
+        if (typeof settings.email === "object") {
             this.email = settings.email;
         }
-        this.transactions = new AceBaseServerTransactionSettings(settings.transactions);
-        this.ipc = settings.ipc;
-        if (typeof settings.storage === 'object') {
-            this.storage = settings.storage;
-        }
-        if (typeof settings.sponsor === 'boolean') {
+        this.transactions = new ServerTransactionSettings(settings.transactions);
+        if (typeof settings.sponsor === "boolean") {
             this.sponsor = settings.sponsor;
         }
-        if (typeof settings.logColors === 'boolean') {
+        if (typeof settings.logColors === "boolean") {
             this.logColors = settings.logColors;
         }
-        if (typeof settings.init === 'function') {
+        if (typeof settings.init === "function") {
             this.init = settings.init;
         }
     }
 }
-exports.AceBaseServerConfig = AceBaseServerConfig;
+exports.ServerConfig = ServerConfig;
 //# sourceMappingURL=index.js.map

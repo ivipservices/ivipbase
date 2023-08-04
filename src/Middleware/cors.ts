@@ -1,4 +1,4 @@
-import { RouteInitEnvironment } from "src/types";
+import { RouteInitEnvironment } from "../types";
 
 /**
  * Gets CORS options that are compatible with the 'cors' package (used by Socket.IO 3+)
@@ -27,13 +27,7 @@ export const getCorsHeaders = (
 } => {
 	const corsOptions = getCorsOptions(allowedOrigins);
 	const origins =
-		typeof corsOptions.origin === "boolean"
-			? corsOptions.origin
-				? currentOrigin ?? "*"
-				: ""
-			: corsOptions.origin instanceof Array
-			? corsOptions.origin.join(",")
-			: corsOptions.origin;
+		typeof corsOptions.origin === "boolean" ? (corsOptions.origin ? currentOrigin ?? "*" : "") : corsOptions.origin instanceof Array ? corsOptions.origin.join(",") : corsOptions.origin;
 	return {
 		"Access-Control-Allow-Origin": origins,
 		"Access-Control-Allow-Methods": corsOptions.methods,

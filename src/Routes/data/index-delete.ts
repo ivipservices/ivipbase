@@ -1,6 +1,6 @@
-import adminOnly from "src/Middleware/admin-only";
-import { RouteInitEnvironment, RouteRequest } from "src/types";
-import { sendError } from "src/lib/Errors";
+import adminOnly from "../../Middleware/admin-only";
+import { RouteInitEnvironment, RouteRequest } from "../../types";
+import { sendError } from "../../lib/Errors";
 
 export type RequestQuery = null;
 export type RequestBody = {

@@ -1,18 +1,18 @@
-import type { MongodbSettings } from "src/Mongo";
-import type { ServerAuthenticationSettings, ServerConfig } from "src/server/settings";
-import type { ServerEmailSettings } from "src/server/settings/email";
+import type { MongodbSettings } from "../Mongo";
+import type { ServerAuthenticationSettings, ServerConfig } from "../server/settings";
+import type { ServerEmailSettings } from "../server/settings/email";
 import type { Socket } from "socket.io";
 import type { Server as HttpServer } from "http";
 import type { Server as SecureHttpServer } from "https";
 import type { AceBaseBase, Api, DataReference } from "acebase-core";
 import * as express from "express";
-import type { DebugLogger } from "src/lib/DebugLogger";
-import type { DatabaseLog } from "src/lib/DatabaseLog";
-import type { ConnectedClient } from "src/lib/ConnectedClient";
-import type { DbUserAccountDetails } from "src/Schema/user";
-import type { SimpleCache } from "src/lib/SimpleCache";
-import type { PathBasedRules } from "src/lib/Rules";
-import type { SyncMongoServer } from "src";
+import type { DebugLogger } from "../lib/DebugLogger";
+import type { DatabaseLog } from "../lib/DatabaseLog";
+import type { ConnectedClient } from "../lib/ConnectedClient";
+import type { DbUserAccountDetails } from "../Schema/user";
+import type { SimpleCache } from "../lib/SimpleCache";
+import type { PathBasedRules } from "../lib/Rules";
+import type { SyncMongoServer } from "..";
 import type { DataIndex } from "acebase/dist/types/data-index";
 import type { Storage } from "acebase/dist/types/storage";
 

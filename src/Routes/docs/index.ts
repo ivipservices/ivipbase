@@ -2,10 +2,10 @@ import * as swaggerJsdoc from "swagger-jsdoc";
 const createSwaggerDocs = (swaggerJsdoc as any).default ?? swaggerJsdoc; // ESM and CJS compatible approach
 import * as _swaggerUi from "swagger-ui-express";
 const swaggerUi = (_swaggerUi as any).default ?? _swaggerUi; // ESM and CJS compatible approach
-import { RouteInitEnvironment } from "src/types";
-import { packageRootPath } from "src/lib/RootPath";
+import { RouteInitEnvironment } from "../../types";
+import { packageRootPath } from "../../lib/RootPath";
 import { join as joinPaths } from "path";
-import { addMiddleware as addSwaggerMiddleware } from "src/Middleware/swagger";
+import { addMiddleware as addSwaggerMiddleware } from "../../Middleware/swagger";
 
 const yamlPath = joinPaths(packageRootPath, "/src/routes/*.yaml");
 // console.log(`Using path ${yamlPath} for Swagger documentation`);

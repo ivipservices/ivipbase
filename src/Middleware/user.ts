@@ -1,7 +1,7 @@
-import { RouteInitEnvironment, RouteRequest } from "src/types";
-import { sendNotAuthenticatedError } from "src/lib/Errors";
-import { signIn } from "src/lib/Signin";
-import { decodePublicAccessToken, PublicAccessToken } from "src/lib/Tokens";
+import { RouteInitEnvironment, RouteRequest } from "../types";
+import { sendNotAuthenticatedError } from "../lib/Errors";
+import { signIn } from "../lib/Signin";
+import { decodePublicAccessToken, PublicAccessToken } from "../lib/Tokens";
 
 export const addMiddleware = (env: RouteInitEnvironment) => {
 	// Add bearer authentication middleware

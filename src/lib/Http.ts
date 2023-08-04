@@ -1,10 +1,10 @@
 export type { Express, Request, Response } from "express";
 import * as express from "express";
-import * as cors from "src/Middleware/cors";
-import { ServerConfig } from "src/server/settings";
+import * as cors from "../Middleware/cors";
+import { ServerConfig } from "../server/settings";
 const createExpress = (express as any).default ?? express; // ESM and CJS compatible approach
 
-import { HttpApp, HttpRouter } from "src/types";
+import { HttpApp, HttpRouter } from "../types";
 
 /**
  * Creates an app that handles http requests, adds json body parsing.

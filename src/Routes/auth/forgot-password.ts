@@ -1,8 +1,8 @@
-import { RouteInitEnvironment, RouteRequest, AceBaseUserResetPasswordEmailRequest } from "src/types";
-import { DbUserAccountDetails } from "src/Schema/user";
-import { createSignedPublicToken } from "src/lib/Tokens";
+import { RouteInitEnvironment, RouteRequest, AceBaseUserResetPasswordEmailRequest } from "../../types";
+import { DbUserAccountDetails } from "../../Schema/user";
+import { createSignedPublicToken } from "../../lib/Tokens";
 import { ID } from "acebase-core";
-import { sendBadRequestError, sendUnexpectedError } from "src/lib/Errors";
+import { sendBadRequestError, sendUnexpectedError } from "../../lib/Errors";
 
 export class ForgotPasswordError extends Error {
 	constructor(public code: "server_email_config" | "invalid_details" | "invalid_email", message: string) {

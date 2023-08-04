@@ -1,34 +1,41 @@
 import type { AceBase } from "acebase";
-import { HttpApp, HttpMethod, HttpRequest, HttpResponse, HttpRouter, RouteInitEnvironment, SyncMongoServerSettings } from "src/types";
-import { DataBase, MongoDBPreparer, MongoDBTransaction } from "src/Mongo";
-import { SimpleEventEmitter } from "src/lib/SimpleEventEmitter";
+import { HttpApp, HttpMethod, HttpRequest, HttpResponse, HttpRouter, RouteInitEnvironment, SyncMongoServerSettings } from "../types";
+import { DataBase, MongoDBPreparer, MongoDBTransaction } from "../Mongo";
+import { SimpleEventEmitter } from "../lib/SimpleEventEmitter";
 import { ServerConfig } from "./settings";
-import { DebugLogger } from "src/lib/DebugLogger";
-import { SimpleCache } from "src/lib/SimpleCache";
-import { StorageNode } from "src/lib/StorageNode";
-import { ColorStyle } from "src/lib/Colorize";
-import { createApp, createRouter } from "src/lib/Http";
+import { DebugLogger } from "../lib/DebugLogger";
+import { ColorStyle } from "../lib/Colorize";
+import { createApp, createRouter } from "../lib/Http";
 import { createServer } from "http";
 import { createServer as createSecureServer } from "https";
-import { ConnectedClient } from "src/lib/ConnectedClient";
-import { PathBasedRules, PathRuleFunction, PathRuleType } from "src/lib/Rules";
+import { ConnectedClient } from "../lib/ConnectedClient";
+import { PathBasedRules, PathRuleFunction, PathRuleType } from "../lib/Rules";
 import type { AceBaseBase, Api } from "acebase-core";
-import { DatabaseLog } from "src/lib/DatabaseLog";
-import { DbUserAccountDetails } from "src/Schema/user";
+import { DatabaseLog } from "../lib/DatabaseLog";
+import { DbUserAccountDetails } from "../Schema/user";
 
-import addConnectionMiddleware from "src/Middleware/connection";
-import addCorsMiddleware from "src/Middleware/cors";
-import addCacheMiddleware from "src/Middleware/cache";
-import add404Middleware from "src/Middleware/404";
+import addConnectionMiddleware from "../Middleware/connection";
+import addCorsMiddleware from "../Middleware/cors";
+import addCacheMiddleware from "../Middleware/cache";
+import add404Middleware from "../Middleware/404";
 
-import addAuthenticionRoutes from "src/Routes/auth";
-import addMetadataRoutes from "src/Routes/meta";
-import addDocsRoutes from "src/Routes/docs";
-import addDataRoutes from "src/Routes/data";
+import addAuthenticionRoutes from "../Routes/auth";
+import addMetadataRoutes from "../Routes/meta";
+import addDocsRoutes from "../Routes/docs";
+import addDataRoutes from "../Routes/data";
+import addWebManagerRoutes from "../Routes/webmanager";
+
+import { addWebsocketServer } from "../Websocket";
 
 export class ServerNotReadyError extends Error {
 	constructor() {
 		super("Server is not ready yet");
+	}
+}
+
+export class ExternalServerError extends Error {
+	constructor() {
+		super("This method is not available with an external server");
 	}
 }
 
@@ -220,7 +227,169 @@ export class SyncMongoServer extends SimpleEventEmitter {
 		this.debug.warn("DEVELOPMENT MODE: adding API docs endpoint at /docs");
 		addDocsRoutes(routeEnv);
 
+		// Add data endpoints
 		addDataRoutes(routeEnv);
+
+		// Add webmanager endpoints
+		addWebManagerRoutes(routeEnv);
+
+		// Allow adding custom routes
+		this.extend = (method: HttpMethod, ext_path: string, handler: (req: HttpRequest, res: HttpResponse) => any) => {
+			const route = `/ext/${db.name}/${ext_path}`;
+			this.debug.log(`Extending server: `, method, route);
+			this.router[method.toLowerCase()](route, handler);
+		};
+
+		// Create websocket server
+		addWebsocketServer(routeEnv);
+
+		// Run init callback to allow user code to call `server.extend`, `server.router.[method]`, `server.setRule` etc before the server starts listening
+		await this.config.init?.(this);
+
+		// If we own the server, add 404 handler
+		if (!this.config.server) {
+			add404Middleware(routeEnv);
+		}
+
+		// Setup pause and resume methods
+		let paused = false;
+		this.pause = async () => {
+			if (this.config.server) {
+				throw new ExternalServerError();
+			}
+			if (paused) {
+				throw new Error("Server is already paused");
+			}
+			server.close();
+			this.debug.warn(`Paused "${db.name}" database server at ${this.url}`);
+			this.emit("pause");
+			paused = true;
+		};
+		this.resume = async () => {
+			if (this.config.server) {
+				throw new ExternalServerError();
+			}
+			if (!paused) {
+				throw new Error("Server is not paused");
+			}
+			return new Promise((resolve) => {
+				server.listen(config.port, config.host, () => {
+					this.debug.warn(`Resumed "${db.name}" database server at ${this.url}`);
+					this.emit("resume");
+					paused = false;
+					resolve();
+				});
+			});
+		};
+
+		// Handle SIGINT and shutdown requests
+		const shutdown = async (request: { sigint: boolean }) => {
+			this.debug.warn("shutting down server");
+			routeEnv.rules.stop();
+
+			const getConnectionsCount = () => {
+				return new Promise<number>((resolve, reject) => {
+					server.getConnections((err, connections) => {
+						if (err) {
+							reject(err);
+						} else {
+							resolve(connections);
+						}
+					});
+				});
+			};
+			const connections = await getConnectionsCount();
+			this.debug.log(`Server has ${connections} connections`);
+
+			await new Promise<void>((resolve) => {
+				// const interval = setInterval(async () => {
+				//     const connections = await getConnectionsCount();
+				//     this.debug.log(`Server still has ${connections} connections`);
+				// }, 5000);
+				// interval.unref();
+
+				server.close((err) => {
+					if (err) {
+						this.debug.error(`server.close() error: ${err.message}`);
+					} else {
+						this.debug.log(`server.close() success`);
+					}
+					resolve();
+				});
+
+				// If for some reason connection aren't broken in time - do proceed with shutdown sequence
+				const timeout = setTimeout(() => {
+					if (clients.size === 0) {
+						return;
+					}
+					this.debug.warn(`server.close() timed out, there are still open connections`);
+					killConnections();
+				}, 5000);
+				timeout.unref();
+
+				this.debug.log(`Closing ${clients.size} websocket connections`);
+				clients.forEach((client, id) => {
+					const socket = client.socket;
+					socket.once("disconnect", (reason: any) => {
+						this.debug.log(`Socket ${socket.id} disconnected: ${reason}`);
+					});
+					socket.disconnect(true);
+				});
+			});
+			this.debug.warn("closing database");
+			await db.close();
+			this.debug.warn("shutdown complete");
+
+			// Emit events to let the outside world know we shut down.
+			// This is especially important if this instance was running in a Node.js cluster: the process will
+			// not exit automatically after this shutdown because Node.js' IPC channel between worker and master is still open.
+			// By sending these events, the cluster manager can determine if it should (and when to) execute process.exit()
+
+			// process.emit('acebase-server-shutdown');             // Emit on process
+			process.emit("beforeExit", request.sigint ? 130 : 0); // Emit on process
+			try {
+				process.send && process.send("acebase-server-shutdown"); // Send to master process when running in a Node.js cluster
+			} catch (err) {
+				// IPC Channel has apparently been closed already
+			}
+			this.emit("shutdown"); // Emit on AceBaseServer instance
+		};
+		this.shutdown = async () => {
+			if (this.config.server) {
+				throw new ExternalServerError();
+			}
+			await shutdown({ sigint: false });
+		};
+
+		if (this.config.server) {
+			// Offload shutdown control to an external server
+			server.on("close", function close() {
+				server.off("request", this.app);
+				server.off("close", close);
+				shutdown({ sigint: false });
+			});
+			const ready = () => {
+				this.debug.log(`"${db.name}" database server running at ${this.url}`);
+				this._ready = true;
+				this.emitOnce(`ready`);
+				server.off("listening", ready);
+			};
+			if (server.listening) {
+				ready();
+			} else {
+				server.on("listening", ready);
+			}
+		} else {
+			// Start listening
+			server.listen(config.port, config.host, () => {
+				// Ready!!
+				this.debug.log(`"${db.name}" database server running at ${this.url}`);
+				this._ready = true;
+				this.emitOnce(`ready`);
+			});
+
+			process.on("SIGINT", () => shutdown({ sigint: true }));
+		}
 	}
 	/**
 	 * Reset a user's password. This can also be done using the auth/reset_password API endpoint

@@ -4,14 +4,14 @@
 export class PartialArray {
 	[index: number]: any;
 	constructor(sparseArray?: { [index: number]: any } | any[]) {
-		if (sparseArray instanceof Array) {
-			for (let i = 0; i < sparseArray.length; i++) {
-				if (typeof sparseArray[i] !== "undefined") {
-					this[i] = sparseArray[i];
-				}
-			}
-		} else if (sparseArray) {
-			Object.assign(this, sparseArray);
-		}
+	    if (sparseArray instanceof Array) {
+	        for (let i = 0; i < sparseArray.length; i++) {
+	            if (typeof sparseArray[i] !== 'undefined') {
+	                this[i] = sparseArray[i];
+	            }
+	        }
+	    } else if (sparseArray) {
+	        Object.assign(this, sparseArray);
+	    }
 	}
 }

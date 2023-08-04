@@ -1,7 +1,7 @@
-import adminOnly from "src/Middleware/admin-only";
-import { RouteInitEnvironment, RouteRequest } from "src/types";
-import { sendError } from "src/lib/Errors";
-import { Response } from "src/lib/Http";
+import adminOnly from "../../Middleware/admin-only";
+import { RouteInitEnvironment, RouteRequest } from "../../types";
+import { sendError } from "../../lib/Errors";
+import { Response } from "../../lib/Http";
 
 export type FullTextIndexOptions = {
 	type: "fulltext";
@@ -38,8 +38,7 @@ export type CreateIndexRequest = {
 		textLocale?: string;
 		include?: string[];
 		config?: object;
-	} & // eslint-disable-next-line @typescript-eslint/ban-types
-	({} | FullTextIndexOptions | GeoIndexOptions | ArrayIndexOptions);
+	} & ({} | FullTextIndexOptions | GeoIndexOptions | ArrayIndexOptions); // eslint-disable-next-line @typescript-eslint/ban-types
 };
 
 export type RequestQuery = null;

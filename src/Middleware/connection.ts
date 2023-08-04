@@ -1,5 +1,5 @@
 import type { Duplex } from "stream";
-import type { RouteInitEnvironment } from "src/types";
+import type { RouteInitEnvironment } from "../types";
 
 /**
  * Adds connection management middleware. Add this as very first handler!

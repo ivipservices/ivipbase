@@ -1,7 +1,7 @@
 import { NextFunction } from "express";
-import { RouteInitEnvironment, RouteRequest } from "src/types";
-import { sendUnauthorizedError } from "src/lib/Errors";
-import type { Response } from "src/lib/Http";
+import { RouteInitEnvironment, RouteRequest } from "../types";
+import { sendUnauthorizedError } from "../lib/Errors";
+import type { Response } from "../lib/Http";
 
 /**
  * Middleware function that checks if the current user is `admin`. An 403 Forbidden error will be sent in the response if

@@ -2,12 +2,12 @@ function runCallback(callback: (data: any) => void, data: any) {
     try {
         callback(data);
     } catch (err) {
-        console.error("Error in subscription callback", err);
+        console.error('Error in subscription callback', err);
     }
 }
 
-const _subscriptions = Symbol("subscriptions");
-const _oneTimeEvents = Symbol("oneTimeEvents");
+const _subscriptions = Symbol('subscriptions');
+const _oneTimeEvents = Symbol('oneTimeEvents');
 
 export class SimpleEventEmitter {
     private [_subscriptions]: {

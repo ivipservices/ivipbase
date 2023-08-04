@@ -1,8 +1,8 @@
-import { RouteInitEnvironment, RouteRequest, AceBaseUserResetPasswordSuccessEmailRequest } from "src/types";
-import { DbUserAccountDetails } from "src/Schema/user";
-import { parseSignedPublicToken } from "src/lib/Tokens";
-import { sendBadRequestError, sendUnexpectedError } from "src/lib/Errors";
-import { createPasswordHash } from "src/lib/Password";
+import { RouteInitEnvironment, RouteRequest, AceBaseUserResetPasswordSuccessEmailRequest } from "../../types";
+import { DbUserAccountDetails } from "../../Schema/user";
+import { parseSignedPublicToken } from "../../lib/Tokens";
+import { sendBadRequestError, sendUnexpectedError } from "../../lib/Errors";
+import { createPasswordHash } from "../../lib/Password";
 
 export class ResetPasswordError extends Error {
 	constructor(public code: "invalid_code" | "unknown_user" | "password_requirement_mismatch", message: string) {

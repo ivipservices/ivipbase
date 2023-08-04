@@ -1,6 +1,6 @@
 import { Transport } from "acebase-core";
-import { RouteInitEnvironment, RouteRequest } from "src/types";
-import { sendUnauthorizedError } from "src/lib/Errors";
+import { RouteInitEnvironment, RouteRequest } from "../../types";
+import { sendUnauthorizedError } from "../../lib/Errors";
 
 export type RequestQuery = { include?: string; exclude?: string; child_objects?: boolean };
 export type RequestBody = null;

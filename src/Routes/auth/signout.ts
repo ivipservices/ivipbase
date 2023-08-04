@@ -1,6 +1,6 @@
-import { RouteInitEnvironment, RouteRequest } from "src/types";
-import { DbUserAccountDetails } from "src/Schema/user";
-import { sendUnexpectedError } from "src/lib/Errors";
+import { RouteInitEnvironment, RouteRequest } from "../../types";
+import { DbUserAccountDetails } from "../../Schema/user";
+import { sendUnexpectedError } from "../../lib/Errors";
 
 export type RequestQuery = never;
 export type RequestBody = { client_id?: string } & {

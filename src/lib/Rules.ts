@@ -4,9 +4,9 @@ import { DebugLogger } from "./DebugLogger";
 import { PathInfo } from "./PathInfo";
 import * as fs from "fs";
 import { executeSandboxed } from "./Sandbox";
-import { DbUserAccountDetails } from "src/Schema/user";
-import { AUTH_ACCESS_DEFAULT } from "src/server/settings";
-import { AuthAccessDefault } from "src/types";
+import { DbUserAccountDetails } from "../Schema/user";
+import { AUTH_ACCESS_DEFAULT } from "../server/settings";
+import { AuthAccessDefault } from "../types";
 
 type PathRuleFunctionEnvironment = {
 	now: number;
@@ -201,12 +201,7 @@ export class PathBasedRules {
 		this.accessRules = accessRules;
 	}
 
-	async isOperationAllowed(
-		user: Pick<DbUserAccountDetails, "uid">,
-		path: string,
-		operation: AccessCheckOperation,
-		data?: Record<string, any>,
-	): Promise<HasAccessResult> {
+	async isOperationAllowed(user: Pick<DbUserAccountDetails, "uid">, path: string, operation: AccessCheckOperation, data?: Record<string, any>): Promise<HasAccessResult> {
 		// Process rules, find out if signed in user is allowed to read/write
 		// Defaults to false unless a rule is found that tells us otherwise
 
@@ -306,11 +301,7 @@ export class PathBasedRules {
 						};
 						const result = typeof rule === "function" ? await rule(ruleEnv) : await executeSandboxed(rule, ruleEnv);
 						if (!["cascade", "deny", "allow", true, false].includes(result)) {
-							this.debug.warn(
-								`rule for path ${rulePath} possibly returns an unintentional value (${JSON.stringify(
-									result,
-								)}) which results in outcome "${result ? "allow" : "deny"}"`,
-							);
+							this.debug.warn(`rule for path ${rulePath} possibly returns an unintentional value (${JSON.stringify(result)}) which results in outcome "${result ? "allow" : "deny"}"`);
 						}
 						isAllowed = result === "allow" || result === true;
 						if (!isAllowed && result !== "cascade") {
@@ -440,9 +431,9 @@ export class PathBasedRules {
 							this.debug.warn(`Rule at path ${validatePath} returned "cascade", but ${validateEnv.operation} rules always cascade`);
 						} else if (!["cascade", "deny", "allow", true, false].includes(result)) {
 							this.debug.warn(
-								`${validateEnv.operation} rule for path ${validatePath} possibly returned an unintentional value (${JSON.stringify(
-									result,
-								)}) which results in outcome "${result ? "allow" : "deny"}"`,
+								`${validateEnv.operation} rule for path ${validatePath} possibly returned an unintentional value (${JSON.stringify(result)}) which results in outcome "${
+									result ? "allow" : "deny"
+								}"`,
 							);
 						}
 						if (["cascade", "deny", "allow"].includes(result as string)) {

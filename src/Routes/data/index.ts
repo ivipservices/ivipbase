@@ -1,5 +1,5 @@
-import { RouteInitEnvironment } from "src/types";
-import addContextMiddleware from "src/Middleware/context";
+import { RouteInitEnvironment } from "../../types";
+import addContextMiddleware from "../../Middleware/context";
 import addGetDataRoute from "./get";
 import addUpdateDataRoute from "./update";
 import addSetDataRoute from "./set";

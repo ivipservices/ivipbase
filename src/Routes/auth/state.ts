@@ -1,5 +1,5 @@
-import { RouteInitEnvironment, RouteRequest } from "src/types";
-import { User, getPublicAccountDetails } from "src/Schema/user";
+import { RouteInitEnvironment, RouteRequest } from "../../types";
+import { User, getPublicAccountDetails } from "../../Schema/user";
 
 export type RequestQuery = never;
 export type RequestBody = never;

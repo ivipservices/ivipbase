@@ -1,35 +1,22 @@
 /// <reference types="node" />
 /// <reference types="node" />
-import { AceBaseStorageSettings } from 'acebase';
-import { AceBaseServerEmailSettings } from './email';
-import { Server } from 'http';
-import type { SyncMongoServer } from '../';
-export type AceBaseServerHttpsSettings = {
-    enabled?: boolean;
-    keyPath?: string;
-    certPath?: string;
-    pfxPath?: string;
-    passphrase?: string;
-} & ({
-    keyPath: string;
-    certPath: string;
-} | {
-    pfxPath: string;
-    passphrase: string;
-} | {});
-export declare class AceBaseServerHttpsConfig {
+import { AceBaseStorageSettings } from "acebase";
+import { ServerEmailSettings } from "./email";
+import { Server } from "http";
+import type { SyncMongoServer } from "../..";
+import { ServerHttpsSettings, AuthAccessDefault } from "../../types";
+export declare class ServerHttpsConfig {
     enabled: boolean;
     key?: Buffer;
     cert?: Buffer;
     pfx?: Buffer;
     passphrase?: string;
-    constructor(settings: AceBaseServerHttpsSettings);
+    constructor(settings: ServerHttpsSettings);
 }
-export type AuthAccessDefault = 'deny' | 'allow' | 'auth';
 export declare const AUTH_ACCESS_DEFAULT: {
     [key: string]: AuthAccessDefault;
 };
-export declare class AceBaseServerAuthenticationSettings {
+export declare class ServerAuthenticationSettings {
     /**
      * Whether to enable authorization. Without authorization the entire db can be read and written to by anyone (not recommended 🤷🏼‍♂️)
      */
@@ -57,13 +44,13 @@ export declare class AceBaseServerAuthenticationSettings {
     /**
      * Whether to use a separate database for auth and logging. 'v2' will store data in auth.db, which is NOT TESTED YET!
      */
-    readonly separateDb: boolean | 'v2';
-    constructor(settings: Partial<AceBaseServerAuthenticationSettings>);
+    readonly separateDb: boolean | "v2";
+    constructor(settings: Partial<ServerAuthenticationSettings>);
 }
 /**
- * TODO: Use AceBaseTransactionLogSettings from acebase
+ * TODO: Use TransactionLogSettings from acebase
  */
-export declare class AceBaseServerTransactionSettings {
+export declare class ServerTransactionSettings {
     /**
      * Whether to enable transaction logging
      */
@@ -76,7 +63,7 @@ export declare class AceBaseServerTransactionSettings {
      * Whether database write operations should not wait until transaction has been logged
      */
     noWait: boolean;
-    constructor(settings: Partial<AceBaseServerTransactionSettings>);
+    constructor(settings: Partial<ServerTransactionSettings>);
 }
 export interface IPCClientSettings {
     /**
@@ -98,16 +85,16 @@ export interface IPCClientSettings {
     /**
      * Determines the role of this IPC client. Only 1 process can be assigned the 'master' role, all other processes must use the role 'worker'
      */
-    role: 'master' | 'worker';
+    role: "master" | "worker";
 }
-export type AceBaseServerSettings = Partial<{
+export type ServerSettings = Partial<{
     /**
      * Level of messages logged to console
-    */
-    logLevel: 'verbose' | 'log' | 'warn' | 'error';
+     */
+    logLevel: "verbose" | "log" | "warn" | "error";
     /**
      * ip or hostname to start the server on
-    */
+     */
     host: string;
     /**
      * port number the server will be listening
@@ -120,19 +107,19 @@ export type AceBaseServerSettings = Partial<{
     /**
      * Whether to use secure sockets layer (ssl)
      */
-    https: AceBaseServerHttpsSettings;
+    https: ServerHttpsSettings;
     /**
-     * Provide your own server for AceBase to use
+     * Provide your own server for  to use
      */
     server: Server;
     /**
-     * Root path for the AceBase routes
+     * Root path for the  routes
      */
     rootPath: string;
     /**
      * settings that define if and how authentication is used
      */
-    authentication: Partial<AceBaseServerAuthenticationSettings>;
+    authentication: Partial<ServerAuthenticationSettings>;
     /**
      * maximum size to allow for posted data, eg for updating nodes. Default is '10mb'
      */
@@ -142,17 +129,13 @@ export type AceBaseServerSettings = Partial<{
      */
     allowOrigin: string;
     /**
-     * Email settings that enable AceBaseServer to send e-mails, eg for welcoming new users, to reset passwords, notify of new sign ins etc
+     * Email settings that enable Server to send e-mails, eg for welcoming new users, to reset passwords, notify of new sign ins etc
      */
-    email: AceBaseServerEmailSettings;
+    email: ServerEmailSettings;
     /**
      * Transaction logging settings. Warning: BETA stage, do NOT use in production yet
      */
-    transactions: Partial<AceBaseServerTransactionSettings>;
-    /**
-     * IPC settings for pm2 or cloud-based clusters. BETA stage, see https://github.com/appy-one/acebase-ipc-server
-     */
-    ipc: IPCClientSettings | 'socket';
+    transactions: Partial<ServerTransactionSettings>;
     /**
      * Allows overriding of default storage settings used by the database. ALPHA stage
      */
@@ -169,28 +152,26 @@ export type AceBaseServerSettings = Partial<{
     /**
      * Init callback that runs before the server adds 404 middleware and starts listening to incoming calls.
      * Use this callback to extend the server with custom routes, add data validation rules, wait for external events, etc.
-     * @param server Instance of the `AceBaseServer`
+     * @param server Instance of the `Server`
      */
     init?: (server: SyncMongoServer) => Promise<void>;
 }>;
-export declare class AceBaseServerConfig {
-    readonly logLevel: 'verbose' | 'log' | 'warn' | 'error';
+export declare class ServerConfig {
+    readonly logLevel: "verbose" | "log" | "warn" | "error";
     readonly host: string;
     readonly port: number;
     readonly path: string;
     readonly maxPayloadSize: string;
     readonly allowOrigin: string;
-    readonly https: AceBaseServerHttpsConfig;
+    readonly https: ServerHttpsConfig;
     readonly server?: Server;
     readonly rootPath: string;
-    readonly auth: AceBaseServerAuthenticationSettings;
-    readonly email: AceBaseServerEmailSettings;
-    readonly transactions: AceBaseServerTransactionSettings;
-    readonly ipc: AceBaseServerSettings['ipc'];
-    readonly storage?: AceBaseStorageSettings;
+    readonly auth: ServerAuthenticationSettings;
+    readonly email: ServerEmailSettings;
+    readonly transactions: ServerTransactionSettings;
     readonly sponsor: boolean;
     readonly logColors: boolean;
     readonly init?: (server: SyncMongoServer) => Promise<void>;
-    constructor(settings: AceBaseServerSettings);
+    constructor(settings: ServerSettings);
 }
 //# sourceMappingURL=index.d.ts.map

@@ -1,4 +1,4 @@
-import { RouteInitEnvironment, RouteRequest } from "src/types";
+import { RouteInitEnvironment, RouteRequest } from "../../types";
 
 export type RequestQuery = null;
 export type RequestBody = null;

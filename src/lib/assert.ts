@@ -4,7 +4,7 @@
  * @param error
  */
 export function assert(condition: any, error?: string) {
-	if (!condition) {
-		throw new Error(`Assertion failed: ${error ?? "check your code"}`);
-	}
+    if (!condition) {
+        throw new Error(`Assertion failed: ${error ?? 'check your code'}`);
+    }
 }

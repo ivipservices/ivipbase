@@ -2,8 +2,8 @@ import { AceBaseStorageSettings } from "acebase";
 import { readFileSync } from "fs";
 import { ServerEmailSettings } from "./email";
 import { Server } from "http";
-import type { SyncMongoServer } from "src";
-import { ServerHttpsSettings, AuthAccessDefault } from "src/types";
+import type { SyncMongoServer } from "../..";
+import { ServerHttpsSettings, AuthAccessDefault } from "../../types";
 
 export class ServerHttpsConfig {
 	enabled = true;

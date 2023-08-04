@@ -1,14 +1,16 @@
 import { CustomStorageSettings, CustomStorageTransaction } from "acebase";
 import { MongoClient, Db, Document, FindCursor } from "mongodb";
 import { MongoDBPreparer } from "./";
-import { PathInfo } from "src/lib/PathInfo";
-import { SimpleCache } from "src/lib/SimpleCache";
-import { StorageNode, StorageNodeMetaData } from "src/lib/StorageNode";
-import { DebugLogger, LoggingLevel } from "src/lib/DebugLogger";
+import { PathInfo } from "../lib/PathInfo";
+import { SimpleCache } from "../lib/SimpleCache";
+import { StorageNode, StorageNodeMetaData } from "../lib/StorageNode";
+import { DebugLogger, LoggingLevel } from "../lib/DebugLogger";
+import rootPath from "../lib/RootPath";
+import { resolve } from "path";
 
 export const storageSettings = (dbname: string, mongodb: MongoDBPreparer, cache: SimpleCache<string, StorageNode>): CustomStorageSettings =>
 	new CustomStorageSettings({
-		path: "./",
+		path: resolve(rootPath, "./LocalDataBase"),
 		name: "MongoDB",
 		locking: true, // Let AceBase handle resource locking to prevent multiple simultanious updates to the same data
 
@@ -156,7 +158,12 @@ export class MongoDBTransaction extends CustomStorageTransaction {
 	 * @param addCallback callback method that adds the child node. Returns whether or not to keep calling with more children
 	 * @returns Returns a promise that resolves when there are no more children to be streamed
 	 */
-	childrenOf(path: string, include: { metadata: boolean; value: boolean }, checkCallback: (path: string) => boolean, addCallback: (path: string, node: StorageNodeMetaData | StorageNode) => boolean) {
+	childrenOf(
+		path: string,
+		include: { metadata: boolean; value: boolean },
+		checkCallback: (path: string) => boolean,
+		addCallback: (path: string, node: StorageNodeMetaData | StorageNode | any) => boolean,
+	) {
 		return this._getChildrenOf(path, { ...include, descendants: false }, checkCallback, addCallback);
 	}
 
@@ -168,7 +175,12 @@ export class MongoDBTransaction extends CustomStorageTransaction {
 	 * @param addCallback callback method that adds the descendant node. Returns whether or not to keep calling with more children
 	 * @returns Returns a promise that resolves when there are no more descendants to be streamed
 	 */
-	descendantsOf(path: string, include: { metadata: boolean; value: boolean }, checkCallback: (path: string) => boolean, addCallback: (path: string, node: StorageNodeMetaData | StorageNode) => boolean) {
+	descendantsOf(
+		path: string,
+		include: { metadata: boolean; value: boolean },
+		checkCallback: (path: string) => boolean,
+		addCallback: (path: string, node: StorageNodeMetaData | StorageNode | any) => boolean,
+	) {
 		return this._getChildrenOf(path, { ...include, descendants: true }, checkCallback, addCallback);
 	}
 
@@ -192,7 +204,7 @@ export class MongoDBTransaction extends CustomStorageTransaction {
 				.forEach((document: Document) => {
 					//if (!document.path.startsWith(this._storageKeysPrefix)){ return true; }
 
-					let otherPath = this.getPathFromStorageKey(document.path);
+					const otherPath = this.getPathFromStorageKey(document.path);
 
 					let keepGoing = true;
 					if (!document.path.startsWith(this._storageKeysPrefix)) {
