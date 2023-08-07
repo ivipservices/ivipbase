@@ -27,8 +27,8 @@ export const addRoute = (env: RouteInitEnvironment) => {
 
 		const verification = (() => {
 			try {
-				return parseSignedPublicToken(code, env.tokenSalt);
-			} catch (err) {
+				return parseSignedPublicToken(code, env.tokenSalt as any);
+			} catch (err: any) {
 				throw new VerifyEmailError("invalid_code", err.message);
 			}
 		})();
@@ -39,7 +39,7 @@ export const addRoute = (env: RouteInitEnvironment) => {
 			env.log.error(LOG_ACTION, "unknown_user", LOG_DETAILS);
 			throw new VerifyEmailError("unknown_user", "Unknown user");
 		}
-		const user: DbUserAccountDetails = snap.val();
+		const user: DbUserAccountDetails = snap.val() as any;
 		user.uid = snap.key as string;
 
 		// No need to do further checks, code was signed by us so we can trust the contents
@@ -55,7 +55,7 @@ export const addRoute = (env: RouteInitEnvironment) => {
 		try {
 			await verifyEmailAddress(req.ip, details.code);
 			res.send("OK");
-		} catch (err) {
+		} catch (err: any) {
 			if (err.code) {
 				sendBadRequestError(res, err);
 			} else {

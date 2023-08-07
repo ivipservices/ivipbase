@@ -3,6 +3,7 @@ import { ConnectedClient, Transactions } from "../lib/Clients";
 import { RouteInitEnvironment } from "../types";
 import { decodePublicAccessToken } from "../lib/Tokens";
 import { createServer, SocketType } from "./socket.io";
+import { DbUserAccountDetails } from "src/Schema/user";
 
 export class SocketRequestError extends Error {
 	constructor(public code: string, message: string) {
@@ -78,11 +79,11 @@ export const addWebsocketServer = (env: RouteInitEnvironment) => {
 		}
 
 		try {
-			const uid = decodePublicAccessToken(event.data.accessToken, env.tokenSalt).uid;
-			client.user = env.authCache.get(uid) || null;
+			const uid = decodePublicAccessToken(event.data?.accessToken as string, env.tokenSalt as string).uid;
+			client.user = env.authCache?.get(uid) || null;
 		} catch (err) {
 			// no way to bind the user
-			env.debug.error(`websocket: invalid access token passed to signin: ${event.data.accessToken}`);
+			env.debug.error(`websocket: invalid access token passed to signin: ${event.data?.accessToken}`);
 		}
 	});
 
@@ -104,7 +105,7 @@ export const addWebsocketServer = (env: RouteInitEnvironment) => {
 		}
 
 		const request = event.data;
-		const providerName = typeof request === "string" ? request : request.provider;
+		const providerName = typeof request === "string" ? request : request?.provider;
 
 		env.debug.error(`websocket: cannot sign in with oauth provider ${providerName}`);
 		serverManager.send(event.socket, "oauth2-signin", { error: "Error: oauth2-signin not found!" });
@@ -148,20 +149,20 @@ export const addWebsocketServer = (env: RouteInitEnvironment) => {
 			return;
 		}
 
-		const eventName = event.data.event;
-		const subscriptionPath = event.data.path;
+		const eventName = event.data?.event;
+		const subscriptionPath = event.data?.path ?? "";
 		env.debug.verbose(`Client ${event.socket_id} subscribes to event "${eventName}" on path "/${subscriptionPath}"`.colorize([ColorStyle.bgWhite, ColorStyle.black]));
 		const isSubscribed = () => subscriptionPath in client.subscriptions && client.subscriptions[subscriptionPath].some((s: any) => s.event === eventName);
 		if (isSubscribed()) {
-			return acknowledgeRequest(event.socket, event.data.req_id);
+			return acknowledgeRequest(event.socket, event.data?.req_id as string);
 		}
 
 		// Get client
 		// const client = clients.get(socket.id);
 
-		if (!(await env.rules.isOperationAllowed(client.user, subscriptionPath, "get"))) {
+		if (!(await env.rules.isOperationAllowed(client.user as DbUserAccountDetails, subscriptionPath, "get"))) {
 			env.log.error("event.subscribe", "access_denied", { uid: client.user?.uid ?? "anonymous", path: subscriptionPath });
-			return failRequest(event.socket, event.data.req_id, "access_denied");
+			return failRequest(event.socket, event.data?.req_id as string, "access_denied");
 		}
 
 		const callback = async (err: any, path: string, currentValue: any, previousValue: any, context: any) => {
@@ -172,13 +173,13 @@ export const addWebsocketServer = (env: RouteInitEnvironment) => {
 			if (err) {
 				return;
 			}
-			if (!(await env.rules.isOperationAllowed(client.user, path, "get", { value: currentValue, context }))) {
+			if (!(await env.rules.isOperationAllowed(client.user as DbUserAccountDetails, path, "get", { value: currentValue, context }))) {
 				// 'event', { eventName, subscriptionPath, currentValue, previousValue, context })
 				if (!subscriptionPath.includes("*") && !subscriptionPath.includes("$")) {
 					// Could potentially be very many callbacks, so
 					// DISABLED: logRef.push({ action: `access_revoked`, uid: client.user ? client.user.uid : '-', path: subscriptionPath });
 					// Only log when user subscribes again
-					failRequest(event.socket, event.data.req_id, "access_denied");
+					failRequest(event.socket, event.data?.req_id as any, "access_denied");
 				}
 				return;
 			}
@@ -203,11 +204,11 @@ export const addWebsocketServer = (env: RouteInitEnvironment) => {
 		}
 
 		const subscr = { path: subscriptionPath, event: eventName, callback };
-		pathSubs.push(subscr);
+		pathSubs.push(subscr as any);
 
-		env.db.api.subscribe(subscriptionPath, eventName, callback);
+		env.db.api.subscribe(subscriptionPath, eventName as any, callback);
 
-		acknowledgeRequest(event.socket, event.data.req_id);
+		acknowledgeRequest(event.socket, event.data?.req_id as any);
 	});
 
 	serverManager.on("unsubscribe", (event) => {
@@ -217,15 +218,15 @@ export const addWebsocketServer = (env: RouteInitEnvironment) => {
 			return;
 		}
 
-		const eventName = event.data.event;
-		const subscriptionPath = event.data.path;
+		const eventName = event.data?.event;
+		const subscriptionPath = event.data?.path ?? "";
 		env.debug.verbose(`Client ${event.socket_id} is unsubscribing from event "${eventName || "(any)"}" on path "/${subscriptionPath}"`.colorize([ColorStyle.bgWhite, ColorStyle.black]));
 
 		// const client = clients.get(socket.id);
 		const pathSubs = client.subscriptions[subscriptionPath];
 		if (!pathSubs) {
 			// We have no knowledge of any active subscriptions on this path
-			return acknowledgeRequest(event.socket, event.data.req_id);
+			return acknowledgeRequest(event.socket, event.data?.req_id as any);
 		}
 		let remove = pathSubs;
 		if (eventName) {
@@ -242,7 +243,7 @@ export const addWebsocketServer = (env: RouteInitEnvironment) => {
 			// No subscriptions left on this path, remove the path entry
 			delete client.subscriptions[subscriptionPath];
 		}
-		return acknowledgeRequest(event.socket, event.data.req_id);
+		return acknowledgeRequest(event.socket, event.data?.req_id as any);
 	});
 
 	serverManager.on("query-unsubscribe", (event) => {
@@ -252,11 +253,11 @@ export const addWebsocketServer = (env: RouteInitEnvironment) => {
 			return;
 		}
 
-		env.debug.verbose(`Client ${event.socket_id} is unsubscribing from realtime query "${event.data.query_id}"`);
+		env.debug.verbose(`Client ${event.socket_id} is unsubscribing from realtime query "${event.data?.query_id}"`);
 		// const client = clients.get(socket.id);
-		delete client.realtimeQueries[event.data.query_id];
+		delete client.realtimeQueries[event.data?.query_id as any];
 
-		acknowledgeRequest(event.socket, event.data.req_id);
+		acknowledgeRequest(event.socket, event.data?.req_id as any);
 	});
 
 	const TRANSACTION_TIMEOUT_MS = 10000; // 10s to finish a started transaction
@@ -275,7 +276,7 @@ export const addWebsocketServer = (env: RouteInitEnvironment) => {
 		const data = event.data;
 
 		// Pre-check if reading AND writing is allowed (special transact operation)
-		const access = await env.rules.isOperationAllowed(client.user, data.path, "transact");
+		const access = await env.rules.isOperationAllowed(client.user as DbUserAccountDetails, data.path, "transact");
 		if (!access.allow) {
 			env.log.error(LOG_ACTION, "unauthorized", { ...LOG_DETAILS, rule_code: access.code, rule_path: access.rulePath ?? null }, access.details);
 			return serverManager.send(event.socket, "tx_error", { id: data.id, reason: "access_denied" });
@@ -289,7 +290,7 @@ export const addWebsocketServer = (env: RouteInitEnvironment) => {
 			finish: undefined,
 			timeout: setTimeout(() => {
 				delete client.transactions[tx.id];
-				tx.finish(); // Finish without value cancels the transaction
+				(tx as any)?.finish(); // Finish without value cancels the transaction
 				env.log.error(LOG_ACTION, "timeout", LOG_DETAILS);
 				serverManager.send(event.socket, "tx_error", { id: tx.id, reason: "timeout" });
 			}, TRANSACTION_TIMEOUT_MS),
@@ -306,7 +307,7 @@ export const addWebsocketServer = (env: RouteInitEnvironment) => {
 			async (val) => {
 				env.debug.verbose(`Transaction ${tx.id} started with value: `, val);
 
-				const access = await env.rules.isOperationAllowed(client.user, data.path, "get", { value: val, context: tx.context });
+				const access = await env.rules.isOperationAllowed(client.user as DbUserAccountDetails, data.path, "get", { value: val, context: tx.context });
 				if (!access.allow) {
 					env.log.error(LOG_ACTION, "unauthorized", { ...LOG_DETAILS, rule_code: access.code, rule_path: access.rulePath ?? null }, access.details);
 					serverManager.send(event.socket, "tx_error", { id: tx.id, reason: "access_denied" });
@@ -353,23 +354,23 @@ export const addWebsocketServer = (env: RouteInitEnvironment) => {
 
 			const newValue = "val" in data.value ? Transport.deserialize(data.value) : undefined;
 			if (typeof newValue !== "undefined") {
-				const access = await env.rules.isOperationAllowed(client.user, data.path, "set", { value: newValue, context: tx.context });
+				const access = await env.rules.isOperationAllowed(client.user as DbUserAccountDetails, data.path, "set", { value: newValue, context: tx.context });
 				if (!access.allow) {
 					env.log.error(LOG_ACTION, "unauthorized", { ...LOG_DETAILS, rule_code: access.code, rule_path: access.rulePath ?? null }, access.details);
 					throw new SocketRequestError("access_denied", "Access denied");
 				}
 			}
 
-			const { cursor } = await tx.finish(newValue);
+			const { cursor } = await (tx as any)?.finish(newValue);
 			env.debug.verbose(`Transaction ${tx.id} finished`);
 			serverManager.send(event.socket, "tx_completed", { id: tx.id, context: { cursor } });
-		} catch (err) {
+		} catch (err: any) {
 			if (!(err instanceof SocketRequestError)) {
 				// Other errors have been logged already
 				env.log.error(LOG_ACTION, "unexpected", LOG_DETAILS, err);
 			}
 			serverManager.send(event.socket, "tx_error", { id: tx.id, reason: err.code ?? err.message, data });
-			tx.finish(); // Finish with undefined, canceling the transaction
+			(tx as any)?.finish(); // Finish with undefined, canceling the transaction
 		}
 	});
 

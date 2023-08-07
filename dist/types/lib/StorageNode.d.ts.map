@@ -1,1 +1,0 @@
-{"version":3,"file":"StorageNode.d.ts","sourceRoot":"","sources":["../../../src/lib/StorageNode.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,kBAAkB,EAAE,0BAA0B,EAAE,MAAM,SAAS,CAAC;AACzE,OAAO,EAAE,YAAY,EAAE,gBAAgB,EAAE,gBAAgB,EAAE,aAAa,EAAE,WAAW,EAAE,MAAM,qCAAqC,CAAC;AAEnI,oDAAoD;AACpD,qBAAa,mBAAoB,SAAQ,0BAA0B;CAAG;AAEtE,0DAA0D;AAC1D,qBAAa,WAAY,SAAQ,kBAAkB;CAAG"}

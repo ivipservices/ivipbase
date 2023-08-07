@@ -18,7 +18,7 @@ export const addRoute = (env: RouteInitEnvironment) => {
 		try {
 			const stats = (await env.db.api.stats()) as SimpleAceBaseStorageStats;
 			res.send(stats);
-		} catch (err) {
+		} catch (err: any) {
 			res.statusCode = 500;
 			res.send(err.message);
 		}

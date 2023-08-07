@@ -1,6 +1,6 @@
 import type { AceBase } from "acebase";
 import { HttpApp, HttpMethod, HttpRequest, HttpResponse, HttpRouter, RouteInitEnvironment, SyncMongoServerSettings } from "../types";
-import { DataBase, MongoDBPreparer, MongoDBTransaction } from "../Mongo";
+import { DataBase, MongoDBPreparer, MongoDBTransaction, MongodbSettings } from "../Mongo";
 import { SimpleEventEmitter } from "../lib/SimpleEventEmitter";
 import { ServerConfig } from "./settings";
 import { DebugLogger } from "../lib/DebugLogger";
@@ -46,7 +46,7 @@ export class SyncMongoServerConfig {
 		this.mongodb = new MongoDBPreparer({
 			database: dbname,
 			...settings.mongodb,
-		});
+		} as MongodbSettings);
 	}
 }
 
@@ -84,32 +84,32 @@ export class SyncMongoServer extends SimpleEventEmitter {
 
 	readonly debug: DebugLogger;
 
-	public db: AceBaseBase;
+	public db!: AceBaseBase;
 
 	/**
 	 * Expõe o roteador do framework HTTP usado (atualmente Express) para uso externo.
 	 */
-	public router: HttpRouter & {
+	public router!: HttpRouter & {
 		[key: string]: any;
 	};
 
 	/**
 	 * Expõe a aplicação do framework http utilizado (atualmente o Express) para uso externo.
 	 */
-	public app: HttpApp;
+	public app!: HttpApp;
 
-	private rulesFilePath: string;
+	private rulesFilePath?: string;
 
 	constructor(readonly dbname: string, readonly options?: Partial<SyncMongoServerSettings>) {
 		super();
-		const { mongodb, rulesFilePath, ...serverOptions } = this.options;
+		const { mongodb, rulesFilePath, ...serverOptions } = this.options ?? {};
 
 		this.rulesFilePath = rulesFilePath;
 
 		this.mongodb = new MongoDBPreparer({
 			database: this.dbname,
 			...mongodb,
-		});
+		} as MongodbSettings);
 
 		this.config = new ServerConfig({
 			logLevel: "verbose",
@@ -197,9 +197,9 @@ export class SyncMongoServer extends SimpleEventEmitter {
 			securityRef,
 			authRef,
 			log: logger,
-			tokenSalt: null,
+			tokenSalt: undefined,
 			clients,
-			authCache: null,
+			authCache: undefined,
 			//authProviders: this.authProviders,
 			rules,
 			instance: this,
@@ -363,8 +363,9 @@ export class SyncMongoServer extends SimpleEventEmitter {
 
 		if (this.config.server) {
 			// Offload shutdown control to an external server
+			const self = this;
 			server.on("close", function close() {
-				server.off("request", this.app);
+				server.off("request", self.app);
 				server.off("close", close);
 				shutdown({ sigint: false });
 			});

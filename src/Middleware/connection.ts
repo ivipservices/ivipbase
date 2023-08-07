@@ -38,7 +38,7 @@ export const addMiddleware = (env: RouteInitEnvironment) => {
 		sockets.forEach((socket) => {
 			try {
 				destroySocket(socket);
-			} catch (err) {
+			} catch (err: any) {
 				console.error(`Cannot destroy socket: ${err.message}`);
 			}
 		});

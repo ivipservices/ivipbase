@@ -11,34 +11,33 @@ export const setupAuthentication = async (env: RouteInitEnvironment) => {
 
 	// Get or generate a salt to hash public tokens with
 	await env.securityRef.child("token_salt").transaction((snap) => {
-		env.tokenSalt = snap.val();
-		if (!env.tokenSalt) {
-			const length = 256;
-			env.tokenSalt = randomBytes(Math.ceil(length / 2))
+		const length = 256;
+		env.tokenSalt =
+			snap.val() ??
+			randomBytes(Math.ceil(length / 2))
 				.toString("hex")
 				.slice(0, length);
-			return env.tokenSalt;
-		}
+		return env.tokenSalt;
 	});
 
 	// Setup admin account
 	await env.authRef.child("admin").transaction((snap) => {
-		let adminAccount: DbUserAccountDetails = snap.val();
+		let adminAccount: DbUserAccountDetails | null = snap.val();
 		if (adminAccount === null) {
 			// Use provided default password, or generate one:
-			const adminPassword = env.config.auth.defaultAdminPassword || generatePassword();
+			const adminPassword: string = env.config.auth.defaultAdminPassword || generatePassword();
 
 			const pwd = createPasswordHash(adminPassword);
 			adminAccount = {
-				uid: null,
+				uid: "admin",
 				username: "admin",
-				email: null, // no email address for admin
+				email: "", // no email address for admin
 				display_name: `${env.db.name} AceBase admin`,
 				password: pwd.hash,
 				password_salt: pwd.salt,
 				change_password: true, // flags that password must be changed. Not implemented yet
 				created: new Date(),
-				access_token: null, // Will be set upon login, so bearer authentication strategy can find user with this token
+				access_token: undefined, // Will be set upon login, so bearer authentication strategy can find user with this token
 				settings: {},
 			};
 			env.debug.warn(`__________________________________________________________________`.colorize(ColorStyle.red));

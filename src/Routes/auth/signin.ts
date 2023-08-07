@@ -30,13 +30,13 @@ export const addRoute = (env: RouteInitEnvironment) => {
 			const user = await signIn(details as SignInCredentials, env, req);
 			if (typeof clientId === "string" && env.clients.has(clientId)) {
 				const client = env.clients.get(clientId);
-				client.user = user; // Bind user to client socket
+				if (client) client.user = user; // Bind user to client socket
 			}
 			res.send({
-				access_token: createPublicAccessToken(user.uid, req.ip, user.access_token, env.tokenSalt),
+				access_token: createPublicAccessToken(user.uid, req.ip, user.access_token as any, env.tokenSalt as any),
 				user: getPublicAccountDetails(user),
 			});
-		} catch (err) {
+		} catch (err: any) {
 			if (typeof err.code === "string") {
 				// Authentication error
 				return sendNotAuthenticatedError(res, err.code, err.message);

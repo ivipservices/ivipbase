@@ -1,26 +1,43 @@
 {
+    "ts-node": {
+        "esm": true,
+        "experimentalSpecifierResolution": "node"
+    },
     "compilerOptions": {
         "lib": [
             "esnext",
             "dom"
         ],
         "listEmittedFiles": false,
-        "noImplicitAny": true,
-        "sourceMap": true,
-        "module": "commonjs",
-        "rootDir": "./src",
-        "outDir": "./src",
-        "moduleResolution": "node",
         "target": "es2020",
+        "module": "ES6",
+        "moduleResolution": "node",
+        "outDir": "./dist/esm",
+        "rootDir": "./src",
+        "strict": true,
+        "esModuleInterop": true,
+        "forceConsistentCasingInFileNames": true,
+        "skipLibCheck": true,
+        "sourceMap": true,
         "pretty": true,
         "declaration": true,
         "declarationMap": true,
-        "declarationDir": "./src",
+        "declarationDir": "./dist/types",
         "resolveJsonModule": true,
-        "skipLibCheck": false
+        "noImplicitAny": false,
+        "noEmitOnError": true,
+        "removeComments": false,
+        "baseUrl": "./",
+        "paths": {
+            "src/*": [
+                "./src/*"
+            ]
+        }
     },
+    "compileOnSave": false,
     "include": [
-        "src/**/*"
+        "src/**/*.ts",
+        "node_modules/acebase/**/*"
     ],
     "exclude": [
         "node_modules",

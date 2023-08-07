@@ -21,7 +21,7 @@ export const getCorsOptions = (allowedOrigins: string) => {
  */
 export const getCorsHeaders = (
 	allowedOrigins: string,
-	currentOrigin: string,
+	currentOrigin?: string,
 ): {
 	[key: string]: string;
 } => {

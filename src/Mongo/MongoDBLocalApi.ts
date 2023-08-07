@@ -1,6 +1,6 @@
 import { AceBaseBase, Api, LoggingLevel } from "acebase-core";
 import { CustomStorage } from "./MongoDBStorage";
-import { Storage, StorageEnv } from "acebase/dist/types/storage";
+import { Storage, StorageEnv } from "acebase/dist/esm/storage";
 import { storageSettings } from "./MongoDBTransaction";
 import type { MongoDBPreparer } from ".";
 import { SimpleCache } from "../lib/SimpleCache";
@@ -10,7 +10,7 @@ import type { ServerConfig } from "../server/settings";
 export class LocalApi extends Api {
 	// All api methods for local database instance
 	public db: AceBaseBase;
-	public storage: Storage;
+	public storage: CustomStorage;
 	public logLevel: LoggingLevel;
 
 	private cache: SimpleCache<string, StorageNode>;
@@ -24,5 +24,6 @@ export class LocalApi extends Api {
 		const storageEnv: StorageEnv = { logLevel: init.settings.logLevel };
 
 		this.storage = new CustomStorage(dbname, storageSettings(dbname, init.mongodb, this.cache), storageEnv);
+		this.logLevel = init.settings.logLevel;
 	}
 }

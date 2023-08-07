@@ -38,7 +38,7 @@ export class MongoDBTransaction extends CustomStorageTransaction {
 		node?: StorageNode;
 	}>;
 
-	private forceCommitTime: string | number | NodeJS.Timeout;
+	private forceCommitTime: number | NodeJS.Timeout | undefined;
 
 	constructor(
 		readonly context: {
@@ -79,14 +79,18 @@ export class MongoDBTransaction extends CustomStorageTransaction {
 						content: op.node,
 					};
 					this.mongodb.db.collection(this.collection).updateOne({ path: key }, { $set: document }, { upsert: true });
-					this.context.cache.set(path, op.node);
+					if (op.node) {
+						this.context.cache.set(path, op.node);
+					} else {
+						this.context.cache.remove(path);
+					}
 				} else if (op.action === "remove") {
 					this.mongodb.db.collection(this.collection).deleteOne({ path: key });
 					this.context.cache.remove(path);
 				}
 			});
 		} catch (err) {
-			this.debug.error(err);
+			this.debug.error(err as any);
 			throw err;
 		}
 	}
@@ -214,7 +218,7 @@ export class MongoDBTransaction extends CustomStorageTransaction {
 						// Paths are sorted, no more children or ancestors to be expected!
 						keepGoing = false;
 					} else if (include.descendants || pathInfo.isParentOf(otherPath)) {
-						let node: StorageNode | StorageNodeMetaData;
+						let node: StorageNode | StorageNodeMetaData | undefined;
 
 						if (include.metadata || include.value) {
 							node = document.content;
@@ -227,7 +231,7 @@ export class MongoDBTransaction extends CustomStorageTransaction {
 
 						const shouldAdd = checkCallback(otherPath, node);
 
-						if (shouldAdd) {
+						if (shouldAdd && addCallback) {
 							keepGoing = addCallback(otherPath, node);
 						}
 					}

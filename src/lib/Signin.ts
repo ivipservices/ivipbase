@@ -30,7 +30,7 @@ export const signIn = async (credentials: SignInCredentials, env: RouteInitEnvir
 
 	try {
 		const query = env.authRef.query();
-		let tokenDetails: PublicAccessToken;
+		let tokenDetails: PublicAccessToken | undefined;
 		switch (credentials.method) {
 			case "token": {
 				if (typeof credentials.access_token !== "string") {
@@ -39,7 +39,7 @@ export const signIn = async (credentials: SignInCredentials, env: RouteInitEnvir
 				try {
 					tokenDetails = decodePublicAccessToken(credentials.access_token, env.tokenSalt);
 					query.filter("access_token", "==", tokenDetails.access_token);
-				} catch (err) {
+				} catch (err: any) {
 					throw new SignInError("invalid_token", err.message);
 				}
 				break;
@@ -79,16 +79,20 @@ export const signIn = async (credentials: SignInCredentials, env: RouteInitEnvir
 		}
 
 		const snap = snaps[0];
-		const user: DbUserAccountDetails = snap.val();
+		const user: DbUserAccountDetails | null = snap.val();
+		if (!user) {
+			throw new SignInError("not_found", `account not found`);
+		}
+
 		user.uid = snap.key as string;
 
-		if (user.is_disabled === true) {
+		if (user?.is_disabled === true) {
 			throw new SignInError("account_disabled", "Your account has been disabled. Contact your database administrator");
 		}
-		if (credentials.method === "token" && tokenDetails.uid !== user.uid) {
+		if (credentials.method === "token" && tokenDetails?.uid !== user?.uid) {
 			throw new SignInError("token_mismatch", "Sign in again");
 		}
-		if (credentials.method === "account" || credentials.method === "email") {
+		if ((credentials.method === "account" || credentials.method === "email") && user?.password_salt) {
 			// Check password
 			const hash = user.password_salt ? getPasswordHash(credentials.password, user.password_salt) : getOldPasswordHash(credentials.password);
 			if (user.password !== hash) {
@@ -99,20 +103,20 @@ export const signIn = async (credentials: SignInCredentials, env: RouteInitEnvir
 		// Keep track of properties to update, both in db and in our object
 		const updates: Partial<DbUserAccountDetails> = {
 			// Update prev / last sign in stats
-			prev_signin: user.last_signin,
-			prev_signin_ip: user.last_signin_ip,
+			prev_signin: user?.last_signin,
+			prev_signin_ip: user?.last_signin_ip,
 			last_signin: new Date(),
 			last_signin_ip: req.ip,
 		};
 
 		if ("password" in credentials) {
-			if (!user.password_salt) {
+			if (!user?.password_salt) {
 				// OLD md5 password hash, convert to new salted hash
 				const pwd = createPasswordHash(credentials.password);
 				updates.password = pwd.hash;
 				updates.password_salt = pwd.salt;
 			}
-			if (!user.access_token) {
+			if (!user?.access_token) {
 				// Generate access token
 				updates.access_token = ID.generate();
 				updates.access_token_created = new Date();
@@ -137,7 +141,7 @@ export const signIn = async (credentials: SignInCredentials, env: RouteInitEnvir
 		req.user = user;
 
 		return user;
-	} catch (err) {
+	} catch (err: any) {
 		// Log error
 		env.log.error(LOG_ACTION, err.code ?? "unexpected", LOG_DETAILS, typeof err.code === "undefined" ? err : null);
 		throw err;

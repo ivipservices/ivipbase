@@ -108,7 +108,7 @@ export class PathBasedRules {
 					throw new Error(`malformed rules object`);
 				}
 				return obj;
-			} catch (err) {
+			} catch (err: any) {
 				env.debug.error(`Failed to read rules from "${rulesFilePath}": ${err.message}`);
 				return defaultRules;
 			}
@@ -270,11 +270,11 @@ export class PathBasedRules {
 			};
 			if (["get", "exists", "query", "reflect", "export", "transact"].includes(operation)) {
 				// Operations that require 'read' access
-				applyRule(rule[".read"]);
+				applyRule(rule[".read"] as any);
 			}
 			if (".write" in rule && ["update", "set", "delete", "import", "transact"].includes(operation)) {
 				// Operations that require 'write' access
-				applyRule(rule[".write"]);
+				applyRule(rule[".write"] as any);
 			}
 			if (`.${operation}` in rule && !isPreFlight) {
 				// If there is a dedicated rule (eg ".update" or ".reflect") for this operation, use it.
@@ -313,7 +313,7 @@ export class PathBasedRules {
 								rulePath,
 							};
 						}
-					} catch (err) {
+					} catch (err: any) {
 						// If rule execution throws an exception, don't allow. Can happen when rule is "auth.uid === '...'", and auth is null because the user is not signed in
 						return {
 							allow: false,
@@ -334,10 +334,10 @@ export class PathBasedRules {
 				break;
 			}
 			let nextKey = pathKeys.shift();
-			currentPath = PathInfo.get(currentPath).childPath(nextKey);
+			currentPath = PathInfo.get(currentPath).childPath(nextKey as any);
 			// if nextKey is '*' or '$something', rule[nextKey] will be undefined (or match a variable) so there is no
 			// need to change things here for usage of wildcard paths in subscriptions
-			if (typeof rule[nextKey] === "undefined") {
+			if (typeof rule[nextKey as any] === "undefined") {
 				// Check if current rule has a wildcard child
 				const wildcardKey = Object.keys(rule).find((key) => key === "*" || key[0] === "$");
 				if (wildcardKey) {
@@ -347,7 +347,7 @@ export class PathBasedRules {
 				nextKey = wildcardKey;
 			}
 			nextKey && rulePathKeys.push(nextKey);
-			rule = rule[nextKey];
+			rule = rule[nextKey as any];
 		}
 
 		// Now dig deeper to check nested .validate rules
@@ -429,7 +429,7 @@ export class PathBasedRules {
 						}
 						if (result === "cascade") {
 							this.debug.warn(`Rule at path ${validatePath} returned "cascade", but ${validateEnv.operation} rules always cascade`);
-						} else if (!["cascade", "deny", "allow", true, false].includes(result)) {
+						} else if (!["cascade", "deny", "allow", true, false].includes(result as any)) {
 							this.debug.warn(
 								`${validateEnv.operation} rule for path ${validatePath} possibly returned an unintentional value (${JSON.stringify(result)}) which results in outcome "${
 									result ? "allow" : "deny"
@@ -450,7 +450,7 @@ export class PathBasedRules {
 							rulePath: validatePath,
 						};
 					}
-				} catch (err) {
+				} catch (err: any) {
 					// If rule execution throws an exception, don't allow. Can happen when rule is "auth.uid === '...'", and auth is null because the user is not signed in
 					return {
 						allow: false,

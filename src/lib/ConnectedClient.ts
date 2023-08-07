@@ -29,7 +29,7 @@ export class ConnectedClient {
 	readonly connectedDate: Date = new Date();
 
 	/** user details if this socket client is signed in */
-	user?: DbUserAccountDetails;
+	user?: DbUserAccountDetails | null;
 
 	/** Active event subscriptions for this client */
 	subscriptions: { [path: string]: Array<{ path: string; event: string; callback: EventSubscriptionCallback }> } = {};

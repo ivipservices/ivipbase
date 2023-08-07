@@ -1,46 +1,46 @@
-import * as crypto from 'crypto';
+import * as crypto from "crypto";
 
 export const createPublicAccessToken = (uid: string, ip: string, dbToken: string, password: string) => {
-    const obj = {
-        t: dbToken,
-        c: Date.now(),
-        u: uid,
-        i: ip,
-    };
-    // let str = JSON.stringify(obj);
-    // str = Buffer.from(str).toString('base64');
-    // return 'a' + str; // version a
-    return 'b' + createSignedPublicToken(obj, password);
+	const obj = {
+		t: dbToken,
+		c: Date.now(),
+		u: uid,
+		i: ip,
+	};
+	// let str = JSON.stringify(obj);
+	// str = Buffer.from(str).toString('base64');
+	// return 'a' + str; // version a
+	return "b" + createSignedPublicToken(obj, password);
 };
 
 export type PublicAccessToken = { access_token: string; uid: string; created: number; ip: string };
 export const decodePublicAccessToken = (accessToken: string, password: string): PublicAccessToken => {
-    let details: PublicAccessToken;
-    if (accessToken[0] === 'b') {
-        // New signed version
-        const obj = parseSignedPublicToken(accessToken.slice(1), password);
-        details = {
-            access_token: obj.t,
-            uid: obj.u,
-            created: obj.c,
-            ip: obj.i,
-        };
-    } else if (accessToken[0] === 'a') {
-        // Old insecure version, previously allowed until August 1, 2020.
-        throw new Error('Old token version not allowed');
-    }
-    if (!details || !details.access_token || !details.uid || !details.created || !details.ip) {
-        throw new Error('Invalid token');
-    }
-    return details;
+	let details: PublicAccessToken | undefined;
+	if (accessToken[0] === "b") {
+		// New signed version
+		const obj = parseSignedPublicToken(accessToken.slice(1), password);
+		details = {
+			access_token: obj.t,
+			uid: obj.u,
+			created: obj.c,
+			ip: obj.i,
+		};
+	} else if (accessToken[0] === "a") {
+		// Old insecure version, previously allowed until August 1, 2020.
+		throw new Error("Old token version not allowed");
+	}
+	if (!details || !details.access_token || !details.uid || !details.created || !details.ip) {
+		throw new Error("Invalid token");
+	}
+	return details;
 };
 
 const getSignature = (content: string, salt: string) => {
-    // Use fast md5 with salt to sign with. Large salt recommended!!
-    return crypto
-        .createHash('md5')
-        .update(salt + content)
-        .digest('hex');
+	// Use fast md5 with salt to sign with. Large salt recommended!!
+	return crypto
+		.createHash("md5")
+		.update(salt + content)
+		.digest("hex");
 };
 
 /**
@@ -52,9 +52,9 @@ const getSignature = (content: string, salt: string) => {
  * @returns base64 encoded signed token
  */
 export const createSignedPublicToken = (obj: any, password: string) => {
-    const str = JSON.stringify(obj);
-    const checksum = getSignature(str, password);
-    return Buffer.from(JSON.stringify({ v: 1, cs: checksum, d: str })).toString('base64');
+	const str = JSON.stringify(obj);
+	const checksum = getSignature(str, password);
+	return Buffer.from(JSON.stringify({ v: 1, cs: checksum, d: str })).toString("base64");
 };
 
 /**
@@ -64,17 +64,17 @@ export const createSignedPublicToken = (obj: any, password: string) => {
  * @returns the original data object
  */
 export const parseSignedPublicToken = (str: string, password: string) => {
-    const json = Buffer.from(str, 'base64').toString('utf8');
-    const obj = JSON.parse(json) as { v: number; cs: string; d: string };
-    if (obj.v !== 1) {
-        throw new Error(`Unsupported version`);
-    }
-    if (typeof obj.cs !== 'string' || typeof obj.d !== 'string') {
-        throw new Error('Invalid token');
-    }
-    const checksum = obj.cs;
-    if (checksum !== getSignature(obj.d, password)) {
-        throw new Error(`compromised object`);
-    }
-    return JSON.parse(obj.d);
+	const json = Buffer.from(str, "base64").toString("utf8");
+	const obj = JSON.parse(json) as { v: number; cs: string; d: string };
+	if (obj.v !== 1) {
+		throw new Error(`Unsupported version`);
+	}
+	if (typeof obj.cs !== "string" || typeof obj.d !== "string") {
+		throw new Error("Invalid token");
+	}
+	const checksum = obj.cs;
+	if (checksum !== getSignature(obj.d, password)) {
+		throw new Error(`compromised object`);
+	}
+	return JSON.parse(obj.d);
 };

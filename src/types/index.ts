@@ -16,7 +16,7 @@ import type { SyncMongoServer } from "..";
 import type { DataIndex } from "acebase/dist/types/data-index";
 import type { Storage } from "acebase/dist/types/storage";
 
-import type { Request } from "express";
+import { Request } from "express";
 
 export * from "./email";
 
@@ -78,9 +78,9 @@ export interface RouteInitEnvironment {
 	securityRef: DataReference;
 	authRef: DataReference;
 	log: DatabaseLog; // logRef: DataReference;
-	tokenSalt: string;
+	tokenSalt: string | undefined;
 	clients: Map<string, ConnectedClient>;
-	authCache: SimpleCache<string, DbUserAccountDetails>;
+	authCache: SimpleCache<string, DbUserAccountDetails> | undefined;
 	//authProviders: { [providerName: string]: OAuth2Provider };
 	rules: PathBasedRules;
 	instance: SyncMongoServer;
@@ -94,7 +94,15 @@ export interface RouteRequestEnvironment {
 	context: { [key: string]: any };
 }
 
-export type RouteRequest<ReqQuery = any, ReqBody = any, ResBody = any> = Request<any, ResBody, ReqBody, ReqQuery> & RouteRequestEnvironment;
+export type RouteRequest<ReqQuery = any, ReqBody = any, ResBody = any> = Request<any, ResBody, ReqBody, ReqQuery> & Partial<RouteRequestEnvironment>;
+
+declare global {
+	namespace Express {
+		interface Request {
+			[k: string]: any;
+		}
+	}
+}
 
 export interface CreateIndexOptions {
 	rebuild?: boolean;

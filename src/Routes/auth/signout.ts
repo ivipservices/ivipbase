@@ -25,7 +25,7 @@ export const addRoute = (env: RouteInitEnvironment) => {
 				const signOutEverywhere = typeof req.body === "object" && req.body.everywhere === true; // NEW in AceBaseClient v0.9.14
 				if (signOutEverywhere) {
 					// Remove token from cache
-					env.authCache.remove(req.user.uid);
+					env.authCache?.remove(req.user.uid);
 
 					// Remove user binding from all clients signed in with current user
 					for (const client of env.clients.values()) {
@@ -41,9 +41,9 @@ export const addRoute = (env: RouteInitEnvironment) => {
 						return;
 					}
 
-					const user: DbUserAccountDetails = snap.val();
+					const user: DbUserAccountDetails = snap.val() as any;
 					if (signOutEverywhere) {
-						user.access_token = null;
+						user.access_token = undefined;
 					}
 					user.last_signout = new Date();
 					user.last_signout_ip = req.ip;
@@ -53,7 +53,7 @@ export const addRoute = (env: RouteInitEnvironment) => {
 				env.log.event(LOG_ACTION, LOG_DETAILS);
 			}
 			res.send("Bye!");
-		} catch (err) {
+		} catch (err: any) {
 			env.log.error(LOG_ACTION, "unexpected", { ...LOG_DETAILS, message: err instanceof Error ? err.message : err.toString() });
 			sendUnexpectedError(res, err);
 		}

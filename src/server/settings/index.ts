@@ -12,15 +12,15 @@ export class ServerHttpsConfig {
 	pfx?: Buffer;
 	passphrase?: string;
 
-	constructor(settings: ServerHttpsSettings) {
+	constructor(settings?: ServerHttpsSettings) {
 		this.enabled = typeof settings === "object" && settings.enabled !== false;
 		if (!this.enabled) {
 			return;
 		}
-		if (settings.keyPath) {
+		if (settings && settings.keyPath) {
 			this.key = readFileSync(settings.keyPath);
-			this.cert = readFileSync(settings.certPath);
-		} else if (settings.pfxPath) {
+			this.cert = readFileSync(settings.certPath as string);
+		} else if (settings && settings.pfxPath) {
 			this.pfx = readFileSync(settings.pfxPath);
 			this.passphrase = settings.passphrase;
 		}
@@ -69,7 +69,7 @@ export class ServerAuthenticationSettings {
 	 */
 	readonly separateDb: boolean | "v2" = false;
 
-	constructor(settings: Partial<ServerAuthenticationSettings>) {
+	constructor(settings?: Partial<ServerAuthenticationSettings>) {
 		if (typeof settings !== "object") {
 			settings = {};
 		}
@@ -119,7 +119,7 @@ export class ServerTransactionSettings {
 	 */
 	noWait = false;
 
-	constructor(settings: Partial<ServerTransactionSettings>) {
+	constructor(settings?: Partial<ServerTransactionSettings>) {
 		if (typeof settings !== "object") {
 			return;
 		}
@@ -258,7 +258,7 @@ export class ServerConfig {
 	readonly server?: Server;
 	readonly rootPath: string = "";
 	readonly auth: ServerAuthenticationSettings;
-	readonly email: ServerEmailSettings;
+	readonly email!: ServerEmailSettings;
 	readonly transactions: ServerTransactionSettings;
 	//readonly storage?: AceBaseStorageSettings;
 	readonly sponsor: boolean = false;

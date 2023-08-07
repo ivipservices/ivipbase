@@ -1,18 +1,16 @@
 import { CustomStorageSettings, CustomStorageTransaction } from "acebase";
 import { ID, PathReference, ascii85, Utils } from "acebase-core";
 const { compareValues } = Utils;
-import { NodeInfo } from "acebase/dist/types/node-info";
-import { Storage, StorageEnv, StorageSettings } from "acebase/dist/types/storage";
-import { NodeLock, NodeLocker } from "acebase/dist/types/node-lock";
-import { NodeNotFoundError, NodeRevisionError } from "acebase/dist/types/node-errors";
-import { NodeAddress } from "acebase/dist/types/node-address";
+import { NodeAddress, NodeNotFoundError, NodeRevisionError } from "../lib/StorageNode";
+import { Storage } from "acebase/dist/esm/storage";
+import type { Storage as StorageType, StorageEnv as StorageEnvType } from "acebase/dist/types/storage";
 import { ColorStyle } from "../lib/Colorize";
 import { PathInfo } from "../lib/PathInfo";
-import { DebugLogger } from "../lib/DebugLogger";
 import { StorageNode, StorageNodeMetaData } from "../lib/StorageNode";
 import { assert } from "../lib/assert";
 import { NodeValueType, VALUE_TYPES } from "../lib/StorageNode";
 import { DataIndex } from "acebase/dist/types/data-index";
+import { NodeInfo } from "acebase/dist/types/node-info";
 
 export class CustomStorageNodeAddress {
 	path: string;
@@ -22,7 +20,7 @@ export class CustomStorageNodeAddress {
 }
 
 export class CustomStorageNodeInfo extends NodeInfo {
-	address: NodeAddress;
+	address?: NodeAddress;
 	revision: string;
 	revision_nr: number;
 	created: Date;
@@ -37,12 +35,14 @@ export class CustomStorageNodeInfo extends NodeInfo {
 	}
 }
 
-export class CustomStorage extends Storage {
+export class CustomStorage extends (Storage as typeof StorageType) {
 	private _customImplementation: CustomStorageSettings;
 	private _local_indexes: DataIndex[] = [];
 
-	constructor(dbname: string, settings: CustomStorageSettings, env: StorageEnv) {
+	constructor(dbname: string, settings: CustomStorageSettings, env: StorageEnvType) {
 		super(dbname, settings, env);
+		this.name = dbname;
+		this.settings = settings;
 
 		this._customImplementation = settings;
 		this._init();
@@ -177,7 +177,7 @@ export class CustomStorage extends Storage {
 		}
 	}
 
-	private async _readNode(path: string, options: { transaction: CustomStorageTransaction }): Promise<StorageNode> {
+	private async _readNode(path: string, options: { transaction: CustomStorageTransaction }): Promise<StorageNode | null> {
 		// deserialize a stored value (always an object with "type", "value", "revision", "revision_nr", "created", "modified")
 		const node = await options.transaction.get(path);
 		if (node === null) {
@@ -202,7 +202,7 @@ export class CustomStorage extends Storage {
 		} else if (val instanceof Array) {
 			type = VALUE_TYPES.ARRAY;
 		} else if (typeof val === "object") {
-			if ("type" in val) {
+			if ("type" in (val ?? {})) {
 				const serialized = val as { type: NodeValueType; value: number | string };
 				type = serialized.type;
 				val = serialized.value;
@@ -305,8 +305,8 @@ export class CustomStorage extends Storage {
 
 		let currentObject = null;
 		if (currentIsObjectOrArray) {
-			currentObject = currentRow.value;
-			children.current = Object.keys(currentObject);
+			currentObject = currentRow?.value;
+			children.current = Object.keys(currentObject ?? {});
 			// if (currentObject instanceof Array) { // ALWAYS FALSE BECAUSE THEY ARE STORED AS OBJECTS WITH NUMERIC PROPERTIES
 			//     // Convert array to object with numeric properties
 			//     const obj = {};
@@ -316,7 +316,7 @@ export class CustomStorage extends Storage {
 			//     currentObject = obj;
 			// }
 			if (newIsObjectOrArray) {
-				mainNode.value = currentObject;
+				(mainNode.value as any) = currentObject;
 			}
 		}
 		if (newIsObjectOrArray) {
@@ -382,7 +382,9 @@ export class CustomStorage extends Storage {
 						this.throwImplementationError(`childrenOf did not call checkCallback before addCallback`);
 					}
 					const key = PathInfo.get(childPath).key;
-					keys.push(key.toString()); // .toString to make sure all keys are compared as strings
+					if (key) {
+						keys.push(key.toString()); // .toString to make sure all keys are compared as strings
+					}
 					return true; // Keep streaming
 				};
 				await transaction.childrenOf(path, { metadata: false, value: false }, includeChildCheck, addChildPath);
@@ -601,10 +603,10 @@ export class CustomStorage extends Storage {
 
 							const info = new CustomStorageNodeInfo({
 								path: pathInfo.childPath(key),
-								key: isArray ? null : (key as string),
-								index: isArray ? (key as number) : null,
+								key: isArray ? undefined : (key as string),
+								index: isArray ? (key as number) : undefined,
 								type: child.type,
-								address: null,
+								address: undefined,
 								exists: true,
 								value: child.value,
 								revision: node.revision,
@@ -630,7 +632,7 @@ export class CustomStorage extends Storage {
 						}
 						if (options.keyFilter) {
 							const key = PathInfo.get(childPath).key;
-							return (options.keyFilter as Array<string | number>).includes(key);
+							return (options.keyFilter as Array<string | number | null>).includes(key);
 						}
 						return true;
 					};
@@ -643,8 +645,8 @@ export class CustomStorage extends Storage {
 						const info = new CustomStorageNodeInfo({
 							path: childPath,
 							type: node.type,
-							key: isArray ? null : (key as string),
-							index: isArray ? (key as number) : null,
+							key: isArray ? undefined : (key as string),
+							index: isArray ? (key as number) : undefined,
 							address: new NodeAddress(childPath),
 							exists: true,
 							value: null, // not loaded
@@ -657,7 +659,7 @@ export class CustomStorage extends Storage {
 						canceled = callback(info) === false;
 						return !canceled;
 					};
-					await transaction.childrenOf(path, { metadata: true, value: false }, includeChildCheck, addChildNode);
+					await transaction.childrenOf(path, { metadata: true, value: false }, includeChildCheck, addChildNode as any);
 				})();
 				if (!options.transaction) {
 					// transaction was created by us, commit
@@ -667,7 +669,7 @@ export class CustomStorage extends Storage {
 			} catch (err) {
 				if (!options.transaction) {
 					// transaction was created by us, rollback
-					await transaction.rollback(err);
+					await transaction.rollback(err as any);
 				}
 				throw err;
 			}
@@ -703,7 +705,7 @@ export class CustomStorage extends Storage {
 					const lockPath = await transaction.moveToParentPath(pathInfo.parentPath);
 					assert(lockPath === pathInfo.parentPath, `transaction.moveToParentPath() did not move to the right parent path of "${path}"`);
 					const parentNode = await this._readNode(pathInfo.parentPath, { transaction });
-					if (parentNode && [VALUE_TYPES.OBJECT, VALUE_TYPES.ARRAY].includes(parentNode.type) && pathInfo.key in parentNode.value) {
+					if (parentNode && pathInfo.key && [VALUE_TYPES.OBJECT, VALUE_TYPES.ARRAY].includes(parentNode.type) && pathInfo.key in parentNode.value) {
 						const childValueInfo = this._getTypeFromStoredValue(parentNode.value[pathInfo.key]);
 						return {
 							revision: parentNode.revision,
@@ -804,7 +806,7 @@ export class CustomStorage extends Storage {
 					// Apply child_objects filter. If metadata is not loaded, we can only skip deeper descendants here - any child object that does get through will be ignored by addDescendant
 					if (
 						include &&
-						options.child_objects === false &&
+						(options ?? {}).child_objects === false &&
 						((pathInfo.isParentOf(descPath) && [VALUE_TYPES.OBJECT, VALUE_TYPES.ARRAY].includes(metadata ? metadata.type : (-1 as NodeValueType))) ||
 							PathInfo.getPathKeys(descPath).length > pathInfo.pathKeys.length + 1)
 					) {
@@ -819,7 +821,7 @@ export class CustomStorage extends Storage {
 					if (!checkExecuted) {
 						this.throwImplementationError("descendantsOf did not call checkCallback before addCallback");
 					}
-					if (options.child_objects === false && [VALUE_TYPES.OBJECT, VALUE_TYPES.ARRAY].includes(node.type)) {
+					if ((options ?? {}).child_objects === false && [VALUE_TYPES.OBJECT, VALUE_TYPES.ARRAY].includes(node.type)) {
 						// child objects are filtered out, but this one got through because includeDescendantCheck did not have access to its metadata,
 						// which is ok because doing that might drastically improve performance in client code. Skip it now.
 						return true;
@@ -839,7 +841,7 @@ export class CustomStorage extends Storage {
 					return true; // Keep streaming
 				};
 
-				await transaction.descendantsOf(path, { metadata: true, value: true }, includeDescendantCheck, addDescendant);
+				await transaction.descendantsOf(path, { metadata: true, value: true }, includeDescendantCheck as any, addDescendant as any);
 
 				this.debug.log(`Read node "/${path}" and ${filtered ? "(filtered) " : ""}descendants from ${descRows.length + 1} records`.colorize(ColorStyle.magenta));
 
@@ -967,7 +969,7 @@ export class CustomStorage extends Storage {
 		} catch (err) {
 			if (!options.transaction) {
 				// transaction was created by us, rollback
-				await transaction.rollback(err);
+				await transaction.rollback(err as any);
 			}
 			throw err;
 		}
@@ -988,15 +990,15 @@ export class CustomStorage extends Storage {
 			const node = await this._readNode(path, { transaction });
 			const info = new CustomStorageNodeInfo({
 				path,
-				key: typeof pathInfo.key === "string" ? pathInfo.key : null,
-				index: typeof pathInfo.key === "number" ? pathInfo.key : null,
+				key: typeof pathInfo.key === "string" ? pathInfo.key : undefined,
+				index: typeof pathInfo.key === "number" ? pathInfo.key : undefined,
 				type: node ? node.type : (0 as NodeValueType),
 				exists: node !== null,
-				address: node ? new NodeAddress(path) : null,
-				created: node ? new Date(node.created) : null,
-				modified: node ? new Date(node.modified) : null,
-				revision: node ? node.revision : null,
-				revision_nr: node ? node.revision_nr : null,
+				address: node ? new NodeAddress(path) : undefined,
+				created: node ? new Date(node.created) : new Date(),
+				modified: node ? new Date(node.modified) : new Date(),
+				revision: node ? node.revision : "",
+				revision_nr: node ? node.revision_nr : 0,
 			});
 
 			if (!node && path !== "") {
@@ -1005,11 +1007,11 @@ export class CustomStorage extends Storage {
 				const lockPath = await transaction.moveToParentPath(pathInfo.parentPath);
 				assert(lockPath === pathInfo.parentPath, `transaction.moveToParentPath() did not move to the right parent path of "${path}"`);
 				const parent = await this._readNode(pathInfo.parentPath, { transaction });
-				if (parent && [VALUE_TYPES.OBJECT, VALUE_TYPES.ARRAY].includes(parent.type) && pathInfo.key in parent.value) {
+				if (parent && pathInfo.key && [VALUE_TYPES.OBJECT, VALUE_TYPES.ARRAY].includes(parent.type) && pathInfo.key in parent.value) {
 					// Stored in parent node
 					info.exists = true;
 					info.value = parent.value[pathInfo.key];
-					info.address = null;
+					info.address = undefined;
 					info.type = parent.type;
 					info.created = new Date(parent.created);
 					info.modified = new Date(parent.modified);
@@ -1017,15 +1019,15 @@ export class CustomStorage extends Storage {
 					info.revision_nr = parent.revision_nr;
 				} else {
 					// Parent doesn't exist, so the node we're looking for cannot exist either
-					info.address = null;
+					info.address = undefined;
 				}
 			}
 
 			if (options.include_child_count) {
 				info.childCount = 0;
-				if ([VALUE_TYPES.OBJECT, VALUE_TYPES.ARRAY].includes(info.valueType) && info.address) {
+				if ([VALUE_TYPES.OBJECT, VALUE_TYPES.ARRAY].includes(info.valueType as any) && info.address) {
 					// Get number of children
-					info.childCount = node.value ? Object.keys(node.value).length : 0;
+					info.childCount = (node ?? {}).value ? Object.keys((node ?? {}).value).length : 0;
 					info.childCount += await transaction.getChildCount(path);
 				}
 			}
@@ -1038,7 +1040,7 @@ export class CustomStorage extends Storage {
 		} catch (err) {
 			if (!options.transaction) {
 				// transaction was created by us, rollback
-				await transaction.rollback(err);
+				await transaction.rollback(err as any);
 			}
 			throw err;
 		}
@@ -1089,13 +1091,17 @@ export class CustomStorage extends Storage {
 					// Update parent node
 					const lockPath = await transaction.moveToParentPath(pathInfo.parentPath);
 					assert(lockPath === pathInfo.parentPath, `transaction.moveToParentPath() did not move to the right parent path of "${path}"`);
-					await this._writeNodeWithTracking(pathInfo.parentPath, { [pathInfo.key]: value }, { merge: true, transaction, suppress_events: options.suppress_events, context: options.context });
+					await this._writeNodeWithTracking(
+						pathInfo.parentPath,
+						{ [pathInfo.key as any]: value },
+						{ merge: true, transaction, suppress_events: options.suppress_events, context: options.context },
+					);
 				}
 			} else {
 				// Delegate operation to update on parent node
 				const lockPath = await transaction.moveToParentPath(pathInfo.parentPath);
 				assert(lockPath === pathInfo.parentPath, `transaction.moveToParentPath() did not move to the right parent path of "${path}"`);
-				await this.updateNode(pathInfo.parentPath, { [pathInfo.key]: value }, { transaction, suppress_events: options.suppress_events, context: options.context });
+				await this.updateNode(pathInfo.parentPath, { [pathInfo.key as any]: value }, { transaction, suppress_events: options.suppress_events, context: options.context });
 			}
 			if (!options.transaction) {
 				// transaction was created by us, commit
@@ -1104,7 +1110,7 @@ export class CustomStorage extends Storage {
 		} catch (err) {
 			if (!options.transaction) {
 				// transaction was created by us, rollback
-				await transaction.rollback(err);
+				await transaction.rollback(err as any);
 			}
 			throw err;
 		}
@@ -1148,12 +1154,16 @@ export class CustomStorage extends Storage {
 				const pathInfo = PathInfo.get(path);
 				const lockPath = await transaction.moveToParentPath(pathInfo.parentPath);
 				assert(lockPath === pathInfo.parentPath, `transaction.moveToParentPath() did not move to the right parent path of "${path}"`);
-				await this._writeNodeWithTracking(pathInfo.parentPath, { [pathInfo.key]: updates }, { transaction, merge: true, suppress_events: options.suppress_events, context: options.context });
+				await this._writeNodeWithTracking(
+					pathInfo.parentPath,
+					{ [pathInfo.key as any]: updates },
+					{ transaction, merge: true, suppress_events: options.suppress_events, context: options.context },
+				);
 			} else {
 				// The node does not exist, it's parent doesn't have it either. Update the parent instead
 				const lockPath = await transaction.moveToParentPath(pathInfo.parentPath);
 				assert(lockPath === pathInfo.parentPath, `transaction.moveToParentPath() did not move to the right parent path of "${path}"`);
-				await this.updateNode(pathInfo.parentPath, { [pathInfo.key]: updates }, { transaction, suppress_events: options.suppress_events, context: options.context });
+				await this.updateNode(pathInfo.parentPath, { [pathInfo.key as any]: updates }, { transaction, suppress_events: options.suppress_events, context: options.context });
 			}
 			if (!options.transaction) {
 				// transaction was created by us, commit
@@ -1162,7 +1172,7 @@ export class CustomStorage extends Storage {
 		} catch (err) {
 			if (!options.transaction) {
 				// transaction was created by us, rollback
-				await transaction.rollback(err);
+				await transaction.rollback(err as any);
 			}
 			throw err;
 		}

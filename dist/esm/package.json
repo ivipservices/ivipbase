@@ -1,8 +1,0 @@
-{
-    "type": "module",
-    "types": "../types/index.d.ts",
-    "browser": {
-        "./index.js": "./browser.js",
-        "./ipc/index.js": "./ipc/browser.js"
-    }
-}

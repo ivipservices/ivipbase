@@ -42,12 +42,15 @@ export const addRoute = (env: RouteInitEnvironment) => {
 		}
 
 		try {
-			let publicAccessToken: string;
+			let publicAccessToken: string = "";
 			await env.authRef.child(details.uid).transaction((snap) => {
 				if (!snap.exists()) {
 					throw new ChangePasswordError("unknown_uid", `Unknown uid`);
 				}
-				const user: DbUserAccountDetails = snap.val();
+				const user: DbUserAccountDetails | null = snap.val();
+				if (!user) {
+					throw new ChangePasswordError("unknown_uid", `Unknown uid`);
+				}
 				user.uid = snap.key as string;
 
 				const hash = user.password_salt ? getPasswordHash(details.password, user.password_salt) : getOldPasswordHash(details.password);
@@ -74,14 +77,14 @@ export const addRoute = (env: RouteInitEnvironment) => {
 				env.authCache.set(user.uid, user);
 
 				// Create new public access token
-				publicAccessToken = createPublicAccessToken(user.uid, req.ip, user.access_token, env.tokenSalt);
+				publicAccessToken = createPublicAccessToken(user.uid, req.ip, user.access_token ?? "", env.tokenSalt);
 
 				return user; // Update db
 			});
 
 			env.log.event(LOG_ACTION, LOG_DETAILS);
 			res.send({ access_token: publicAccessToken }); // Client must use this new access token from now on
-		} catch (err) {
+		} catch (err: any) {
 			env.log.error(LOG_ACTION, err.code, LOG_DETAILS);
 			if (err.code) {
 				sendBadRequestError(res, err);
