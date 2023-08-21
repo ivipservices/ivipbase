@@ -7,3 +7,5 @@ tsconfig*.*
 .vscode
 test
 .prettierrc*.*
+create-package-files
+previous_src

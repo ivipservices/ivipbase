@@ -2,3 +2,4 @@ node_modules
 .vscode
 *.acebase
 package-lock.json
+previous_src

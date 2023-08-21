@@ -10,7 +10,7 @@
         ],
         "listEmittedFiles": false,
         "target": "es2020",
-        "module": "ES6",
+        "module": "CommonJS",
         "moduleResolution": "node",
         "outDir": "./dist/esm",
         "rootDir": "./src",
@@ -26,18 +26,11 @@
         "resolveJsonModule": true,
         "noImplicitAny": false,
         "noEmitOnError": true,
-        "removeComments": false,
-        "baseUrl": "./",
-        "paths": {
-            "src/*": [
-                "./src/*"
-            ]
-        }
+        "removeComments": false
     },
     "compileOnSave": false,
     "include": [
-        "src/**/*.ts",
-        "node_modules/acebase/**/*"
+        "src/**/*.ts"
     ],
     "exclude": [
         "node_modules",
