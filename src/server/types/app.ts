@@ -10,13 +10,11 @@ export interface IvipBaseApp {
 export interface IvipBaseOptions {
 	host: string;
 	port: number;
-	database?: string;
-	collection?: string;
 	username?: string;
 	password?: string;
 	options?: Record<string, any>;
 }
 
 export interface IvipBaseSettings {
-	name?: string;
+	name: string;
 }

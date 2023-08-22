@@ -1,14 +1,18 @@
 import { IvipBaseApp, IvipBaseOptions, IvipBaseSettings } from "../../types/app";
-import { MongoClient, Db } from "mongodb";
+import { MongoClient, Db, Collection } from "mongodb";
 
 export class MongoDBPreparer {
-	readonly client: MongoClient;
-	public db: Db;
+	private readonly client: MongoClient;
+
+	private _collection_root?: Collection;
+	private _collection_auth?: Collection;
+	private _collection_storage?: Collection;
+
+	private db!: Db;
 	protected _ready = false;
 
-	constructor(readonly app: IvipBaseApp) {
+	constructor(readonly app: IvipBaseAppImpl) {
 		this.client = new MongoClient(this.app.mongoUri, {});
-		this.db = this.client.db(this.app.options.database);
 
 		this.client.on("connected", () => {
 			console.log("Connected to the database");
@@ -30,15 +34,43 @@ export class MongoDBPreparer {
 		this.connect();
 	}
 
-	async connect(): Promise<void> {
+	private async connect(): Promise<void> {
 		try {
 			await this.client.connect();
 			this._ready = true;
-			this.db = this.client.db(this.app.options.database); // Use the default database
+
+			this.db = this.client.db(this.app.config.name); // Use the default database
+
+			this._collection_root = await this.getCollectionBy("root");
+			this._collection_auth = await this.getCollectionBy("auth");
+			this._collection_storage = await this.getCollectionBy("storage");
 		} catch (error) {
 			this._ready = false;
 			throw "Failed to connect to MongoDB:" + String(error);
 		}
+	}
+
+	private async getCollectionBy(collectionName: string): Promise<Collection> {
+		const collectionNames = await this.db.listCollections().toArray();
+		const collectionExists = collectionNames.some((col) => col.name === collectionName);
+
+		if (!collectionExists) {
+			await this.db.createCollection(collectionName);
+		}
+
+		return this.db.collection(collectionName);
+	}
+
+	get collectionRoot(): Collection | undefined {
+		return this._collection_root;
+	}
+
+	get collectionAuth(): Collection | undefined {
+		return this._collection_auth;
+	}
+
+	get collectionStorage(): Collection | undefined {
+		return this._collection_storage;
 	}
 }
 
@@ -75,7 +107,8 @@ export default class IvipBaseAppImpl implements IvipBaseApp {
 
 	get mongoUri() {
 		this.checkDestroyed();
-		const { host, port, database, username, password, options } = this.options;
+		const { host, port, username, password, options } = this.options;
+		const { name: database } = this.config;
 
 		// Monta a URI de conexão usando as opções fornecidas
 		let uri = `mongodb://${host}:${port}`;

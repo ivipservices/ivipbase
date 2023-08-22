@@ -6,9 +6,7 @@ import IvipBaseAppImpl from "./ivipBaseApp";
 
 const DEFAULT_ENTRY_NAME = "[DEFAULT]";
 
-export function initializeApp(options: IvipBaseOptions, name?: string): IvipBaseApp;
-export function initializeApp(options: IvipBaseOptions, config?: IvipBaseSettings): IvipBaseApp;
-export function initializeApp(_options: IvipBaseOptions, rawConfig = {}): IvipBaseApp {
+export function initializeApp(_options: IvipBaseOptions, rawConfig: string | IvipBaseSettings): IvipBaseApp {
 	let options = _options;
 
 	if (typeof rawConfig !== "object") {
