@@ -14,10 +14,12 @@ export function initializeApp(_options: IvipBaseOptions, rawConfig: string | Ivi
 		rawConfig = { name };
 	}
 
-	const config: Required<IvipBaseSettings> = {
-		name: DEFAULT_ENTRY_NAME,
-		...rawConfig,
-	};
+	const config: Required<IvipBaseSettings> = Object.assign(
+		{
+			name: DEFAULT_ENTRY_NAME,
+		},
+		rawConfig,
+	);
 
 	const name = config.name;
 
@@ -46,6 +48,10 @@ export function initializeApp(_options: IvipBaseOptions, rawConfig: string | Ivi
 	return newApp;
 }
 
+export function appExists(name?: string): boolean {
+	return typeof name === "string" && _apps.has(name);
+}
+
 export function getApp(name: string = DEFAULT_ENTRY_NAME): IvipBaseApp {
 	const app = _apps.get(name);
 	if (!app) {
@@ -57,6 +63,15 @@ export function getApp(name: string = DEFAULT_ENTRY_NAME): IvipBaseApp {
 
 export function getApps(): IvipBaseApp[] {
 	return Array.from(_apps.values());
+}
+
+export function getFirstApp(): IvipBaseApp {
+	const app = getApps()[0];
+	if (!app) {
+		//throw ERROR_FACTORY.create(AppError.NO_APP, { appName: name });
+		throw "";
+	}
+	return app;
 }
 
 export function deleteApp(app: IvipBaseApp) {

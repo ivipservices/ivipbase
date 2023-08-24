@@ -1,12 +1,13 @@
 import { IvipBaseApp, IvipBaseOptions, IvipBaseSettings } from "../../types/app";
 import { MongoClient, Db, Collection } from "mongodb";
+import { StorageNodeInfo } from "../database/Node";
 
 export class MongoDBPreparer {
 	private readonly client: MongoClient;
 
-	private _collection_root?: Collection;
-	private _collection_auth?: Collection;
-	private _collection_storage?: Collection;
+	private _collection_root?: Collection<StorageNodeInfo>;
+	private _collection_auth?: Collection<StorageNodeInfo>;
+	private _collection_storage?: Collection<StorageNodeInfo>;
 
 	private db!: Db;
 	protected _ready = false;
@@ -50,26 +51,26 @@ export class MongoDBPreparer {
 		}
 	}
 
-	private async getCollectionBy(collectionName: string): Promise<Collection> {
+	private async getCollectionBy(collectionName: string): Promise<Collection<StorageNodeInfo>> {
 		const collectionNames = await this.db.listCollections().toArray();
 		const collectionExists = collectionNames.some((col) => col.name === collectionName);
 
 		if (!collectionExists) {
-			await this.db.createCollection(collectionName);
+			await this.db.createCollection<StorageNodeInfo>(collectionName);
 		}
 
-		return this.db.collection(collectionName);
+		return this.db.collection<StorageNodeInfo>(collectionName);
 	}
 
-	get collectionRoot(): Collection | undefined {
+	get collectionRoot(): Collection<StorageNodeInfo> | undefined {
 		return this._collection_root;
 	}
 
-	get collectionAuth(): Collection | undefined {
+	get collectionAuth(): Collection<StorageNodeInfo> | undefined {
 		return this._collection_auth;
 	}
 
-	get collectionStorage(): Collection | undefined {
+	get collectionStorage(): Collection<StorageNodeInfo> | undefined {
 		return this._collection_storage;
 	}
 }

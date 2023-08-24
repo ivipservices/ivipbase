@@ -40,7 +40,6 @@
 	},
 	"homepage": "https://github.com/ivipcoin/ivipbase#readme",
 	"dependencies": {
-		"ivipbase-core": "^1.5.0",
 		"dotenv": "^16.0.3",
 		"ejs": "^3.1.8",
 		"express": "^4.17.1",
