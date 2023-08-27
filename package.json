@@ -1,7 +1,6 @@
 {
 	"name": "ivipbase",
 	"version": "1.0.0",
-	"type": "module",
 	"description": "Componentes principais compartilhados do iVipBase, sem necessidade de instalação manual",
 	"comments": {
 		"browser": "As substituições de arquivo webpack/browserify foram movidas para package.json em dist/cjs e dist/esm. Veja README.md para mais informações",
@@ -43,7 +42,9 @@
 		"dotenv": "^16.0.3",
 		"ejs": "^3.1.8",
 		"express": "^4.17.1",
+		"ivipbase-core": "^1.5.2",
 		"mongodb": "^5.5.0",
+		"proper-lockfile": "^4.1.2",
 		"socket.io": "^4.5.0",
 		"swagger-jsdoc": "^6.1.0",
 		"swagger-ui-express": "^4.3.0",
@@ -52,6 +53,7 @@
 	"devDependencies": {
 		"@types/express": "^4.17.17",
 		"@types/node": "^18.15.5",
+		"@types/proper-lockfile": "^4.1.2",
 		"@types/socket.io": "^3.0.2",
 		"@types/swagger-jsdoc": "^6.0.1",
 		"@types/swagger-ui-express": "^4.1.3",
