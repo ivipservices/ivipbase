@@ -1,8 +1,9 @@
 import NodeInfo from "./NodeInfo";
 import { NodeAddress } from "./NodeAddress";
 
-import { PathInfo, PathReference, Utils, ascii85, ID, Lib } from "ivipbase-core";
+import { PathInfo, PathReference, Utils, ascii85, ID, Lib, SimpleEventEmitter } from "ivipbase-core";
 import type { Types } from "ivipbase-core";
+import { Collection } from "mongodb";
 
 export * from "./NodeAddress";
 export * from "./NodeCache";
@@ -134,30 +135,6 @@ export function getValueType(value: unknown) {
 	return VALUE_TYPES.EMPTY;
 }
 
-export class NodeSettings {
-	/**
-	 * in bytes, max amount of child data to store within a parent record before moving to a dedicated record. Default is 50
-	 * @default 50
-	 */
-	maxInlineValueSize: number = 50;
-
-	/**
-	 * Instead of throwing errors on undefined values, remove the properties automatically. Default is false
-	 * @default false
-	 */
-	removeVoidProperties: boolean = false;
-
-	constructor(options: Partial<NodeSettings>) {
-		if (typeof options.maxInlineValueSize === "number") {
-			this.maxInlineValueSize = options.maxInlineValueSize;
-		}
-
-		if (typeof options.removeVoidProperties === "boolean") {
-			this.removeVoidProperties = options.removeVoidProperties;
-		}
-	}
-}
-
 export class CustomStorageNodeInfo extends NodeInfo {
 	address?: NodeAddress;
 	revision: string;
@@ -202,11 +179,49 @@ export interface StorageNodeInfo {
 	content: StorageNode;
 }
 
-export default class Node {
+export class NodeSettings {
+	/**
+	 * in bytes, max amount of child data to store within a parent record before moving to a dedicated record. Default is 50
+	 * @default 50
+	 */
+	maxInlineValueSize: number = 50;
+
+	/**
+	 * Instead of throwing errors on undefined values, remove the properties automatically. Default is false
+	 * @default false
+	 */
+	removeVoidProperties: boolean = false;
+
+	mongoDB: {
+		collection?: Collection<StorageNodeInfo>;
+	} = {};
+
+	constructor(options: Partial<NodeSettings>) {
+		if (typeof options.maxInlineValueSize === "number") {
+			this.maxInlineValueSize = options.maxInlineValueSize;
+		}
+
+		if (typeof options.removeVoidProperties === "boolean") {
+			this.removeVoidProperties = options.removeVoidProperties;
+		}
+
+		if (typeof options.removeVoidProperties === "boolean") {
+			this.removeVoidProperties = options.removeVoidProperties;
+		}
+
+		if (typeof options.mongoDB === "object") {
+			this.mongoDB = options.mongoDB;
+		}
+	}
+}
+
+export default class Node extends SimpleEventEmitter {
 	readonly settings: NodeSettings;
 	private nodes: StorageNodeInfo[] = [];
 
 	constructor(byNodes: StorageNodeInfo[] = [], options: Partial<NodeSettings> = {}) {
+		super();
+
 		this.settings = new NodeSettings(options);
 		this.push(byNodes);
 
@@ -772,9 +787,12 @@ export default class Node {
 
 	deleteNode(path: string, specificNode: boolean = false): Node {
 		const pathInfo = PathInfo.get(path);
-		this.nodes = this.nodes.filter(({ path }) => {
+		this.nodes.forEach(({ path }, index) => {
 			const nodePath = PathInfo.get(path);
-			return specificNode ? pathInfo.path !== nodePath.path : !pathInfo.isAncestorOf(nodePath) && pathInfo.path !== nodePath.path;
+			const isPersists = specificNode ? pathInfo.path !== nodePath.path : !pathInfo.isAncestorOf(nodePath) && pathInfo.path !== nodePath.path;
+			if (!isPersists) {
+				delete this.nodes[index];
+			}
 		});
 		return this;
 	}
