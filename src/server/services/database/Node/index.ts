@@ -3,7 +3,6 @@ import { NodeAddress } from "./NodeAddress";
 
 import { PathInfo, PathReference, Utils, ascii85, ID, Lib, SimpleEventEmitter } from "ivipbase-core";
 import type { Types } from "ivipbase-core";
-import { Collection } from "mongodb";
 
 export * from "./NodeAddress";
 export * from "./NodeCache";
@@ -179,6 +178,8 @@ export interface StorageNodeInfo {
 	content: StorageNode;
 }
 
+type JSONData = { [key: string]: string | number | boolean | null | Date | bigint | JSONData | JSONData[] };
+
 export class NodeSettings {
 	/**
 	 * in bytes, max amount of child data to store within a parent record before moving to a dedicated record. Default is 50
@@ -192,9 +193,7 @@ export class NodeSettings {
 	 */
 	removeVoidProperties: boolean = false;
 
-	mongoDB: {
-		collection?: Collection<StorageNodeInfo>;
-	} = {};
+	dataSynchronization: ((path: RegExp, type: "get" | "remove" | "add", nodes?: StorageNodeInfo[]) => Promise<StorageNodeInfo[]> | StorageNodeInfo[]) | undefined | null;
 
 	constructor(options: Partial<NodeSettings>) {
 		if (typeof options.maxInlineValueSize === "number") {
@@ -209,10 +208,16 @@ export class NodeSettings {
 			this.removeVoidProperties = options.removeVoidProperties;
 		}
 
-		if (typeof options.mongoDB === "object") {
-			this.mongoDB = options.mongoDB;
+		if (typeof options.dataSynchronization === "function") {
+			this.dataSynchronization = options.dataSynchronization;
 		}
 	}
+}
+
+interface NodeChanges {
+	insert: string[];
+	update: string[];
+	delete: string[];
 }
 
 export default class Node extends SimpleEventEmitter {
@@ -239,6 +244,28 @@ export default class Node extends SimpleEventEmitter {
 		);
 	}
 
+	async synchronize(path: string, allHeirs: boolean = false) {
+		const pathsRegex: string[] = [];
+
+		const replasePathToRegex = (path: string) => {
+			path = path.replace(/\/((\*)|(\$[^/\$]*))/g, "/([^/]*)");
+			path = path.replace(/\[\*\]/g, "\\[(\\d+)\\]");
+			return path;
+		};
+
+		pathsRegex.push(`${replasePathToRegex(path)}(/([^/]*))${allHeirs ? "+" : ""}?`);
+
+		const parentPath = new PathInfo(path).parentPath;
+		pathsRegex.push(`${replasePathToRegex(parentPath)}(/([^/]*))${allHeirs ? "+" : ""}?`);
+
+		const fullRegex: RegExp = new RegExp(`^(${pathsRegex.join("$)|(")}$)`);
+
+		if (typeof this.settings.dataSynchronization === "function") {
+			const nodes: StorageNodeInfo[] = (await this.settings.dataSynchronization(fullRegex, "get")) ?? [];
+			this.push(nodes);
+		}
+	}
+
 	push(...nodes: (StorageNodeInfo[] | StorageNodeInfo)[]) {
 		const forNodes: StorageNodeInfo[] =
 			Array.prototype.concat
@@ -252,6 +279,11 @@ export default class Node extends SimpleEventEmitter {
 			this.nodes.push(node);
 		}
 
+		this.nodes = this.nodes.filter(({ path }, i, l) => {
+			//const isRemove = l.findIndex((n) => new PathInfo(path).isChildOf(n.path)) < 0 || l.findIndex((n) => n.path === path) !== i;
+			const isRemove = l.findIndex((n) => n.path === path) !== i;
+			return !isRemove;
+		});
 		return this;
 	}
 
@@ -455,10 +487,10 @@ export default class Node extends SimpleEventEmitter {
 			});
 		}
 
-		const containsChild = this.nodes.findIndex(({ path }) => pathInfo.isAncestorOf(path)) >= 0;
+		const containsChild = this.nodes.findIndex((node) => node && node.path && pathInfo.isAncestorOf(node.path)) >= 0;
 		const isArrayChild = (() => {
 			if (containsChild) return false;
-			const child = this.nodes.find(({ path }) => pathInfo.isParentOf(path));
+			const child = this.nodes.find((node) => node && node.path && pathInfo.isParentOf(node.path));
 			return child ? typeof PathInfo.get(child.path).key === "number" : false;
 		})();
 
@@ -486,9 +518,9 @@ export default class Node extends SimpleEventEmitter {
 
 		info.value = value ? prepareValue(value) : [VALUE_TYPES.OBJECT, VALUE_TYPES.ARRAY].includes(info.type as any) ? (info.type === VALUE_TYPES.ARRAY ? [] : {}) : null;
 
-		if (options.include_child_count && containsChild) {
-			info.childCount = 0;
-			if ([VALUE_TYPES.OBJECT, VALUE_TYPES.ARRAY].includes(info.valueType as any) && info.address) {
+		if (options.include_child_count) {
+			info.childCount = value ? Object.keys(value ?? {}).length : 0;
+			if (containsChild && [VALUE_TYPES.OBJECT, VALUE_TYPES.ARRAY].includes(info.valueType as any) && info.address) {
 				// Get number of children
 				info.childCount = value ? Object.keys(value ?? {}).length : 0;
 				info.childCount += this.nodes
@@ -512,12 +544,27 @@ export default class Node extends SimpleEventEmitter {
 			currentValue?: any;
 			diff?: Types.ValueCompareResult;
 		} = {},
-	): Node {
+	): NodeChanges {
 		if (!options.merge && this.valueFitsInline(value) && path !== "") {
 			throw new Error(`invalid value to store in its own node`);
 		} else if (path === "" && (typeof value !== "object" || value instanceof Array)) {
 			throw new Error(`Invalid root node value. Must be an object`);
 		}
+
+		const changes: NodeChanges = {
+			insert: [],
+			update: [],
+			delete: [],
+		};
+
+		const joinChanges = (...c: NodeChanges[]): NodeChanges => {
+			c.forEach((n) => {
+				changes.delete = changes.delete.concat(n.delete).filter((p, i, l) => l.indexOf(p) === i);
+				changes.update = changes.update.concat(n.update).filter((p, i, l) => l.indexOf(p) === i);
+				changes.insert = changes.insert.concat(n.insert).filter((p, i, l) => l.indexOf(p) === i);
+			});
+			return changes;
+		};
 
 		if (options.merge && typeof options.currentValue === "undefined" && this.isPathExists(path)) {
 			options.currentValue = this.exportJson(path).content.value;
@@ -538,7 +585,7 @@ export default class Node extends SimpleEventEmitter {
 		}
 
 		if (options.diff === "identical") {
-			return this; // Done!
+			return changes; // Done!
 		}
 
 		//const currentRow = options.currentValue.content;
@@ -663,6 +710,8 @@ export default class Node extends SimpleEventEmitter {
 			});
 		}
 
+		const updateFor: StorageNodeInfo[] = [];
+
 		if (currentRow) {
 			if (currentIsObjectOrArray || newIsObjectOrArray) {
 				const keys: string[] = this.getKeysBy(pathInfo.path);
@@ -680,11 +729,8 @@ export default class Node extends SimpleEventEmitter {
 					});
 				}
 
-				const changes = {
-					insert: children.new.filter((key) => !children.current.includes(key)),
-					update: [] as string[],
-					delete: options && options.merge ? Object.keys(value).filter((key) => value[key] === null) : children.current.filter((key) => !children.new.includes(key)),
-				};
+				changes.insert = children.new.filter((key) => !children.current.includes(key));
+				changes.delete = options && options.merge ? Object.keys(value).filter((key) => value[key] === null) : children.current.filter((key) => !children.new.includes(key));
 				changes.update = children.new.filter((key) => children.current.includes(key) && !changes.delete.includes(key));
 
 				if (isArray && options.merge && (changes.insert.length > 0 || changes.delete.length > 0)) {
@@ -720,12 +766,14 @@ export default class Node extends SimpleEventEmitter {
 							? options.currentValue[keyOrIndex]
 							: null;
 
-					this.writeNode(childPath, childValue, {
-						revision,
-						merge: false,
-						currentValue: currentChildValue,
-						diff: childDiff,
-					});
+					joinChanges(
+						this.writeNode(childPath, childValue, {
+							revision,
+							merge: false,
+							currentValue: currentChildValue,
+							diff: childDiff,
+						}),
+					);
 				}
 
 				// Delete all child nodes that were stored in their own record, but are being removed
@@ -741,9 +789,7 @@ export default class Node extends SimpleEventEmitter {
 				}
 			}
 
-			this.deleteNode(pathInfo.path, true);
-
-			this.nodes.push({
+			updateFor.push({
 				path: pathInfo.path,
 				content: {
 					type: mainNode.type,
@@ -760,16 +806,16 @@ export default class Node extends SimpleEventEmitter {
 				const childPath = pathInfo.childPath(keyOrIndex);
 				const childValue = childNodeValues[keyOrIndex];
 
-				this.writeNode(childPath, childValue, {
-					revision,
-					merge: false,
-					currentValue: null,
-				});
+				joinChanges(
+					this.writeNode(childPath, childValue, {
+						revision,
+						merge: false,
+						currentValue: null,
+					}),
+				);
 			}
 
-			this.deleteNode(pathInfo.path, true);
-
-			this.nodes.push({
+			updateFor.push({
 				path: pathInfo.path,
 				content: {
 					type: mainNode.type,
@@ -782,19 +828,42 @@ export default class Node extends SimpleEventEmitter {
 			});
 		}
 
-		return this;
+		changes.update = changes.update.map((k) => {
+			const rootPath = new PathInfo(pathInfo.path);
+			return rootPath.isParentOf(k) ? k : rootPath.childPath(k);
+		});
+
+		changes.insert = changes.insert.map((k) => {
+			const rootPath = new PathInfo(pathInfo.path);
+			return rootPath.isParentOf(k) ? k : rootPath.childPath(k);
+		});
+
+		changes.delete = changes.delete.map((k) => {
+			const rootPath = new PathInfo(pathInfo.path);
+			return rootPath.isParentOf(k) ? k : rootPath.childPath(k);
+		});
+
+		updateFor.forEach((node) => {
+			const length = this.deleteNode(node.path, true);
+			this.nodes.push(node);
+			length > 0 ? changes.update.unshift(node.path) : changes.insert.unshift(node.path);
+		});
+
+		return changes;
 	}
 
-	deleteNode(path: string, specificNode: boolean = false): Node {
+	deleteNode(path: string, specificNode: boolean = false): number {
 		const pathInfo = PathInfo.get(path);
+		let lengthDelete = 0;
 		this.nodes.forEach(({ path }, index) => {
 			const nodePath = PathInfo.get(path);
 			const isPersists = specificNode ? pathInfo.path !== nodePath.path : !pathInfo.isAncestorOf(nodePath) && pathInfo.path !== nodePath.path;
 			if (!isPersists) {
 				delete this.nodes[index];
+				lengthDelete += 1;
 			}
 		});
-		return this;
+		return lengthDelete;
 	}
 
 	setNode(
@@ -803,8 +872,10 @@ export default class Node extends SimpleEventEmitter {
 		options: {
 			assert_revision?: string;
 		} = {},
-	): Node {
+	): NodeChanges {
 		const pathInfo = PathInfo.get(path);
+
+		let changes: NodeChanges;
 
 		try {
 			if (path === "") {
@@ -812,7 +883,7 @@ export default class Node extends SimpleEventEmitter {
 					throw new Error(`Invalid value for root node: ${value}`);
 				}
 
-				this.writeNode("", value, { merge: false });
+				changes = this.writeNode("", value, { merge: false });
 			} else if (typeof options.assert_revision !== "undefined") {
 				const info = this.getInfoBy(path);
 
@@ -822,31 +893,37 @@ export default class Node extends SimpleEventEmitter {
 
 				if (info.address && info.address.path === path && value !== null && !this.valueFitsInline(value)) {
 					// Overwrite node
-					this.writeNode(path, value, { merge: false });
+					changes = this.writeNode(path, value, { merge: false });
 				} else {
 					// Update parent node
 					// const lockPath = transaction.moveToParentPath(pathInfo.parentPath);
 					// assert(lockPath === pathInfo.parentPath, `transaction.moveToParentPath() did not move to the right parent path of "${path}"`);
-					this.writeNode(pathInfo.parentPath, { [pathInfo.key as any]: value }, { merge: true });
+					changes = this.writeNode(pathInfo.parentPath, { [pathInfo.key as any]: value }, { merge: true });
 				}
 			} else {
 				// Delegate operation to update on parent node
 				// const lockPath = await transaction.moveToParentPath(pathInfo.parentPath);
 				// assert(lockPath === pathInfo.parentPath, `transaction.moveToParentPath() did not move to the right parent path of "${path}"`);
-				this.updateNode(pathInfo.parentPath, { [pathInfo.key as any]: value });
+				changes = this.updateNode(pathInfo.parentPath, { [pathInfo.key as any]: value });
 			}
 		} catch (err) {
 			throw err;
 		}
 
-		return this;
+		return changes;
 	}
 
-	updateNode(path: string, updates: any): Node {
+	updateNode(path: string, updates: any): NodeChanges {
+		let changes: NodeChanges = {
+			insert: [],
+			update: [],
+			delete: [],
+		};
+
 		if (typeof updates !== "object") {
 			throw new Error(`invalid updates argument`); //. Must be a non-empty object or array
 		} else if (Object.keys(updates).length === 0) {
-			return this; // Nothing to update. Done!
+			return changes; // Nothing to update. Done!
 		}
 
 		try {
@@ -854,32 +931,35 @@ export default class Node extends SimpleEventEmitter {
 			const pathInfo = PathInfo.get(path);
 
 			if (nodeInfo.exists && nodeInfo.address && nodeInfo.address.path === path) {
-				this.writeNode(path, updates, { merge: true });
+				changes = this.writeNode(path, updates, { merge: true });
 			} else if (nodeInfo.exists) {
 				// Node exists, but is stored in its parent node.
 				// const pathInfo = PathInfo.get(path);
 				// const lockPath = transaction.moveToParentPath(pathInfo.parentPath);
 				// assert(lockPath === pathInfo.parentPath, `transaction.moveToParentPath() did not move to the right parent path of "${path}"`);
-				this.writeNode(pathInfo.parentPath, { [pathInfo.key as any]: updates }, { merge: true });
+				changes = this.writeNode(pathInfo.parentPath, { [pathInfo.key as any]: updates }, { merge: true });
 			} else {
 				// The node does not exist, it's parent doesn't have it either. Update the parent instead
 				// const lockPath = transaction.moveToParentPath(pathInfo.parentPath);
 				// assert(lockPath === pathInfo.parentPath, `transaction.moveToParentPath() did not move to the right parent path of "${path}"`);
-				this.updateNode(pathInfo.parentPath, { [pathInfo.key as any]: updates });
+				changes = this.updateNode(pathInfo.parentPath, { [pathInfo.key as any]: updates });
 			}
 		} catch (err) {
 			throw err;
 		}
 
-		return this;
+		return changes;
 	}
 
 	importJson(path: string, value: any): Node {
-		return this.setNode(path, value);
+		this.setNode(path, value);
+		return this;
 	}
 
 	static parse(path: string, value: any, options: Partial<NodeSettings> = {}): StorageNodeInfo[] {
-		return new Node([], options).writeNode(path, value).getNodesBy(path);
+		const n = new Node([], options);
+		n.writeNode(path, value);
+		return n.getNodesBy(path);
 	}
 
 	exportJson(nodes?: StorageNodeInfo[] | string, onlyChildren: boolean = false, includeChildrenDedicated: boolean = true): StorageNodeInfo {

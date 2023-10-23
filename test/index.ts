@@ -182,26 +182,50 @@ import Node from "../src/server/services/database/Node";
 
 	console.log(new Date().toLocaleString("pt-BR"));
 
-	const path: string = "ivipcoin-db::__movement_wallet__/$id/history/*";
+	const path: string = "ivipcoin-db::__movement_wallet__/000523147298669313/history/*";
 
 	// Substitua * por .* na pesquisa para corresponder a qualquer valor
-	const pathRegex = path.replace(/\/((\*)|(\$[^/\$]*))/g, "/([^/]*)");
+	// const pathRegex = path.replace(/\/((\*)|(\$[^/\$]*))/g, "/([^/]*)");
 
 	// Construa a consulta com base no caminho (path) fornecido
-	const query = {
-		path: {
-			$regex: new RegExp(`^${pathRegex}(/([^/]*))?$`),
-		},
-	};
+	// const query = {
+	// 	path: {
+	// 		$regex: new RegExp(`^${pathRegex}(/([^/]*))?$`),
+	// 	},
+	// };
 
 	// Execute a consulta e retorne os resultados
-	const result = await collection.find(query).toArray();
+	//const result = await collection.find(query).toArray();
 
 	//console.log(result.map(({ path }) => path));
 
-	const data = new Node(result as any[]);
+	const data = new Node([], {
+		async dataSynchronization(path, type, nodes) {
+			console.log(path);
+			if (type === "get") {
+				const result = await (collection
+					.find({
+						path: {
+							$regex: path,
+						},
+					})
+					.toArray() as Promise<any[]>);
+
+				console.log(result.length);
+
+				return result;
+			}
+
+			return [];
+		},
+	});
+
+	await data.synchronize(path, false);
 
 	console.log(new Date().toLocaleString("pt-BR"));
+
+	console.log(data.setNode("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788/currency_id", "USD- test"));
+	console.log(data.setNode("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788/currency_id_olt", "BRL- test"));
 
 	console.log(
 		data.getInfoBy("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788", {
