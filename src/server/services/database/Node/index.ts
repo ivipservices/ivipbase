@@ -279,9 +279,9 @@ export default class Node extends SimpleEventEmitter {
 			this.nodes.push(node);
 		}
 
-		this.nodes = this.nodes.filter(({ path }, i, l) => {
+		this.nodes = this.nodes.filter(({ path, content }, i, l) => {
 			//const isRemove = l.findIndex((n) => new PathInfo(path).isChildOf(n.path)) < 0 || l.findIndex((n) => n.path === path) !== i;
-			const isRemove = l.findIndex((n) => n.path === path) !== i;
+			const isRemove = l.findIndex((n) => n.path === path && n.content.modified >= content.modified) !== i;
 			return !isRemove;
 		});
 		return this;
