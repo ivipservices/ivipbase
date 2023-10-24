@@ -357,11 +357,18 @@ export default class Node extends SimpleEventEmitter {
 		 * os caminhos alterados e seus nós pais correspondentes.
 		 * @type {Object<string, Array<[string, StorageNodeInfo | undefined]>[]>}
 		 */
-		const nodesChanged = Object.fromEntries(
+		const nodesChanged: {
+			[k in keyof NodeChanges]: Array<[string, Array<StorageNodeInfo | undefined>]>;
+		} = Object.fromEntries(
 			Object.entries(changes).map(([change, paths]) => {
-				return [change, paths.map((p) => [p, this.getNodeParentBy(p)])];
-			}) as [string, Array<[string, StorageNodeInfo | undefined]>][],
+				return [change, paths.map((p) => [p, this.getResponsibleNodeBy(p)])];
+			}) as [any, Array<[string, StorageNodeInfo | undefined]>][],
 		);
+
+		nodesChanged.changed = nodesChanged.changed.concat(nodesChanged.removed.filter(([p, n]) => n != undefined || n != null));
+		nodesChanged.removed = [...nodesChanged.removed, ...nodesChanged.changed, ...nodesChanged.added].filter(([p, n]) => !n);
+		nodesChanged.changed = nodesChanged.changed.filter(([p, n]) => n != undefined || n != null);
+		nodesChanged.added = nodesChanged.added.filter(([p, n]) => n != undefined || n != null);
 
 		console.log(JSON.stringify(nodesChanged, null, 4));
 	}
@@ -598,6 +605,21 @@ export default class Node extends SimpleEventEmitter {
 				return pathA.isDescendantOf(pathB.path) ? -1 : pathB.isDescendantOf(pathA.path) ? 1 : 0;
 			})
 			.shift();
+	}
+
+	getResponsibleNodeBy(path: string): StorageNodeInfo | undefined {
+		const pathInfo = PathInfo.get(path);
+		return this.nodes
+			.filterValues((node) => {
+				const nodePath = PathInfo.get(node.path);
+				return nodePath.path === "" || pathInfo.equals(nodePath.path) || nodePath.isParentOf(pathInfo);
+			})
+			.sort((a: StorageNodeInfo, b: StorageNodeInfo): number => {
+				const pathA = PathInfo.get(a.path);
+				const pathB = PathInfo.get(b.path);
+				return pathA.equals(pathB.path) || pathA.isParentOf(pathB.path) ? -1 : pathB.equals(pathA.path) || pathB.isParentOf(pathA.path) ? 1 : 0;
+			})
+			.find((node) => PathInfo.get(node.path).equals(pathInfo) || PathInfo.get(node.path).isParentOf(pathInfo));
 	}
 
 	/**
