@@ -182,7 +182,7 @@ import Node from "../src/server/services/database/Node";
 
 	console.log(new Date().toLocaleString("pt-BR"));
 
-	const path: string = "ivipcoin-db::__movement_wallet__/000523147298669313/history/*";
+	const path: string = "ivipcoin-db::__movement_wallet__/000523147298669313/history";
 
 	// Substitua * por .* na pesquisa para corresponder a qualquer valor
 	// const pathRegex = path.replace(/\/((\*)|(\$[^/\$]*))/g, "/([^/]*)");
@@ -220,18 +220,22 @@ import Node from "../src/server/services/database/Node";
 		},
 	});
 
-	await data.synchronize(path, false);
+	await data.synchronize(path, true);
 
 	console.log(new Date().toLocaleString("pt-BR"));
 
-	console.log(data.setNode("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788/currency_id", "USD- test"));
-	console.log(data.setNode("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788/currency_id_olt", "BRL- test"));
+	// data.setNode("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788/currency_id", "USD- test");
+	// data.setNode("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788/currency_id_olt", "BRL- test");
+	// data.setNode("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788/payment_method", null);
+	data.setNode("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788", null);
 
-	console.log(
-		data.getInfoBy("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788", {
-			include_child_count: true,
-		}),
-	);
+	console.log(data.getNodesBy("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788"));
+
+	// console.log(
+	// 	data.getInfoBy("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788", {
+	// 		include_child_count: true,
+	// 	}),
+	// );
 
 	console.log(new Date().toLocaleString("pt-BR"));
 })();

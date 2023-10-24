@@ -215,9 +215,9 @@ export class NodeSettings {
 }
 
 interface NodeChanges {
-	insert: string[];
-	update: string[];
-	delete: string[];
+	changed: string[];
+	added: string[];
+	removed: string[];
 }
 
 export default class Node extends SimpleEventEmitter {
@@ -233,6 +233,16 @@ export default class Node extends SimpleEventEmitter {
 		if (this.isPathExists("") !== true) {
 			this.writeNode("", {});
 		}
+	}
+
+	private applyChanges(changes: NodeChanges) {
+		const nodesChanged = Object.fromEntries(
+			Object.entries(changes).map(([change, paths]) => {
+				return [change, paths.map((p) => [p, this.getNodeParentBy(p)])];
+			}) as [string, Array<[string, StorageNodeInfo | undefined]>][],
+		);
+
+		console.log(JSON.stringify(nodesChanged, null, 4));
 	}
 
 	isPathExists(path: string): boolean {
@@ -296,7 +306,7 @@ export default class Node extends SimpleEventEmitter {
 	 * move to a dedicated record. Uses settings.maxInlineValueSize
 	 * @param value
 	 */
-	valueFitsInline(value: any) {
+	private valueFitsInline(value: any) {
 		if (typeof value === "number" || typeof value === "boolean" || isDate(value)) {
 			return true;
 		} else if (typeof value === "string") {
@@ -424,7 +434,7 @@ export default class Node extends SimpleEventEmitter {
 			.shift();
 	}
 
-	getKeysBy(path: string): string[] {
+	private getKeysBy(path: string): string[] {
 		const pathInfo = PathInfo.get(path);
 		return this.nodes
 			.filter((node) => pathInfo.isParentOf(node.path))
@@ -535,7 +545,7 @@ export default class Node extends SimpleEventEmitter {
 		return info;
 	}
 
-	writeNode(
+	private writeNode(
 		path: string,
 		value: any,
 		options: {
@@ -551,19 +561,19 @@ export default class Node extends SimpleEventEmitter {
 			throw new Error(`Invalid root node value. Must be an object`);
 		}
 
-		const changes: NodeChanges = {
-			insert: [],
-			update: [],
-			delete: [],
+		const pathChanges: NodeChanges = {
+			changed: [],
+			added: [],
+			removed: [],
 		};
 
 		const joinChanges = (...c: NodeChanges[]): NodeChanges => {
 			c.forEach((n) => {
-				changes.delete = changes.delete.concat(n.delete).filter((p, i, l) => l.indexOf(p) === i);
-				changes.update = changes.update.concat(n.update).filter((p, i, l) => l.indexOf(p) === i);
-				changes.insert = changes.insert.concat(n.insert).filter((p, i, l) => l.indexOf(p) === i);
+				Object.entries(n).forEach(([change, keys]) => {
+					pathChanges[change] = pathChanges[change].concat(keys).filter((p, i, l) => l.indexOf(p) === i);
+				});
 			});
-			return changes;
+			return pathChanges;
 		};
 
 		if (options.merge && typeof options.currentValue === "undefined" && this.isPathExists(path)) {
@@ -585,7 +595,30 @@ export default class Node extends SimpleEventEmitter {
 		}
 
 		if (options.diff === "identical") {
-			return changes; // Done!
+			return pathChanges; // Done!
+		}
+
+		const pathInfo = PathInfo.get(path);
+
+		switch (options.diff) {
+			case "added":
+				pathChanges.added.push(pathInfo.path);
+				break;
+			case "removed":
+				pathChanges.removed.push(pathInfo.path);
+				break;
+			case "changed":
+				pathChanges.changed.push(pathInfo.path);
+				break;
+			default:
+				if (typeof options.diff === "object") {
+					const { added, removed, changed } = options.diff;
+					joinChanges({
+						added: added.map((k) => pathInfo.childPath(k)),
+						removed: removed.map((k) => pathInfo.childPath(k)),
+						changed: changed.map(({ key }) => key).map((k) => pathInfo.childPath(k)),
+					});
+				}
 		}
 
 		//const currentRow = options.currentValue.content;
@@ -601,8 +634,6 @@ export default class Node extends SimpleEventEmitter {
 				throw new Error(`Cannot merge existing object of path "${path}" with an array`);
 			}
 		}
-
-		const pathInfo = PathInfo.get(path);
 
 		const revision = ID.generate();
 
@@ -714,6 +745,16 @@ export default class Node extends SimpleEventEmitter {
 
 		if (currentRow) {
 			if (currentIsObjectOrArray || newIsObjectOrArray) {
+				const changes: {
+					insert: string[];
+					update: string[];
+					delete: string[];
+				} = {
+					insert: [],
+					update: [],
+					delete: [],
+				};
+
 				const keys: string[] = this.getKeysBy(pathInfo.path);
 
 				children.current = children.current.concat(keys).filter((key, i, l) => l.indexOf(key) === i);
@@ -785,7 +826,7 @@ export default class Node extends SimpleEventEmitter {
 				for (let key of deleteDedicatedKeys) {
 					const keyOrIndex = isArray ? parseInt(key) : key;
 					const childPath = pathInfo.childPath(keyOrIndex);
-					this.deleteNode(childPath);
+					pathChanges.removed = pathChanges.removed.concat(this.deleteNode(childPath));
 				}
 			}
 
@@ -828,42 +869,34 @@ export default class Node extends SimpleEventEmitter {
 			});
 		}
 
-		changes.update = changes.update.map((k) => {
-			const rootPath = new PathInfo(pathInfo.path);
-			return rootPath.isParentOf(k) ? k : rootPath.childPath(k);
-		});
-
-		changes.insert = changes.insert.map((k) => {
-			const rootPath = new PathInfo(pathInfo.path);
-			return rootPath.isParentOf(k) ? k : rootPath.childPath(k);
-		});
-
-		changes.delete = changes.delete.map((k) => {
-			const rootPath = new PathInfo(pathInfo.path);
-			return rootPath.isParentOf(k) ? k : rootPath.childPath(k);
-		});
-
 		updateFor.forEach((node) => {
-			const length = this.deleteNode(node.path, true);
+			pathChanges.removed = pathChanges.removed.concat(this.deleteNode(node.path, true));
 			this.nodes.push(node);
-			length > 0 ? changes.update.unshift(node.path) : changes.insert.unshift(node.path);
+			//length > 0 ? changes.changed.unshift(node.path) : changes.added.unshift(node.path);
 		});
 
-		return changes;
+		const allPaths = [...pathChanges.added, ...pathChanges.changed];
+		pathChanges.removed = pathChanges.removed.filter((p, i, l) => !allPaths.includes(p));
+
+		return Object.fromEntries(
+			Object.entries(pathChanges).map(([k, paths]) => {
+				return [k, paths.filter((p, i, l) => l.indexOf(p) === i)];
+			}),
+		) as any;
 	}
 
-	deleteNode(path: string, specificNode: boolean = false): number {
+	private deleteNode(path: string, specificNode: boolean = false): string[] {
 		const pathInfo = PathInfo.get(path);
-		let lengthDelete = 0;
-		this.nodes.forEach(({ path }, index) => {
+		let removed: string[] = [];
+		this.nodes = this.nodes.filter(({ path }, index) => {
 			const nodePath = PathInfo.get(path);
 			const isPersists = specificNode ? pathInfo.path !== nodePath.path : !pathInfo.isAncestorOf(nodePath) && pathInfo.path !== nodePath.path;
 			if (!isPersists) {
-				delete this.nodes[index];
-				lengthDelete += 1;
+				removed.push(path);
 			}
+			return isPersists;
 		});
-		return lengthDelete;
+		return removed;
 	}
 
 	setNode(
@@ -910,14 +943,15 @@ export default class Node extends SimpleEventEmitter {
 			throw err;
 		}
 
+		this.applyChanges(changes);
 		return changes;
 	}
 
-	updateNode(path: string, updates: any): NodeChanges {
+	private updateNode(path: string, updates: any): NodeChanges {
 		let changes: NodeChanges = {
-			insert: [],
-			update: [],
-			delete: [],
+			added: [],
+			changed: [],
+			removed: [],
 		};
 
 		if (typeof updates !== "object") {
