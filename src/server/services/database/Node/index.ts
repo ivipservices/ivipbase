@@ -180,21 +180,36 @@ export interface StorageNodeInfo {
 
 type JSONData = { [key: string]: string | number | boolean | null | Date | bigint | JSONData | JSONData[] };
 
+/**
+ * Representa as configurações de um nó de armazenamento.
+ */
 export class NodeSettings {
 	/**
-	 * in bytes, max amount of child data to store within a parent record before moving to a dedicated record. Default is 50
+	 * Tamanho máximo, em bytes, dos dados filhos a serem armazenados em um registro pai
+	 * antes de serem movidos para um registro dedicado. O valor padrão é 50.
 	 * @default 50
 	 */
 	maxInlineValueSize: number = 50;
 
 	/**
-	 * Instead of throwing errors on undefined values, remove the properties automatically. Default is false
+	 * Em vez de lançar erros em propriedades não definidas, esta opção permite
+	 * remover automaticamente as propriedades não definidas. O valor padrão é false.
 	 * @default false
 	 */
 	removeVoidProperties: boolean = false;
 
+	/**
+	 * Uma função que permite a sincronização de dados. Recebe uma expressão regular para o caminho,
+	 * o tipo de operação ("get", "remove" ou "add"), e uma matriz de informações sobre nós de armazenamento.
+	 * Pode retornar uma Promessa de matriz de informações sobre nós de armazenamento ou uma matriz de informações
+	 * sobre nós de armazenamento. Se não for fornecida, o valor é `undefined`.
+	 */
 	dataSynchronization: ((path: RegExp, type: "get" | "remove" | "add", nodes?: StorageNodeInfo[]) => Promise<StorageNodeInfo[]> | StorageNodeInfo[]) | undefined | null;
 
+	/**
+	 * Cria uma instância de NodeSettings com as opções fornecidas.
+	 * @param options - Opções para configurar o nó.
+	 */
 	constructor(options: Partial<NodeSettings>) {
 		if (typeof options.maxInlineValueSize === "number") {
 			this.maxInlineValueSize = options.maxInlineValueSize;
@@ -220,10 +235,107 @@ interface NodeChanges {
 	removed: string[];
 }
 
-export default class Node extends SimpleEventEmitter {
-	readonly settings: NodeSettings;
-	private nodes: StorageNodeInfo[] = [];
+/**
+ * Uma classe estendida de Map que oferece métodos adicionais para manipular seus valores.
+ *
+ * @template k O tipo das chaves no mapa.
+ * @template v O tipo dos valores no mapa.
+ */
+class CustomMap<k = any, v = any> extends Map<k, v> {
+	/**
+	 * Filtra os valores do mapa com base em um callback e retorna um array dos valores que atendem à condição.
+	 *
+	 * @param {function(v, k): boolean} callback - A função de callback que define a condição para filtrar os valores.
+	 * @returns {v[]} Um array dos valores filtrados.
+	 */
+	filterValues(callback: (value: v, key: k) => boolean | void): v[] {
+		const list: v[] = [];
+		for (const [key, value] of this) {
+			if (callback(value, key)) {
+				list.push(value);
+			}
+		}
+		return list;
+	}
 
+	/**
+	 * Encontra a primeira chave que atende a uma condição definida em um callback.
+	 *
+	 * @param {function(v, k): boolean} callback - A função de callback que define a condição de busca.
+	 * @returns {k | undefined} A primeira chave que atende à condição ou `undefined` se nenhuma chave for encontrada.
+	 */
+	findIndex(callback: (value: v, key: k) => boolean | void): k | undefined {
+		for (const [key, value] of this) {
+			if (callback(value, key)) {
+				return key;
+			}
+		}
+		return undefined;
+	}
+
+	/**
+	 * Encontra o primeiro valor que atende a uma condição definida em um callback.
+	 *
+	 * @param {function(v, k): boolean} callback - A função de callback que define a condição de busca.
+	 * @returns {v | undefined} O primeiro valor que atende à condição ou `undefined` se nenhum valor for encontrado.
+	 */
+	find(callback: (value: v, key: k) => boolean | void): v | undefined {
+		const key = this.findIndex(callback);
+		return !key ? undefined : this.get(key);
+	}
+
+	/**
+	 * Remove os itens do mapa que atendem a uma condição definida em um callback.
+	 *
+	 * @param {function(v, k): boolean} callback - A função de callback que define a condição para remover os itens.
+	 */
+	removeItems(callback: (value: v, key: k) => boolean) {
+		const keysToDelete: k[] = [];
+		for (const [key, value] of this) {
+			if (callback(value, key)) {
+				keysToDelete.push(key);
+			}
+		}
+		for (const key of keysToDelete) {
+			this.delete(key);
+		}
+	}
+
+	/**
+	 * Mapeia os valores do mapa e retorna um array de resultados após aplicar um callback a cada valor.
+	 *
+	 * @template t O tipo dos resultados do mapeamento.
+	 * @param {function(v, k): t} callback - A função de callback que mapeia os valores.
+	 * @returns {t[]} Um array dos resultados do mapeamento.
+	 */
+	map<t = any>(callback: (value: v, key: k) => t): t[] {
+		const list: t[] = [];
+		for (const [key, value] of this) {
+			list.push(callback(value, key));
+		}
+		return list;
+	}
+}
+
+/**
+ * Classe que representa um nó com configurações específicas.
+ */
+export default class Node extends SimpleEventEmitter {
+	/**
+	 * As configurações do nó.
+	 */
+	readonly settings: NodeSettings;
+
+	/**
+	 * Uma matriz de informações sobre nós de armazenamento.
+	 */
+	private nodes = new CustomMap<string, StorageNodeInfo>();
+
+	/**
+	 * Cria uma nova instância de Node.
+	 * @param byNodes - Uma matriz de informações sobre nós de armazenamento para inicializar o nó.
+	 * @param options - Opções para configurar o nó.
+	 */
 	constructor(byNodes: StorageNodeInfo[] = [], options: Partial<NodeSettings> = {}) {
 		super();
 
@@ -235,7 +347,16 @@ export default class Node extends SimpleEventEmitter {
 		}
 	}
 
+	/**
+	 * Aplica as alterações especificadas ao nó.
+	 * @param changes - Um objeto contendo as alterações a serem aplicadas.
+	 */
 	private applyChanges(changes: NodeChanges) {
+		/**
+		 * Um objeto que mapeia os tipos de alterações ('add', 'remove', etc.) para
+		 * os caminhos alterados e seus nós pais correspondentes.
+		 * @type {Object<string, Array<[string, StorageNodeInfo | undefined]>[]>}
+		 */
 		const nodesChanged = Object.fromEntries(
 			Object.entries(changes).map(([change, paths]) => {
 				return [change, paths.map((p) => [p, this.getNodeParentBy(p)])];
@@ -245,18 +366,34 @@ export default class Node extends SimpleEventEmitter {
 		console.log(JSON.stringify(nodesChanged, null, 4));
 	}
 
+	/**
+	 * Verifica se um caminho específico existe no nó.
+	 * @param path - O caminho a ser verificado.
+	 * @returns {boolean} `true` se o caminho existir no nó, `false` caso contrário.
+	 */
 	isPathExists(path: string): boolean {
 		const pathInfo = PathInfo.get(path);
 		return (
 			this.nodes.findIndex(({ path: nodePath }) => {
 				return pathInfo.isOnTrailOf(nodePath);
-			}) >= 0
+			}) !== undefined
 		);
 	}
 
+	/**
+	 * Sincroniza o nó com os nós correspondentes com base no caminho especificado.
+	 * @param path - O caminho a ser sincronizado.
+	 * @param allHeirs - Um valor booleano que determina se todos os herdeiros devem ser sincronizados.
+	 * @returns {Promise<void>} Uma promessa que é resolvida após a sincronização.
+	 */
 	async synchronize(path: string, allHeirs: boolean = false) {
 		const pathsRegex: string[] = [];
 
+		/**
+		 * Substitui o caminho por uma expressão regular.
+		 * @param path - O caminho a ser convertido em expressão regular.
+		 * @returns {string} O caminho convertido em expressão regular.
+		 */
 		const replasePathToRegex = (path: string) => {
 			path = path.replace(/\/((\*)|(\$[^/\$]*))/g, "/([^/]*)");
 			path = path.replace(/\[\*\]/g, "\\[(\\d+)\\]");
@@ -276,6 +413,11 @@ export default class Node extends SimpleEventEmitter {
 		}
 	}
 
+	/**
+	 * Adiciona um ou mais nós ao nó atual.
+	 * @param nodes - Um ou mais nós a serem adicionados.
+	 * @returns {Node} O nó atual após a adição dos nós.
+	 */
 	push(...nodes: (StorageNodeInfo[] | StorageNodeInfo)[]) {
 		const forNodes: StorageNodeInfo[] =
 			Array.prototype.concat
@@ -286,14 +428,14 @@ export default class Node extends SimpleEventEmitter {
 				.filter((node: any = {}) => node && typeof node.path === "string" && "content" in node) ?? [];
 
 		for (let node of forNodes) {
-			this.nodes.push(node);
+			this.nodes.set(node.path, node);
 		}
 
-		this.nodes = this.nodes.filter(({ path, content }, i, l) => {
-			//const isRemove = l.findIndex((n) => new PathInfo(path).isChildOf(n.path)) < 0 || l.findIndex((n) => n.path === path) !== i;
-			const isRemove = l.findIndex((n) => n.path === path && n.content.modified >= content.modified) !== i;
-			return !isRemove;
-		});
+		// this.nodes.removeItems(({ path, content }, i, l) => {
+		// 	//const isRemove = l.findIndex((n) => new PathInfo(path).isChildOf(n.path)) < 0 || l.findIndex((n) => n.path === path) !== i;
+		// 	const isRemove = l.findIndex((n) => n.path === path && n.content.modified >= content.modified) !== i;
+		// 	return !isRemove;
+		// });
 		return this;
 	}
 
@@ -302,9 +444,11 @@ export default class Node extends SimpleEventEmitter {
 	}
 
 	/**
-	 * Checks if a value can be stored in a parent object, or if it should
-	 * move to a dedicated record. Uses settings.maxInlineValueSize
-	 * @param value
+	 * Verifica se um valor pode ser armazenado em um objeto pai ou se deve ser movido
+	 * para um registro dedicado com base nas configurações de tamanho máximo (`maxInlineValueSize`).
+	 * @param value - O valor a ser verificado.
+	 * @returns {boolean} `true` se o valor pode ser armazenado inline, `false` caso contrário.
+	 * @throws {TypeError} Lança um erro se o tipo do valor não for suportado.
 	 */
 	private valueFitsInline(value: any) {
 		if (typeof value === "number" || typeof value === "boolean" || isDate(value)) {
@@ -313,14 +457,14 @@ export default class Node extends SimpleEventEmitter {
 			if (value.length > this.settings.maxInlineValueSize) {
 				return false;
 			}
-			// if the string has unicode chars, its byte size will be bigger than value.length
+			// Se a string contém caracteres Unicode, o tamanho em bytes será maior do que `value.length`.
 			const encoded = encodeString(value);
 			return encoded.length < this.settings.maxInlineValueSize;
 		} else if (value instanceof PathReference) {
 			if (value.path.length > this.settings.maxInlineValueSize) {
 				return false;
 			}
-			// if the path has unicode chars, its byte size will be bigger than value.path.length
+			// Se o caminho contém caracteres Unicode, o tamanho em bytes será maior do que `value.path.length`.
 			const encoded = encodeString(value.path);
 			return encoded.length < this.settings.maxInlineValueSize;
 		} else if (value instanceof ArrayBuffer) {
@@ -334,6 +478,12 @@ export default class Node extends SimpleEventEmitter {
 		}
 	}
 
+	/**
+	 * Obtém um valor tipado apropriado para armazenamento com base no tipo do valor fornecido.
+	 * @param val - O valor a ser processado.
+	 * @returns {any} O valor processado.
+	 * @throws {Error} Lança um erro se o valor não for suportado ou se for nulo.
+	 */
 	private getTypedChildValue(val: any) {
 		if (val === null) {
 			throw new Error(`Not allowed to store null values. remove the property`);
@@ -351,17 +501,23 @@ export default class Node extends SimpleEventEmitter {
 		}
 	}
 
+	/**
+	 * Processa o valor de um nó de armazenamento durante a leitura, convertendo valores tipados de volta ao formato original.
+	 * @param node - O nó de armazenamento a ser processado.
+	 * @returns {StorageNode} O nó de armazenamento processado.
+	 * @throws {Error} Lança um erro se o tipo de registro autônomo for inválido.
+	 */
 	private processReadNodeValue(node: StorageNode): StorageNode {
 		const getTypedChildValue = (val: { type: number; value: any; path?: string }) => {
-			// Typed value stored in parent record
+			// Valor tipado armazenado em um registro pai
 			if (val.type === VALUE_TYPES.BINARY) {
-				// binary stored in a parent record as a string
+				// Binário armazenado em um registro pai como uma string
 				return ascii85.decode(val.value);
 			} else if (val.type === VALUE_TYPES.DATETIME) {
-				// Date value stored as number
+				// Valor de data armazenado como número
 				return new Date(val.value);
 			} else if (val.type === VALUE_TYPES.REFERENCE) {
-				// Path reference stored as string
+				// Referência de caminho armazenada como string
 				return new PathReference(val.value);
 			} else if (val.type === VALUE_TYPES.DEDICATED_RECORD) {
 				return getValueTypeDefault(val.value);
@@ -375,8 +531,8 @@ export default class Node extends SimpleEventEmitter {
 		switch (node.type) {
 			case VALUE_TYPES.ARRAY:
 			case VALUE_TYPES.OBJECT: {
-				// check if any value needs to be converted
-				// NOTE: Arrays are stored with numeric properties
+				// Verifica se algum valor precisa ser convertido
+				// NOTA: Arrays são armazenados com propriedades numéricas
 				const obj = node.value;
 				Object.keys(obj).forEach((key) => {
 					const item = obj[key];
@@ -399,30 +555,40 @@ export default class Node extends SimpleEventEmitter {
 			}
 
 			case VALUE_TYPES.STRING: {
-				// No action needed
+				// Nenhuma ação necessária
 				// node.value = node.value;
 				break;
 			}
 
 			default:
-				throw new Error(`Invalid standalone record value type`); // should never happen
+				throw new Error(`Invalid standalone record value type`); // nunca deve acontecer
 		}
 
 		return node;
 	}
 
+	/**
+	 * Obtém uma matriz de informações sobre nós de armazenamento com base no caminho especificado.
+	 * @param path - O caminho para o qual os nós devem ser obtidos.
+	 * @returns {StorageNodeInfo[]} Uma matriz de informações sobre os nós correspondentes ao caminho.
+	 */
 	getNodesBy(path: string): StorageNodeInfo[] {
 		const pathInfo = PathInfo.get(path);
-		return this.nodes.filter((node) => {
+		return this.nodes.filterValues((node) => {
 			const nodePath = PathInfo.get(node.path);
 			return nodePath.path == pathInfo.path || pathInfo.isAncestorOf(nodePath);
 		});
 	}
 
+	/**
+	 * Obtém o nó pai de um caminho específico.
+	 * @param path - O caminho para o qual o nó pai deve ser obtido.
+	 * @returns {StorageNodeInfo | undefined} O nó pai correspondente ao caminho ou `undefined` se não for encontrado.
+	 */
 	getNodeParentBy(path: string): StorageNodeInfo | undefined {
 		const pathInfo = PathInfo.get(path);
 		return this.nodes
-			.filter((node) => {
+			.filterValues((node) => {
 				const nodePath = PathInfo.get(node.path);
 				return nodePath.path === "" || pathInfo.path === nodePath.path || nodePath.isParentOf(pathInfo);
 			})
@@ -434,10 +600,15 @@ export default class Node extends SimpleEventEmitter {
 			.shift();
 	}
 
+	/**
+	 * Obtém as chaves dos nós filhos de um caminho específico.
+	 * @param path - O caminho para o qual as chaves dos nós filhos devem ser obtidas.
+	 * @returns {string[]} Uma matriz de chaves dos nós filhos.
+	 */
 	private getKeysBy(path: string): string[] {
 		const pathInfo = PathInfo.get(path);
 		return this.nodes
-			.filter((node) => pathInfo.isParentOf(node.path))
+			.filterValues((node) => pathInfo.isParentOf(node.path))
 			.map((node) => {
 				const key = PathInfo.get(node.path).key;
 				return key ? key.toString() : null;
@@ -445,6 +616,13 @@ export default class Node extends SimpleEventEmitter {
 			.filter((keys) => typeof keys === "string") as string[];
 	}
 
+	/**
+	 * Obtém informações personalizadas sobre um nó com base no caminho especificado.
+	 * @param path - O caminho do nó para o qual as informações devem ser obtidas.
+	 * @param options - Opções adicionais para controlar o comportamento.
+	 * @param options.include_child_count - Um valor booleano que indica se o número de filhos deve ser incluído nas informações.
+	 * @returns {CustomStorageNodeInfo} Informações personalizadas sobre o nó especificado.
+	 */
 	getInfoBy(
 		path: string,
 		options: {
@@ -497,10 +675,10 @@ export default class Node extends SimpleEventEmitter {
 			});
 		}
 
-		const containsChild = this.nodes.findIndex((node) => node && node.path && pathInfo.isAncestorOf(node.path)) >= 0;
+		const containsChild = this.nodes.findIndex((node) => node && typeof node.path === "string" && pathInfo.isAncestorOf(node.path)) !== undefined;
 		const isArrayChild = (() => {
 			if (containsChild) return false;
-			const child = this.nodes.find((node) => node && node.path && pathInfo.isParentOf(node.path));
+			const child = this.nodes.find((node) => node && typeof node.path === "string" && pathInfo.isParentOf(node.path));
 			return child ? typeof PathInfo.get(child.path).key === "number" : false;
 		})();
 
@@ -534,7 +712,7 @@ export default class Node extends SimpleEventEmitter {
 				// Get number of children
 				info.childCount = value ? Object.keys(value ?? {}).length : 0;
 				info.childCount += this.nodes
-					.filter(({ path }) => pathInfo.isAncestorOf(path))
+					.filterValues(({ path }) => pathInfo.isAncestorOf(path))
 					.map(({ path }) => PathInfo.get(path.replace(new RegExp(`^${pathInfo.path}`, "gi"), "")).keys[1] ?? "")
 					.filter((path, index, list) => {
 						return list.indexOf(path) === index;
@@ -545,6 +723,17 @@ export default class Node extends SimpleEventEmitter {
 		return info;
 	}
 
+	/**
+	 * Escreve um nó no armazenamento com o caminho e valor especificados.
+	 * @param path - O caminho do nó a ser escrito.
+	 * @param value - O valor a ser armazenado no nó.
+	 * @param options - Opções adicionais para controlar o comportamento da escrita.
+	 * @param options.merge - Um valor booleano que indica se a escrita deve ser mesclada com o valor existente no nó, se houver.
+	 * @param options.revision - Uma string que representa a revisão associada ao nó.
+	 * @param options.currentValue - O valor atual no nó, se disponível.
+	 * @param options.diff - A diferença entre o valor atual e o novo valor, se disponível.
+	 * @returns {NodeChanges} As alterações feitas no nó, incluindo alterações, adições e remoções.
+	 */
 	private writeNode(
 		path: string,
 		value: any,
@@ -871,7 +1060,7 @@ export default class Node extends SimpleEventEmitter {
 
 		updateFor.forEach((node) => {
 			pathChanges.removed = pathChanges.removed.concat(this.deleteNode(node.path, true));
-			this.nodes.push(node);
+			this.nodes.set(node.path, node);
 			//length > 0 ? changes.changed.unshift(node.path) : changes.added.unshift(node.path);
 		});
 
@@ -885,20 +1074,34 @@ export default class Node extends SimpleEventEmitter {
 		) as any;
 	}
 
+	/**
+	 * Exclui um nó no armazenamento com o caminho especificado.
+	 * @param path - O caminho do nó a ser excluído.
+	 * @param specificNode - Um valor booleano que indica se apenas um nó específico deve ser excluído.
+	 * @returns {string[]} Uma lista de caminhos dos nós excluídos.
+	 */
 	private deleteNode(path: string, specificNode: boolean = false): string[] {
 		const pathInfo = PathInfo.get(path);
 		let removed: string[] = [];
-		this.nodes = this.nodes.filter(({ path }, index) => {
+		this.nodes.removeItems(({ path }) => {
 			const nodePath = PathInfo.get(path);
 			const isPersists = specificNode ? pathInfo.path !== nodePath.path : !pathInfo.isAncestorOf(nodePath) && pathInfo.path !== nodePath.path;
 			if (!isPersists) {
 				removed.push(path);
 			}
-			return isPersists;
+			return !isPersists;
 		});
 		return removed;
 	}
 
+	/**
+	 * Define um nó no armazenamento com o caminho e valor especificados.
+	 * @param path - O caminho do nó a ser definido.
+	 * @param value - O valor a ser armazenado no nó.
+	 * @param options - Opções adicionais para controlar o comportamento da definição.
+	 * @param options.assert_revision - Uma string que representa a revisão associada ao nó, se necessário.
+	 * @returns {NodeChanges} As alterações feitas no nó, incluindo alterações, adições e remoções.
+	 */
 	setNode(
 		path: string,
 		value: any,
@@ -947,6 +1150,12 @@ export default class Node extends SimpleEventEmitter {
 		return changes;
 	}
 
+	/**
+	 * Atualiza um nó no armazenamento com o caminho e atualizações especificados.
+	 * @param path - O caminho do nó a ser atualizado.
+	 * @param updates - As atualizações a serem aplicadas ao nó.
+	 * @returns {NodeChanges} As alterações feitas no nó, incluindo alterações, adições e remoções.
+	 */
 	private updateNode(path: string, updates: any): NodeChanges {
 		let changes: NodeChanges = {
 			added: [],
@@ -985,18 +1194,38 @@ export default class Node extends SimpleEventEmitter {
 		return changes;
 	}
 
+	/**
+	 * Importa um valor JSON no nó com o caminho especificado.
+	 * @param path - O caminho do nó onde o valor JSON será importado.
+	 * @param value - O valor JSON a ser importado.
+	 * @returns {Node} O próprio nó.
+	 */
 	importJson(path: string, value: any): Node {
 		this.setNode(path, value);
 		return this;
 	}
 
+	/**
+	 * Analisa e armazena um valor JSON no nó com o caminho especificado.
+	 * @param path - O caminho do nó onde o valor JSON será armazenado.
+	 * @param value - O valor JSON a ser armazenado.
+	 * @param options - Opções adicionais para controlar o comportamento do armazenamento.
+	 * @returns {StorageNodeInfo[]} Uma lista de informações sobre os nós armazenados.
+	 */
 	static parse(path: string, value: any, options: Partial<NodeSettings> = {}): StorageNodeInfo[] {
 		const n = new Node([], options);
 		n.writeNode(path, value);
 		return n.getNodesBy(path);
 	}
 
-	exportJson(nodes?: StorageNodeInfo[] | string, onlyChildren: boolean = false, includeChildrenDedicated: boolean = true): StorageNodeInfo {
+	/**
+	 * Exporta os nós para um objeto JSON.
+	 * @param {StorageNodeInfo[] | string} nodes - Uma lista de nós ou o caminho de um nó raiz.
+	 * @param {boolean} onlyChildren - Se verdadeiro, exporta apenas os filhos do nó especificado.
+	 * @param {boolean} includeChildrenDedicated - Se verdadeiro, inclui os filhos separadamente.
+	 * @returns {StorageNodeInfo} O objeto JSON exportado.
+	 */
+	exportJson(nodes?: StorageNodeInfo[] | CustomMap<string, StorageNodeInfo> | string, onlyChildren: boolean = false, includeChildrenDedicated: boolean = true): StorageNodeInfo {
 		const byPathRoot: string | undefined = typeof nodes === "string" ? nodes : undefined;
 
 		nodes = typeof nodes === "string" ? this.getNodesBy(nodes) : Array.isArray(nodes) ? nodes : ([nodes] as any);
@@ -1150,6 +1379,13 @@ export default class Node extends SimpleEventEmitter {
 		};
 	}
 
+	/**
+	 * Converte uma lista de nós em um objeto JSON.
+	 * @param {StorageNodeInfo[]} nodes - Uma lista de nós a serem convertidos.
+	 * @param {boolean} onlyChildren - Se verdadeiro, converte apenas os filhos dos nós.
+	 * @param {Partial<NodeSettings>} options - Opções adicionais para controlar o comportamento da conversão.
+	 * @returns {StorageNodeInfo} O objeto JSON convertido.
+	 */
 	static toJson(nodes: StorageNodeInfo[], onlyChildren: boolean = false, options: Partial<NodeSettings> = {}): StorageNodeInfo {
 		return new Node([], options).exportJson(nodes, onlyChildren);
 	}
