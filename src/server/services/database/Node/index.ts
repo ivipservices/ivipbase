@@ -788,7 +788,7 @@ export default class Node extends SimpleEventEmitter {
 		};
 
 		if (options.merge && typeof options.currentValue === "undefined" && this.isPathExists(path)) {
-			options.currentValue = this.exportJson(path).content.value;
+			options.currentValue = this.getNode(path).content.value;
 		}
 
 		//options.currentValue = options.currentValue ?? this.toJson(path);
@@ -835,7 +835,7 @@ export default class Node extends SimpleEventEmitter {
 		//const currentRow = options.currentValue.content;
 
 		// Get info about current node at path
-		const currentRow = options.currentValue === null ? null : this.exportJson(path, true, false).content;
+		const currentRow = options.currentValue === null ? null : this.getNode(path, true, false).content;
 
 		if (options.merge && currentRow) {
 			if (currentRow.type === VALUE_TYPES.ARRAY && !(value instanceof Array) && typeof value === "object" && Object.keys(value).some((key) => isNaN(parseInt(key)))) {
@@ -1241,17 +1241,16 @@ export default class Node extends SimpleEventEmitter {
 	}
 
 	/**
-	 * Exporta os nós para um objeto JSON.
-	 * @param {StorageNodeInfo[] | string} nodes - Uma lista de nós ou o caminho de um nó raiz.
+	 * Exporta os nós para um nó montado.
+	 * @param {string} path - Caminho de um nó raiz.
 	 * @param {boolean} onlyChildren - Se verdadeiro, exporta apenas os filhos do nó especificado.
 	 * @param {boolean} includeChildrenDedicated - Se verdadeiro, inclui os filhos separadamente.
-	 * @returns {StorageNodeInfo} O objeto JSON exportado.
+	 * @returns {StorageNodeInfo} O nó montado.
 	 */
-	exportJson(nodes?: StorageNodeInfo[] | CustomMap<string, StorageNodeInfo> | string, onlyChildren: boolean = false, includeChildrenDedicated: boolean = true): StorageNodeInfo {
-		const byPathRoot: string | undefined = typeof nodes === "string" ? nodes : undefined;
+	getNode(path: string, onlyChildren: boolean = false, includeChildrenDedicated: boolean = true): StorageNodeInfo {
+		const pathRoot: PathInfo = new PathInfo(path);
 
-		nodes = typeof nodes === "string" ? this.getNodesBy(nodes) : Array.isArray(nodes) ? nodes : ([nodes] as any);
-		nodes = Array.isArray(nodes) ? nodes.filter((node: any = {}) => node && typeof node.path === "string" && "content" in node) : this.nodes;
+		let nodes: StorageNodeInfo[] = this.getNodesBy(pathRoot.path);
 
 		let byNodes = nodes.map((node) => {
 			node = JSON.parse(JSON.stringify(node));
@@ -1262,7 +1261,7 @@ export default class Node extends SimpleEventEmitter {
 		let revision = (byNodes[0]?.content ?? {}).revision ?? ID.generate();
 
 		const rootNode: StorageNodeInfo = {
-			path: PathInfo.get(byPathRoot ?? "").path,
+			path: pathRoot.path,
 			content: {
 				type: 1,
 				value: {},
@@ -1283,22 +1282,17 @@ export default class Node extends SimpleEventEmitter {
 			return pathA.isDescendantOf(pathB.path) ? 1 : pathB.isDescendantOf(pathA.path) ? -1 : 0;
 		});
 
-		if (byPathRoot) {
-			const pathRoot = PathInfo.get(byPathRoot);
-			const rootExists = byNodes.findIndex(({ path }) => pathRoot.path === path) >= 0;
+		const rootExists = byNodes.findIndex(({ path }) => pathRoot.path === path) >= 0;
 
-			if (!rootExists) {
-				rootNode.content.revision = byNodes[0]?.content.revision ?? revision;
-				rootNode.content.revision_nr = byNodes[0]?.content.revision_nr ?? 1;
-				rootNode.content.created = byNodes[0]?.content.created ?? Date.now();
-				rootNode.content.modified = byNodes[0]?.content.modified ?? Date.now();
-				byNodes.unshift(rootNode);
-			}
+		if (!rootExists) {
+			rootNode.content.revision = byNodes[0]?.content.revision ?? revision;
+			rootNode.content.revision_nr = byNodes[0]?.content.revision_nr ?? 1;
+			rootNode.content.created = byNodes[0]?.content.created ?? Date.now();
+			rootNode.content.modified = byNodes[0]?.content.modified ?? Date.now();
+			byNodes.unshift(rootNode);
 		}
 
-		const { path, content: targetNode } = byNodes.shift() as StorageNodeInfo;
-
-		const pathInfo = PathInfo.get(path);
+		const { path: shiftNodePath, content: targetNode } = byNodes.shift() as StorageNodeInfo;
 
 		const result = targetNode;
 
@@ -1310,9 +1304,9 @@ export default class Node extends SimpleEventEmitter {
 			byNodes = byNodes
 				.filter((node) => {
 					const nodePath = PathInfo.get(node.path);
-					const isChild = nodePath.isChildOf(path);
-					if (!isChild && nodePath.isDescendantOf(path)) {
-						const childKeys = PathInfo.get(nodePath.path.replace(new RegExp(`^${path}`, "gi"), "")).keys;
+					const isChild = nodePath.isChildOf(shiftNodePath);
+					if (!isChild && nodePath.isDescendantOf(shiftNodePath)) {
+						const childKeys = PathInfo.get(nodePath.path.replace(new RegExp(`^${shiftNodePath}`, "gi"), "")).keys;
 						if (childKeys[1] && !(childKeys[1] in result.value)) {
 							result.value[childKeys[1]] = typeof childKeys[2] === "number" ? [] : {};
 						}
@@ -1341,7 +1335,7 @@ export default class Node extends SimpleEventEmitter {
 		}
 
 		if ([VALUE_TYPES.OBJECT, VALUE_TYPES.ARRAY].includes(targetNode.type)) {
-			const targetPathKeys = PathInfo.getPathKeys(path);
+			const targetPathKeys = PathInfo.getPathKeys(shiftNodePath);
 			const value = targetNode.value;
 
 			for (let { path: otherPath, content: otherNode } of byNodes) {
@@ -1396,7 +1390,7 @@ export default class Node extends SimpleEventEmitter {
 		}
 
 		return {
-			path: pathInfo.path,
+			path: shiftNodePath,
 			content: result,
 		};
 	}
@@ -1409,6 +1403,6 @@ export default class Node extends SimpleEventEmitter {
 	 * @returns {StorageNodeInfo} O objeto JSON convertido.
 	 */
 	static toJson(nodes: StorageNodeInfo[], onlyChildren: boolean = false, options: Partial<NodeSettings> = {}): StorageNodeInfo {
-		return new Node([], options).exportJson(nodes, onlyChildren);
+		return new Node(nodes, options).getNode("", onlyChildren);
 	}
 }
