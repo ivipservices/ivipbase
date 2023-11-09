@@ -16,7 +16,7 @@ export class NodeRevisionError extends Error {}
 const { compareValues, encodeString, isDate } = Utils;
 const assert = Lib.assert;
 
-const nodeValueTypes = {
+export const nodeValueTypes = {
 	EMPTY: 0,
 	// Native types:
 	OBJECT: 1,
@@ -329,7 +329,7 @@ export default class Node extends SimpleEventEmitter {
 	/**
 	 * Uma matriz de informações sobre nós de armazenamento.
 	 */
-	private nodes = new CustomMap<string, StorageNodeInfo>();
+	readonly nodes = new CustomMap<string, StorageNodeInfo>();
 
 	/**
 	 * Cria uma nova instância de Node.
@@ -491,17 +491,25 @@ export default class Node extends SimpleEventEmitter {
 	 * @returns {any} O valor processado.
 	 * @throws {Error} Lança um erro se o valor não for suportado ou se for nulo.
 	 */
-	private getTypedChildValue(val: any) {
+	private getTypedChildValue(val: any):
+		| string
+		| number
+		| boolean
+		| {
+				type: (typeof nodeValueTypes)[keyof Pick<typeof nodeValueTypes, "DATETIME" | "REFERENCE" | "BINARY">];
+				value: string | number | boolean;
+		  }
+		| undefined {
 		if (val === null) {
 			throw new Error(`Not allowed to store null values. remove the property`);
 		} else if (isDate(val)) {
-			return { type: VALUE_TYPES.DATETIME, value: new Date(val).getTime() };
+			return { type: VALUE_TYPES.DATETIME as any, value: new Date(val).getTime() };
 		} else if (["string", "number", "boolean"].includes(typeof val)) {
 			return val;
 		} else if (val instanceof PathReference) {
-			return { type: VALUE_TYPES.REFERENCE, value: val.path };
+			return { type: VALUE_TYPES.REFERENCE as any, value: val.path };
 		} else if (val instanceof ArrayBuffer) {
-			return { type: VALUE_TYPES.BINARY, value: ascii85.encode(val) };
+			return { type: VALUE_TYPES.BINARY as any, value: ascii85.encode(val) };
 		} else if (typeof val === "object") {
 			assert(Object.keys(val).length === 0 || ("type" in val && val.type === VALUE_TYPES.DEDICATED_RECORD), "child object stored in parent can only be empty");
 			return val;
