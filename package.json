@@ -15,7 +15,7 @@
 	"private": false,
 	"repository": "github:ivipcoin/ivipbase",
 	"scripts": {
-		"dev": "nodemon ./test",
+		"dev": "nodemon ./test/test.ts",
 		"build": "npm run build:clean && npm run build:esm && npm run build:cjs && npm run build:packages && echo Done!",
 		"build:clean": "rimraf dist",
 		"build:esm": "tsc -p tsconfig.json && npx tsc-esm-fix ---target='dist/esm'",
@@ -42,7 +42,7 @@
 		"dotenv": "^16.0.3",
 		"express": "^4.17.1",
 		"ivipbase-core": "^1.5.2",
-		"mongodb": "^5.5.0",
+		"mongodb": "^5.9.1",
 		"proper-lockfile": "^4.1.2",
 		"socket.io": "^4.5.0",
 		"swagger-jsdoc": "^6.1.0",
