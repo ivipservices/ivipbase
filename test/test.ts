@@ -14,6 +14,7 @@ async function main() {
 		// console.log(result2)
 
 		if (result) {
+			// console.log(result.path);
 			// Acessar o campo "path"
 			// const pathValue = result.path
 			// Agora você pode ver o valor de "path"
