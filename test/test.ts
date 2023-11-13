@@ -6,21 +6,20 @@ interface Balance {
 	value: number;
 }
 
-interface HistoryEntry {
-	type: string;
-	wallet_type: string;
+interface BalanceInfo {
+	[symbol: string]: Balance;
 }
 
-interface WalletData {
-	dataModificacao: number;
-	dateValidity: number;
-	totalValue: number;
-	currencyType: string;
-	balancesModificacao: string;
-	balances: Record<string, Balance>;
-	history: Record<string, HistoryEntry>;
+interface OriginalBalance {
+	path: string;
+	content: {
+		value: Balance;
+	};
 }
 
+interface RestructuredResult {
+	balances: BalanceInfo;
+}
 async function main() {
 	const uri = "mongodb://manager:9Hq91q5oExU9biOZ7yq98I8P1DU1ge@ivipcoin-api.com:4048/?authMechanism=DEFAULT";
 	const client = new MongoClient(uri);
@@ -29,48 +28,104 @@ async function main() {
 		await client.connect();
 		const collection = client.db("root").collection("teste");
 
-		const result = await collection.find().toArray();
+		// const result = await collection.find().toArray();
 
-		const transformedData: Record<string, WalletData> = {};
+		const KEY_THAT_MUST_BE_ARRAY = ["costs"];
 
-		result.forEach((entry) => {
-			const pathComponents = entry.path.split("/");
-			const walletId = pathComponents[2];
-			const symbol = entry.content.value.symbol;
-			const available = entry.content.value.available;
-			const value = entry.content.value.value;
+		function restructJson(entries) {
+			const result = {};
 
-			if (!transformedData[walletId]) {
-				transformedData[walletId] = {
-					dataModificacao: entry.content.modified,
-					dateValidity: entry.content.created,
-					totalValue: 0,
-					currencyType: "USD",
-					balancesModificacao: new Date(entry.content.modified).toISOString(),
-					balances: {},
-					history: {},
-				};
-			}
+			entries.forEach((entry) => {
+				const { path, content } = entry;
+				const parts = path.split("/");
+				let current = result;
 
-			transformedData[walletId].balances[symbol] = {
-				available,
-				symbol,
-				value,
-			};
+				for (let i = 0; i < parts.length; i++) {
+					const part = parts[i];
 
-			if (entry.content.history) {
-				Object.keys(entry.content.history).forEach((historyId) => {
-					transformedData[walletId].history[historyId] = entry.content.history[historyId];
-				});
-			}
-		});
+					if (i === parts.length - 1) {
+						let key = part.replace(/__+/g, "_").replace(/^_+|_+$/g, "");
+						// console.log({ key });
+						const { value } = content;
 
-		console.log(transformedData);
+						if (!current[key]) {
+							key = key.split("[")[0];
+							if (KEY_THAT_MUST_BE_ARRAY.includes(key)) {
+								current[key] = [];
 
-		if (result) {
-		} else {
-			console.log("Documento não encontrado");
+								if (Object.keys(value).length) {
+									current[key].push(value);
+								}
+							} else {
+								current[key] = value;
+							}
+						}
+
+						// current[key].values.push(value);
+					} else {
+						if (!current[part]) {
+							current[part] = {};
+						}
+
+						current = current[part];
+					}
+				}
+			});
+
+			return result;
 		}
+
+		const entries = [
+			{
+				path: "ivipcoin-db::__movement_wallet__/000523147298669313/balances/BRL",
+				content: {
+					type: 1,
+					value: {
+						available: "2528.00700001",
+						symbol: "BRL",
+						value: 494.23,
+					},
+					revision: "lnt02q7v0006oohx1hd4856x",
+					revision_nr: 1,
+					created: 1697467086139,
+					modified: 1697467086139,
+				},
+			},
+			{
+				path: "ivipcoin-db::__movement_wallet__/000523147298669313/balances/IVIP",
+				content: {
+					type: 1,
+					value: {
+						available: "1499269.00000000",
+						symbol: "IVIP",
+						value: 158.48,
+					},
+					revision: "lnt02q7v0007oohx37705737",
+					revision_nr: 1,
+					created: 1697467086139,
+					modified: 1697467086139,
+				},
+			},
+			{
+				path: "ivipcoin-db::__movement_wallet__/000523147298669313/balances",
+				content: {
+					type: 1,
+					value: {},
+					revision: "lnt02q7v0005oohx3xm7c536",
+					revision_nr: 1,
+					created: 1697467086139,
+					modified: 1697467086139,
+				},
+			},
+		];
+
+		const resultPathx = restructJson(entries);
+		console.log(JSON.stringify(resultPathx, null, 2));
+
+		// if (result) {
+		// } else {
+		// 	console.log("Documento não encontrado");
+		// }
 	} finally {
 		await client.close();
 	}
