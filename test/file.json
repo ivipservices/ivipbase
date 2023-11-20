@@ -1,0 +1,124 @@
+{
+  "ivipcoin-db::__movement_wallet__": {
+    "000523147298669313": {
+      "balances": {
+        "BRL": {
+          "available": "2528.00700001",
+          "symbol": "BRL",
+          "value": 494.23
+        },
+        "IVIP": {
+          "available": "1499269.00000000",
+          "symbol": "IVIP",
+          "value": 158.48
+        }
+      },
+      "history": {
+        "1677138262468": {
+          "description": "Deposito de um valor R$ 603,00 para a carteira iVip 0005.2314.7298.6693-13Tarifas: - Taxa de serviço (Taxa de R$ 3,49):  + R$ 3,49",
+          "details": {
+            "external_resource_url": "https://www.mercadopago.com.br/sandbox/payments/1311772470/ticket?caller_id=1310149122&payment_method_id=bolbradesco&payment_id=1311772470&payment_method_reference_id=10194042832&hash=af674271-1e58-4fd7-be5a-99a2285e1e5a",
+            "barcode": {
+              "content": "23796927400000606493380261019404283200633330"
+            },
+            "costs": [
+              {
+                "title": "Taxa de serviço",
+                "label": "Taxa de R$ 3,49",
+                "amount": 3.49
+              }
+            ]
+          }
+        },
+        "1677138655788": {
+          "description": "Deposito de um valor R$ 592,00 para a carteira iVip 0005.2314.7298.6693-13Tarifas: - Taxa de serviço (Taxa de R$ 3,49):  + R$ 3,49",
+          "details": {
+            "external_resource_url": "https://www.mercadopago.com.br/sandbox/payments/1311772488/ticket?caller_id=1310149122&payment_method_id=bolbradesco&payment_id=1311772488&payment_method_reference_id=10194043809&hash=73ef0e48-e863-4567-bdcb-8711a40d76b2",
+            "barcode": {
+              "content": "23799927400000595493380261019404380900633330"
+            },
+            "costs": [
+              {
+                "title": "Taxa de serviço",
+                "label": "Taxa de R$ 3,49",
+                "amount": 3.49
+              }
+            ]
+          }
+        },
+        "1677139564865": {
+          "description": "Deposito de um valor R$ 500,00 para a carteira iVip 0005.2314.7298.6693-13",
+          "details": {
+            "qr_code": "00020126580014br.gov.bcb.pix0136b76aa9c2-2ec4-4110-954e-ebfe34f05b615204000053039865406504.955802BR59115774IUCkUzT6014PiVm MZqBPUzMI62230519mpqrinter1312722165630407FD",
+            "ticket_url": "https://www.mercadopago.com.br/sandbox/payments/1312722165/ticket?caller_id=1310149122&hash=db7e8cb4-20ed-4664-aa3c-fa50b3f2d6e8",
+            "qr_code_base64": "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",
+            "bank_info": {
+              "collector": {
+                "account_holder_name": "zBCfpF dcGeyDOq lplNs"
+              }
+            },
+            "costs": [
+              {
+                "title": "Taxa de serviço",
+                "label": "Taxa de 0.99%",
+                "amount": 4.95
+              }
+            ]
+          }
+        },
+        "1677140212667": {
+          "description": "Deposito de um valor R$ 20,00 para a carteira iVip 0005.2314.7298.6693-13",
+          "details": {
+            "qr_code_base64": "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",
+            "qr_code": "00020126580014br.gov.bcb.pix0136b76aa9c2-2ec4-4110-954e-ebfe34f05b61520400005303986540520.205802BR59115774IUCkUzT6014PiVm MZqBPUzMI62230519mpqrinter131177255663042F4F",
+            "ticket_url": "https://www.mercadopago.com.br/sandbox/payments/1311772556/ticket?caller_id=1310149122&hash=317c7ec8-4131-44a3-a5d4-81d3bd707a5f",
+            "costs": [
+              {
+                "title": "Taxa de serviço",
+                "label": "Taxa de 0.99%",
+                "amount": 0.198
+              }
+            ],
+            "bank_info": {
+              "collector": {
+                "account_holder_name": "zBCfpF dcGeyDOq lplNs"
+              }
+            }
+          }
+        },
+        "1677141074675": {
+          "description": "Deposito de um valor R$ 50,00 para a carteira iVip 0005.2314.7298.6693-13",
+          "details": {
+            "external_resource_url": "https://www.mercadopago.com.br/sandbox/payments/1311772574/ticket?caller_id=1310149122&payment_method_id=pec&payment_id=1311772574&payment_method_reference_id=6003381638&hash=676a5569-4884-42d3-9e67-bfdb72450090",
+            "barcode": {
+              "content": "23791927400000051993380260600338163800633330"
+            },
+            "costs": [
+              {
+                "title": "Taxa de serviço",
+                "label": "Taxa de 3.99%",
+                "amount": 1.9949999999999999
+              }
+            ]
+          }
+        },
+        "1677143332353": {
+          "description": "Deposito de um valor R$ 72,00 para a carteira iVip 0005.2314.7298.6693-13",
+          "details": {
+            "external_resource_url": "https://www.mercadopago.com.br/sandbox/payments/1312722387/ticket?caller_id=1310149122&payment_method_id=bolbradesco&payment_id=1312722387&payment_method_reference_id=10194052159&hash=0fea3a36-6354-4019-aec5-950b140fc21c",
+            "barcode": {
+              "content": "23792927400000075493380261019405215900633330"
+            },
+            "costs": [
+              {
+                "title": "Taxa de serviço",
+                "label": "Taxa de R$ 3,49",
+                "amount": 3.49
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
