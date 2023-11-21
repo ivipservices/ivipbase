@@ -1,4 +1,5 @@
 import fs from "fs";
+import path from "path";
 
 type Result = {
 	path: string;
@@ -58,6 +59,29 @@ function transform(json: Record<string, unknown>, prefix: string = ""): Result[]
 
 	return results;
 }
+function readPath() {
+	const fileName = "__movement_wallet__.json";
+
+	const filePath = path.join(__dirname, fileName);
+
+	fs.readFile(filePath, "utf8", (err, data) => {
+		if (err) {
+			console.error("Error reading the file:", err);
+			return;
+		}
+
+		try {
+			var dataToArray = JSON.parse(data);
+			console.log(dataToArray);
+			return dataToArray;
+		} catch (parseError) {
+			console.error("Error parsing JSON:", parseError);
+		}
+	});
+}
+const gettingTheJson: any = readPath();
+console.log(gettingTheJson);
+// const afterLimit = gettingTheJson?.slice(0, 1);
 
 const inputJson = {
 	"000523147298669313": {
@@ -139,7 +163,6 @@ const inputJson = {
 };
 
 const result = transform(inputJson);
-console.log(JSON.stringify(result, null, 2));
 
 const dataJSONModel = JSON.stringify(result, null, 2);
 
@@ -158,7 +181,8 @@ function afterRestructureSaveIntoJSONFile(dataWithOutPathFromMongodb) {
 	return dataWithOutPathFromMongodb;
 }
 
-console.log(afterRestructureSaveIntoJSONFile(dataJSONModel));
+// console.log(afterRestructureSaveIntoJSONFile(dataJSONModel));
+// console.log(JSON.stringify(result, null, 2));
 
 function isObject(value: any): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null;

@@ -15,7 +15,7 @@
 	"private": false,
 	"repository": "github:ivipcoin/ivipbase",
 	"scripts": {
-		"dev": "nodemon ./test/test.ts",
+		"dev": "nodemon ./test/restructureJson.ts",
 		"dev2": "nodemon ./test/example.ts",
 		"build": "npm run build:clean && npm run build:esm && npm run build:cjs && npm run build:packages && echo Done!",
 		"build:clean": "rimraf dist",
