@@ -1,3 +1,5 @@
+import fs from "fs";
+
 type Result = {
 	path: string;
 	content: {
@@ -9,6 +11,17 @@ type Result = {
 		modified: number;
 	};
 };
+interface ResultWithPath {
+	path: string;
+	content: {
+		type: number;
+		value: any;
+		revision: string;
+		revision_nr: number;
+		created: number;
+		modified: number;
+	};
+}
 
 function transform(json: Record<string, unknown>, prefix: string = ""): Result[] {
 	const results: Result[] = [];
@@ -128,17 +141,24 @@ const inputJson = {
 const result = transform(inputJson);
 console.log(JSON.stringify(result, null, 2));
 
-interface ResultWithPath {
-	path: string;
-	content: {
-		type: number;
-		value: any;
-		revision: string;
-		revision_nr: number;
-		created: number;
-		modified: number;
-	};
+const dataJSONModel = JSON.stringify(result, null, 2);
+
+function afterRestructureSaveIntoJSONFile(dataWithOutPathFromMongodb) {
+	console.log(dataWithOutPathFromMongodb);
+
+	const fileAddress: any = "./test/outputResultWithPathJSON.json";
+	fs.writeFile(fileAddress, dataWithOutPathFromMongodb, (error) => {
+		if (error) {
+			console.error("Algum erro aconteceu", error);
+		} else {
+			console.log(fileAddress);
+		}
+	});
+
+	return dataWithOutPathFromMongodb;
 }
+
+console.log(afterRestructureSaveIntoJSONFile(dataJSONModel));
 
 function isObject(value: any): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null;

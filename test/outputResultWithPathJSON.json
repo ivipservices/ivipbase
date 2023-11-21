@@ -1,0 +1,159 @@
+[
+  {
+    "path": "ivipcoin-db::movement_wallet/000523147298669313/balances/BRL/BRL",
+    "content": {
+      "type": 1,
+      "value": {
+        "available": "2528.00700001",
+        "symbol": "BRL",
+        "value": 494.23
+      },
+      "revision": "lnt02q7v0007oohx37705737",
+      "revision_nr": 1,
+      "created": 1700572664929,
+      "modified": 1700572664929
+    }
+  },
+  {
+    "path": "ivipcoin-db::movement_wallet/000523147298669313/balances/BRL/IVIP",
+    "content": {
+      "type": 1,
+      "value": {
+        "available": "1499269.00000000",
+        "symbol": "IVIP",
+        "value": 158.48
+      },
+      "revision": "lnt02q7v0007oohx37705737",
+      "revision_nr": 1,
+      "created": 1700572664929,
+      "modified": 1700572664929
+    }
+  },
+  {
+    "path": "ivipcoin-db::movement_wallet/000523147298669313/balances/BRL",
+    "content": {
+      "type": 1,
+      "value": {
+        "available": "2528.00700001",
+        "symbol": "BRL",
+        "value": 494.23
+      },
+      "revision": "lnt02q7v0007oohx37705737",
+      "revision_nr": 1,
+      "created": 1700572664929,
+      "modified": 1700572664929
+    }
+  },
+  {
+    "path": "ivipcoin-db::movement_wallet/000523147298669313/balances/IVIP",
+    "content": {
+      "type": 1,
+      "value": {
+        "available": "1499269.00000000",
+        "symbol": "IVIP",
+        "value": 158.48
+      },
+      "revision": "lnt02q7v0007oohx37705737",
+      "revision_nr": 1,
+      "created": 1700572664929,
+      "modified": 1700572664929
+    }
+  },
+  {
+    "path": "ivipcoin-db::movement_wallet/147006993684782200/history/1678652275580/history/1678652275580/history/1678652275580",
+    "content": {
+      "type": 1,
+      "value": {
+        "type": "deposit",
+        "wallet_type": "IVIPCOIN",
+        "payment_method": "pix",
+        "original_amount": 100,
+        "total_amount": 100.99,
+        "history_id": 1678652275580,
+        "id": 55661848873,
+        "date_created": "2023-03-12T16:17:56.428-04:00",
+        "date_last_updated": "2023-03-13T16:21:02.000-04:00",
+        "date_of_expiration": "2023-03-13T16:17:56.084-04:00",
+        "operation_type": "regular_payment",
+        "payment_type": "bank_transfer",
+        "status": "cancelled",
+        "status_detail": "expired",
+        "currency_id": "BRL"
+      },
+      "revision": "lnt02q7v0007oohx37705737",
+      "revision_nr": 1,
+      "created": 1700572664929,
+      "modified": 1700572664929
+    }
+  },
+  {
+    "path": "ivipcoin-db::movement_wallet/147006993684782200/history/1678652275580/history/1678652275580",
+    "content": {
+      "type": 1,
+      "value": {
+        "type": "deposit",
+        "wallet_type": "IVIPCOIN",
+        "payment_method": "pix",
+        "original_amount": 100,
+        "total_amount": 100.99,
+        "history_id": 1678652275580,
+        "id": 55661848873,
+        "date_created": "2023-03-12T16:17:56.428-04:00",
+        "date_last_updated": "2023-03-13T16:21:02.000-04:00",
+        "date_of_expiration": "2023-03-13T16:17:56.084-04:00",
+        "operation_type": "regular_payment",
+        "payment_type": "bank_transfer",
+        "status": "cancelled",
+        "status_detail": "expired",
+        "currency_id": "BRL"
+      },
+      "revision": "lnt02q7v0007oohx37705737",
+      "revision_nr": 1,
+      "created": 1700572664929,
+      "modified": 1700572664929
+    }
+  },
+  {
+    "path": "ivipcoin-db::movement_wallet/147006993684782200/history/1678652275580",
+    "content": {
+      "type": 1,
+      "value": {
+        "type": "deposit",
+        "wallet_type": "IVIPCOIN",
+        "payment_method": "pix",
+        "original_amount": 100,
+        "total_amount": 100.99,
+        "history_id": 1678652275580,
+        "id": 55661848873,
+        "date_created": "2023-03-12T16:17:56.428-04:00",
+        "date_last_updated": "2023-03-13T16:21:02.000-04:00",
+        "date_of_expiration": "2023-03-13T16:17:56.084-04:00",
+        "operation_type": "regular_payment",
+        "payment_type": "bank_transfer",
+        "status": "cancelled",
+        "status_detail": "expired",
+        "currency_id": "BRL"
+      },
+      "revision": "lnt02q7v0007oohx37705737",
+      "revision_nr": 1,
+      "created": 1700572664929,
+      "modified": 1700572664929
+    }
+  },
+  {
+    "path": "ivipcoin-db::movement_wallet/147006993684782200",
+    "content": {
+      "type": 1,
+      "value": {
+        "dataModificacao": 1678651931786,
+        "dateValidity": 1678669931823,
+        "totalValue": 0,
+        "currencyType": "USD"
+      },
+      "revision": "lnt02q7v0007oohx37705737",
+      "revision_nr": 1,
+      "created": 1700572664929,
+      "modified": 1700572664929
+    }
+  }
+]
