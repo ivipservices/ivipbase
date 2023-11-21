@@ -1,4 +1,6 @@
 import { MongoClient } from "mongodb";
+import fs from "fs";
+import { after } from "node:test";
 
 interface Balance {
 	available: string;
@@ -27,8 +29,13 @@ async function main() {
 	try {
 		await client.connect();
 		const collection = client.db("root").collection("teste");
+		const limit = 50;
 
-		// const result = await collection.find().toArray();
+		console.log(new Date().getSeconds(), "antes da busca");
+		const resultData = await collection.find().toArray();
+		const afterLimit = resultData.slice(0, limit);
+
+		console.log(new Date().getSeconds(), "depois da busca");
 
 		const KEY_THAT_MUST_BE_ARRAY = ["costs"];
 
@@ -45,11 +52,11 @@ async function main() {
 
 					if (i === parts.length - 1) {
 						let key = part.replace(/__+/g, "_").replace(/^_+|_+$/g, "");
-						// console.log({ key });
 						const { value } = content;
 
 						if (!current[key]) {
 							key = key.split("[")[0];
+
 							if (KEY_THAT_MUST_BE_ARRAY.includes(key)) {
 								current[key] = [];
 
@@ -60,8 +67,6 @@ async function main() {
 								current[key] = value;
 							}
 						}
-
-						// current[key].values.push(value);
 					} else {
 						if (!current[part]) {
 							current[part] = {};
@@ -75,52 +80,116 @@ async function main() {
 			return result;
 		}
 
-		const entries = [
-			{
-				path: "ivipcoin-db::__movement_wallet__/000523147298669313/balances/BRL",
-				content: {
-					type: 1,
-					value: {
-						available: "2528.00700001",
-						symbol: "BRL",
-						value: 494.23,
-					},
-					revision: "lnt02q7v0006oohx1hd4856x",
-					revision_nr: 1,
-					created: 1697467086139,
-					modified: 1697467086139,
-				},
-			},
-			{
-				path: "ivipcoin-db::__movement_wallet__/000523147298669313/balances/IVIP",
-				content: {
-					type: 1,
-					value: {
-						available: "1499269.00000000",
-						symbol: "IVIP",
-						value: 158.48,
-					},
-					revision: "lnt02q7v0007oohx37705737",
-					revision_nr: 1,
-					created: 1697467086139,
-					modified: 1697467086139,
-				},
-			},
-			{
-				path: "ivipcoin-db::__movement_wallet__/000523147298669313/balances",
-				content: {
-					type: 1,
-					value: {},
-					revision: "lnt02q7v0005oohx3xm7c536",
-					revision_nr: 1,
-					created: 1697467086139,
-					modified: 1697467086139,
-				},
-			},
-		];
+		const entries = afterLimit;
+		// const entries = [
+		// 	{
+		// 		path: "ivipcoin-db::__movement_wallet__/000523147298669313/balances/BRL",
+		// 		content: {
+		// 			type: 1,
+		// 			value: {
+		// 				available: "2528.00700001",
+		// 				symbol: "BRL",
+		// 				value: 494.23,
+		// 			},
+		// 			revision: "lnt02q7v0006oohx1hd4856x",
+		// 			revision_nr: 1,
+		// 			created: 1697467086139,
+		// 			modified: 1697467086139,
+		// 		},
+		// 	},
+		// 	{
+		// 		path: "ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788/details/costs[0]",
+		// 		content: {
+		// 			type: 1,
+		// 			value: { title: "Taxa de serviço", label: "Taxa de R$ 3,49", amount: 3.49 },
+		// 			revision: "lnt02q7y000moohxbtckd7dc",
+		// 			revision_nr: 1,
+		// 			created: 1697467086142,
+		// 			modified: 1697467086142,
+		// 		},
+		// 	},
+		// 	{
+		// 		path: "ivipcoin-db::__movement_wallet__/000523147298669313/balances/IVIP",
+		// 		content: {
+		// 			type: 1,
+		// 			value: {
+		// 				available: "1499269.00000000",
+		// 				symbol: "IVIP",
+		// 				value: 158.48,
+		// 			},
+		// 			revision: "lnt02q7v0007oohx37705737",
+		// 			revision_nr: 1,
+		// 			created: 1697467086139,
+		// 			modified: 1697467086139,
+		// 		},
+		// 	},
+		// 	{
+		// 		path: "ivipcoin-db::__movement_wallet__/000523147298669313/balances",
+		// 		content: {
+		// 			type: 1,
+		// 			value: {},
+		// 			revision: "lnt02q7v0005oohx3xm7c536",
+		// 			revision_nr: 1,
+		// 			created: 1697467086139,
+		// 			modified: 1697467086139,
+		// 		},
+		// 	},
+		// 	{
+		// 		path: "ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138262468/details",
+		// 		content: {
+		// 			type: 1,
+		// 			value: {
+		// 				installments: 1,
+		// 				payment_method_reference_id: "10194042832",
+		// 				acquirer_reference: "",
+		// 				verification_code: "10194042832",
+		// 				net_received_amount: 0,
+		// 				total_paid_amount: 606.49,
+		// 				overpaid_amount: 0,
+		// 				installment_amount: 0,
+		// 				financial_institution: "bradesco",
+		// 			},
+		// 			revision: "lnt02q7w000boohx9oufgquj",
+		// 			revision_nr: 1,
+		// 			created: 1697467086141,
+		// 			modified: 1697467086141,
+		// 		},
+		// 	},
+		// 	{
+		// 		path: "ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788/description",
+		// 		content: {
+		// 			type: 5,
+		// 			value: "Deposito de um valor R$ 592,00 para a carteira iVip 0005.2314.7298.6693-13Tarifas: - Taxa de serviço (Taxa de R$ 3,49):  + R$ 3,49",
+		// 			revision: "lnt02q7x000hoohx4hktecqo",
+		// 			revision_nr: 1,
+		// 			created: 1697467086141,
+		// 			modified: 1697467086141,
+		// 		},
+		// 	},
+		// ];
 
 		const resultPathx = restructJson(entries);
-		console.log(JSON.stringify(resultPathx, null, 2));
+
+		const jsonPath = JSON.stringify(resultPathx, null, 2);
+
+		function createJson(resultPathsParams) {
+			console.log(resultPathsParams);
+			const fileAddress: any = "./test/file.json";
+			fs.writeFile(fileAddress, resultPathsParams, (error) => {
+				if (error) {
+					console.error("Algum erro aconteceu", error);
+				} else {
+					console.log(fileAddress);
+				}
+			});
+
+			return resultPathsParams;
+		}
+
+		console.log(createJson(jsonPath));
+
+		// console.log(JSON.stringify(resultPathx, null, 2));
+		console.log(new Date().getSeconds(), "final da busca");
 
 		// if (result) {
 		// } else {
