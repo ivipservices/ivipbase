@@ -50,7 +50,9 @@ function transform(json: Record<string, unknown>, prefix: string = ""): Result[]
 				modified: Date.now(),
 			},
 		};
-		results.push(nonObjectResult);
+		if (nonObjectResult.path) {
+			results.push(nonObjectResult);
+		}
 	}
 
 	if (Object.keys(nonObjectKeys).length === 0) {
@@ -65,7 +67,9 @@ function transform(json: Record<string, unknown>, prefix: string = ""): Result[]
 				modified: Date.now(),
 			},
 		};
-		results.push(nonObjectResult);
+		if (nonObjectResult.path) {
+			results.push(nonObjectResult);
+		}
 	}
 
 	return results;
