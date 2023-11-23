@@ -2,11 +2,10 @@ import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 
-
 function generateShortUUID(): string {
-    const fullUUID = randomUUID();
-    const shortUUID = fullUUID.replace(/-/g, "").slice(0, 24);
-    return shortUUID;
+	const fullUUID = randomUUID();
+	const shortUUID = fullUUID.replace(/-/g, "").slice(0, 24);
+	return shortUUID;
 }
 
 type Result = {
@@ -30,11 +29,10 @@ function transform(json: Record<string, unknown>, prefix: string = ""): Result[]
 		const currentValue = json[key];
 
 		if (key === "costs" && Array.isArray(currentValue) && currentValue.length > 0) {
-			// If "costs" is an array with values, add [0] to the path
-			results.push(...transform(currentValue[0] as Record<string, unknown>, `${currentPath}[0]`));
-			console.log("entrou aqui", currentValue);
-		} else if (key === "costs" && Array.isArray(currentValue) && currentValue.length === 0) {
-			results.push(...transform(currentValue as unknown as Record<string, unknown>, `${currentPath}`));
+			// If "costs" is an array with values, iterate through each element
+			for (let i = 0; i < currentValue.length; i++) {
+				results.push(...transform(currentValue[i] as Record<string, unknown>, `${currentPath}[${i}]`));
+			}
 		} else if (typeof currentValue === "object" && currentValue !== null) {
 			// If not "costs" or is "costs" but not an array with values, proceed as usual
 			results.push(...transform(currentValue as Record<string, unknown>, currentPath));
@@ -81,6 +79,67 @@ function transform(json: Record<string, unknown>, prefix: string = ""): Result[]
 
 	return results;
 }
+
+// function transform(json: Record<string, unknown>, prefix: string = ""): Result[] {
+// 	const results: Result[] = [];
+// 	const nonObjectKeys: Record<string, unknown> = {};
+
+// 	for (const key in json) {
+// 		const currentPath = `${prefix.replace(/^\//, "")}/${key.replace(/\*\*/g, "")}`;
+// 		const currentValue = json[key];
+
+// 		if (key === "costs" && Array.isArray(currentValue) && currentValue.length > 0) {
+// 			// If "costs" is an array with values, add [0] to the path
+// 			results.push(...transform(currentValue[0] as Record<string, unknown>, `${currentPath}[0]`));
+// 			console.log("entrou aqui", currentValue);
+// 		} else if (key === "costs" && Array.isArray(currentValue) && currentValue.length === 0) {
+// 			results.push(...transform(currentValue as unknown as Record<string, unknown>, `${currentPath}`));
+// 		} else if (typeof currentValue === "object" && currentValue !== null) {
+// 			// If not "costs" or is "costs" but not an array with values, proceed as usual
+// 			results.push(...transform(currentValue as Record<string, unknown>, currentPath));
+// 		} else {
+// 			// If it's not an object, add to the nonObjectKeys
+// 			nonObjectKeys[key] = currentValue;
+// 		}
+// 	}
+
+// 	// Add a single result for non-object keys
+// 	if (Object.keys(nonObjectKeys).length > 0) {
+// 		const nonObjectResult: Result = {
+// 			path: `${prefix.replace(/^\//, "")}`,
+// 			content: {
+// 				type: 1,
+// 				value: nonObjectKeys as any,
+// 				revision: generateShortUUID(),
+// 				revision_nr: 1,
+// 				created: Date.now(),
+// 				modified: Date.now(),
+// 			},
+// 		};
+// 		if (nonObjectResult.path) {
+// 			results.push(nonObjectResult);
+// 		}
+// 	}
+
+// 	if (Object.keys(nonObjectKeys).length === 0) {
+// 		const nonObjectResult: Result = {
+// 			path: `${prefix.replace(/^\//, "")}`,
+// 			content: {
+// 				type: 1,
+// 				value: {} as any,
+// 				revision: generateShortUUID(),
+// 				revision_nr: 1,
+// 				created: Date.now(),
+// 				modified: Date.now(),
+// 			},
+// 		};
+// 		if (nonObjectResult.path) {
+// 			results.push(nonObjectResult);
+// 		}
+// 	}
+
+// 	return results;
+// }
 
 function readPath() {
 	const fileName = "__movement_wallet__.json";
