@@ -2,6 +2,13 @@ import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 
+
+function generateShortUUID(): string {
+    const fullUUID = randomUUID();
+    const shortUUID = fullUUID.replace(/-/g, "").slice(0, 24);
+    return shortUUID;
+}
+
 type Result = {
 	path: string;
 	content: {
@@ -44,7 +51,7 @@ function transform(json: Record<string, unknown>, prefix: string = ""): Result[]
 			content: {
 				type: 1,
 				value: nonObjectKeys as any,
-				revision: "lnt02q7v0007oohx37705737",
+				revision: generateShortUUID(),
 				revision_nr: 1,
 				created: Date.now(),
 				modified: Date.now(),
@@ -59,7 +66,7 @@ function transform(json: Record<string, unknown>, prefix: string = ""): Result[]
 			content: {
 				type: 1,
 				value: {} as any,
-				revision: "lnt02q7v0007oohx37705737",
+				revision: generateShortUUID(),
 				revision_nr: 1,
 				created: Date.now(),
 				modified: Date.now(),
