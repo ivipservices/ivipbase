@@ -19,25 +19,46 @@ function transform(json: Record<string, unknown>, prefix: string = ""): Result[]
 	const nonObjectKeys: Record<string, unknown> = {};
 
 	for (const key in json) {
-		const currentPath = `${prefix}/${key.replace(/\*\*/g, "")}`;
+		const currentPath = `${prefix.replace(/^\//, "")}/${key.replace(/\*\*/g, "")}`;
 		const currentValue = json[key];
 
-		if (typeof currentValue === "object" && currentValue !== null) {
-			// Se for objeto, chama recursivamente transform para processar objetos aninhados
+		if (key === "costs" && Array.isArray(currentValue) && currentValue.length > 0) {
+			// If "costs" is an array with values, add [0] to the path
+			results.push(...transform(currentValue[0] as Record<string, unknown>, `${currentPath}[0]`));
+			console.log("entrou aqui", currentValue);
+		} else if (key === "costs" && Array.isArray(currentValue) && currentValue.length === 0) {
+			results.push(...transform(currentValue as unknown as Record<string, unknown>, `${currentPath}`));
+		} else if (typeof currentValue === "object" && currentValue !== null) {
+			// If not "costs" or is "costs" but not an array with values, proceed as usual
 			results.push(...transform(currentValue as Record<string, unknown>, currentPath));
 		} else {
-			// Se não for objeto, adiciona ao objeto de chaves não-objeto
+			// If it's not an object, add to the nonObjectKeys
 			nonObjectKeys[key] = currentValue;
 		}
 	}
 
-	// Adiciona um único resultado para chaves não-objeto
+	// Add a single result for non-object keys
 	if (Object.keys(nonObjectKeys).length > 0) {
 		const nonObjectResult: Result = {
-			path: `ivipcoin-db::movement_wallet${prefix}`,
+			path: `${prefix.replace(/^\//, "")}`,
 			content: {
 				type: 1,
 				value: nonObjectKeys as any,
+				revision: "lnt02q7v0007oohx37705737",
+				revision_nr: 1,
+				created: Date.now(),
+				modified: Date.now(),
+			},
+		};
+		results.push(nonObjectResult);
+	}
+
+	if (Object.keys(nonObjectKeys).length === 0) {
+		const nonObjectResult: Result = {
+			path: `${prefix.replace(/^\//, "")}`,
+			content: {
+				type: 1,
+				value: {} as any,
 				revision: "lnt02q7v0007oohx37705737",
 				revision_nr: 1,
 				created: Date.now(),
