@@ -120,13 +120,30 @@ function transform(json: Record<string, unknown>, prefix: string = ""): Result[]
 				path: `${prefix.replace(/^\//, "")}`,
 				content: {
 					type: getType(nonObjectKeys),
-					value: filterKeysFromObject(otherObject),
+					value: filterKeysFromObject(otherObject, ["date_created", "date_last_updated", "date_of_expiration"]),
 					revision: generateShortUUID(),
 					revision_nr: 1,
 					created: Date.now(),
 					modified: Date.now(),
 				},
 			};
+
+			if (nonObjectResult.content.value.history_id !== undefined) {
+				nonObjectResult.content.value.date_created = {
+					type: 6,
+					value: Date.now(),
+				};
+
+				nonObjectResult.content.value.date_last_updated = {
+					type: 6,
+					value: Date.now(),
+				};
+
+				nonObjectResult.content.value.date_of_expiration = {
+					type: 6,
+					value: Date.now(),
+				};
+			}
 
 			if (nonObjectResult.path) {
 				results.push(nonObjectResult);
@@ -136,33 +153,13 @@ function transform(json: Record<string, unknown>, prefix: string = ""): Result[]
 		}
 	}
 
-	function filterKeysFromObject(obj) {
+	function filterKeysFromObject(obj, keysToFilter) {
 		const filteredObject = {};
-
-		function checkIsValidDate(string) {
-			// Expressão regular para validar o padrão da string de data
-			const datePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?(-\d{2}:\d{2})?$/;
-
-			if (datePattern.test(string)) {
-				let date = new Date(string);
-				// console.log(date.getTime());
-				return !isNaN(date.getTime());
-			}
-
-			return false;
-		}
-
 		for (const key in obj) {
-			if (checkIsValidDate(obj[key])) {
-				let newDate = new Date(obj[key]);
-				filteredObject[key] = {
-					type: 6,
-					value: newDate.getTime(),
-				};
+			if (!keysToFilter.includes(key)) {
+				filteredObject[key] = obj[key];
 			}
-			return obj;
 		}
-
 		return filteredObject;
 	}
 
