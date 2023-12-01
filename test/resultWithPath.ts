@@ -2,16 +2,12 @@ import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 
-function generateShortUUID(): string {
-	const fullUUID = randomUUID();
-	const shortUUID = fullUUID.replace(/-/g, "").slice(0, 24);
-	return shortUUID;
-}
+type NodeValueType = keyof typeof nodeValueTypes;
 
 type Result = {
 	path: string;
 	content: {
-		type: number;
+		type: NodeValueType;
 		value: Record<string, unknown> | string | number;
 		revision: string;
 		revision_nr: number;
@@ -20,35 +16,109 @@ type Result = {
 	};
 };
 
+const nodeValueTypes = {
+	EMPTY: 0,
+	OBJECT: 1,
+	ARRAY: 2,
+	NUMBER: 3,
+	BOOLEAN: 4,
+	STRING: 5,
+	DATETIME: 6,
+	BIGINT: 7,
+	BINARY: 8,
+	REFERENCE: 9,
+} as const;
+
+function generateShortUUID(): string {
+	const fullUUID = randomUUID();
+	const shortUUID = fullUUID.replace(/-/g, "").slice(0, 24);
+	return shortUUID;
+}
+
+function getType(value: unknown): NodeValueType {
+	if (Array.isArray(value)) {
+		return "ARRAY";
+	} else if (value && typeof value === "object") {
+		return "OBJECT";
+	} else if (typeof value === "number") {
+		return "NUMBER";
+	} else if (typeof value === "boolean") {
+		return "BOOLEAN";
+	} else if (typeof value === "string") {
+		return "STRING";
+	} else if (typeof value === "bigint") {
+		return "BIGINT";
+	} else if (typeof value === "object" && (value as any).type === 6) {
+		return "DATETIME";
+	} else {
+		return "EMPTY";
+	}
+}
+
 function transform(json: Record<string, unknown>, prefix: string = ""): Result[] {
 	const results: Result[] = [];
 	const nonObjectKeys: Record<string, unknown> = {};
+	const arrayResults: Result[] = [];
+	let otherObject;
 
 	for (const key in json) {
 		const currentPath = `${prefix.replace(/^\//, "")}/${key.replace(/\*\*/g, "")}`;
 		const currentValue = json[key];
+		const valueType = getType(currentValue);
 
-		if (key === "costs" && Array.isArray(currentValue) && currentValue.length > 0) {
-			// If "costs" is an array with values, iterate through each element
+		if (typeof currentValue === "string" && currentValue.length >= 50) {
+			arrayResults.push({
+				path: currentPath,
+				content: {
+					type: valueType,
+					value: currentValue,
+					revision: generateShortUUID(),
+					revision_nr: 1,
+					created: Date.now(),
+					modified: Date.now(),
+				},
+			});
+		}
+
+		if (Array.isArray(currentValue) && currentValue.length > 0 && currentValue.length <= 49) {
+			// Se for um array com valores, itera por cada elemento
 			for (let i = 0; i < currentValue.length; i++) {
 				results.push(...transform(currentValue[i] as Record<string, unknown>, `${currentPath}[${i}]`));
 			}
-		} else if (typeof currentValue === "object" && currentValue !== null) {
-			// If not "costs" or is "costs" but not an array with values, proceed as usual
-			results.push(...transform(currentValue as Record<string, unknown>, currentPath));
+			// Adiciona um resultado para o array vazio
+			arrayResults.push({
+				path: currentPath,
+				content: {
+					type: "ARRAY",
+					value: {},
+					revision: generateShortUUID(),
+					revision_nr: 1,
+					created: Date.now(),
+					modified: Date.now(),
+				},
+			});
+		} else if (valueType === "OBJECT") {
+			results.push(...transform(currentValue as unknown as Record<string, unknown>, currentPath));
 		} else {
-			// If it's not an object, add to the nonObjectKeys
 			nonObjectKeys[key] = currentValue;
+			let ob = nonObjectKeys;
+			otherObject = Object.entries(ob)
+				.filter(([key, value]) => typeof value !== "string" || value.length < 49)
+				.reduce((acc, [key, value]) => {
+					acc[key] = value;
+					return acc;
+				}, {} as Record<string, unknown>);
 		}
 	}
 
-	// Add a single result for non-object keys
+	// Adiciona um único resultado para chaves não objeto
+
 	if (Object.keys(nonObjectKeys).length > 0) {
 		const nonObjectResult: Result = {
 			path: `${prefix.replace(/^\//, "")}`,
 			content: {
-				type: 1,
-				value: nonObjectKeys as any,
+				type: getType(nonObjectKeys),
+				value: otherObject as any,
 				revision: generateShortUUID(),
 				revision_nr: 1,
 				created: Date.now(),
@@ -60,11 +130,12 @@ function transform(json: Record<string, unknown>, prefix: string = ""): Result[]
 		}
 	}
 
+	// Se não há chaves não objeto, adiciona um resultado com objeto vazio
 	if (Object.keys(nonObjectKeys).length === 0) {
 		const nonObjectResult: Result = {
 			path: `${prefix.replace(/^\//, "")}`,
 			content: {
-				type: 1,
+				type: getType({}),
 				value: {} as any,
 				revision: generateShortUUID(),
 				revision_nr: 1,
@@ -77,69 +148,11 @@ function transform(json: Record<string, unknown>, prefix: string = ""): Result[]
 		}
 	}
 
+	// Adiciona resultados para arrays
+	results.push(...arrayResults);
+
 	return results;
 }
-
-// function transform(json: Record<string, unknown>, prefix: string = ""): Result[] {
-// 	const results: Result[] = [];
-// 	const nonObjectKeys: Record<string, unknown> = {};
-
-// 	for (const key in json) {
-// 		const currentPath = `${prefix.replace(/^\//, "")}/${key.replace(/\*\*/g, "")}`;
-// 		const currentValue = json[key];
-
-// 		if (key === "costs" && Array.isArray(currentValue) && currentValue.length > 0) {
-// 			// If "costs" is an array with values, add [0] to the path
-// 			results.push(...transform(currentValue[0] as Record<string, unknown>, `${currentPath}[0]`));
-// 			console.log("entrou aqui", currentValue);
-// 		} else if (key === "costs" && Array.isArray(currentValue) && currentValue.length === 0) {
-// 			results.push(...transform(currentValue as unknown as Record<string, unknown>, `${currentPath}`));
-// 		} else if (typeof currentValue === "object" && currentValue !== null) {
-// 			// If not "costs" or is "costs" but not an array with values, proceed as usual
-// 			results.push(...transform(currentValue as Record<string, unknown>, currentPath));
-// 		} else {
-// 			// If it's not an object, add to the nonObjectKeys
-// 			nonObjectKeys[key] = currentValue;
-// 		}
-// 	}
-
-// 	// Add a single result for non-object keys
-// 	if (Object.keys(nonObjectKeys).length > 0) {
-// 		const nonObjectResult: Result = {
-// 			path: `${prefix.replace(/^\//, "")}`,
-// 			content: {
-// 				type: 1,
-// 				value: nonObjectKeys as any,
-// 				revision: generateShortUUID(),
-// 				revision_nr: 1,
-// 				created: Date.now(),
-// 				modified: Date.now(),
-// 			},
-// 		};
-// 		if (nonObjectResult.path) {
-// 			results.push(nonObjectResult);
-// 		}
-// 	}
-
-// 	if (Object.keys(nonObjectKeys).length === 0) {
-// 		const nonObjectResult: Result = {
-// 			path: `${prefix.replace(/^\//, "")}`,
-// 			content: {
-// 				type: 1,
-// 				value: {} as any,
-// 				revision: generateShortUUID(),
-// 				revision_nr: 1,
-// 				created: Date.now(),
-// 				modified: Date.now(),
-// 			},
-// 		};
-// 		if (nonObjectResult.path) {
-// 			results.push(nonObjectResult);
-// 		}
-// 	}
-
-// 	return results;
-// }
 
 function readPath() {
 	const fileName = "__movement_wallet__.json";
