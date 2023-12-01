@@ -137,33 +137,41 @@ function transform(json: Record<string, unknown>, prefix: string = ""): Result[]
 	}
 
 	function filterKeysFromObject(obj) {
-		const filteredObject = {};
-
 		function checkIsValidDate(string) {
 			// Expressão regular para validar o padrão da string de data
-			const datePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?(-\d{2}:\d{2})?$/;
+			const datePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?([+-]\d{2}:\d{2})?Z?$/;
 
 			if (datePattern.test(string)) {
 				let date = new Date(string);
-				// console.log(date.getTime());
 				return !isNaN(date.getTime());
 			}
 
 			return false;
 		}
 
-		for (const key in obj) {
-			if (checkIsValidDate(obj[key])) {
-				let newDate = new Date(obj[key]);
-				filteredObject[key] = {
-					type: 6,
-					value: newDate.getTime(),
-				};
+		function processObject(inputObj) {
+			const filteredObject = {};
+
+			for (const key in inputObj) {
+				if (checkIsValidDate(inputObj[key])) {
+					let newDate = new Date(inputObj[key]);
+					filteredObject[key] = {
+						type: 6,
+						value: newDate.getTime(),
+					};
+				} else if (typeof inputObj[key] === "object" && inputObj[key] !== null) {
+					// Recursively process nested objects
+					filteredObject[key] = processObject(inputObj[key]);
+				} else {
+					// Copy other types of values as is
+					filteredObject[key] = inputObj[key];
+				}
 			}
-			return obj;
+
+			return filteredObject;
 		}
 
-		return filteredObject;
+		return processObject(obj);
 	}
 
 	// Se não há chaves não objeto, adiciona um resultado com objeto vazio
