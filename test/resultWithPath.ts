@@ -8,7 +8,7 @@ type Result = {
 	path: string;
 	content: {
 		type: NodeValueType;
-		value: Record<string, unknown> | string | number;
+		value: Record<string, unknown> | string | number | any;
 		revision: string;
 		revision_nr: number;
 		created: number;
@@ -78,6 +78,7 @@ function transform(json: Record<string, unknown>, prefix: string = ""): Result[]
 					modified: Date.now(),
 				},
 			});
+			// console.log(currentValue, "string");
 		}
 
 		if (Array.isArray(currentValue) && currentValue.length > 0 && currentValue.length <= 49) {
@@ -114,20 +115,53 @@ function transform(json: Record<string, unknown>, prefix: string = ""): Result[]
 	// Adiciona um único resultado para chaves não objeto
 
 	if (Object.keys(nonObjectKeys).length > 0) {
-		const nonObjectResult: Result = {
-			path: `${prefix.replace(/^\//, "")}`,
-			content: {
-				type: getType(nonObjectKeys),
-				value: otherObject as any,
-				revision: generateShortUUID(),
-				revision_nr: 1,
-				created: Date.now(),
-				modified: Date.now(),
-			},
-		};
-		if (nonObjectResult.path) {
-			results.push(nonObjectResult);
+		if (typeof otherObject === "object" && otherObject !== null) {
+			const nonObjectResult: Result = {
+				path: `${prefix.replace(/^\//, "")}`,
+				content: {
+					type: getType(nonObjectKeys),
+					value: filterKeysFromObject(otherObject, ["date_created", "date_last_updated", "date_of_expiration"]),
+					revision: generateShortUUID(),
+					revision_nr: 1,
+					created: Date.now(),
+					modified: Date.now(),
+				},
+			};
+
+			nonObjectResult.content.value.date_created = {
+				type: 6,
+				value: Date.now(),
+			};
+
+			nonObjectResult.content.value.date_last_updated = {
+				type: 6,
+				value: Date.now(),
+			};
+
+			nonObjectResult.content.value.date_of_expiration = {
+				type: 6,
+				value: Date.now(),
+			};
+
+			if (nonObjectResult.path) {
+				results.push(nonObjectResult);
+			}
+		} else {
+			console.error("otherObject is not an object");
 		}
+	}
+
+	function filterKeysFromObject(obj, keysToFilter) {
+		const filteredObject = {};
+		for (const key in obj) {
+			if (obj.history_id !== undefined) {
+				if (!keysToFilter.includes(key)) {
+					filteredObject[key] = obj[key];
+				}
+			}
+			return obj;
+		}
+		return filteredObject;
 	}
 
 	// Se não há chaves não objeto, adiciona um resultado com objeto vazio
