@@ -7,7 +7,7 @@ type NodeValueType = keyof typeof nodeValueTypes;
 type Result = {
 	path: string;
 	content: {
-		type: NodeValueType;
+		type: number;
 		value: Record<string, unknown> | string | number | any;
 		revision: string;
 		revision_nr: number;
@@ -34,24 +34,23 @@ function generateShortUUID(): string {
 	const shortUUID = fullUUID.replace(/-/g, "").slice(0, 24);
 	return shortUUID;
 }
-
-function getType(value: unknown): NodeValueType {
+function getType(value: unknown): number {
 	if (Array.isArray(value)) {
-		return "ARRAY";
+		return nodeValueTypes.ARRAY;
 	} else if (value && typeof value === "object") {
-		return "OBJECT";
+		return nodeValueTypes.OBJECT;
 	} else if (typeof value === "number") {
-		return "NUMBER";
+		return nodeValueTypes.NUMBER;
 	} else if (typeof value === "boolean") {
-		return "BOOLEAN";
+		return nodeValueTypes.BOOLEAN;
 	} else if (typeof value === "string") {
-		return "STRING";
+		return nodeValueTypes.STRING;
 	} else if (typeof value === "bigint") {
-		return "BIGINT";
+		return nodeValueTypes.BIGINT;
 	} else if (typeof value === "object" && (value as any).type === 6) {
-		return "DATETIME";
+		return nodeValueTypes.DATETIME;
 	} else {
-		return "EMPTY";
+		return nodeValueTypes.EMPTY;
 	}
 }
 
@@ -90,7 +89,7 @@ function transform(json: Record<string, unknown>, prefix: string = ""): Result[]
 			arrayResults.push({
 				path: currentPath,
 				content: {
-					type: "ARRAY",
+					type: nodeValueTypes.ARRAY,
 					value: {},
 					revision: generateShortUUID(),
 					revision_nr: 1,
@@ -98,7 +97,7 @@ function transform(json: Record<string, unknown>, prefix: string = ""): Result[]
 					modified: Date.now(),
 				},
 			});
-		} else if (valueType === "OBJECT") {
+		} else if (valueType === nodeValueTypes.OBJECT) {
 			results.push(...transform(currentValue as unknown as Record<string, unknown>, currentPath));
 		} else {
 			nonObjectKeys[key] = currentValue;
