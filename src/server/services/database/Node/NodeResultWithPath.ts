@@ -1,5 +1,5 @@
-import fs from "fs";
-import path from "path";
+import * as fs from "fs";
+import * as path from "path";
 
 import { randomUUID } from "crypto";
 
@@ -17,8 +17,9 @@ type Result = {
 	};
 };
 
-const FILE_ADDRESS = "../../../../../test/__movement_wallet__.json";
+const FILE_ADDRESS_INPUT = "../../../../../test/__movement_wallet__.json";
 
+const FILE_ADDRESS_OUTPUT = "./test/outputResultWithPathJSON.json";
 const nodeValueTypes = {
 	EMPTY: 0,
 	OBJECT: 1,
@@ -32,6 +33,59 @@ const nodeValueTypes = {
 	REFERENCE: 9,
 } as const;
 
+class ReadFiles {
+	private fileAddress: string;
+	private outputResultPath: string;
+	private fileAddressParam: string;
+
+	constructor(fileAddress?: string, outputResultPath?: string, fileAddressParam?: string) {
+		this.fileAddress = fileAddress || "./test/outputResultWithPathJSON.json";
+		this.outputResultPath = outputResultPath || FILE_ADDRESS_INPUT;
+		this.fileAddressParam = fileAddressParam || FILE_ADDRESS_INPUT;
+	}
+
+	public readPath() {
+		const filePath = path.join(__dirname, this.fileAddressParam);
+
+		fs.readFile(filePath, "utf8", (err, data) => {
+			if (err) {
+				console.error("Error reading the file:", err);
+				return;
+			}
+
+			console.log(filePath);
+
+			try {
+				const dataToArray = JSON.parse(data);
+				const nodeJsonTransformer = new NodeJsonTransformer();
+
+				const result = nodeJsonTransformer.transform(dataToArray);
+
+				const dataJSONModel = JSON.stringify(result, null, 2);
+
+				const afterRestructureSaveIntoJSONFile = (dataWithOutPathFromMongodb: any) => {
+					console.log(new Date().getSeconds(), "started");
+
+					fs.writeFile(this.fileAddress, dataWithOutPathFromMongodb, (error) => {
+						if (error) {
+							console.error("Algum erro aconteceu", error);
+						} else {
+							console.log(this.fileAddress);
+						}
+					});
+
+					return dataWithOutPathFromMongodb;
+				};
+
+				afterRestructureSaveIntoJSONFile(dataJSONModel);
+			} catch (parseError) {
+				console.error("Error parsing JSON:", parseError);
+			}
+		});
+		console.log(new Date().getSeconds(), "end");
+	}
+}
+
 class NodeJsonTransformer {
 	private generateShortUUID(): string {
 		const fullUUID = randomUUID();
@@ -39,7 +93,7 @@ class NodeJsonTransformer {
 		return shortUUID;
 	}
 
-	private getType(value: unknown): number {
+	public getType(value: unknown): number {
 		if (Array.isArray(value)) {
 			return nodeValueTypes.ARRAY;
 		} else if (value && typeof value === "object") {
@@ -59,7 +113,7 @@ class NodeJsonTransformer {
 		}
 	}
 
-	private transform(json: Record<string, unknown>, prefix: string = ""): Result[] {
+	public transform(json: Record<string, unknown>, prefix: string = ""): Result[] {
 		const results: Result[] = [];
 		const nonObjectKeys: Record<string, unknown> = {};
 		const arrayResults: Result[] = [];
@@ -200,50 +254,11 @@ class NodeJsonTransformer {
 
 		return processObject(obj);
 	}
-
-	private readPath() {
-		const fileName = FILE_ADDRESS;
-		const filePath = path.join(__dirname, fileName);
-
-		fs.readFile(filePath, "utf8", (err, data) => {
-			if (err) {
-				console.error("Error reading the file:", err);
-				return;
-			}
-
-			try {
-				var dataToArray = JSON.parse(data);
-
-				const result = this.transform(dataToArray);
-
-				const dataJSONModel = JSON.stringify(result, null, 2);
-
-				function afterRestructureSaveIntoJSONFile(dataWithOutPathFromMongodb) {
-					console.log(new Date().getSeconds(), "started");
-
-					const fileAddress: any = "./test/outputResultWithPathJSON.json";
-					fs.writeFile(fileAddress, dataWithOutPathFromMongodb, (error) => {
-						if (error) {
-							console.error("Algum erro aconteceu", error);
-						} else {
-							console.log(fileAddress);
-						}
-					});
-
-					return dataWithOutPathFromMongodb;
-				}
-
-				afterRestructureSaveIntoJSONFile(dataJSONModel);
-			} catch (parseError) {
-				console.error("Error parsing JSON:", parseError);
-			}
-		});
-		console.log(new Date().getSeconds(), "end");
-	}
-
 	// Public method to initiate the transformation
 	public startTransformation() {
-		this.readPath();
+		// Example usage:
+		const instance = new ReadFiles("./test/outputResultWithPathJSON.json", FILE_ADDRESS_OUTPUT, FILE_ADDRESS_INPUT);
+		instance.readPath();
 	}
 }
 
