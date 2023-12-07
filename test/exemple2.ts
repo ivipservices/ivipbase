@@ -7,7 +7,7 @@ type NodeValueType = keyof typeof nodeValueTypes;
 type Result = {
 	path: string;
 	content: {
-		type: number;
+		type: NodeValueType;
 		value: Record<string, unknown> | string | number | any;
 		revision: string;
 		revision_nr: number;
@@ -34,23 +34,24 @@ function generateShortUUID(): string {
 	const shortUUID = fullUUID.replace(/-/g, "").slice(0, 24);
 	return shortUUID;
 }
-function getType(value: unknown): number {
+
+function getType(value: unknown): NodeValueType {
 	if (Array.isArray(value)) {
-		return nodeValueTypes.ARRAY;
+		return "ARRAY";
 	} else if (value && typeof value === "object") {
-		return nodeValueTypes.OBJECT;
+		return "OBJECT";
 	} else if (typeof value === "number") {
-		return nodeValueTypes.NUMBER;
+		return "NUMBER";
 	} else if (typeof value === "boolean") {
-		return nodeValueTypes.BOOLEAN;
+		return "BOOLEAN";
 	} else if (typeof value === "string") {
-		return nodeValueTypes.STRING;
+		return "STRING";
 	} else if (typeof value === "bigint") {
-		return nodeValueTypes.BIGINT;
+		return "BIGINT";
 	} else if (typeof value === "object" && (value as any).type === 6) {
-		return nodeValueTypes.DATETIME;
+		return "DATETIME";
 	} else {
-		return nodeValueTypes.EMPTY;
+		return "EMPTY";
 	}
 }
 
@@ -89,7 +90,7 @@ function transform(json: Record<string, unknown>, prefix: string = ""): Result[]
 			arrayResults.push({
 				path: currentPath,
 				content: {
-					type: nodeValueTypes.ARRAY,
+					type: "ARRAY",
 					value: {},
 					revision: generateShortUUID(),
 					revision_nr: 1,
@@ -97,7 +98,7 @@ function transform(json: Record<string, unknown>, prefix: string = ""): Result[]
 					modified: Date.now(),
 				},
 			});
-		} else if (valueType === nodeValueTypes.OBJECT) {
+		} else if (valueType === "OBJECT") {
 			results.push(...transform(currentValue as unknown as Record<string, unknown>, currentPath));
 		} else {
 			nonObjectKeys[key] = currentValue;
@@ -119,13 +120,30 @@ function transform(json: Record<string, unknown>, prefix: string = ""): Result[]
 				path: `${prefix.replace(/^\//, "")}`,
 				content: {
 					type: getType(nonObjectKeys),
-					value: filterKeysFromObject(otherObject),
+					value: filterKeysFromObject(otherObject, ["date_created", "date_last_updated", "date_of_expiration"]),
 					revision: generateShortUUID(),
 					revision_nr: 1,
 					created: Date.now(),
 					modified: Date.now(),
 				},
 			};
+
+			if (nonObjectResult.content.value.history_id !== undefined) {
+				nonObjectResult.content.value.date_created = {
+					type: 6,
+					value: Date.now(),
+				};
+
+				nonObjectResult.content.value.date_last_updated = {
+					type: 6,
+					value: Date.now(),
+				};
+
+				nonObjectResult.content.value.date_of_expiration = {
+					type: 6,
+					value: Date.now(),
+				};
+			}
 
 			if (nonObjectResult.path) {
 				results.push(nonObjectResult);
@@ -135,42 +153,14 @@ function transform(json: Record<string, unknown>, prefix: string = ""): Result[]
 		}
 	}
 
-	function filterKeysFromObject(obj) {
-		function checkIsValidDate(string) {
-			// Expressão regular para validar o padrão da string de data
-			const datePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?([+-]\d{2}:\d{2})?Z?$/;
-
-			if (datePattern.test(string)) {
-				let date = new Date(string);
-				return !isNaN(date.getTime());
+	function filterKeysFromObject(obj, keysToFilter) {
+		const filteredObject = {};
+		for (const key in obj) {
+			if (!keysToFilter.includes(key)) {
+				filteredObject[key] = obj[key];
 			}
-
-			return false;
 		}
-
-		function processObject(inputObj) {
-			const filteredObject = {};
-
-			for (const key in inputObj) {
-				if (checkIsValidDate(inputObj[key])) {
-					let newDate = new Date(inputObj[key]);
-					filteredObject[key] = {
-						type: 6,
-						value: newDate.getTime(),
-					};
-				} else if (typeof inputObj[key] === "object" && inputObj[key] !== null) {
-					// Recursively process nested objects
-					filteredObject[key] = processObject(inputObj[key]);
-				} else {
-					// Copy other types of values as is
-					filteredObject[key] = inputObj[key];
-				}
-			}
-
-			return filteredObject;
-		}
-
-		return processObject(obj);
+		return filteredObject;
 	}
 
 	// Se não há chaves não objeto, adiciona um resultado com objeto vazio
