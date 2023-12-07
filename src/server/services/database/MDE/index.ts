@@ -103,7 +103,7 @@ function getValueTypeDefault(valueType: number) {
 }
 
 /**
- * Determina o tipo de valor de um nó com base no valor fornecido.
+ * Determina o tipo de valor de um node com base no valor fornecido.
  *
  * @param {unknown} value - O valor a ser avaliado.
  * @returns {number} - O código do tipo de valor correspondente.
@@ -319,14 +319,14 @@ class MDESettings {
 	/**
 	 * Uma função que realiza uma pesquisa de dados na base de dados com base em uma expressão regular resultada da propriedade pathToRegex em MDE.
 	 *
-	 * @type {((expression: RegExp) => Promise<Map<string, StorageNodeInfo>> ) | undefined}
+	 * @type {((expression: RegExp) => Promise<StorageNodeInfo[]> ) | undefined}
 	 * @default undefined
 	 */
-	searchData: ((expression: RegExp) => Promise<Map<string, StorageNodeInfo>>) | undefined = undefined;
+	searchData: ((expression: RegExp) => Promise<StorageNodeInfo[]>) | undefined = undefined;
 
 	/**
 	 * Cria uma instância de MDESettings com as opções fornecidas.
-	 * @param options - Opções para configurar o nó.
+	 * @param options - Opções para configurar o node.
 	 */
 	constructor(options: Partial<MDESettings>) {
 		if (typeof options.prefix === "string" && options.prefix.trim() !== "") {
@@ -353,16 +353,16 @@ class MDESettings {
 
 export default class MDE extends SimpleEventEmitter {
 	/**
-	 * As configurações do nó.
+	 * As configurações do node.
 	 */
 	readonly settings: MDESettings;
 
 	/**
-	 * Uma mapa de informações sobre nodes, mantido em cache até que as modificações sejam processadas no BD com êxito.
+	 * Uma lista de informações sobre nodes, mantido em cache até que as modificações sejam processadas no BD com êxito.
 	 *
-	 * @type {Map<string, StorageNodeInfo>}
+	 * @type {StorageNodeInfo[]}
 	 */
-	private nodes = new Map<string, StorageNodeInfo>();
+	private nodes: StorageNodeInfo[] = [];
 
 	constructor(options: Partial<MDESettings>) {
 		super();
@@ -376,7 +376,7 @@ export default class MDE extends SimpleEventEmitter {
 	 * @param {boolean} allHeirs - Indica se todos os descendentes devem ser incluídos.
 	 * @returns {RegExp} - A expressão regular resultante.
 	 */
-	static pathToRegex(path: string, allHeirs: boolean = false): RegExp {
+	private pathToRegex(path: string, allHeirs: boolean = false): RegExp {
 		const pathsRegex: string[] = [];
 
 		/**
@@ -404,10 +404,39 @@ export default class MDE extends SimpleEventEmitter {
 	}
 
 	/**
-	 * Obtém informações personalizadas sobre um nó com base no caminho especificado.
+	 * Obtém uma lista de nodes com base em um caminho e opções adicionais.
 	 *
-	 * @param {string} path - O caminho do nó para o qual as informações devem ser obtidas.
-	 * @returns {CustomStorageNodeInfo} - Informações personalizadas sobre o nó especificado.
+	 * @param {string} path - O caminho a ser usado para filtrar os nodes.
+	 * @param {boolean} [allHeirs=false] - Indica se todos os descendentes devem ser incluídos.
+	 * @returns {Promise<StorageNodeInfo[]>} - Uma Promise que resolve para uma lista de informações sobre os nodes.
+	 * @throws {Error} - Lança um erro se ocorrer algum problema durante a busca assíncrona.
+	 */
+	private async getNodesBy(path: string, allHeirs: boolean = false): Promise<StorageNodeInfo[]> {
+		const reg = this.pathToRegex(path, allHeirs);
+		let nodeList: StorageNodeInfo[] = this.nodes.filter(({ path }) => reg.test(path));
+
+		if (this.settings.searchData) {
+			try {
+				const response = await this.settings.searchData(reg);
+				nodeList = nodeList.concat(response ?? []);
+			} catch {}
+		}
+
+		return nodeList
+			.sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
+				return aM > bM ? -1 : aM < bM ? 1 : 0;
+			})
+			.filter(({ path, content: { modified } }, i, l) => {
+				const indexRecent = l.findIndex(({ path: p, content: { modified: m } }) => p === path && m > modified);
+				return indexRecent < 0 || indexRecent === i;
+			});
+	}
+
+	/**
+	 * Obtém informações personalizadas sobre um node com base no caminho especificado.
+	 *
+	 * @param {string} path - O caminho do node para o qual as informações devem ser obtidas.
+	 * @returns {CustomStorageNodeInfo} - Informações personalizadas sobre o node especificado.
 	 */
 	getInfoBy(path: string): CustomStorageNodeInfo {
 		const pathInfo = PathInfo.get(path);
@@ -429,24 +458,24 @@ export default class MDE extends SimpleEventEmitter {
 	}
 
 	/**
-	 * Obtém os nós exportados para um nó montado.
+	 * Obtém valor referente ao path específico.
 	 *
 	 * @template T - Tipo genérico para o retorno da função.
-	 * @param {string} path - Caminho de um nó raiz.
-	 * @param {boolean} [onlyChildren=true] - Se verdadeiro, exporta apenas os filhos do nó especificado.
-	 * @return {T | undefined} - Retorna os nós exportados ou undefined se nenhum nó for encontrado.
+	 * @param {string} path - Caminho de um node raiz.
+	 * @param {boolean} [onlyChildren=true] - Se verdadeiro, exporta apenas os filhos do node especificado.
+	 * @return {T | undefined} - Retorna valor referente ao path ou undefined se nenhum node for encontrado.
 	 */
 	get<t = any>(path: string, onlyChildren: boolean = true): t | undefined {
 		return undefined;
 	}
 
 	/**
-	 * Define um nó no armazenamento com o caminho e valor especificados.
+	 * Define um valor no armazenamento com o caminho especificado.
 	 *
-	 * @param {string} path - O caminho do nó a ser definido.
-	 * @param {any} value - O valor a ser armazenado no nó.
+	 * @param {string} path - O caminho do node a ser definido.
+	 * @param {any} value - O valor a ser armazenado em nodes.
 	 * @param {Object} [options] - Opções adicionais para controlar o comportamento da definição.
-	 * @param {string} [options.assert_revision] - Uma string que representa a revisão associada ao nó, se necessário.
+	 * @param {string} [options.assert_revision] - Uma string que representa a revisão associada ao node, se necessário.
 	 * @returns {void}
 	 */
 	set(
