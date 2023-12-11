@@ -1,5 +1,6 @@
-import { PathInfo, PathReference, SimpleEventEmitter } from "ivipbase-core";
-import { isDate } from "util/types";
+import { PathInfo, PathReference, SimpleEventEmitter, Utils } from "ivipbase-core";
+
+const { encodeString, isDate } = Utils;
 
 export const nodeValueTypes = {
 	EMPTY: 0,
@@ -404,6 +405,155 @@ export default class MDE extends SimpleEventEmitter {
 	}
 
 	/**
+	 * Verifica se um caminho específico existe no nó.
+	 * @param path - O caminho a ser verificado.
+	 * @returns {Promise<boolean>} `true` se o caminho existir no nó, `false` caso contrário.
+	 */
+	async isPathExists(path: string): Promise<boolean> {
+		const reg = this.pathToRegex(path, false);
+		let nodeList: StorageNodeInfo[] = this.nodes.filter(({ path }) => reg.test(path));
+
+		if (this.settings.searchData) {
+			try {
+				const response = await this.settings.searchData(reg);
+				nodeList = nodeList.concat(response ?? []);
+			} catch {}
+		}
+
+		nodeList = nodeList
+			.sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
+				return aM > bM ? -1 : aM < bM ? 1 : 0;
+			})
+			.filter(({ path, content: { modified } }, i, l) => {
+				const indexRecent = l.findIndex(({ path: p, content: { modified: m } }) => p === path && m > modified);
+				return indexRecent < 0 || indexRecent === i;
+			});
+
+		return nodeList.findIndex(({ path: p }) => p === path) >= 0;
+	}
+
+	/**
+	 * Verifica se um valor pode ser armazenado em um objeto pai ou se deve ser movido
+	 * para um registro dedicado com base nas configurações de tamanho máximo (`maxInlineValueSize`).
+	 * @param value - O valor a ser verificado.
+	 * @returns {boolean} `true` se o valor pode ser armazenado inline, `false` caso contrário.
+	 * @throws {TypeError} Lança um erro se o tipo do valor não for suportado.
+	 */
+	private valueFitsInline(value: any) {
+		if (typeof value === "number" || typeof value === "boolean" || isDate(value)) {
+			return true;
+		} else if (typeof value === "string") {
+			if (value.length > this.settings.maxInlineValueSize) {
+				return false;
+			}
+			// Se a string contém caracteres Unicode, o tamanho em bytes será maior do que `value.length`.
+			const encoded = encodeString(value);
+			return encoded.length < this.settings.maxInlineValueSize;
+		} else if (value instanceof PathReference) {
+			if (value.path.length > this.settings.maxInlineValueSize) {
+				return false;
+			}
+			// Se o caminho contém caracteres Unicode, o tamanho em bytes será maior do que `value.path.length`.
+			const encoded = encodeString(value.path);
+			return encoded.length < this.settings.maxInlineValueSize;
+		} else if (value instanceof ArrayBuffer) {
+			return value.byteLength < this.settings.maxInlineValueSize;
+		} else if (value instanceof Array) {
+			return value.length === 0;
+		} else if (typeof value === "object") {
+			return Object.keys(value).length === 0;
+		} else {
+			throw new TypeError("What else is there?");
+		}
+	}
+
+	/**
+	 * Responsável pela mesclagem de nodes soltos, apropriado para evitar conflitos de dados.
+	 * @param nodes - Lista de nodes a serem processados.
+	 * @returns {StorageNodeInfo[]} Retorna uma lista de informações sobre os nodes.
+	 */
+	private prepareMergeNodes = (nodes: StorageNodeInfo[]): StorageNodeInfo[] => {
+		const result: StorageNodeInfo[] = [];
+		const pathsRemoved: string[] = [];
+
+		for (let node of nodes) {
+			const containsUsRemoved: boolean = pathsRemoved.findIndex((path) => PathInfo.get(path).isAncestorOf(node.path)) >= 0;
+
+			if (containsUsRemoved || node.content.type === nodeValueTypes.EMPTY || node.content.value === null) {
+				pathsRemoved.push(node.path);
+				continue;
+			}
+
+			const pathInfo = PathInfo.get(node.path);
+			const index = result.findIndex(({ path }) => pathInfo.equals(path) || pathInfo.isParentOf(path) || pathInfo.isChildOf(path));
+			if (index < 0) {
+				result.push(node);
+				continue;
+			}
+
+			const lastNode = result[index];
+
+			if (pathInfo.equals(lastNode.path)) {
+				switch (lastNode.content.type) {
+					case nodeValueTypes.OBJECT:
+					case nodeValueTypes.ARRAY: {
+						const contents = [lastNode.content, node.content];
+
+						const content_values: object[] = contents.map(({ value }) => value);
+
+						const new_content_value = Object.assign.apply(null, (lastNode.content.modified > node.content.modified ? content_values.reverse() : content_values) as any);
+
+						result[index].content = Object.assign.apply(null, [
+							...(lastNode.content.modified > node.content.modified ? contents.reverse() : contents),
+							{
+								value: new_content_value,
+							},
+						] as any);
+
+						break;
+					}
+					default: {
+						if (lastNode.content.modified < node.content.modified) {
+							result[index] = node;
+						}
+					}
+				}
+
+				continue;
+			}
+
+			const parentNodeIsLast = pathInfo.isChildOf(lastNode.path);
+			const parentNode = !parentNodeIsLast ? node : lastNode;
+			const childNode = parentNodeIsLast ? node : lastNode;
+			const childKey = PathInfo.get(childNode.path).key;
+
+			if (parentNode.content.type === nodeValueTypes.OBJECT && childKey !== null) {
+				let parentNodeModified: boolean = false;
+
+				if (
+					[nodeValueTypes.STRING, nodeValueTypes.BIGINT, nodeValueTypes.BOOLEAN, nodeValueTypes.DATETIME, nodeValueTypes.NUMBER].includes(childNode.content.type as any) &&
+					this.valueFitsInline(childNode.content.value)
+				) {
+					parentNode.content.value[childKey] = childNode.content.value;
+					parentNodeModified = true;
+				} else if (childNode.content.type === nodeValueTypes.EMPTY) {
+					parentNode.content.value[childKey] = null;
+					parentNodeModified = true;
+				}
+
+				if (parentNodeModified) {
+					result[index] = parentNode;
+					continue;
+				}
+			}
+
+			result.push(node);
+		}
+
+		return result;
+	};
+
+	/**
 	 * Obtém uma lista de nodes com base em um caminho e opções adicionais.
 	 *
 	 * @param {string} path - O caminho a ser usado para filtrar os nodes.
@@ -422,14 +572,55 @@ export default class MDE extends SimpleEventEmitter {
 			} catch {}
 		}
 
-		return nodeList
-			.sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
+		return this.prepareMergeNodes(
+			nodeList.sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
 				return aM > bM ? -1 : aM < bM ? 1 : 0;
+			}),
+		);
+	}
+
+	/**
+	 * Obtém o node pai de um caminho específico.
+	 * @param path - O caminho para o qual o node pai deve ser obtido.
+	 * @returns {Promise<StorageNodeInfo | undefined>} O node pai correspondente ao caminho ou `undefined` se não for encontrado.
+	 */
+	private async getNodeParentBy(path: string): Promise<StorageNodeInfo | undefined> {
+		const pathInfo = PathInfo.get(path);
+
+		const nodes = await this.getNodesBy(path, false);
+
+		return nodes
+			.filter((node) => {
+				const nodePath = PathInfo.get(node.path);
+				return nodePath.path === "" || pathInfo.path === nodePath.path || nodePath.isParentOf(pathInfo);
 			})
-			.filter(({ path, content: { modified } }, i, l) => {
-				const indexRecent = l.findIndex(({ path: p, content: { modified: m } }) => p === path && m > modified);
-				return indexRecent < 0 || indexRecent === i;
-			});
+			.sort((a: StorageNodeInfo, b: StorageNodeInfo): number => {
+				const pathA = PathInfo.get(a.path);
+				const pathB = PathInfo.get(b.path);
+				return pathA.isDescendantOf(pathB.path) ? -1 : pathB.isDescendantOf(pathA.path) ? 1 : 0;
+			})
+			.shift();
+	}
+
+	/**
+	 * Adiciona um ou mais nodes a matriz de nodes atual e aplica evento de alteração.
+	 * @param nodes - Um ou mais nós a serem adicionados.
+	 * @returns {MDE} O nó atual após a adição dos nós.
+	 */
+	private pushNode(...nodes: (StorageNodeInfo[] | StorageNodeInfo)[]): MDE {
+		const forNodes: StorageNodeInfo[] =
+			Array.prototype.concat
+				.apply(
+					[],
+					nodes.map((node) => (Array.isArray(node) ? node : [node])),
+				)
+				.filter((node: any = {}) => node && typeof node.path === "string" && "content" in node) ?? [];
+
+		for (let node of forNodes) {
+			this.nodes.push(node);
+		}
+
+		return this;
 	}
 
 	/**
