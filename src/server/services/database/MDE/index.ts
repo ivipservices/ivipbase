@@ -638,11 +638,21 @@ export default class MDE extends SimpleEventEmitter {
 			nodeList = nodeList.concat(response ?? []);
 		} catch {}
 
-		return this.prepareMergeNodes(
+		const result = this.prepareMergeNodes(
 			nodeList.sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
 				return aM > bM ? -1 : aM < bM ? 1 : 0;
 			}),
 		).result;
+
+		let nodes = result.filter(({ path: p }) => PathInfo.get(path).equals(p));
+
+		if (nodes.length > 0 && allHeirs) {
+			nodes = result.filter(({ path: p }) => PathInfo.get(path).equals(p) || PathInfo.get(path).isAncestorOf(p));
+		} else if (nodes.length <= 0) {
+			nodes = result.filter(({ path: p }) => PathInfo.get(path).isChildOf(p));
+		}
+
+		return nodes;
 	}
 
 	/**
