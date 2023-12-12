@@ -1,6 +1,7 @@
-import { PathInfo, PathReference, SimpleEventEmitter, Utils } from "ivipbase-core";
+import { PathInfo, PathReference, SimpleEventEmitter, Utils, Lib, ascii85 } from "ivipbase-core";
+import { encodeString, isDate } from "ivip-utils";
 
-const { encodeString, isDate } = Utils;
+const { assert } = Lib;
 
 export const nodeValueTypes = {
 	EMPTY: 0,
@@ -188,7 +189,7 @@ class NodeAddress {
 	 * Compares this address to another address
 	 */
 	equals(address: NodeAddress) {
-		return this.path === address.path;
+		return PathInfo.get(this.path).equals(address.path);
 	}
 }
 
@@ -390,10 +391,11 @@ export default class MDE extends SimpleEventEmitter {
 	 * Converte um caminho em uma expressão regular.
 	 *
 	 * @param {string} path - O caminho a ser convertido em expressão regular.
-	 * @param {boolean} allHeirs - Indica se todos os descendentes devem ser incluídos.
+	 * @param {boolean} [onlyChildren=false] - Se verdadeiro, exporta apenas os filhos do node especificado.
+	 * @param {boolean} [allHeirs=false] - Se verdadeiro, exporta todos os descendentes em relação ao path especificado.
 	 * @returns {RegExp} - A expressão regular resultante.
 	 */
-	private pathToRegex(path: string, allHeirs: boolean = false): RegExp {
+	private pathToRegex(path: string, onlyChildren: boolean = false, allHeirs: boolean = false): RegExp {
 		const pathsRegex: string[] = [];
 
 		/**
@@ -408,11 +410,16 @@ export default class MDE extends SimpleEventEmitter {
 		};
 
 		// Adiciona a expressão regular do caminho principal ao array.
-		pathsRegex.push(`${replasePathToRegex(path)}(/([^/]*))${allHeirs ? "+" : ""}?`);
+		pathsRegex.push(replasePathToRegex(path));
+
+		if (onlyChildren) {
+			pathsRegex.forEach((exp) => pathsRegex.push(`${exp}((\/([^\/]*)){1})`));
+		} else if (allHeirs) {
+			pathsRegex.forEach((exp) => pathsRegex.push(`${exp}((\/([^\/]*)){1,})`));
+		}
 
 		// Obtém o caminho pai e adiciona a expressão regular correspondente ao array.
-		const parentPath = new PathInfo(path).parentPath;
-		pathsRegex.push(`${replasePathToRegex(parentPath)}(/([^/]*))${allHeirs ? "+" : ""}?`);
+		pathsRegex.push(replasePathToRegex(PathInfo.get(path).parentPath));
 
 		// Cria a expressão regular completa combinando as expressões individuais no array.
 		const fullRegex: RegExp = new RegExp(`^(${pathsRegex.join("$)|(")}$)`);
@@ -426,24 +433,29 @@ export default class MDE extends SimpleEventEmitter {
 	 * @returns {Promise<boolean>} `true` se o caminho existir no nó, `false` caso contrário.
 	 */
 	async isPathExists(path: string): Promise<boolean> {
-		const reg = this.pathToRegex(path, false);
-		let nodeList: StorageNodeInfo[] = this.nodes.filter(({ path }) => reg.test(path));
+		const nodeList = await this.getNodesBy(path, false, false).then((nodes) => {
+			return Promise.resolve(
+				nodes
+					.sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
+						return aM > bM ? -1 : aM < bM ? 1 : 0;
+					})
+					.filter(({ path, content: { modified } }, i, l) => {
+						const indexRecent = l.findIndex(({ path: p, content: { modified: m } }) => p === path && m > modified);
+						return indexRecent < 0 || indexRecent === i;
+					}),
+			);
+		});
 
-		try {
-			const response = await this.settings.searchData(reg);
-			nodeList = nodeList.concat(response ?? []);
-		} catch {}
+		let nodeSelected = nodeList.find(({ path: p }) => PathInfo.get(p).equals(path) || PathInfo.get(p).isParentOf(path));
 
-		nodeList = nodeList
-			.sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
-				return aM > bM ? -1 : aM < bM ? 1 : 0;
-			})
-			.filter(({ path, content: { modified } }, i, l) => {
-				const indexRecent = l.findIndex(({ path: p, content: { modified: m } }) => p === path && m > modified);
-				return indexRecent < 0 || indexRecent === i;
-			});
+		if (!nodeSelected) {
+			return false;
+		} else if (PathInfo.get(nodeSelected.path).isParentOf(path)) {
+			const key = PathInfo.get(path).key;
+			return key !== null && nodeSelected.content.type === nodeValueTypes.OBJECT && (Object.keys(nodeSelected.content.value) as Array<string | number>).includes(key);
+		}
 
-		return nodeList.findIndex(({ path: p }) => p === path) >= 0;
+		return PathInfo.get(nodeSelected.path).equals(path);
 	}
 
 	/**
@@ -482,9 +494,107 @@ export default class MDE extends SimpleEventEmitter {
 	}
 
 	/**
+	 * Obtém um valor tipado apropriado para armazenamento com base no tipo do valor fornecido.
+	 * @param val - O valor a ser processado.
+	 * @returns {any} O valor processado.
+	 * @throws {Error} Lança um erro se o valor não for suportado ou se for nulo.
+	 */
+	private getTypedChildValue(val: any):
+		| string
+		| number
+		| boolean
+		| {
+				type: (typeof nodeValueTypes)[keyof Pick<typeof nodeValueTypes, "DATETIME" | "REFERENCE" | "BINARY">];
+				value: string | number | boolean;
+		  }
+		| undefined {
+		if (val === null) {
+			throw new Error(`Not allowed to store null values. remove the property`);
+		} else if (isDate(val)) {
+			return { type: VALUE_TYPES.DATETIME as any, value: new Date(val).getTime() };
+		} else if (["string", "number", "boolean"].includes(typeof val)) {
+			return val;
+		} else if (val instanceof PathReference) {
+			return { type: VALUE_TYPES.REFERENCE as any, value: val.path };
+		} else if (val instanceof ArrayBuffer) {
+			return { type: VALUE_TYPES.BINARY as any, value: ascii85.encode(val) };
+		} else if (typeof val === "object") {
+			assert(Object.keys(val).length === 0 || ("type" in val && val.type === VALUE_TYPES.DEDICATED_RECORD), "child object stored in parent can only be empty");
+			return val;
+		}
+	}
+
+	/**
+	 * Processa o valor de um nó de armazenamento durante a leitura, convertendo valores tipados de volta ao formato original.
+	 * @param node - O nó de armazenamento a ser processado.
+	 * @returns {StorageNode} O nó de armazenamento processado.
+	 * @throws {Error} Lança um erro se o tipo de registro autônomo for inválido.
+	 */
+	private processReadNodeValue(node: StorageNode): StorageNode {
+		const getTypedChildValue = (val: { type: number; value: any; path?: string }) => {
+			// Valor tipado armazenado em um registro pai
+			if (val.type === VALUE_TYPES.BINARY) {
+				// Binário armazenado em um registro pai como uma string
+				return ascii85.decode(val.value);
+			} else if (val.type === VALUE_TYPES.DATETIME) {
+				// Valor de data armazenado como número
+				return new Date(val.value);
+			} else if (val.type === VALUE_TYPES.REFERENCE) {
+				// Referência de caminho armazenada como string
+				return new PathReference(val.value);
+			} else if (val.type === VALUE_TYPES.DEDICATED_RECORD) {
+				return getValueTypeDefault(val.value);
+			} else {
+				throw new Error(`Unhandled child value type ${val.type}`);
+			}
+		};
+
+		node = JSON.parse(JSON.stringify(node));
+
+		switch (node.type) {
+			case VALUE_TYPES.ARRAY:
+			case VALUE_TYPES.OBJECT: {
+				// Verifica se algum valor precisa ser convertido
+				// NOTA: Arrays são armazenados com propriedades numéricas
+				const obj = node.value;
+				Object.keys(obj).forEach((key) => {
+					const item = obj[key];
+					if (typeof item === "object" && "type" in item) {
+						obj[key] = getTypedChildValue(item);
+					}
+				});
+				node.value = obj;
+				break;
+			}
+
+			case VALUE_TYPES.BINARY: {
+				node.value = ascii85.decode(node.value);
+				break;
+			}
+
+			case VALUE_TYPES.REFERENCE: {
+				node.value = new PathReference(node.value);
+				break;
+			}
+
+			case VALUE_TYPES.STRING: {
+				// Nenhuma ação necessária
+				// node.value = node.value;
+				break;
+			}
+
+			default:
+				throw new Error(`Invalid standalone record value type`); // nunca deve acontecer
+		}
+
+		return node;
+	}
+
+	/**
 	 * Responsável pela mesclagem de nodes soltos, apropriado para evitar conflitos de dados.
 	 *
 	 * @param {StorageNodeInfo[]} nodes - Lista de nodes a serem processados.
+	 * @param {StorageNodeInfo[]} comparison - Lista de nodes para comparação.
 	 *
 	 * @returns {{
 	 *   result: StorageNodeInfo[];
@@ -495,6 +605,7 @@ export default class MDE extends SimpleEventEmitter {
 	 */
 	private prepareMergeNodes = (
 		nodes: StorageNodeInfo[],
+		comparison: StorageNodeInfo[],
 	): {
 		result: StorageNodeInfo[];
 		added: StorageNodeInfo[];
@@ -506,6 +617,19 @@ export default class MDE extends SimpleEventEmitter {
 		let added: StorageNodeInfo[] = [];
 		let modified: StorageNodeInfo[] = [];
 		let removed: StorageNodeInfo[] = [];
+
+		if (comparison.length === 0) {
+			return {
+				result: nodes,
+				added,
+				modified,
+				removed,
+			};
+		}
+
+		nodes = nodes.concat(comparison).sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
+			return aM > bM ? -1 : aM < bM ? 1 : 0;
+		});
 
 		const setNodeBy = (node: StorageNodeInfo): number => {
 			const index = result.findIndex(({ path }) => PathInfo.get(node.path).equals(path));
@@ -625,28 +749,27 @@ export default class MDE extends SimpleEventEmitter {
 	 * Obtém uma lista de nodes com base em um caminho e opções adicionais.
 	 *
 	 * @param {string} path - O caminho a ser usado para filtrar os nodes.
-	 * @param {boolean} [allHeirs=false] - Indica se todos os descendentes devem ser incluídos.
+	 * @param {boolean} [onlyChildren=false] - Se verdadeiro, exporta apenas os filhos do node especificado.
+	 * @param {boolean} [allHeirs=false] - Se verdadeiro, exporta todos os descendentes em relação ao path especificado.
 	 * @returns {Promise<StorageNodeInfo[]>} - Uma Promise que resolve para uma lista de informações sobre os nodes.
 	 * @throws {Error} - Lança um erro se ocorrer algum problema durante a busca assíncrona.
 	 */
-	async getNodesBy(path: string, allHeirs: boolean = false): Promise<StorageNodeInfo[]> {
-		const reg = this.pathToRegex(path, allHeirs);
+	async getNodesBy(path: string, onlyChildren: boolean = false, allHeirs: boolean = false): Promise<StorageNodeInfo[]> {
+		const reg = this.pathToRegex(path, onlyChildren, allHeirs);
 		let nodeList: StorageNodeInfo[] = this.nodes.filter(({ path }) => reg.test(path));
+		let byNodes: StorageNodeInfo[] = [];
 
 		try {
-			const response = await this.settings.searchData(reg);
-			nodeList = nodeList.concat(response ?? []);
+			byNodes = await this.settings.searchData(reg);
 		} catch {}
 
-		const result = this.prepareMergeNodes(
-			nodeList.sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
-				return aM > bM ? -1 : aM < bM ? 1 : 0;
-			}),
-		).result;
+		const result = this.prepareMergeNodes(byNodes, nodeList).result;
 
 		let nodes = result.filter(({ path: p }) => PathInfo.get(path).equals(p));
 
-		if (nodes.length > 0 && allHeirs) {
+		if (nodes.length > 0 && onlyChildren) {
+			nodes = result.filter(({ path: p }) => PathInfo.get(path).equals(p) || PathInfo.get(path).isParentOf(p));
+		} else if (nodes.length > 0 && allHeirs) {
 			nodes = result.filter(({ path: p }) => PathInfo.get(path).equals(p) || PathInfo.get(path).isAncestorOf(p));
 		} else if (nodes.length <= 0) {
 			nodes = result.filter(({ path: p }) => PathInfo.get(path).isChildOf(p));
@@ -705,8 +828,15 @@ export default class MDE extends SimpleEventEmitter {
 	 * @param {string} path - O caminho do node para o qual as informações devem ser obtidas.
 	 * @returns {CustomStorageNodeInfo} - Informações personalizadas sobre o node especificado.
 	 */
-	getInfoBy(path: string): CustomStorageNodeInfo {
+	async getInfoBy(
+		path: string,
+		options: {
+			include_child_count?: boolean;
+		} = {},
+	): Promise<CustomStorageNodeInfo> {
 		const pathInfo = PathInfo.get(path);
+		const nodes = await this.getNodesBy(path, options.include_child_count, false);
+		const mainNode = nodes.find(({ path: p }) => PathInfo.get(p).equals(path) || PathInfo.get(p).isParentOf(path));
 
 		const defaultNode = new CustomStorageNodeInfo({
 			path: pathInfo.path,
@@ -721,7 +851,48 @@ export default class MDE extends SimpleEventEmitter {
 			revision_nr: 0,
 		});
 
-		return defaultNode;
+		if (!mainNode || !pathInfo.key) {
+			return defaultNode;
+		}
+
+		const content = this.processReadNodeValue(mainNode.content);
+		let value = content.value;
+
+		if (pathInfo.isChildOf(mainNode.path)) {
+			if ([nodeValueTypes.OBJECT, nodeValueTypes.ARRAY].includes(mainNode.content.type as any)) {
+				if ((Object.keys(value) as Array<string | number>).includes(pathInfo.key)) {
+					value = value[pathInfo.key];
+				} else {
+					value = null;
+				}
+			} else {
+				value = null;
+			}
+		}
+
+		const containsChild = nodes.findIndex(({ path: p }) => pathInfo.isParentOf(p)) >= 0;
+		const isArrayChild = !containsChild && mainNode.content.type === nodeValueTypes.ARRAY;
+
+		const info = new CustomStorageNodeInfo({
+			path: pathInfo.path,
+			key: typeof pathInfo.key === "string" ? pathInfo.key : undefined,
+			index: typeof pathInfo.key === "number" ? pathInfo.key : undefined,
+			type: value !== null ? getValueType(value) : containsChild ? (isArrayChild ? VALUE_TYPES.ARRAY : VALUE_TYPES.OBJECT) : (0 as NodeValueType),
+			exists: value !== null || containsChild,
+			address: new NodeAddress(mainNode.path),
+			created: new Date(content.created) ?? new Date(),
+			modified: new Date(content.modified) ?? new Date(),
+			revision: content.revision ?? "",
+			revision_nr: content.revision_nr ?? 0,
+		});
+
+		info.value = value ? value : null;
+
+		if (options.include_child_count && (containsChild || isArrayChild)) {
+			info.childCount = nodes.reduce((c, { path: p }) => c + (pathInfo.isParentOf(p) ? 1 : 0), Object.keys(info.value).length);
+		}
+
+		return info;
 	}
 
 	/**
