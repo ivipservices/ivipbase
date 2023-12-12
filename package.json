@@ -17,6 +17,7 @@
 	"scripts": {
 		"dev": "nodemon ./src/server/services/database/Node/NodeRestructureJson.ts",
 		"dev2": "nodemon ./src/server/services/database/Node/NodeResultWithPath.ts",
+		"dev3": "nodemon ./test/set.ts",
 		"build": "npm run build:clean && npm run build:esm && npm run build:cjs && npm run build:packages && echo Done!",
 		"build:clean": "rimraf dist",
 		"build:esm": "tsc -p tsconfig.json && npx tsc-esm-fix ---target='dist/esm'",
