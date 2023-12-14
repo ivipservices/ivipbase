@@ -178,6 +178,7 @@ class NodeJsonTransformer {
 					content: {
 						type: this.getType(nonObjectKeys),
 						value: this.filterKeysFromObject(otherObject),
+						// value: otherObject,
 						revision: this.generateShortUUID(),
 						revision_nr: 1,
 						created: Date.now(),

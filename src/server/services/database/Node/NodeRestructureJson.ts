@@ -5,7 +5,7 @@ import path from "path";
 const INPUT_FILE_NAME = "../../../../../test/myjsonfile.json";
 
 // Class encapsulating the data restructuring functionality
-class NoderestructureJson {
+export class NoderestructureJson {
 	private readonly uri: string;
 	private readonly client: MongoClient;
 
@@ -25,11 +25,44 @@ class NoderestructureJson {
 	}
 
 	// Restructure JSON data based on specified logic
-	private restructureJson(entries) {
+	public restructureJson(entries: any[] | Record<string, any>) {
+		let array_entries = entries;
+
+		if (!Array.isArray(entries)) {
+			array_entries = [entries];
+		}
+
+		function convertDates(obj) {
+			// Verifica se o argumento é um objeto
+			if (typeof obj === "object" && obj !== null) {
+				// Percorre as chaves do objeto
+				for (const key in obj) {
+					// Verifica se a chave é um objeto que atende à condição especificada
+					if (obj[key] && typeof obj[key] === "object" && obj[key].type === 6 && obj[key].value && typeof obj[key].value === "number") {
+						// Converte o valor da chave para uma string de data formatada
+						obj[key] = new Date(obj[key].value).toISOString();
+					} else if (typeof obj[key] === "object") {
+						// Se a chave for um objeto, chama a função recursivamente para processar os subobjetos
+						convertDates(obj[key]);
+					}
+				}
+			}
+
+			return obj;
+		}
+
 		const result = {};
 		const KEY_THAT_MUST_BE_ARRAY = ["costs"];
-		entries?.forEach((entry) => {
+
+		array_entries.forEach((entry) => {
 			const { path, content } = entry;
+			convertDates(entry);
+
+			if (typeof path !== "string") {
+				console.error("Invalid input: path should be a string");
+				return;
+			}
+
 			const parts = path.split("/");
 			let current = result;
 
@@ -43,7 +76,6 @@ class NoderestructureJson {
 					if (!current[key]) {
 						key = key.split("[")[0];
 
-						// Check if the key must be an array
 						if (KEY_THAT_MUST_BE_ARRAY.includes(key)) {
 							current[key] = [];
 
@@ -72,7 +104,7 @@ class NoderestructureJson {
 		const collection = this.client.db("root").collection("teste");
 		const limit = 50;
 
-		console.log(new Date().getSeconds(), "antes da busca");
+		// console.log(new Date().getSeconds(), "antes da busca");
 		const resultData = await collection.find().toArray();
 		const afterLimit = resultData.slice(0, limit);
 
@@ -80,8 +112,8 @@ class NoderestructureJson {
 	}
 
 	// Convert JSON data to string and save it to a file
-	private convertToJsonAndSaveToFile(dataWithOutPathFromMongodb) {
-		console.log(dataWithOutPathFromMongodb);
+	public convertToJsonAndSaveToFile(dataWithOutPathFromMongodb) {
+		// console.log(dataWithOutPathFromMongodb);
 
 		const fileAddress: any = "./test/outputRestructuredJSON.json";
 		fs.writeFile(fileAddress, dataWithOutPathFromMongodb, (error) => {
@@ -94,6 +126,7 @@ class NoderestructureJson {
 
 		return dataWithOutPathFromMongodb;
 	}
+
 	private async readFilesUsingPath(inputFile) {
 		const filePath = path.join(__dirname, inputFile);
 
@@ -107,45 +140,47 @@ class NoderestructureJson {
 		}
 	}
 
-	public async main(choose: string) {
-		switch (choose) {
-			case "REMOTE":
-				try {
-					await this.connectToDatabase();
+	// public async main(choose: string) {
+	// 	switch (choose) {
+	// 		case "REMOTE":
+	// 			try {
+	// 				await this.connectToDatabase();
 
-					const entries = await this.fetchDataFromMongoDB();
-					const dataAfterToBeRestructured = this.restructureJson(entries);
-					const dataFromMongoConvertedToJSON = JSON.stringify(dataAfterToBeRestructured, null, 2);
+	// 				const entries = await this.fetchDataFromMongoDB();
+	// 				const dataAfterToBeRestructured = this.restructureJson(entries);
+	// 				const dataFromMongoConvertedToJSON = JSON.stringify(dataAfterToBeRestructured, null, 2);
 
-					console.log(this.convertToJsonAndSaveToFile(dataFromMongoConvertedToJSON));
+	// 				// // console.log(this.convertToJsonAndSaveToFile(dataFromMongoConvertedToJSON));
+	// 				// console.log(dataFromMongoConvertedToJSON, "to aqui");
+	// 				this.convertToJsonAndSaveToFile(dataFromMongoConvertedToJSON);
 
-					console.log(new Date().getSeconds(), "final da busca");
-				} finally {
-					await this.closeDatabaseConnection();
-				}
+	// 				// console.log(new Date().getSeconds(), "final da busca");
+	// 			} finally {
+	// 				await this.closeDatabaseConnection();
+	// 			}
 
-				break;
-			case "LOCAL":
-				try {
-					const entries = await this.readFilesUsingPath(INPUT_FILE_NAME);
+	// 			break;
+	// 		case "LOCAL":
+	// 			try {
+	// 				const entries = await this.readFilesUsingPath(INPUT_FILE_NAME);
 
-					const dataAfterToBeRestructured = this.restructureJson(entries);
-					const dataFromMongoConvertedToJSON = JSON.stringify(dataAfterToBeRestructured, null, 2);
+	// 				const dataAfterToBeRestructured = this.restructureJson(entries);
+	// 				const dataFromMongoConvertedToJSON = JSON.stringify(dataAfterToBeRestructured, null, 2);
 
-					console.log(this.convertToJsonAndSaveToFile(dataFromMongoConvertedToJSON));
+	// 				this.convertToJsonAndSaveToFile(dataFromMongoConvertedToJSON);
 
-					console.log(new Date().getSeconds(), "final da busca");
-				} finally {
-					console.log("LIDO COM SUCESSO");
-				}
-				break;
+	// 				// console.log(new Date().getSeconds(), "final da busca");
+	// 			} finally {
+	// 				console.log("LIDO COM SUCESSO");
+	// 			}
+	// 			break;
 
-			default:
-		}
-	}
+	// 		default:
+	// 	}
+	// }
 }
 
-// Usage
-const uri = "mongodb://manager:9Hq91q5oExU9biOZ7yq98I8P1DU1ge@ivipcoin-api.com:4048/?authMechanism=DEFAULT";
-const dataRestructure = new NoderestructureJson(uri);
-dataRestructure.main("REMOTE").catch(console.error);
+// // Usage
+// const uri = "mongodb://manager:9Hq91q5oExU9biOZ7yq98I8P1DU1ge@ivipcoin-api.com:4048/?authMechanism=DEFAULT";
+// const dataRestructure = new NoderestructureJson(uri);
+// dataRestructure.main("REMOTE").catch(console.error);
