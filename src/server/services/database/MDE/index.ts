@@ -319,12 +319,38 @@ class MDESettings {
 	removeVoidProperties: boolean = false;
 
 	/**
-	 * Uma função que realiza uma pesquisa de dados na base de dados com base em uma expressão regular resultada da propriedade pathToRegex em MDE.
+	 * @returns {Promise<any>}
+	 */
+	commit: () => Promise<any> | any = () => {};
+
+	/**
+	 * @param reason
+	 */
+	rollback: (reason: Error) => Promise<any> | any = () => {};
+
+	/**
+	 * Uma função que realiza um get/pesquisa de dados na base de dados com base em uma expressão regular resultada da propriedade pathToRegex em MDE.
 	 *
-	 * @type {((expression: RegExp) => Promise<StorageNodeInfo[]> ) | undefined}
+	 * @type {((expression: RegExp) => Promise<StorageNodeInfo[]> | StorageNodeInfo[]) | undefined}
 	 * @default undefined
 	 */
-	searchData: (expression: RegExp) => Promise<StorageNodeInfo[]> | StorageNodeInfo[] = () => [];
+	getMultiple: (expression: RegExp) => Promise<StorageNodeInfo[]> | StorageNodeInfo[] = () => [];
+
+	/**
+	 * Uma função que realiza um set de um node na base de dados com base em um path especificado.
+	 *
+	 * @type {(((path:string, content: StorageNode, node: StorageNodeInfo) => Promise<void> | void) | undefined}
+	 * @default undefined
+	 */
+	setNode: (path: string, content: StorageNode, node: StorageNodeInfo) => Promise<void> | void = () => {};
+
+	/**
+	 * Uma função que realiza um remove de um node na base de dados com base em um path especificado.
+	 *
+	 * @type {(((path:string, content: StorageNode, node: StorageNodeInfo) => Promise<void> | void) | undefined}
+	 * @default undefined
+	 */
+	removeNode: (path: string, content: StorageNode, node: StorageNodeInfo) => Promise<void> | void = () => {};
 
 	init: ((this: MDE) => void) | undefined;
 
@@ -349,11 +375,31 @@ class MDESettings {
 			this.removeVoidProperties = options.removeVoidProperties;
 		}
 
-		this.searchData = async (reg) => {
-			if (typeof options.searchData === "function") {
-				return await Promise.race([options.searchData(reg)]);
+		if (typeof options.commit === "function") {
+			this.commit = options.commit;
+		}
+
+		if (typeof options.rollback === "function") {
+			this.rollback = options.rollback;
+		}
+
+		this.getMultiple = async (reg) => {
+			if (typeof options.getMultiple === "function") {
+				return await Promise.race([options.getMultiple(reg)]);
 			}
 			return [];
+		};
+
+		this.setNode = async (path, content, node) => {
+			if (typeof options.setNode === "function") {
+				await Promise.race([options.setNode(path, content, node)]);
+			}
+		};
+
+		this.removeNode = async (path, content, node) => {
+			if (typeof options.removeNode === "function") {
+				await Promise.race([options.removeNode(path, content, node)]);
+			}
 		};
 
 		if (typeof options.init === "function") {
@@ -605,18 +651,28 @@ export default class MDE extends SimpleEventEmitter {
 	 */
 	private prepareMergeNodes = (
 		nodes: StorageNodeInfo[],
-		comparison: StorageNodeInfo[],
+		comparison: StorageNodeInfo[] | undefined = undefined,
 	): {
 		result: StorageNodeInfo[];
 		added: StorageNodeInfo[];
 		modified: StorageNodeInfo[];
 		removed: StorageNodeInfo[];
 	} => {
-		const result: StorageNodeInfo[] = [];
-
+		let result: StorageNodeInfo[] = [];
 		let added: StorageNodeInfo[] = [];
 		let modified: StorageNodeInfo[] = [];
 		let removed: StorageNodeInfo[] = [];
+
+		if (!comparison) {
+			comparison = nodes;
+			nodes = nodes
+				.sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
+					return aM > bM ? 1 : aM < bM ? -1 : 0;
+				})
+				.filter(({ path }, i, list) => {
+					return list.findIndex(({ path: p }) => PathInfo.get(p).equals(path)) === i;
+				});
+		}
 
 		if (comparison.length === 0) {
 			return {
@@ -627,30 +683,49 @@ export default class MDE extends SimpleEventEmitter {
 			};
 		}
 
-		nodes = nodes.concat(comparison).sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
+		comparison = comparison.sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
 			return aM > bM ? -1 : aM < bM ? 1 : 0;
 		});
 
 		const setNodeBy = (node: StorageNodeInfo): number => {
+			const nodesIndex = nodes.findIndex(({ path }) => PathInfo.get(node.path).equals(path));
+
+			if (nodesIndex < 0) {
+				const addedIndex = added.findIndex(({ path }) => PathInfo.get(node.path).equals(path));
+				if (addedIndex < 0) {
+					added.push(node);
+					added = added.sort(({ path: p1 }, { path: p2 }) => {
+						return PathInfo.get(p1).isAncestorOf(p2) ? -1 : PathInfo.get(p1).isDescendantOf(p2) ? 1 : 0;
+					});
+				} else {
+					added[addedIndex] = node;
+				}
+			}
+
+			const modifiedIndex = modified.findIndex(({ path }) => PathInfo.get(node.path).equals(path));
+			if (modifiedIndex < 0) {
+				modified.push(node);
+				modified = modified.sort(({ path: p1 }, { path: p2 }) => {
+					return PathInfo.get(p1).isAncestorOf(p2) ? -1 : PathInfo.get(p1).isDescendantOf(p2) ? 1 : 0;
+				});
+			} else {
+				added[modifiedIndex] = node;
+			}
+
 			const index = result.findIndex(({ path }) => PathInfo.get(node.path).equals(path));
+
 			if (index < 0) {
 				result.push(node);
-				added.push(node);
-				return result.length - 1;
+				result = result.sort(({ path: p1 }, { path: p2 }) => {
+					return PathInfo.get(p1).isAncestorOf(p2) ? -1 : PathInfo.get(p1).isDescendantOf(p2) ? 1 : 0;
+				});
 			}
 
 			result[index] = node;
-			const indexModified = modified.findIndex(({ path }) => PathInfo.get(node.path).equals(path));
-
-			if (indexModified < 0) {
-				added = added.filter(({ path }) => PathInfo.get(node.path).equals(path) !== true);
-				modified.push(node);
-			}
-
-			return index;
+			return result.findIndex(({ path }) => PathInfo.get(node.path).equals(path));
 		};
 
-		const pathsRemoved: string[] = nodes
+		const pathsRemoved: string[] = comparison
 			.sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
 				return aM > bM ? -1 : aM < bM ? 1 : 0;
 			})
@@ -659,20 +734,37 @@ export default class MDE extends SimpleEventEmitter {
 				return indexRecent < 0 || indexRecent === i;
 			})
 			.filter(({ content }) => content.type === nodeValueTypes.EMPTY || content.value === null)
-			.map(({ path }) => path);
+			.map(({ path }) => path)
+			.filter((path, i, l) => l.findIndex((p) => PathInfo.get(p).isAncestorOf(path)) < 0);
 
-		for (let node of nodes) {
-			if (pathsRemoved.findIndex((path) => PathInfo.get(path).equals(node.path) || PathInfo.get(path).isAncestorOf(node.path)) >= 0) {
-				removed.push(node);
-				continue;
-			}
+		removed = nodes
+			.filter(({ path }) => {
+				return pathsRemoved.findIndex((p) => PathInfo.get(p).equals(path) || PathInfo.get(p).isAncestorOf(path)) >= 0;
+			})
+			.sort(({ path: p1 }, { path: p2 }) => {
+				return PathInfo.get(p1).isAncestorOf(p2) ? -1 : PathInfo.get(p1).isDescendantOf(p2) ? 1 : 0;
+			});
 
-			if (node.content.type === nodeValueTypes.EMPTY || node.content.value === null) {
-				continue;
-			}
+		comparison = comparison
+			.filter(({ path }) => {
+				return pathsRemoved.findIndex((p) => PathInfo.get(p).equals(path) || PathInfo.get(p).isAncestorOf(path)) < 0;
+			})
+			.sort(({ path: p1 }, { path: p2 }) => {
+				return PathInfo.get(p1).isAncestorOf(p2) ? -1 : PathInfo.get(p1).isDescendantOf(p2) ? 1 : 0;
+			});
 
+		result = nodes
+			.filter(({ path }) => {
+				return pathsRemoved.findIndex((p) => PathInfo.get(p).equals(path) || PathInfo.get(p).isAncestorOf(path)) < 0;
+			})
+			.sort(({ path: p1 }, { path: p2 }) => {
+				return PathInfo.get(p1).isAncestorOf(p2) ? -1 : PathInfo.get(p1).isDescendantOf(p2) ? 1 : 0;
+			});
+
+		for (let node of comparison) {
 			const pathInfo = PathInfo.get(node.path);
-			const index = result.findIndex(({ path }) => pathInfo.equals(path) || pathInfo.isParentOf(path) || pathInfo.isChildOf(path));
+			let index = result.findIndex(({ path }) => pathInfo.equals(path));
+			index = index < 0 ? result.findIndex(({ path }) => pathInfo.isParentOf(path) || pathInfo.isChildOf(path)) : index;
 			if (index < 0) {
 				setNodeBy(node);
 				continue;
@@ -691,7 +783,7 @@ export default class MDE extends SimpleEventEmitter {
 
 						const new_content_value = Object.assign.apply(null, content_values as any);
 
-						result[index].content = Object.assign.apply(null, [
+						const content = Object.assign.apply(null, [
 							...contents,
 							{
 								value: Object.fromEntries(Object.entries(new_content_value).filter(([k, v]) => v !== null)),
@@ -700,7 +792,12 @@ export default class MDE extends SimpleEventEmitter {
 							} as StorageNode,
 						] as any);
 
-						setNodeBy(result[index]);
+						setNodeBy(
+							Object.assign(lastNode, {
+								content,
+							}),
+						);
+
 						break;
 					}
 					default: {
@@ -760,10 +857,10 @@ export default class MDE extends SimpleEventEmitter {
 		let byNodes: StorageNodeInfo[] = [];
 
 		try {
-			byNodes = await this.settings.searchData(reg);
+			byNodes = await this.settings.getMultiple(reg);
 		} catch {}
 
-		const result = this.prepareMergeNodes(byNodes, nodeList).result;
+		const { result } = this.prepareMergeNodes(byNodes, nodeList);
 
 		let nodes = result.filter(({ path: p }) => PathInfo.get(path).equals(p));
 

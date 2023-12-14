@@ -3,7 +3,7 @@ import JSONData from "../myjsonfile.json";
 
 const main = new MDE({
 	prefix: "",
-	searchData(expression) {
+	getMultiple(expression) {
 		const list = JSONData.filter(({ path }) => expression.test(path)) as any[];
 		console.log(list.length);
 		return list;
@@ -25,12 +25,12 @@ const main = new MDE({
 			},
 		]);
 
-		// this.getNodesBy("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788", true).then((nodes) => {
-		// 	console.log(nodes);
-		// });
-
-		this.getInfoBy("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788/status", { include_child_count: true }).then((info) => {
-			console.log(info);
+		this.getNodesBy("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788", true).then((nodes) => {
+			console.log(JSON.stringify(nodes, null, 4));
 		});
+
+		// this.getInfoBy("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788/status", { include_child_count: true }).then((info) => {
+		// 	console.log(info);
+		// });
 	},
 });
