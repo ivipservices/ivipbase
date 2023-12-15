@@ -404,7 +404,7 @@ export default class MDE extends SimpleEventEmitter {
 		 * @returns {string} O caminho convertido em expressão regular.
 		 */
 		const replasePathToRegex = (path: string) => {
-			path = path.replace(/\/((\*)|(\$[^/\$]*))/g, "/([^/]*)");
+			path = path.replace(/\/((\)|(\$[^/\$]))/g, "/([^/]*)");
 			path = path.replace(/\[\*\]/g, "\\[(\\d+)\\]");
 			return path;
 		};
@@ -737,18 +737,15 @@ export default class MDE extends SimpleEventEmitter {
 	async get<t = any>(path: string, onlyChildren: boolean = true): Promise<t | undefined> {
 		const nodes = await this.getNodesBy(path, onlyChildren);
 
-		// console.log(nodes);
-
 		const restructurerInstance = new NoderestructureJson(settings.uri);
 
 		const restructuredJson = restructurerInstance.restructureJson(nodes);
 
-		// console.log(restructuredJson);
-
 		const dataFromMongoConvertedToJSON = JSON.stringify(restructuredJson, null, 2);
-		// console.log(dataFromMongoConvertedToJSON);
 
 		const saveJsonIntoFile = restructurerInstance.convertToJsonAndSaveToFile(dataFromMongoConvertedToJSON);
+
+		console.log(saveJsonIntoFile)
 
 		return undefined;
 	}
@@ -762,11 +759,244 @@ export default class MDE extends SimpleEventEmitter {
 	 * @param {string} [options.assert_revision] - Uma string que representa a revisão associada ao node, se necessário.
 	 * @returns {Promise<void>}
 	 */
-	async set(
-		path: string,
-		value: any,
-		options: {
-			assert_revision?: string;
-		} = {},
-	): Promise<void> {}
+
+	set(path: string, value: any, options: { assert_revision?: string } = {}): Result[] {
+		const results: Result[] = [];
+	
+		if (path.trim() === "") {
+			throw new Error(`Invalid path node`);
+		}
+	
+		const pathInfo = PathInfo.get(path);
+	
+		if (typeof value === "object" && !Array.isArray(value)) {
+			this.processObject(value, { path: pathInfo.path }, results, options);
+		}
+		let currentPath = "";
+	
+		PathInfo.get(path).keys.forEach((part, i) => {
+			currentPath += (i > 0 ? "/" : "") + part;
+	
+			if (!Array.isArray(value)) {
+				const arrayResult = {
+					path: currentPath.substring(1),
+					type: "VERIFY",
+					content: {
+						// type: nodeValueTypes.ARRAY,
+						type: this.getType(value),
+						value: {},
+						revision: this.generateShortUUID(),
+						revision_nr: 1,
+						created: Date.now(),
+						modified: Date.now(),
+					},
+				};
+				if (arrayResult.path) {
+					results.push(arrayResult as any);
+				}
+			}
+		});
+	
+		const theKey: any = pathInfo.key;
+	
+		if (Array.isArray(value) && value.length > 0) {
+			value.forEach((obj, i) => {
+				const currentPath = `${path}[${i}]`;
+				const processedValue = {
+					[theKey]: obj,
+				};
+				const arrayResult: Result = {
+					path: currentPath,
+					type: "SET",
+					content: {
+						type: nodeValueTypes.ARRAY,
+						value: processedValue,
+						revision: this.generateShortUUID(),
+						revision_nr: 1,
+						created: Date.now(),
+						modified: Date.now(),
+					},
+				};
+				results.push(arrayResult);
+			});
+			const arrayResult: Result = {
+				path: pathInfo.path,
+				type: "SET",
+				content: {
+					type: nodeValueTypes.ARRAY,
+					value: {},
+					revision: this.generateShortUUID(),
+					revision_nr: 1,
+					created: Date.now(),
+					modified: Date.now(),
+				},
+			};
+			results.push(arrayResult);
+		} else {
+			const valueType = this.getType(value);
+			const processedValue = {
+				[theKey]: value,
+			};
+	
+			if (typeof value === "string") {
+				const processedValue = {
+					[theKey]: value,
+				};
+				const nonObjectResult: Result = {
+					path: pathInfo.parentPath as string,
+					type: "SET",
+					content: {
+						type: valueType as any,
+						value: processedValue,
+						revision: this.generateShortUUID(),
+						revision_nr: 1,
+						created: Date.now(),
+						modified: Date.now(),
+					},
+				};
+				results.push(nonObjectResult);
+			}
+		}
+		return results;
+	}
+	
+		
+	public getType(value: unknown): number {
+		if (Array.isArray(value)) {
+			return nodeValueTypes.ARRAY;
+		} else if (value && typeof value === "object") {
+			return nodeValueTypes.OBJECT;
+		} else if (typeof value === "number") {
+			return nodeValueTypes.NUMBER;
+		} else if (typeof value === "boolean") {
+			return nodeValueTypes.BOOLEAN;
+		} else if (typeof value === "string") {
+			return nodeValueTypes.STRING;
+		} else if (typeof value === "bigint") {
+			return nodeValueTypes.BIGINT;
+		} else if (typeof value === "object" && (value as any).type === 6) {
+			return nodeValueTypes.DATETIME;
+		} else {
+			return nodeValueTypes.EMPTY;
+		}
+	}
+
+	public generateShortUUID(): string {
+		const fullUUID = randomUUID();
+		const shortUUID = fullUUID.replace(/-/g, "").slice(0, 24);
+		return shortUUID;
+	}
+
+	public processObject(obj, pathInfo, results, options) {
+		const currentPath = pathInfo.path;
+		const { assert_revision = "lnt02q7v0007oohx37705737" } = options;
+		const MAX_KEY_LENGTH = 50;
+	
+		if (typeof obj !== "object" || Array.isArray(obj)) {
+			return;
+		}
+	
+		const nonObjectKeys = {};
+		let otherObject;
+		let maior;
+	
+		for (const [key, value] of Object.entries(obj)) {
+			const childPath = `${currentPath}/${key}`;
+	
+			if (Array.isArray(value)) {
+				value.forEach((element, index) => {
+					const arrayElementPath = `${childPath}[${index}]`;
+					this.processObject(element, { path: arrayElementPath }, results, options);
+				});
+				const resultContent = {
+					path: childPath,
+					type: "SET",
+					content: {
+						type: nodeValueTypes.ARRAY,
+						value: {},
+						revision: this.generateShortUUID(),
+						revision_nr: 1,
+						created: Date.now(),
+						modified: Date.now(),
+					},
+				};
+				results.push(resultContent);
+			} else if (typeof value === "object") {
+				this.processObject(value, { path: childPath }, results, options);
+			} else {
+				const valueType = this.getType(value);
+				if (String(value).length >= MAX_KEY_LENGTH) {
+					const resultContent = {
+						path: childPath,
+						type: "SET",
+						content: {
+							type: valueType,
+							value: value,
+							revision: this.generateShortUUID(),
+							revision_nr: 1,
+							created: Date.now(),
+							modified: Date.now(),
+						},
+					};
+					results.push(resultContent);
+				} else {
+					nonObjectKeys[key] = value;
+					if (String(value).length >= MAX_KEY_LENGTH) {
+						maior = Object.entries(nonObjectKeys)
+							.filter(([k, v]) => typeof v !== "string" || String(v).length >= MAX_KEY_LENGTH)
+							.reduce((acc, [k, v]) => {
+								acc[k] = v;
+								return acc;
+							}, {});
+					}
+				}
+			}
+		}
+	
+		if (Object.keys(nonObjectKeys).length > 0) {
+			const resultContent = {
+				path: currentPath,
+				type: "SET",
+				content: {
+					type: nodeValueTypes.OBJECT,
+					value: otherObject || nonObjectKeys,
+					revision: this.generateShortUUID(),
+					revision_nr: 1,
+					created: Date.now(),
+					modified: Date.now(),
+				},
+			};
+			results.push(resultContent);
+		}
+	
+		if (maior) {
+			const resultContent = {
+				path: `${currentPath}/maior`,
+				type: "SET",
+				content: {
+					type: nodeValueTypes.OBJECT,
+					value: maior,
+					revision: this.generateShortUUID(),
+					revision_nr: 1,
+					created: Date.now(),
+					modified: Date.now(),
+				},
+			};
+			results.push(resultContent);
+		}
+	}
 }
+
+
+type Result = {
+	path: string;
+	type: string,
+	content: {
+		type: (typeof nodeValueTypes)[keyof typeof nodeValueTypes];
+		value: Record<string, unknown> | string | number;
+		revision: string;
+		revision_nr: number;
+		created: number;
+		modified: number;
+	};
+};
