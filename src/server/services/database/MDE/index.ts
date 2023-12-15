@@ -690,6 +690,7 @@ export default class MDE extends SimpleEventEmitter {
 			if (!Array.isArray(value)) {
 				const arrayResult = {
 					path: currentPath.substring(1),
+					type: "VERIFY",
 					content: {
 						// type: nodeValueTypes.ARRAY,
 						type: this.getType(value),
@@ -716,6 +717,7 @@ export default class MDE extends SimpleEventEmitter {
 				};
 				const arrayResult: Result = {
 					path: currentPath,
+					type: "SET",
 					content: {
 						type: nodeValueTypes.ARRAY,
 						value: processedValue,
@@ -729,6 +731,7 @@ export default class MDE extends SimpleEventEmitter {
 			});
 			const arrayResult: Result = {
 				path: pathInfo.path,
+				type: "SET",
 				content: {
 					type: nodeValueTypes.ARRAY,
 					value: {},
@@ -751,6 +754,7 @@ export default class MDE extends SimpleEventEmitter {
 				};
 				const nonObjectResult: Result = {
 					path: pathInfo.parentPath as string,
+					type: "SET",
 					content: {
 						type: valueType as any,
 						value: processedValue,
@@ -816,6 +820,7 @@ export default class MDE extends SimpleEventEmitter {
 				});
 				const resultContent = {
 					path: childPath,
+					type: "SET",
 					content: {
 						type: nodeValueTypes.ARRAY,
 						value: {},
@@ -833,6 +838,7 @@ export default class MDE extends SimpleEventEmitter {
 				if (String(value).length >= MAX_KEY_LENGTH) {
 					const resultContent = {
 						path: childPath,
+						type: "SET",
 						content: {
 							type: valueType,
 							value: value,
@@ -860,6 +866,7 @@ export default class MDE extends SimpleEventEmitter {
 		if (Object.keys(nonObjectKeys).length > 0) {
 			const resultContent = {
 				path: currentPath,
+				type: "SET",
 				content: {
 					type: nodeValueTypes.OBJECT,
 					value: otherObject || nonObjectKeys,
@@ -875,6 +882,7 @@ export default class MDE extends SimpleEventEmitter {
 		if (maior) {
 			const resultContent = {
 				path: `${currentPath}/maior`,
+				type: "SET",
 				content: {
 					type: nodeValueTypes.OBJECT,
 					value: maior,
@@ -892,6 +900,7 @@ export default class MDE extends SimpleEventEmitter {
 
 type Result = {
 	path: string;
+	type: string,
 	content: {
 		type: (typeof nodeValueTypes)[keyof typeof nodeValueTypes];
 		value: Record<string, unknown> | string | number;
