@@ -161,7 +161,7 @@ import { MongoClient, ChangeStream, ChangeStreamInsertDocument, ChangeStreamDele
 // 	},
 // });
 
-import Node from "../src/server/services/database/Node";
+import Node from "../../src/server/services/database/Node";
 // import fs from "fs";
 // import path from "path";
 
