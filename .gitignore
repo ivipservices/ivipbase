@@ -3,3 +3,5 @@ node_modules
 *.acebase
 package-lock.json
 previous_src
+./src/settings.ts
+**./src/settings.ts

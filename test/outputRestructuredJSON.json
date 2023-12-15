@@ -1,0 +1,109 @@
+{
+  "ivipcoin-db::__movement_wallet__": {
+    "007219693774253022": {
+      "dataModificacao": 1689373828234,
+      "dateValidity": 1689373828234,
+      "totalValue": 0,
+      "currencyType": "USD",
+      "balancesModificacao": "2023-10-14T03:00:00.000Z",
+      "credit": {
+        "approvedLimit": 0,
+        "limitUsed": 0,
+        "invoices": {}
+      },
+      "history": {
+        "1690216041978": {
+          "type": "deposit",
+          "wallet_type": "IVIPCOIN",
+          "payment_method": "whatsapp",
+          "original_amount": 150,
+          "total_amount": 150,
+          "id": 1690216041978,
+          "history_id": 1690216041978,
+          "date_created": "2023-07-24T16:27:21.978Z",
+          "date_last_updated": "2023-07-24T17:23:10.794Z",
+          "operation_type": "regular_payment",
+          "payment_type": "ticket",
+          "status": "approved",
+          "currency_id": "BRL",
+          "base_currency_id": "BRL",
+          "status_detail": "accredited",
+          "date_approved": "2023-07-24T17:23:10.794Z",
+          "money_release_date": "2023-07-24T17:23:10.794Z",
+          "money_release_status": "approved",
+          "wasDebited": true,
+          "details": {
+            "payment_method_reference_id": 1690216041978,
+            "net_received_amount": 0,
+            "overpaid_amount": 0,
+            "total_paid_amount": 150,
+            "installment_amount": 150,
+            "installments": 1,
+            "reference_currency_id": "BRL",
+            "financial_institution": "ivipcoin",
+            "costs": [],
+            "external_resource_url": "https://ivipcoin-api.com/v1/finances/info_by/007219693774253022/history/1690216041978"
+          },
+          "description": "Deposito de um valor R$ 150,00 para a carteira iVip 0072.1969.3774.2530-22",
+          "date_of_expiration": {
+            ".type": "date",
+            ".val": "2023-08-23T16:27:21.978Z"
+          }
+        },
+        "1689719003118": {
+          "type": "deposit",
+          "wallet_type": "IVIPCOIN",
+          "payment_method": "whatsapp",
+          "original_amount": 130,
+          "total_amount": 130,
+          "history_id": 1689719003118,
+          "id": 1689719003118,
+          "date_created": "2023-07-18T22:23:23.118Z",
+          "date_last_updated": "2023-07-26T21:40:36.264Z",
+          "date_of_expiration": "2023-08-17T22:23:23.118Z",
+          "operation_type": "regular_payment",
+          "status": "cancelled",
+          "status_detail": "cancelled",
+          "currency_id": "BRL",
+          "money_release_date": "2023-07-26T21:40:36.264Z",
+          "money_release_status": "cancelled",
+          "wasDebited": true,
+          "details": {
+            "costs": []
+          },
+          "description": "Deposito de um valor R$ 130,00 para a carteira iVip 0072.1969.3774.2530-22"
+        },
+        "1689373938365": {
+          "type": "deposit",
+          "wallet_type": "IVIPCOIN",
+          "payment_method": "whatsapp",
+          "original_amount": 100,
+          "total_amount": 100,
+          "history_id": 1689373938365,
+          "id": 1689373938365,
+          "date_created": "2023-07-14T22:32:18.365Z",
+          "date_last_updated": "2023-07-26T21:41:01.153Z",
+          "date_of_expiration": "2023-08-13T22:32:18.365Z",
+          "operation_type": "regular_payment",
+          "status": "cancelled",
+          "status_detail": "cancelled",
+          "currency_id": "BRL",
+          "money_release_date": "2023-07-26T21:41:01.153Z",
+          "money_release_status": "cancelled",
+          "wasDebited": true,
+          "details": {
+            "costs": []
+          },
+          "description": "Deposito de um valor R$ 100,00 para a carteira iVip 0072.1969.3774.2530-22"
+        }
+      },
+      "balances": {
+        "BRL": {
+          "available": "150.00000000",
+          "symbol": "BRL",
+          "value": 29.27
+        }
+      }
+    }
+  }
+}

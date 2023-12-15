@@ -36,6 +36,21 @@ export const nodeValueTypes = {
 export type NodeValueType = (typeof nodeValueTypes)[keyof typeof nodeValueTypes];
 export const VALUE_TYPES = nodeValueTypes as Record<keyof typeof nodeValueTypes, NodeValueType>;
 
+/**
+ * Retorna o nome descritivo de um tipo de valor com base no código do tipo.
+ *
+ * @param {number} valueType - O código do tipo de valor.
+ * @returns {string} - O nome descritivo do tipo de valor correspondente.
+ * @throws {Error} - Se o código do tipo de valor fornecido for desconhecido.
+ *
+ * @example
+ * const typeName = getValueTypeName(VALUE_TYPES.STRING);
+ * // Retorna: "string"
+ *
+ * @example
+ * const typeName = getValueTypeName(99);
+ * // Retorna: "dedicated_record"
+ */
 export function getValueTypeName(valueType: number) {
 	switch (valueType) {
 		case VALUE_TYPES.ARRAY:
@@ -63,6 +78,20 @@ export function getValueTypeName(valueType: number) {
 	}
 }
 
+/**
+ * Retorna um valor padrão para um tipo de valor com base no código do tipo.
+ *
+ * @param {number} valueType - O código do tipo de valor.
+ * @returns {any} - Um valor padrão correspondente ao tipo de valor especificado.
+ *
+ * @example
+ * const defaultValue = getValueTypeDefault(VALUE_TYPES.STRING);
+ * // Retorna: ""
+ *
+ * @example
+ * const defaultValue = getValueTypeDefault(VALUE_TYPES.NUMBER);
+ * // Retorna: 0
+ */
 function getValueTypeDefault(valueType: number) {
 	switch (valueType) {
 		case VALUE_TYPES.ARRAY:
@@ -88,6 +117,20 @@ function getValueTypeDefault(valueType: number) {
 	}
 }
 
+/**
+ * Determina o tipo de valor de um nó com base no valor fornecido.
+ *
+ * @param {unknown} value - O valor a ser avaliado.
+ * @returns {number} - O código do tipo de valor correspondente.
+ *
+ * @example
+ * const valueType = getNodeValueType([1, 2, 3]);
+ * // Retorna: VALUE_TYPES.ARRAY
+ *
+ * @example
+ * const valueType = getNodeValueType(new PathReference());
+ * // Retorna: VALUE_TYPES.REFERENCE
+ */
 export function getNodeValueType(value: unknown) {
 	if (value instanceof Array) {
 		return VALUE_TYPES.ARRAY;
@@ -109,6 +152,20 @@ export function getNodeValueType(value: unknown) {
 	return VALUE_TYPES.EMPTY;
 }
 
+/**
+ * Determina o tipo de valor de um dado com base no valor fornecido.
+ *
+ * @param {unknown} value - O valor a ser avaliado.
+ * @returns {number} - O código do tipo de valor correspondente.
+ *
+ * @example
+ * const valueType = getValueType([1, 2, 3]);
+ * // Retorna: VALUE_TYPES.ARRAY
+ *
+ * @example
+ * const valueType = getValueType(new PathReference());
+ * // Retorna: VALUE_TYPES.REFERENCE
+ */
 export function getValueType(value: unknown) {
 	if (value instanceof Array) {
 		return VALUE_TYPES.ARRAY;
