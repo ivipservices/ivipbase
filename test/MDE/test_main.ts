@@ -161,7 +161,7 @@ import { MongoClient, ChangeStream, ChangeStreamInsertDocument, ChangeStreamDele
 // 	},
 // });
 
-import Node from "../../src/server/services/database/Node";
+import Node from "../src/server/services/database/Node";
 // import fs from "fs";
 // import path from "path";
 
@@ -225,64 +225,7 @@ import Node from "../../src/server/services/database/Node";
 	//console.log(new Date().toLocaleString("pt-BR"));
 	//console.log(new Date().toLocaleString("pt-BR"));
 
-	data.setNode("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788/currency_id", "BRL- test");
-
-	const exemplo = [
-		{
-			path: "ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788",
-			content: {
-				type: 1,
-				value: {
-					currency_id: "BRL- test",
-				},
-				revision: "lnt02q7w000doohxasia0o3e",
-				revision_nr: 1,
-				created: 1697467086141,
-				modified: 1697467086141,
-			},
-		},
-	];
-
-	// {
-	// 	"path": "ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138262468",
-	// 	"content": {
-	// 		"type": 1,
-	// 		"value": {
-	// 			"type": "deposit",
-	// 			"wallet_type": "IVIPCOIN",
-	// 			"payment_method": "bolbradesco",
-	// 			"original_amount": 603,
-	// 			"total_amount": 606.49,
-	// 			"id": 1311772470,
-	// 			"date_created": {
-	// 				"type": 6,
-	// 				"value": 1677138263122
-	// 			},
-	// 			"date_last_updated": {
-	// 				"type": 6,
-	// 				"value": 1677138263122
-	// 			},
-	// 			"date_of_expiration": {
-	// 				"type": 6,
-	// 				"value": 1677553199000
-	// 			},
-	// 			"operation_type": "regular_payment",
-	// 			"payment_type": "ticket",
-	// 			"status": "pending",
-	// 			"status_detail": "pending_waiting_payment",
-	// 			"currency_id": "BRL",
-	// 			"history_id": "1677138262468"
-	// 		},
-	// 		"revision": "lnt02q7w0009oohx8xtx9wot",
-	// 		"revision_nr": 1,
-	// 		"created": 1697467086141,
-	// 		"modified": 1697467086141
-	// 	}
-	// }
-
-	const value = data.getNode("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788/currency_id");
-	// value = "BRL- test";
-
+	// data.setNode("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788/currency_id", "USD- test");
 	// data.setNode("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788/currency_id_olt", "BRL- test");
 	// data.setNode("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788/payment_method", null);
 	// data.setNode("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788", null);
