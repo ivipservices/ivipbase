@@ -404,7 +404,7 @@ export default class MDE extends SimpleEventEmitter {
 		 * @returns {string} O caminho convertido em expressão regular.
 		 */
 		const replasePathToRegex = (path: string) => {
-			path = path.replace(/\/((\)|(\$[^/\$]))/g, "/([^/]*)");
+			path = path.replace(/\/((\*)|(\$[^/\$]*))/g, "/([^/]*)");
 			path = path.replace(/\[\*\]/g, "\\[(\\d+)\\]");
 			return path;
 		};
@@ -745,9 +745,7 @@ export default class MDE extends SimpleEventEmitter {
 
 		const saveJsonIntoFile = restructurerInstance.convertToJsonAndSaveToFile(dataFromMongoConvertedToJSON);
 
-		console.log(saveJsonIntoFile)
-
-		return undefined;
+		return dataFromMongoConvertedToJSON as any;
 	}
 
 	/**
@@ -760,7 +758,7 @@ export default class MDE extends SimpleEventEmitter {
 	 * @returns {Promise<void>}
 	 */
 
-	set(path: string, value: any, options: { assert_revision?: string } = {}): Result[] {
+set(path: string, value: any, options: { assert_revision?: string } = {}): Result[] {
 		const results: Result[] = [];
 	
 		if (path.trim() === "") {

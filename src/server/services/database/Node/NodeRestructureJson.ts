@@ -70,7 +70,7 @@ export class NoderestructureJson {
 				const part = parts[i];
 
 				if (i === parts.length - 1) {
-					let key = part.replace(/_+/g, "").replace(/^+|+$/g, "");
+					let key = part.replace(/__+/g, "_").replace(/^_+|_+$/g, "");
 					const { value } = content;
 
 					if (!current[key]) {
