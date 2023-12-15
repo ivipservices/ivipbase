@@ -2,14 +2,11 @@ import MDE from "../src/server/services/database/MDE";
 import myJsonfile from "../test/myjsonfile.json";
 
 const instance = new MDE({
-    prefix: "",
-    searchData: async (search) => {
-        return myJsonfile.filter((node) => 
-            search.test(node.path)
-        )
-    }
-})
-
+	prefix: "",
+	getMultiple: async (search) => {
+		return myJsonfile.filter((node) => search.test(node.path));
+	},
+});
 
 const path = "ivipcoin-db::movement_wallet/000523147298669313/history/1677138262468";
 const value = {
