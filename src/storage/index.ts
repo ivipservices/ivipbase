@@ -1,7 +1,3 @@
-import MDE, { MDESettings } from "./MDE";
-
-export class CustomStorage extends MDE {
-	constructor(options: Partial<MDESettings>) {
-		super(options);
-	}
-}
+export * from "./MongoDBStorage";
+export * from "./TempStorage";
+export * from "./CustomStorage";

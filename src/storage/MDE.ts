@@ -275,7 +275,7 @@ type StorageNodeValue =
 	| { type: 8; value: typeof Uint8Array };
 
 /** Interface for metadata combined with a stored value */
-type StorageNode = {
+export type StorageNode = {
 	/** cuid (time sortable revision id). Nodes stored in the same operation share this id */
 	revision: string;
 	/** Number of revisions, starting with 1. Resets to 1 after deletion and recreation */
@@ -290,7 +290,7 @@ type StorageNode = {
 	// value: StorageNodeValue["value"];
 } & StorageNodeValue;
 
-interface StorageNodeInfo {
+export interface StorageNodeInfo {
 	path: string;
 	content: StorageNode;
 }
@@ -427,7 +427,7 @@ export default class MDE extends SimpleEventEmitter {
 	 */
 	private nodes: NodesPending[] = [];
 
-	constructor(options: Partial<MDESettings>) {
+	constructor(options: Partial<MDESettings> = {}) {
 		super();
 		this.settings = new MDESettings(options);
 		this.init();

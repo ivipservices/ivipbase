@@ -5,6 +5,8 @@ export const enum AppError {
 	BAD_APP_NAME = "bad-app-name",
 	DUPLICATE_APP = "duplicate-app",
 	APP_DELETED = "app-deleted",
+	DB_DISCONNECTED = "db-disconnected",
+	DB_CONNECTION_ERROR = "db-connection-error",
 }
 
 const ERRORS: ErrorMap<AppError> = {
@@ -12,6 +14,8 @@ const ERRORS: ErrorMap<AppError> = {
 	[AppError.BAD_APP_NAME]: "Nome de aplicativo ilegal: '{$appName}",
 	[AppError.DUPLICATE_APP]: "O aplicativo Firebase chamado '{$appName}' já existe com diferentes opções ou configurações",
 	[AppError.APP_DELETED]: "Aplicativo iVipBase chamado '{$appName}' já excluído",
+	[AppError.DB_DISCONNECTED]: "Banco de dados '{$dbName}' desconectado",
+	[AppError.DB_CONNECTION_ERROR]: "Database connection error: {$error}",
 };
 
 interface ErrorParams {
@@ -19,6 +23,8 @@ interface ErrorParams {
 	[AppError.BAD_APP_NAME]: { appName: string };
 	[AppError.DUPLICATE_APP]: { appName: string };
 	[AppError.APP_DELETED]: { appName: string };
+	[AppError.DB_DISCONNECTED]: { dbName: string };
+	[AppError.DB_CONNECTION_ERROR]: { error: string };
 }
 
 export const ERROR_FACTORY = new ErrorFactory<AppError, ErrorParams>("app", "Firebase", ERRORS);
