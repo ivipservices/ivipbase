@@ -1,6 +1,7 @@
 import { PathInfo, PathReference, SimpleEventEmitter, Utils } from "ivipbase-core";
 import { NoderestructureJson } from "../Node/NodeRestructureJson";
 import settings from "../../../../settings";
+import { randomUUID } from "crypto";
 
 const { encodeString, isDate } = Utils;
 
