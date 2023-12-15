@@ -1,5 +1,6 @@
-import { randomUUID } from "crypto";
 import { PathInfo, PathReference, SimpleEventEmitter, Utils } from "ivipbase-core";
+import { NoderestructureJson } from "../Node/NodeRestructureJson";
+import settings from "../../../../settings";
 
 const { encodeString, isDate } = Utils;
 
@@ -324,7 +325,9 @@ class MDESettings {
 	 * @type {((expression: RegExp) => Promise<StorageNodeInfo[]> ) | undefined}
 	 * @default undefined
 	 */
-	searchData: ((expression: RegExp) => Promise<StorageNodeInfo[]>) | undefined = undefined;
+	searchData: (expression: RegExp) => Promise<StorageNodeInfo[]> | StorageNodeInfo[] = () => [];
+
+	init: ((this: MDE) => void) | undefined;
 
 	/**
 	 * Cria uma instância de MDESettings com as opções fornecidas.
@@ -347,8 +350,15 @@ class MDESettings {
 			this.removeVoidProperties = options.removeVoidProperties;
 		}
 
-		if (typeof options.searchData === "function") {
-			this.searchData = options.searchData;
+		this.searchData = async (reg) => {
+			if (typeof options.searchData === "function") {
+				return await Promise.race([options.searchData(reg)]);
+			}
+			return [];
+		};
+
+		if (typeof options.init === "function") {
+			this.init = options.init;
 		}
 	}
 }
@@ -369,6 +379,13 @@ export default class MDE extends SimpleEventEmitter {
 	constructor(options: Partial<MDESettings>) {
 		super();
 		this.settings = new MDESettings(options);
+		this.init();
+	}
+
+	private init() {
+		if (typeof this.settings.init === "function") {
+			this.settings.init.apply(this, []);
+		}
 	}
 
 	/**
@@ -387,7 +404,7 @@ export default class MDE extends SimpleEventEmitter {
 		 * @returns {string} O caminho convertido em expressão regular.
 		 */
 		const replasePathToRegex = (path: string) => {
-			path = path.replace(/\/((\*)|(\$[^/\$]*))/g, "/([^/]*)");
+			path = path.replace(/\/((\)|(\$[^/\$]))/g, "/([^/]*)");
 			path = path.replace(/\[\*\]/g, "\\[(\\d+)\\]");
 			return path;
 		};
@@ -414,12 +431,10 @@ export default class MDE extends SimpleEventEmitter {
 		const reg = this.pathToRegex(path, false);
 		let nodeList: StorageNodeInfo[] = this.nodes.filter(({ path }) => reg.test(path));
 
-		if (this.settings.searchData) {
-			try {
-				const response = await this.settings.searchData(reg);
-				nodeList = nodeList.concat(response ?? []);
-			} catch {}
-		}
+		try {
+			const response = await this.settings.searchData(reg);
+			nodeList = nodeList.concat(response ?? []);
+		} catch {}
 
 		nodeList = nodeList
 			.sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
@@ -470,25 +485,74 @@ export default class MDE extends SimpleEventEmitter {
 
 	/**
 	 * Responsável pela mesclagem de nodes soltos, apropriado para evitar conflitos de dados.
-	 * @param nodes - Lista de nodes a serem processados.
-	 * @returns {StorageNodeInfo[]} Retorna uma lista de informações sobre os nodes.
+	 *
+	 * @param {StorageNodeInfo[]} nodes - Lista de nodes a serem processados.
+	 *
+	 * @returns {{
+	 *   result: StorageNodeInfo[];
+	 *   added: StorageNodeInfo[];
+	 *   modified: StorageNodeInfo[];
+	 *   removed: StorageNodeInfo[];
+	 * }} Retorna uma lista de informações sobre os nodes de acordo com seu estado.
 	 */
-	private prepareMergeNodes = (nodes: StorageNodeInfo[]): StorageNodeInfo[] => {
+	private prepareMergeNodes = (
+		nodes: StorageNodeInfo[],
+	): {
+		result: StorageNodeInfo[];
+		added: StorageNodeInfo[];
+		modified: StorageNodeInfo[];
+		removed: StorageNodeInfo[];
+	} => {
 		const result: StorageNodeInfo[] = [];
-		const pathsRemoved: string[] = [];
+
+		let added: StorageNodeInfo[] = [];
+		let modified: StorageNodeInfo[] = [];
+		let removed: StorageNodeInfo[] = [];
+
+		const setNodeBy = (node: StorageNodeInfo): number => {
+			const index = result.findIndex(({ path }) => PathInfo.get(node.path).equals(path));
+			if (index < 0) {
+				result.push(node);
+				added.push(node);
+				return result.length - 1;
+			}
+
+			result[index] = node;
+			const indexModified = modified.findIndex(({ path }) => PathInfo.get(node.path).equals(path));
+
+			if (indexModified < 0) {
+				added = added.filter(({ path }) => PathInfo.get(node.path).equals(path) !== true);
+				modified.push(node);
+			}
+
+			return index;
+		};
+
+		const pathsRemoved: string[] = nodes
+			.sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
+				return aM > bM ? -1 : aM < bM ? 1 : 0;
+			})
+			.filter(({ path, content: { modified } }, i, l) => {
+				const indexRecent = l.findIndex(({ path: p, content: { modified: m } }) => p === path && m > modified);
+				return indexRecent < 0 || indexRecent === i;
+			})
+			.filter(({ content }) => content.type === nodeValueTypes.EMPTY || content.value === null)
+			.map(({ path }) => path);
 
 		for (let node of nodes) {
-			const containsUsRemoved: boolean = pathsRemoved.findIndex((path) => PathInfo.get(path).isAncestorOf(node.path)) >= 0;
+			if (pathsRemoved.findIndex((path) => PathInfo.get(path).equals(node.path) || PathInfo.get(path).isAncestorOf(node.path)) >= 0) {
+				removed.push(node);
+				continue;
+			}
 
-			if (containsUsRemoved || node.content.type === nodeValueTypes.EMPTY || node.content.value === null) {
-				pathsRemoved.push(node.path);
+			if (node.content.type === nodeValueTypes.EMPTY || node.content.value === null) {
 				continue;
 			}
 
 			const pathInfo = PathInfo.get(node.path);
 			const index = result.findIndex(({ path }) => pathInfo.equals(path) || pathInfo.isParentOf(path) || pathInfo.isChildOf(path));
 			if (index < 0) {
-				result.push(node);
+				setNodeBy(node);
 				continue;
 			}
 
@@ -498,24 +562,28 @@ export default class MDE extends SimpleEventEmitter {
 				switch (lastNode.content.type) {
 					case nodeValueTypes.OBJECT:
 					case nodeValueTypes.ARRAY: {
-						const contents = [lastNode.content, node.content];
+						const { created, revision_nr } = lastNode.content.modified > node.content.modified ? node.content : lastNode.content;
 
+						const contents = lastNode.content.modified > node.content.modified ? [node.content, lastNode.content] : [lastNode.content, node.content];
 						const content_values: object[] = contents.map(({ value }) => value);
 
-						const new_content_value = Object.assign.apply(null, (lastNode.content.modified > node.content.modified ? content_values.reverse() : content_values) as any);
+						const new_content_value = Object.assign.apply(null, content_values as any);
 
 						result[index].content = Object.assign.apply(null, [
-							...(lastNode.content.modified > node.content.modified ? contents.reverse() : contents),
+							...contents,
 							{
-								value: new_content_value,
-							},
+								value: Object.fromEntries(Object.entries(new_content_value).filter(([k, v]) => v !== null)),
+								created,
+								revision_nr: revision_nr + 1,
+							} as StorageNode,
 						] as any);
 
+						setNodeBy(result[index]);
 						break;
 					}
 					default: {
 						if (lastNode.content.modified < node.content.modified) {
-							result[index] = node;
+							setNodeBy(node);
 						}
 					}
 				}
@@ -544,14 +612,15 @@ export default class MDE extends SimpleEventEmitter {
 
 				if (parentNodeModified) {
 					result[index] = parentNode;
+					setNodeBy(result[index]);
 					continue;
 				}
 			}
 
-			result.push(node);
+			setNodeBy(node);
 		}
 
-		return result;
+		return { result, added, modified, removed };
 	};
 
 	/**
@@ -562,22 +631,30 @@ export default class MDE extends SimpleEventEmitter {
 	 * @returns {Promise<StorageNodeInfo[]>} - Uma Promise que resolve para uma lista de informações sobre os nodes.
 	 * @throws {Error} - Lança um erro se ocorrer algum problema durante a busca assíncrona.
 	 */
-	private async getNodesBy(path: string, allHeirs: boolean = false): Promise<StorageNodeInfo[]> {
+	async getNodesBy(path: string, allHeirs: boolean = false): Promise<StorageNodeInfo[]> {
 		const reg = this.pathToRegex(path, allHeirs);
 		let nodeList: StorageNodeInfo[] = this.nodes.filter(({ path }) => reg.test(path));
 
-		if (this.settings.searchData) {
-			try {
-				const response = await this.settings.searchData(reg);
-				nodeList = nodeList.concat(response ?? []);
-			} catch {}
-		}
+		try {
+			const response = await this.settings.searchData(reg);
+			nodeList = nodeList.concat(response ?? []);
+		} catch {}
 
-		return this.prepareMergeNodes(
+		const result = this.prepareMergeNodes(
 			nodeList.sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
 				return aM > bM ? -1 : aM < bM ? 1 : 0;
 			}),
-		);
+		).result;
+
+		let nodes = result.filter(({ path: p }) => PathInfo.get(path).equals(p));
+
+		if (nodes.length > 0 && allHeirs) {
+			nodes = result.filter(({ path: p }) => PathInfo.get(path).equals(p) || PathInfo.get(path).isAncestorOf(p));
+		} else if (nodes.length <= 0) {
+			nodes = result.filter(({ path: p }) => PathInfo.get(path).isChildOf(p));
+		}
+
+		return nodes;
 	}
 
 	/**
@@ -608,7 +685,7 @@ export default class MDE extends SimpleEventEmitter {
 	 * @param nodes - Um ou mais nós a serem adicionados.
 	 * @returns {MDE} O nó atual após a adição dos nós.
 	 */
-	private pushNode(...nodes: (StorageNodeInfo[] | StorageNodeInfo)[]): MDE {
+	pushNode(...nodes: (StorageNodeInfo[] | StorageNodeInfo)[]): MDE {
 		const forNodes: StorageNodeInfo[] =
 			Array.prototype.concat
 				.apply(
@@ -655,9 +732,21 @@ export default class MDE extends SimpleEventEmitter {
 	 * @template T - Tipo genérico para o retorno da função.
 	 * @param {string} path - Caminho de um node raiz.
 	 * @param {boolean} [onlyChildren=true] - Se verdadeiro, exporta apenas os filhos do node especificado.
-	 * @return {T | undefined} - Retorna valor referente ao path ou undefined se nenhum node for encontrado.
+	 * @return {Promise<T | undefined>} - Retorna valor referente ao path ou undefined se nenhum node for encontrado.
 	 */
-	get<t = any>(path: string, onlyChildren: boolean = true): t | undefined {
+	async get<t = any>(path: string, onlyChildren: boolean = true): Promise<t | undefined> {
+		const nodes = await this.getNodesBy(path, onlyChildren);
+
+		const restructurerInstance = new NoderestructureJson(settings.uri);
+
+		const restructuredJson = restructurerInstance.restructureJson(nodes);
+
+		const dataFromMongoConvertedToJSON = JSON.stringify(restructuredJson, null, 2);
+
+		const saveJsonIntoFile = restructurerInstance.convertToJsonAndSaveToFile(dataFromMongoConvertedToJSON);
+
+		console.log(saveJsonIntoFile)
+
 		return undefined;
 	}
 
@@ -668,8 +757,9 @@ export default class MDE extends SimpleEventEmitter {
 	 * @param {any} value - O valor a ser armazenado em nodes.
 	 * @param {Object} [options] - Opções adicionais para controlar o comportamento da definição.
 	 * @param {string} [options.assert_revision] - Uma string que representa a revisão associada ao node, se necessário.
-	 * @returns {void}
+	 * @returns {Promise<void>}
 	 */
+
 	set(path: string, value: any, options: { assert_revision?: string } = {}): Result[] {
 		const results: Result[] = [];
 	
