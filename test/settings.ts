@@ -1,4 +1,4 @@
-import { NoderestructureJson } from "./server/services/database/Node/NodeRestructureJson";
+import { NoderestructureJson } from "../src/server/services/database/Node/NodeRestructureJson";
 
 // SETTINGS
 

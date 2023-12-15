@@ -30,7 +30,9 @@
     },
     "compileOnSave": false,
     "include": [
-        "src/**/*.ts"
+        "src/**/*.ts",
+        "test/settings.example.ts",
+        "test/settings.ts"
     ],
     "exclude": [
         "node_modules",

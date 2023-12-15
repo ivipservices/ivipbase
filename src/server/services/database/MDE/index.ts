@@ -1,9 +1,8 @@
-import { PathInfo, PathReference, SimpleEventEmitter, Utils, Lib, ascii85 } from "ivipbase-core";
+import { PathInfo, PathReference, SimpleEventEmitter, Lib, ascii85 } from "ivipbase-core";
 import { encodeString, isDate } from "ivip-utils";
 
 const { assert } = Lib;
 import { NoderestructureJson } from "../Node/NodeRestructureJson";
-import settings from "../../../../settings";
 import { randomUUID } from "crypto";
 
 export const nodeValueTypes = {
@@ -1037,7 +1036,7 @@ export default class MDE extends SimpleEventEmitter {
 	async get<t = any>(path: string, onlyChildren: boolean = true): Promise<t | undefined> {
 		const nodes = await this.getNodesBy(path, onlyChildren);
 
-		const restructurerInstance = new NoderestructureJson(settings.uri);
+		const restructurerInstance = new NoderestructureJson("");
 
 		const restructuredJson = restructurerInstance.restructureJson(nodes);
 
@@ -1058,8 +1057,8 @@ export default class MDE extends SimpleEventEmitter {
 	 * @returns {Promise<void>}
 	 */
 
-	set(path: string, value: any, options: { assert_revision?: string } = {}): Result[] {
-		const results: Result[] = [];
+	set(path: string, value: any, options: { assert_revision?: string } = {}): NodesPending[] {
+		const results: NodesPending[] = [];
 
 		if (path.trim() === "") {
 			throw new Error(`Invalid path node`);
@@ -1103,12 +1102,12 @@ export default class MDE extends SimpleEventEmitter {
 				const processedValue = {
 					[theKey]: obj,
 				};
-				const arrayResult: Result = {
+				const arrayResult: NodesPending = {
 					path: currentPath,
 					type: "SET",
 					content: {
 						type: nodeValueTypes.ARRAY,
-						value: processedValue,
+						value: processedValue as any,
 						revision: this.generateShortUUID(),
 						revision_nr: 1,
 						created: Date.now(),
@@ -1117,12 +1116,12 @@ export default class MDE extends SimpleEventEmitter {
 				};
 				results.push(arrayResult);
 			});
-			const arrayResult: Result = {
+			const arrayResult: NodesPending = {
 				path: pathInfo.path,
 				type: "SET",
 				content: {
 					type: nodeValueTypes.ARRAY,
-					value: {},
+					value: {} as any,
 					revision: this.generateShortUUID(),
 					revision_nr: 1,
 					created: Date.now(),
@@ -1140,7 +1139,7 @@ export default class MDE extends SimpleEventEmitter {
 				const processedValue = {
 					[theKey]: value,
 				};
-				const nonObjectResult: Result = {
+				const nonObjectResult: NodesPending = {
 					path: pathInfo.parentPath as string,
 					type: "SET",
 					content: {
@@ -1283,16 +1282,3 @@ export default class MDE extends SimpleEventEmitter {
 		}
 	}
 }
-
-type Result = {
-	path: string;
-	type: string;
-	content: {
-		type: (typeof nodeValueTypes)[keyof typeof nodeValueTypes];
-		value: Record<string, unknown> | string | number;
-		revision: string;
-		revision_nr: number;
-		created: number;
-		modified: number;
-	};
-};
