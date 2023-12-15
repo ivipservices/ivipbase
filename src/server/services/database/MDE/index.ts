@@ -263,28 +263,32 @@ class CustomStorageNodeInfo extends NodeInfo {
 	}
 }
 
-/** Interface for metadata being stored for nodes */
-class StorageNodeMetaData {
-	/** cuid (time sortable revision id). Nodes stored in the same operation share this id */
-	revision = "";
-	/** Number of revisions, starting with 1. Resets to 1 after deletion and recreation */
-	revision_nr = 0;
-	/** Creation date/time in ms since epoch UTC */
-	created = 0;
-	/** Last modification date/time in ms since epoch UTC */
-	modified = 0;
-	/** Type of the node's value. 1=object, 2=array, 3=number, 4=boolean, 5=string, 6=date, 7=reserved, 8=binary, 9=reference */
-	type = 0 as NodeValueType;
-}
+type StorageNodeValue =
+	| { type: 0; value: null }
+	| { type: 1; value: object }
+	| { type: 2; value: any[] }
+	| { type: 3; value: number }
+	| { type: 4; value: boolean }
+	| { type: 5; value: string }
+	| { type: 7; value: bigint }
+	| { type: 6; value: number }
+	| { type: 8; value: typeof Uint8Array };
 
 /** Interface for metadata combined with a stored value */
-class StorageNode extends StorageNodeMetaData {
+type StorageNode = {
+	/** cuid (time sortable revision id). Nodes stored in the same operation share this id */
+	revision: string;
+	/** Number of revisions, starting with 1. Resets to 1 after deletion and recreation */
+	revision_nr: number;
+	/** Creation date/time in ms since epoch UTC */
+	created: number;
+	/** Last modification date/time in ms since epoch UTC */
+	modified: number;
+	/** Type of the node's value. 1=object, 2=array, 3=number, 4=boolean, 5=string, 6=date, 7=reserved, 8=binary, 9=reference */
+	type: NodeValueType;
 	/** only Object, Array, large string and binary values. */
-	value: any = null;
-	constructor() {
-		super();
-	}
-}
+	// value: StorageNodeValue["value"];
+} & StorageNodeValue;
 
 interface StorageNodeInfo {
 	path: string;
@@ -408,6 +412,8 @@ class MDESettings {
 	}
 }
 
+type NodesPending = StorageNodeInfo & { type: "SET" | "MODIFY" | "VERIFY" };
+
 export default class MDE extends SimpleEventEmitter {
 	/**
 	 * As configurações do node.
@@ -417,9 +423,9 @@ export default class MDE extends SimpleEventEmitter {
 	/**
 	 * Uma lista de informações sobre nodes, mantido em cache até que as modificações sejam processadas no BD com êxito.
 	 *
-	 * @type {StorageNodeInfo[]}
+	 * @type {NodesPending[]}
 	 */
-	private nodes: StorageNodeInfo[] = [];
+	private nodes: NodesPending[] = [];
 
 	constructor(options: Partial<MDESettings>) {
 		super();
@@ -602,7 +608,7 @@ export default class MDE extends SimpleEventEmitter {
 			case VALUE_TYPES.OBJECT: {
 				// Verifica se algum valor precisa ser convertido
 				// NOTA: Arrays são armazenados com propriedades numéricas
-				const obj = node.value;
+				const obj: any = node.value;
 				Object.keys(obj).forEach((key) => {
 					const item = obj[key];
 					if (typeof item === "object" && "type" in item) {
@@ -614,12 +620,12 @@ export default class MDE extends SimpleEventEmitter {
 			}
 
 			case VALUE_TYPES.BINARY: {
-				node.value = ascii85.decode(node.value);
+				node.value = ascii85.decode(node.value as any);
 				break;
 			}
 
 			case VALUE_TYPES.REFERENCE: {
-				node.value = new PathReference(node.value);
+				node.value = new PathReference(node.value as any);
 				break;
 			}
 
@@ -650,18 +656,18 @@ export default class MDE extends SimpleEventEmitter {
 	 * }} Retorna uma lista de informações sobre os nodes de acordo com seu estado.
 	 */
 	private prepareMergeNodes = (
-		nodes: StorageNodeInfo[],
-		comparison: StorageNodeInfo[] | undefined = undefined,
+		nodes: StorageNodeInfo[] | NodesPending[],
+		comparison: StorageNodeInfo[] | NodesPending[] | undefined = undefined,
 	): {
 		result: StorageNodeInfo[];
 		added: StorageNodeInfo[];
 		modified: StorageNodeInfo[];
 		removed: StorageNodeInfo[];
 	} => {
-		let result: StorageNodeInfo[] = [];
-		let added: StorageNodeInfo[] = [];
-		let modified: StorageNodeInfo[] = [];
-		let removed: StorageNodeInfo[] = [];
+		let result: StorageNodeInfo[] | NodesPending[] = [];
+		let added: StorageNodeInfo[] | NodesPending[] = [];
+		let modified: StorageNodeInfo[] | NodesPending[] = [];
+		let removed: StorageNodeInfo[] | NodesPending[] = [];
 
 		if (!comparison) {
 			comparison = nodes;
@@ -687,35 +693,29 @@ export default class MDE extends SimpleEventEmitter {
 			return aM > bM ? -1 : aM < bM ? 1 : 0;
 		});
 
-		const setNodeBy = (node: StorageNodeInfo): number => {
+		const setNodeBy = (node: StorageNodeInfo | NodesPending): number => {
 			const nodesIndex = nodes.findIndex(({ path }) => PathInfo.get(node.path).equals(path));
 
 			if (nodesIndex < 0) {
 				const addedIndex = added.findIndex(({ path }) => PathInfo.get(node.path).equals(path));
 				if (addedIndex < 0) {
-					added.push(node);
-					added = added.sort(({ path: p1 }, { path: p2 }) => {
-						return PathInfo.get(p1).isAncestorOf(p2) ? -1 : PathInfo.get(p1).isDescendantOf(p2) ? 1 : 0;
-					});
+					added.push(node as any);
 				} else {
 					added[addedIndex] = node;
 				}
-			}
-
-			const modifiedIndex = modified.findIndex(({ path }) => PathInfo.get(node.path).equals(path));
-			if (modifiedIndex < 0) {
-				modified.push(node);
-				modified = modified.sort(({ path: p1 }, { path: p2 }) => {
-					return PathInfo.get(p1).isAncestorOf(p2) ? -1 : PathInfo.get(p1).isDescendantOf(p2) ? 1 : 0;
-				});
 			} else {
-				added[modifiedIndex] = node;
+				const modifiedIndex = modified.findIndex(({ path }) => PathInfo.get(node.path).equals(path));
+				if (modifiedIndex < 0) {
+					modified.push(node as any);
+				} else {
+					added[modifiedIndex] = node;
+				}
 			}
 
 			const index = result.findIndex(({ path }) => PathInfo.get(node.path).equals(path));
 
 			if (index < 0) {
-				result.push(node);
+				result.push(node as any);
 				result = result.sort(({ path: p1 }, { path: p2 }) => {
 					return PathInfo.get(p1).isAncestorOf(p2) ? -1 : PathInfo.get(p1).isDescendantOf(p2) ? 1 : 0;
 				});
@@ -725,7 +725,7 @@ export default class MDE extends SimpleEventEmitter {
 			return result.findIndex(({ path }) => PathInfo.get(node.path).equals(path));
 		};
 
-		const pathsRemoved: string[] = comparison
+		let pathsRemoved: string[] = comparison
 			.sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
 				return aM > bM ? -1 : aM < bM ? 1 : 0;
 			})
@@ -734,16 +734,22 @@ export default class MDE extends SimpleEventEmitter {
 				return indexRecent < 0 || indexRecent === i;
 			})
 			.filter(({ content }) => content.type === nodeValueTypes.EMPTY || content.value === null)
+			.map(({ path }) => path);
+
+		pathsRemoved = nodes
+			.filter(({ path }) => {
+				const { content } = comparison?.find(({ path: p }) => PathInfo.get(p).isParentOf(path)) ?? {};
+				const key = PathInfo.get(path).key;
+				return content ? (typeof key === "number" ? content.type !== nodeValueTypes.ARRAY : content.type !== nodeValueTypes.OBJECT) : false;
+			})
 			.map(({ path }) => path)
+			.concat(pathsRemoved)
+			.filter((path, i, l) => l.indexOf(path) === i)
 			.filter((path, i, l) => l.findIndex((p) => PathInfo.get(p).isAncestorOf(path)) < 0);
 
-		removed = nodes
-			.filter(({ path }) => {
-				return pathsRemoved.findIndex((p) => PathInfo.get(p).equals(path) || PathInfo.get(p).isAncestorOf(path)) >= 0;
-			})
-			.sort(({ path: p1 }, { path: p2 }) => {
-				return PathInfo.get(p1).isAncestorOf(p2) ? -1 : PathInfo.get(p1).isDescendantOf(p2) ? 1 : 0;
-			});
+		removed = nodes.filter(({ path }) => {
+			return pathsRemoved.findIndex((p) => PathInfo.get(p).equals(path) || PathInfo.get(p).isAncestorOf(path)) >= 0;
+		});
 
 		comparison = comparison
 			.filter(({ path }) => {
@@ -772,6 +778,11 @@ export default class MDE extends SimpleEventEmitter {
 
 			const lastNode = result[index];
 
+			if (pathInfo.equals(lastNode.path) && lastNode.content.type !== node.content.type) {
+				setNodeBy(node);
+				continue;
+			}
+
 			if (pathInfo.equals(lastNode.path)) {
 				switch (lastNode.content.type) {
 					case nodeValueTypes.OBJECT:
@@ -779,7 +790,7 @@ export default class MDE extends SimpleEventEmitter {
 						const { created, revision_nr } = lastNode.content.modified > node.content.modified ? node.content : lastNode.content;
 
 						const contents = lastNode.content.modified > node.content.modified ? [node.content, lastNode.content] : [lastNode.content, node.content];
-						const content_values: object[] = contents.map(({ value }) => value);
+						const content_values: object[] = contents.map<any>(({ value }) => value);
 
 						const new_content_value = Object.assign.apply(null, content_values as any);
 
@@ -839,7 +850,27 @@ export default class MDE extends SimpleEventEmitter {
 			setNodeBy(node);
 		}
 
-		return { result, added, modified, removed };
+		result = result.map(({ path, content }) => ({ path, content }));
+
+		added = added
+			.sort(({ path: p1 }, { path: p2 }) => {
+				return PathInfo.get(p1).isAncestorOf(p2) ? -1 : PathInfo.get(p1).isDescendantOf(p2) ? 1 : 0;
+			})
+			.map(({ path, content }) => ({ path, content }));
+
+		modified = modified
+			.sort(({ path: p1 }, { path: p2 }) => {
+				return PathInfo.get(p1).isAncestorOf(p2) ? -1 : PathInfo.get(p1).isDescendantOf(p2) ? 1 : 0;
+			})
+			.map(({ path, content }) => ({ path, content }));
+
+		removed = removed
+			.sort(({ path: p1 }, { path: p2 }) => {
+				return PathInfo.get(p1).isAncestorOf(p2) ? -1 : PathInfo.get(p1).isDescendantOf(p2) ? 1 : 0;
+			})
+			.map(({ path, content }) => ({ path, content }));
+
+		return { result, added, modified, removed } as any;
 	};
 
 	/**
@@ -903,8 +934,8 @@ export default class MDE extends SimpleEventEmitter {
 	 * @param nodes - Um ou mais nós a serem adicionados.
 	 * @returns {MDE} O nó atual após a adição dos nós.
 	 */
-	pushNode(...nodes: (StorageNodeInfo[] | StorageNodeInfo)[]): MDE {
-		const forNodes: StorageNodeInfo[] =
+	pushNode(...nodes: (NodesPending[] | NodesPending)[]): MDE {
+		const forNodes: NodesPending[] =
 			Array.prototype.concat
 				.apply(
 					[],
@@ -957,8 +988,8 @@ export default class MDE extends SimpleEventEmitter {
 
 		if (pathInfo.isChildOf(mainNode.path)) {
 			if ([nodeValueTypes.OBJECT, nodeValueTypes.ARRAY].includes(mainNode.content.type as any)) {
-				if ((Object.keys(value) as Array<string | number>).includes(pathInfo.key)) {
-					value = value[pathInfo.key];
+				if ((Object.keys(value as any) as Array<string | number>).includes(pathInfo.key)) {
+					value = (value as any)[pathInfo.key];
 				} else {
 					value = null;
 				}

@@ -12,6 +12,7 @@ const main = new MDE({
 		this.pushNode([
 			{
 				path: "ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788",
+				type: "SET",
 				content: {
 					type: 1,
 					value: {
@@ -25,7 +26,7 @@ const main = new MDE({
 			},
 		]);
 
-		this.getNodesBy("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788", true).then((nodes) => {
+		this.getNodesBy("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788").then((nodes) => {
 			console.log(JSON.stringify(nodes, null, 4));
 		});
 
