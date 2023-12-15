@@ -1,4 +1,4 @@
-import { IvipBaseApp } from "../../types/app";
+import { IvipBaseApp } from ".";
 
 /**
  * @internal
