@@ -1,5 +1,5 @@
 import { Utils } from "ivipbase-core";
-import { CustomStorage } from "../storage";
+import { CustomStorage, TempStorage } from "../storage";
 import { _apps } from "./internal";
 import { AppError, ERROR_FACTORY } from "../erros";
 
@@ -18,7 +18,7 @@ class IvipBaseSettings {
 export class IvipBaseApp {
 	name: string = DEFAULT_ENTRY_NAME;
 	settings: IvipBaseSettings = new IvipBaseSettings({});
-	storage: CustomStorage | undefined;
+	storage: CustomStorage = new TempStorage();
 	isDeleted: boolean = false;
 
 	constructor(options: Partial<IvipBaseApp>) {
