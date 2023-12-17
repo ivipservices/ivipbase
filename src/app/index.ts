@@ -8,8 +8,8 @@ type StorageSettings = CustomStorage | DataStorageSettings | MongodbSettings;
 const DEFAULT_ENTRY_NAME = "[DEFAULT]";
 
 class IvipBaseSettings {
-	name: string = DEFAULT_ENTRY_NAME;
-	storage: StorageSettings = new DataStorageSettings();
+	name?: string = DEFAULT_ENTRY_NAME;
+	storage?: StorageSettings = new DataStorageSettings();
 
 	server?: {
 		host: string;
@@ -23,7 +23,7 @@ class IvipBaseSettings {
 		port: number;
 	};
 
-	constructor(options: Partial<IvipBaseSettings>) {
+	constructor(options: IvipBaseSettings) {
 		if (typeof options.name === "string") {
 			this.name = options.name;
 		}
@@ -78,7 +78,7 @@ export class IvipBaseApp {
 	}
 }
 
-export function initializeApp(options: Partial<IvipBaseSettings>): IvipBaseApp {
+export function initializeApp(options: IvipBaseSettings): IvipBaseApp {
 	const settings = new IvipBaseSettings(options);
 
 	const newApp: IvipBaseApp = new IvipBaseApp({
