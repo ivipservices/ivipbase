@@ -11,6 +11,18 @@ class IvipBaseSettings {
 	name: string = DEFAULT_ENTRY_NAME;
 	storage: StorageSettings = new DataStorageSettings();
 
+	server?: {
+		host: string;
+		port: number;
+		maxPayloadSize?: string;
+		authentication?: any;
+	};
+
+	client?: {
+		host: string;
+		port: number;
+	};
+
 	constructor(options: Partial<IvipBaseSettings>) {
 		if (typeof options.name === "string") {
 			this.name = options.name;
@@ -23,14 +35,23 @@ class IvipBaseSettings {
 		} else if (options.storage instanceof CustomStorage) {
 			this.storage = options.storage;
 		}
+
+		if (typeof options.server === "object") {
+			this.server = options.server;
+		}
+
+		if (typeof options.client === "object") {
+			this.client = options.client;
+		}
 	}
 }
 
 export class IvipBaseApp {
-	name: string = DEFAULT_ENTRY_NAME;
-	settings: IvipBaseSettings = new IvipBaseSettings({});
-	storage: CustomStorage = new DataStorage();
+	readonly name: string = DEFAULT_ENTRY_NAME;
+	readonly settings: IvipBaseSettings = new IvipBaseSettings({});
+	readonly storage: CustomStorage = new DataStorage();
 	isDeleted: boolean = false;
+	readonly isServer: boolean;
 
 	constructor(options: Partial<IvipBaseApp>) {
 		if (typeof options.name === "string") {
@@ -52,6 +73,8 @@ export class IvipBaseApp {
 		} else if (this.settings.storage instanceof CustomStorage) {
 			this.storage = this.settings.storage;
 		}
+
+		this.isServer = typeof this.settings.server === "object";
 	}
 }
 
@@ -94,7 +117,11 @@ export function getApps(): IvipBaseApp[] {
 }
 
 export function getFirstApp(): IvipBaseApp {
-	const app = getApps()[0];
+	let app;
+	if (_apps.has(DEFAULT_ENTRY_NAME)) {
+		app = _apps.get(DEFAULT_ENTRY_NAME);
+	}
+	app = !app ? getApps()[0] : app;
 	if (!app) {
 		throw ERROR_FACTORY.create(AppError.NO_APP, { appName: DEFAULT_ENTRY_NAME });
 	}
