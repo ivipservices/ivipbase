@@ -1,16 +1,27 @@
 import { Utils } from "ivipbase-core";
-import { CustomStorage, TempStorage } from "../storage";
+import { CustomStorage, DataStorage, DataStorageSettings, MongodbSettings, MongodbStorage } from "../storage";
 import { _apps } from "./internal";
 import { AppError, ERROR_FACTORY } from "../erros";
+
+type StorageSettings = CustomStorage | DataStorageSettings | MongodbSettings;
 
 const DEFAULT_ENTRY_NAME = "[DEFAULT]";
 
 class IvipBaseSettings {
 	name: string = DEFAULT_ENTRY_NAME;
+	storage: StorageSettings = new DataStorageSettings();
 
 	constructor(options: Partial<IvipBaseSettings>) {
 		if (typeof options.name === "string") {
 			this.name = options.name;
+		}
+
+		if (options.storage instanceof DataStorageSettings) {
+			this.storage = options.storage;
+		} else if (options.storage instanceof MongodbSettings) {
+			this.storage = options.storage;
+		} else if (options.storage instanceof CustomStorage) {
+			this.storage = options.storage;
 		}
 	}
 }
@@ -18,7 +29,7 @@ class IvipBaseSettings {
 export class IvipBaseApp {
 	name: string = DEFAULT_ENTRY_NAME;
 	settings: IvipBaseSettings = new IvipBaseSettings({});
-	storage: CustomStorage = new TempStorage();
+	storage: CustomStorage = new DataStorage();
 	isDeleted: boolean = false;
 
 	constructor(options: Partial<IvipBaseApp>) {
@@ -30,23 +41,26 @@ export class IvipBaseApp {
 			this.settings = options.settings;
 		}
 
-		if (options.storage instanceof CustomStorage) {
-			this.storage = options.storage;
-		}
-
 		if (typeof options.isDeleted === "boolean") {
 			this.isDeleted = options.isDeleted;
+		}
+
+		if (this.settings.storage instanceof DataStorageSettings) {
+			this.storage = new DataStorage(this.settings.storage);
+		} else if (this.settings.storage instanceof MongodbSettings) {
+			this.storage = new MongodbStorage(this.settings.storage);
+		} else if (this.settings.storage instanceof CustomStorage) {
+			this.storage = this.settings.storage;
 		}
 	}
 }
 
-export function initializeApp(options: Partial<IvipBaseSettings>, storage?: CustomStorage): IvipBaseApp {
+export function initializeApp(options: Partial<IvipBaseSettings>): IvipBaseApp {
 	const settings = new IvipBaseSettings(options);
 
 	const newApp: IvipBaseApp = new IvipBaseApp({
 		name: settings.name,
 		settings,
-		storage,
 	});
 
 	const existingApp = _apps.get(newApp.name);

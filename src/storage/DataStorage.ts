@@ -1,10 +1,16 @@
 import { CustomStorage, CustomStorageSettings } from "./CustomStorage";
 import { StorageNode, StorageNodeInfo } from "./MDE";
 
-export class TempStorage extends CustomStorage {
+export class DataStorageSettings extends CustomStorageSettings implements Omit<CustomStorageSettings, "getMultiple" | "setNode" | "removeNode"> {
+	constructor(options: Partial<Omit<CustomStorageSettings, "getMultiple" | "setNode" | "removeNode">> = {}) {
+		super(options);
+	}
+}
+
+export class DataStorage extends CustomStorage {
 	data = new Map<string, StorageNode>();
 
-	constructor(options: CustomStorageSettings = {}) {
+	constructor(options: Partial<Omit<CustomStorageSettings, "getMultiple" | "setNode" | "removeNode">> = {}) {
 		super(options);
 		this.dbName = "TempStorage";
 		this.ready = true;

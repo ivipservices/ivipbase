@@ -1,3 +1,3 @@
 export * from "./MongoDBStorage";
-export * from "./TempStorage";
+export * from "./DataStorage";
 export * from "./CustomStorage";

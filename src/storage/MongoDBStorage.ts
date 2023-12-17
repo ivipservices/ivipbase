@@ -3,7 +3,7 @@ import { CustomStorage, CustomStorageSettings } from "./CustomStorage";
 import { StorageNode, StorageNodeInfo } from "./MDE";
 import { MongoClient, Collection, Db } from "mongodb";
 
-class MongodbSettings {
+export class MongodbSettings {
 	host: string = "localhost";
 	port: number = 27017;
 	database: string = "root";
@@ -11,8 +11,9 @@ class MongodbSettings {
 	username: string | undefined;
 	password: string | undefined;
 	options: Record<string, any> | undefined;
+	mdeOptions: Partial<Omit<CustomStorageSettings, "getMultiple" | "setNode" | "removeNode">> = {};
 
-	constructor(options: Partial<MongodbSettings>) {
+	constructor(options: Partial<MongodbSettings> = {}) {
 		if (typeof options.host === "string") {
 			this.host = options.host;
 		}
@@ -36,6 +37,10 @@ class MongodbSettings {
 		if (typeof options.options === "object") {
 			this.options = options.options;
 		}
+
+		if (typeof options.mdeOptions === "object") {
+			this.mdeOptions = options.mdeOptions;
+		}
 	}
 }
 
@@ -45,8 +50,8 @@ export class MongodbStorage extends CustomStorage {
 	db: Db | undefined;
 	collection: Collection<StorageNodeInfo> | undefined;
 
-	constructor(options: Partial<MongodbSettings>, mdeOptions: CustomStorageSettings = {}) {
-		super(mdeOptions);
+	constructor(options: Partial<MongodbSettings>) {
+		super(options.mdeOptions);
 		this.options = new MongodbSettings(options);
 		this.dbName = "MongoDB";
 		this.ready = false;

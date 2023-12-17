@@ -1,13 +1,17 @@
 import { AppError, ERROR_FACTORY } from "../erros";
 import MDE, { MDESettings, StorageNode, StorageNodeInfo } from "./MDE";
 
-export type CustomStorageSettings = Partial<Exclude<MDESettings, "getMultiple" | "setNode" | "removeNode">>;
+export class CustomStorageSettings extends MDESettings implements Omit<MDESettings, "getMultiple" | "setNode" | "removeNode"> {
+	constructor(options: Partial<Omit<MDESettings, "getMultiple" | "setNode" | "removeNode">> = {}) {
+		super(options);
+	}
+}
 
 export abstract class CustomStorage extends MDE {
 	dbName: string = "CustomStorage";
 	ready: boolean = false;
 
-	constructor(options: CustomStorageSettings = {}) {
+	constructor(options: Partial<Omit<MDESettings, "getMultiple" | "setNode" | "removeNode">> = {}) {
 		super({
 			...options,
 			getMultiple: (e) => {
