@@ -19,9 +19,8 @@ class StorageDBServer extends Api {
 	}
 
 	async set(path: string, value: any, options?: any): Promise<{ cursor?: string | undefined }> {
-		this.db.app.storage.set(path, value);
-		const cursor = value;
-		return { ...(cursor ? { cursor } : {}) };
+		await this.db.app.storage.set(path, value);
+		return {};
 	}
 
 	async get(
@@ -41,14 +40,13 @@ class StorageDBServer extends Api {
 			throw new TypeError(`options.exclude must be an array of key names`);
 		}
 
-		const value = this.db.app.storage.get(path);
+		const value = await this.db.app.storage.get(path);
 		return { value, context: { more: false } };
 	}
 
 	async update(path: string, updates: any, options?: any): Promise<{ cursor?: string | undefined }> {
-		this.db.app.storage.set(path, updates);
-		const cursor = updates;
-		return { ...(cursor ? { cursor } : {}) };
+		await this.db.app.storage.set(path, updates);
+		return {};
 	}
 
 	async exists(path: string) {
