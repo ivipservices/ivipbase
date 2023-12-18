@@ -1,15 +1,17 @@
 import { Utils } from "ivipbase-core";
-import { CustomStorage, DataStorage, DataStorageSettings, MongodbSettings, MongodbStorage } from "../storage";
+import { CustomStorage, DataStorage, DataStorageSettings, JsonFileStorage, JsonFileStorageSettings, MongodbSettings, MongodbStorage } from "../storage";
 import { _apps } from "./internal";
 import { AppError, ERROR_FACTORY } from "../erros";
 
-type StorageSettings = CustomStorage | DataStorageSettings | MongodbSettings;
+type StorageSettings = CustomStorage | DataStorageSettings | MongodbSettings | JsonFileStorageSettings;
 
 const DEFAULT_ENTRY_NAME = "[DEFAULT]";
 
 class IvipBaseSettings {
-	name?: string = DEFAULT_ENTRY_NAME;
-	storage?: StorageSettings = new DataStorageSettings();
+	name: string = DEFAULT_ENTRY_NAME;
+	dbname: string = "root";
+	logLevel: "log" | "warn" | "error" = "log";
+	storage: StorageSettings = new DataStorageSettings();
 
 	server?: {
 		host: string;
@@ -23,14 +25,24 @@ class IvipBaseSettings {
 		port: number;
 	};
 
-	constructor(options: IvipBaseSettings) {
+	constructor(options: Partial<IvipBaseSettings> = {}) {
 		if (typeof options.name === "string") {
 			this.name = options.name;
+		}
+
+		if (typeof options.dbname === "string") {
+			this.dbname = options.dbname;
+		}
+
+		if (typeof options.logLevel === "string" && ["log", "warn", "error"].includes(options.logLevel)) {
+			this.logLevel = options.logLevel;
 		}
 
 		if (options.storage instanceof DataStorageSettings) {
 			this.storage = options.storage;
 		} else if (options.storage instanceof MongodbSettings) {
+			this.storage = options.storage;
+		} else if (options.storage instanceof JsonFileStorageSettings) {
 			this.storage = options.storage;
 		} else if (options.storage instanceof CustomStorage) {
 			this.storage = options.storage;
@@ -48,7 +60,7 @@ class IvipBaseSettings {
 
 export class IvipBaseApp {
 	readonly name: string = DEFAULT_ENTRY_NAME;
-	readonly settings: IvipBaseSettings = new IvipBaseSettings({});
+	readonly settings: IvipBaseSettings = new IvipBaseSettings();
 	readonly storage: CustomStorage = new DataStorage();
 	isDeleted: boolean = false;
 	readonly isServer: boolean;
@@ -70,6 +82,8 @@ export class IvipBaseApp {
 			this.storage = new DataStorage(this.settings.storage);
 		} else if (this.settings.storage instanceof MongodbSettings) {
 			this.storage = new MongodbStorage(this.settings.storage);
+		} else if (this.settings.storage instanceof JsonFileStorageSettings) {
+			this.storage = new JsonFileStorage(this.settings.storage);
 		} else if (this.settings.storage instanceof CustomStorage) {
 			this.storage = this.settings.storage;
 		}
@@ -78,7 +92,7 @@ export class IvipBaseApp {
 	}
 }
 
-export function initializeApp(options: IvipBaseSettings): IvipBaseApp {
+export function initializeApp(options: Partial<IvipBaseSettings>): IvipBaseApp {
 	const settings = new IvipBaseSettings(options);
 
 	const newApp: IvipBaseApp = new IvipBaseApp({
@@ -117,7 +131,7 @@ export function getApps(): IvipBaseApp[] {
 }
 
 export function getFirstApp(): IvipBaseApp {
-	let app;
+	let app: IvipBaseApp | undefined;
 	if (_apps.has(DEFAULT_ENTRY_NAME)) {
 		app = _apps.get(DEFAULT_ENTRY_NAME);
 	}
