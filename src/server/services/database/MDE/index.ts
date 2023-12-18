@@ -473,7 +473,7 @@ export default class MDE extends SimpleEventEmitter {
 		}
 
 		// Obtém o caminho pai e adiciona a expressão regular correspondente ao array.
-		pathsRegex.push(replasePathToRegex(PathInfo.get(path).parentPath));
+		pathsRegex.push(replasePathToRegex(PathInfo.get(path).parentPath as any));
 
 		// Cria a expressão regular completa combinando as expressões individuais no array.
 		const fullRegex: RegExp = new RegExp(`^(${pathsRegex.join("$)|(")}$)`);
@@ -835,10 +835,10 @@ export default class MDE extends SimpleEventEmitter {
 					[nodeValueTypes.STRING, nodeValueTypes.BIGINT, nodeValueTypes.BOOLEAN, nodeValueTypes.DATETIME, nodeValueTypes.NUMBER].includes(childNode.content.type as any) &&
 					this.valueFitsInline(childNode.content.value)
 				) {
-					parentNode.content.value[childKey] = childNode.content.value;
+					(parentNode.content.value as any)[childKey] = childNode.content.value;
 					parentNodeModified = true;
 				} else if (childNode.content.type === nodeValueTypes.EMPTY) {
-					parentNode.content.value[childKey] = null;
+					(parentNode.content.value as any)[childKey] = null;
 					parentNodeModified = true;
 				}
 
@@ -1183,7 +1183,7 @@ export default class MDE extends SimpleEventEmitter {
 		return shortUUID;
 	}
 
-	public processObject(obj, pathInfo, results, options) {
+	public processObject(obj: any, pathInfo: any, results: any, options: any) {
 		const currentPath = pathInfo.path;
 		const { assert_revision = "lnt02q7v0007oohx37705737" } = options;
 		const MAX_KEY_LENGTH = 50;

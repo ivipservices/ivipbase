@@ -1,7 +1,9 @@
 import { Utils } from "ivipbase-core";
-import { CustomStorage, DataStorage, DataStorageSettings, JsonFileStorage, JsonFileStorageSettings, MongodbSettings, MongodbStorage } from "../storage";
+import { CustomStorage, DataStorage, DataStorageSettings, JsonFileStorage, JsonFileStorageSettings, MongodbSettings, MongodbStorage } from "../controller/storage";
 import { _apps } from "./internal";
-import { AppError, ERROR_FACTORY } from "../erros";
+import { AppError, ERROR_FACTORY } from "../controller/erros";
+
+import { isPossiblyServer } from "../server";
 
 type StorageSettings = CustomStorage | DataStorageSettings | MongodbSettings | JsonFileStorageSettings;
 
@@ -49,11 +51,15 @@ class IvipBaseSettings {
 		}
 
 		if (typeof options.server === "object") {
-			this.server = options.server;
+			if (isPossiblyServer) {
+				this.server = options.server;
+			} else {
+				this.client = options.server;
+			}
 		}
 
 		if (typeof options.client === "object") {
-			this.client = options.client;
+			this.client = Object.assign(this.client ?? {}, options.client);
 		}
 	}
 }

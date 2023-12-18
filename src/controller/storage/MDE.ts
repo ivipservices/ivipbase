@@ -833,10 +833,10 @@ export default class MDE extends SimpleEventEmitter {
 					[nodeValueTypes.STRING, nodeValueTypes.BIGINT, nodeValueTypes.BOOLEAN, nodeValueTypes.DATETIME, nodeValueTypes.NUMBER].includes(childNode.content.type as any) &&
 					this.valueFitsInline(childNode.content.value)
 				) {
-					parentNode.content.value[childKey] = childNode.content.value;
+					(parentNode.content.value as any)[childKey] = childNode.content.value;
 					parentNodeModified = true;
 				} else if (childNode.content.type === nodeValueTypes.EMPTY) {
-					parentNode.content.value[childKey] = null;
+					(parentNode.content.value as any)[childKey] = null;
 					parentNodeModified = true;
 				}
 
@@ -1026,7 +1026,7 @@ export default class MDE extends SimpleEventEmitter {
 	getChildren(path: string) {
 		const pathInfo = PathInfo.get(path);
 
-		const next = async (callback: (CustomStorageNodeInfo) => false | undefined) => {
+		const next = async (callback: (info: CustomStorageNodeInfo) => false | undefined) => {
 			const nodes = await this.getNodesBy(path, true, false);
 			let isContinue = true;
 

@@ -1,3 +1,1 @@
-import DataBase from "./services/database";
-
-export { DataBase };
+export const isPossiblyServer = true;

@@ -1,6 +1,6 @@
 import { DataBase as DataBaseCore, DataBaseSettings, Api, Types, PathInfo } from "ivipbase-core";
 import { IvipBaseApp, getApp, getFirstApp } from "../app";
-import { VALUE_TYPES } from "../storage/MDE";
+import { VALUE_TYPES } from "../controller/storage/MDE";
 
 class StorageDBServer extends Api {
 	public cache: { [path: string]: any } = {};
@@ -83,11 +83,11 @@ class StorageDBServer extends Api {
 						return false; // Stop iterating
 					}
 					n++;
-					const include = from !== null ? childInfo.key > from : skip === 0 || n > skip;
+					const include = from !== null && childInfo.key ? childInfo.key > from : skip === 0 || n > skip;
 					if (include) {
 						children.push({
-							key: typeof childInfo.key === "string" ? childInfo.key : childInfo.index,
-							type: childInfo.valueTypeName,
+							key: (typeof childInfo.key === "string" ? childInfo.key : childInfo.index) ?? "",
+							type: (childInfo.valueTypeName as any) ?? "unknown",
 							value: childInfo.value,
 							// address is now only added when storage is acebase. Not when eg sqlite, mssql
 							...(typeof childInfo.address === "object" && {
