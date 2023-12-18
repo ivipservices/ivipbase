@@ -1,11 +1,9 @@
 import { Utils } from "ivipbase-core";
-import { CustomStorage, DataStorage, DataStorageSettings, JsonFileStorage, JsonFileStorageSettings, MongodbSettings, MongodbStorage } from "../controller/storage";
 import { _apps } from "./internal";
 import { AppError, ERROR_FACTORY } from "../controller/erros";
 
 import { isPossiblyServer } from "../server";
-
-type StorageSettings = CustomStorage | DataStorageSettings | MongodbSettings | JsonFileStorageSettings;
+import { StorageSettings, DataStorageSettings, validSettings, CustomStorage, DataStorage, applySettings } from "./verifyStorage";
 
 const DEFAULT_ENTRY_NAME = "[DEFAULT]";
 
@@ -40,13 +38,7 @@ class IvipBaseSettings {
 			this.logLevel = options.logLevel;
 		}
 
-		if (options.storage instanceof DataStorageSettings) {
-			this.storage = options.storage;
-		} else if (options.storage instanceof MongodbSettings) {
-			this.storage = options.storage;
-		} else if (options.storage instanceof JsonFileStorageSettings) {
-			this.storage = options.storage;
-		} else if (options.storage instanceof CustomStorage) {
+		if (validSettings(options.storage)) {
 			this.storage = options.storage;
 		}
 
@@ -84,15 +76,7 @@ export class IvipBaseApp {
 			this.isDeleted = options.isDeleted;
 		}
 
-		if (this.settings.storage instanceof DataStorageSettings) {
-			this.storage = new DataStorage(this.settings.storage);
-		} else if (this.settings.storage instanceof MongodbSettings) {
-			this.storage = new MongodbStorage(this.settings.storage);
-		} else if (this.settings.storage instanceof JsonFileStorageSettings) {
-			this.storage = new JsonFileStorage(this.settings.storage);
-		} else if (this.settings.storage instanceof CustomStorage) {
-			this.storage = this.settings.storage;
-		}
+		this.storage = applySettings(this.settings.dbname, this.settings.storage);
 
 		this.isServer = typeof this.settings.server === "object";
 	}

@@ -3,7 +3,7 @@ import jsondata from "../myjsonfile.json";
 
 const instance = new MDE({
 	prefix: "",
-	searchData: async (search) => {
+	getMultiple: async (search) => {
 		return jsondata.filter((node) => search.test(node.path)) as any;
 	},
 });
