@@ -471,7 +471,7 @@ export default class MDE extends SimpleEventEmitter {
 		}
 
 		// Obtém o caminho pai e adiciona a expressão regular correspondente ao array.
-		pathsRegex.push(replasePathToRegex(PathInfo.get(path).parentPath));
+		pathsRegex.push(replasePathToRegex(PathInfo.get(path).parentPath as any));
 
 		// Cria a expressão regular completa combinando as expressões individuais no array.
 		const fullRegex: RegExp = new RegExp(`^(${pathsRegex.join("$)|(")}$)`);
@@ -1021,6 +1021,33 @@ export default class MDE extends SimpleEventEmitter {
 		}
 
 		return info;
+	}
+
+	getChildren(path: string) {
+		const pathInfo = PathInfo.get(path);
+
+		const next = async (callback: (CustomStorageNodeInfo) => false | undefined) => {
+			const nodes = await this.getNodesBy(path, true, false);
+			let isContinue = true;
+
+			for (let node of nodes) {
+				if (!isContinue) {
+					break;
+				}
+
+				if (pathInfo.equals(node.path) && pathInfo.isDescendantOf(node.path)) {
+					continue;
+				}
+
+				const info = await this.getInfoBy(node.path, { include_child_count: false });
+
+				isContinue = callback(info) ?? true;
+			}
+		};
+
+		return {
+			next,
+		};
 	}
 
 	/**

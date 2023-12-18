@@ -45,7 +45,7 @@
 		"dotenv": "^16.0.3",
 		"express": "^4.17.1",
 		"ivip-utils": "^1.1.6",
-		"ivipbase-core": "^1.6.1",
+		"ivipbase-core": "^1.6.3",
 		"mongodb": "^5.9.1",
 		"proper-lockfile": "^4.1.2",
 		"socket.io": "^4.5.0",
