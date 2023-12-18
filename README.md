@@ -1,4 +1,4 @@
-#iVipBase realtime database
+# iVipBase realtime database
 
 Um motor e servidor de banco de dados NoSQL rápido, de baixo consumo de memória, transacional, com suporte a índices e consultas para node.js e navegador, com notificações em tempo real para alterações de dados. Suporta o armazenamento de objetos JSON, arrays, números, strings, booleanos, datas, bigints e dados binários (ArrayBuffer).
 
@@ -6,18 +6,20 @@ Inspirado por (e amplamente compatível com) o banco de dados em tempo real do F
 
 O iVipBase é fácil de configurar e pode ser executado em qualquer lugar: na nuvem, NAS, servidor local, PC/Mac, Raspberry Pi, no [navegador](#experimente-o-ivipbase-no-seu-navegador), onde você quiser.
 
-##Índice
+## Índice
 
-- [Começando](#começando)
-  - [Pré-requisitos](#pré-requisitos)
-  - [Instalação](#instalação)
-  - [Criar um banco de dados local](#criar-um-banco-de-dados-local)
-  - [Experimente o iVipBase no seu navegador](#experimente-o-ivipbase-no-seu-navegador)
-  - [Configurar um servidor de banco de dados](#configurar-um-servidor-de-banco-de-dados)
-  - [Conectar-se a um banco de dados remoto](#conectar-se-a-um-banco-de-dados-remoto)
-- [Exemplo de uso](#exemplo-de-uso)
-  - [Criando um banco de dados](#criando-um-banco-de-dados)
-  - [Carregando dados](#carregando-dados)
+- [iVipBase realtime database](#ivipbase-realtime-database)
+  - [Índice](#índice)
+  - [Começando](#começando)
+    - [Pré-requisitos](#pré-requisitos)
+    - [Instalação](#instalação)
+    - [Criar um banco de dados local](#criar-um-banco-de-dados-local)
+    - [Experimente o iVipBase no seu navegador](#experimente-o-ivipbase-no-seu-navegador)
+    - [Configurar um servidor de banco de dados](#configurar-um-servidor-de-banco-de-dados)
+    - [Conectar-se a um banco de dados remoto](#conectar-se-a-um-banco-de-dados-remoto)
+  - [Exemplo de uso](#exemplo-de-uso)
+    - [Criando um banco de dados](#criando-um-banco-de-dados)
+    - [Carregando dados](#carregando-dados)
   
 ## Começando
 
