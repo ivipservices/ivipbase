@@ -20,9 +20,9 @@ O iVipBase é fácil de configurar e pode ser executado em qualquer lugar: na nu
   - [Exemplo de uso](#exemplo-de-uso)
     - [Criando um banco de dados](#criando-um-banco-de-dados)
     - [Carregando dados](#carregando-dados)
-  
+
+<a id="começando"></a> 
 ## Começando
-<a id="começando"></a>
 
 O iVipBase está dividido em dois pacotes:
 * **ivipbase**: mecanismo de banco de dados iVipBase local, ponto de extremidade do servidor para permitir conexões remotas. Inclui autenticação e autorização de usuário integradas, suporta o uso de provedores externos OAuth, como Facebook e Google ([github](https://github.com/ivipservices/ivipbase), [npm](https://www.npmjs.com/package/ivipbase))
@@ -34,10 +34,12 @@ Por favor, relate qualquer erro ou comportamento inesperado que encontrar criand
 
 O iVipBase é projetado para ser executado em um ambiente [Node.js](https://nodejs.org/), **também é possível usar bancos de dados iVipBase no navegador**! Para executar o iVipBase no navegador, basta incluir um arquivo de script e você estará pronto! Consulte [iVipBase no navegador](#experimente-o-ivipbase-no-seu-navegador) para mais informações e exemplos de código!
 
+<a id="instalação"></a> 
 ### Instalação
 
 Todos os repositórios do iVipBase estão disponíveis no npm. Você só precisa instalar um deles, dependendo de suas necessidades:
 
+<a id="criar-um-banco-de-dados-local"></a> 
 ### Criar um banco de dados local
 
 Se você deseja usar um **banco de dados iVipBase local** em seu projeto, instale o pacote [ivipbase](https://www.npmjs.com/package/ivipbase).
@@ -57,7 +59,7 @@ db.ready(() => {
     // Do stuff
 });
 ```
-
+ <a id="experimente-o-ivipbase-no-seu-navegador"></a> 
 ### Experimente o iVipBase no seu navegador
 
 Se você quiser experimentar o iVipBase em execução no Node.js, basta abri-lo no [RunKit](https://npm.runkit.com/acebase) e seguir os exemplos. Se você quiser experimentar a versão do iVipBase para o navegador, abra [google.com](google.com) em uma nova guia (o GitHub não permite que scripts entre sites sejam carregados) e execute o trecho de código abaixo para usá-lo imediatamente no console do seu navegador.
@@ -97,7 +99,7 @@ db.ready(async () => {
     console.log(`value of "test/text": ` + snap.val());
 });
 ```
-
+ <a id="configurar-um-servidor-de-banco-de-dados"></a> 
 ### Configurar um servidor de banco de dados
 Se você deseja configurar um **servidor iVipBase**, poderá configurar no `initializeApp` propriedades próprias para o funcionamento em servidor com uso do [Express.js](https://expressjs.com/pt-br/).
 
@@ -123,7 +125,7 @@ app.ready(() => {
     // Servidor em execução
 });
 ```
-
+ <a id="conectar-se-a-um-banco-de-dados-remoto"></a> 
 ### Conectar-se a um banco de dados remoto
 Se você deseja se conectar a um servidor iVipBase remoto (ou local), poderá configurar no `initializeApp` propriedades próprias para o funcionamento com uso do [API Fetch](https://developer.mozilla.org/pt-BR/docs/Web/API/Fetch_API/Using_Fetch) ou [node-fetch](https://www.npmjs.com/package/node-fetch).
 
@@ -142,11 +144,11 @@ app.ready(() => {
     // Conectado!
 });
 ```
-
+ <a id="exemplo-de-uso"></a> 
 ## Exemplo de uso
 
 A API é semelhante à do banco de dados em tempo real do Firebase e AceBase, com adições.
-
+ <a id="criando-um-banco-de-dados"></a> 
 ### Criando um banco de dados
 
 Criar um novo banco de dados é tão simples quanto abri-lo. Você escolher entre conectar com banco de dados existente, como o MongoDB usando configuração MongodbSettings, ou optar por armazenamento binário (se o arquivo do banco de dados não existir, ele será criado automaticamente).
@@ -173,7 +175,7 @@ db.ready(() => {
 ```
 
 NOTA: A opção `logLevel` especifica quanto de informação deve ser gravado nos logs do console. Os valores possíveis são: `'verbose'`, `'log'` (padrão), `'warn'` e `'error'` (apenas erros são registrados)
-
+ <a id="carregando-dados"></a> 
 ### Carregando dados
 
 Execute .get em uma referência para obter o valor armazenado atualmente. É a abreviação da sintaxe do Firebase de .once("value").
