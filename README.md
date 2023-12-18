@@ -178,7 +178,7 @@ NOTA: A opção `logLevel` especifica quanto de informação deve ser gravado no
  <a id="carregando-dados"></a> 
 ### Carregando dados
 
-Execute .get em uma referência para obter o valor armazenado atualmente. É a abreviação da sintaxe do Firebase de .once("value").
+Execute `.get` em uma referência para obter o valor armazenado atualmente. É a abreviação da sintaxe do Firebase de `.once("value")`.
 
 ```javascript
 const snapshot = await db.ref('game/config').get();
@@ -190,7 +190,7 @@ else {
 }
  
 ```
-Observação: ao carregar dados, o valor atualmente armazenado será agrupado e retornado em um objeto DataSnapshot. Use snapshot.exists() para determinar se o nó existe, snapshot.val() para obter o valor.
+Observação: ao carregar dados, o valor atualmente armazenado será agrupado e retornado em um objeto `DataSnapshot`. Use `snapshot.exists()` para determinar se o nó existe, `snapshot.val()` para obter o valor.
 
 ### Armazenando dados
 
@@ -225,7 +225,7 @@ const config = snapshot.val();
 
 ### Removendo dados
 
-Você pode remover dados com o remove método
+Você pode `remover` dados com o remove método
 
 ```Javascript
 db.ref('animals/dog')
@@ -234,7 +234,7 @@ db.ref('animals/dog')
 ```
 
 
-A remoção de dados também pode ser feita definindo ou atualizando seu valor para null. Qualquer propriedade que tenha um valor nulo será removida do nó do objeto pai.
+A remoção de dados também pode ser feita definindo ou atualizando seu valor para `null`. Qualquer propriedade que tenha um valor nulo será removida do nó do objeto pai.
 
 ```Javascript
 // Remove by setting it to null
@@ -251,7 +251,7 @@ db.ref('animals')
 
 ### Gerando chaves exclusivas
 
-Para todos os dados genéricos adicionados, você precisa criar chaves que sejam exclusivas e que não entrem em conflito com chaves geradas por outros clientes. Para fazer isso, você pode gerar chaves exclusivas com push. Nos bastidores, push usa [cuid](https://www.npmjs.com/package/cuid) para gerar chaves que são garantidamente exclusivas e classificáveis ​​no tempo.
+Para todos os dados genéricos adicionados, você precisa criar chaves que sejam exclusivas e que não entrem em conflito com chaves geradas por outros clientes. Para fazer isso, você pode gerar chaves exclusivas com `push`. Nos bastidores, push usa [cuid](https://www.npmjs.com/package/cuid) para gerar chaves que são garantidamente exclusivas e classificáveis ​​no tempo.
 
 ```Javascript
 db.ref('users')
@@ -297,19 +297,19 @@ db.ref('messages').update(newMessages)
 
 ### Usando matrizes
 
-IvipBase suporta armazenamento de arrays, mas há algumas ressalvas ao trabalhar com eles. Por exemplo, você não pode remover ou inserir itens que não estejam no final do array. Os arrays IvipBase funcionam como uma pilha, você pode adicionar e remover do topo, não de dentro. No entanto, é possível editar entradas individuais ou substituir todo o array. A maneira mais segura de editar arrays é com transaction, que exige que todos os dados sejam carregados e armazenados novamente. Em muitos casos, é mais sensato usar coleções de objetos.
+IvipBase suporta armazenamento de arrays, mas há algumas ressalvas ao trabalhar com eles. Por exemplo, você não pode remover ou inserir itens que não estejam no final do array. Os arrays IvipBase funcionam como uma pilha, você pode adicionar e remover do topo, não de dentro. No entanto, é possível editar entradas individuais ou substituir todo o array. A maneira mais segura de editar arrays é com `transaction`, que exige que todos os dados sejam carregados e armazenados novamente. Em muitos casos, é mais sensato usar coleções de objetos.
 
 Você pode usar matrizes com segurança quando:
 
 - O número de itens é pequeno e finito, o que significa que você pode estimar o número médio típico de itens nele.
-- Não há necessidade de recuperar/editar itens individuais usando seu caminho armazenado. Se você reordenar os itens em uma matriz, seus caminhos mudam (por exemplo, de "playlist/songs[4]" para "playlist/songs[1]")
-- As entradas armazenadas são pequenas e não possuem muitos dados aninhados (strings pequenas ou objetos simples, por exemplo: chat/members com matriz de IDs de usuário ['ewout','john','pete'] )
+- Não há necessidade de recuperar/editar itens individuais usando seu caminho armazenado. Se você reordenar os itens em uma matriz, seus caminhos mudam (por exemplo, de `"playlist/songs[4]"` para `"playlist/songs[1]")`
+- As entradas armazenadas são pequenas e não possuem muitos dados aninhados (strings pequenas ou objetos simples, por exemplo: chat/members com matriz de IDs de usuário `['ewout','john','pete']` )
 - A coleção não precisa ser editada com frequência.
 
 Use coleções de objetos quando:
 
 - A coleção continua crescendo (por exemplo: conteúdo gerado pelo usuário)
-- O caminho dos itens é importante e de preferência não muda, por exemplo, "playlist/songs[4]" pode apontar para uma entrada diferente se o array for editado. Ao usar uma coleção de objetos, playlist/songs/jld2cjxh0000qzrmn831i7rn sempre se referirá ao mesmo item.
+- O caminho dos itens é importante e de preferência não muda, por exemplo, `"playlist/songs[4]"` pode apontar para uma entrada diferente se o array for editado. Ao usar uma coleção de objetos, `playlist/songs/jld2cjxh0000qzrmn831i7rn` sempre se referirá ao mesmo item.
 - As entradas armazenadas são grandes (por exemplo, strings/blobs/objetos grandes com muitos dados aninhados)
 Você precisa editar a coleção com frequência.
 
@@ -360,20 +360,20 @@ let songs = snap.val();
 // NOTE: songs is instanceof PartialArray, which is an object with properties '0', '5', '8'
 ```
 
-NOTA: você NÃO PODE usar ref.push() para adicionar entradas a um array! push só pode ser usado em coleções de objetos porque gera IDs filho exclusivos, como "jpx0k53u0002ecr7s354c51l" (que obviamente não é um índice de array válido)
+NOTA: você NÃO PODE usar `ref.push()` para adicionar entradas a um array! push só pode ser usado em coleções de objetos porque gera IDs filho exclusivos, como `"jpx0k53u0002ecr7s354c51l"` (que obviamente não é um índice de array válido)
 
 Para resumir: use arrays SOMENTE se usar uma coleção de objetos parecer um exagero e seja muito cauteloso! Adicionar e remover itens só pode ser feito de/para o FIM de um array, a menos que você reescreva o array inteiro. Isso significa que você terá que saber antecipadamente quantas entradas seu array possui para poder adicionar novas entradas, o que não é realmente desejável na maioria das situações. Se você sentir necessidade de usar um array porque a ordem das entradas é importante para você ou seu aplicativo: considere usar uma coleção de objetos e adicione uma 'ordem' propriedade às entradas nas quais realizar uma classificação.
 
 ## Contando crianças
 
-Para descobrir rapidamente quantos filhos um nó específico possui, use o count método em um DataReference:
+Para descobrir rapidamente quantos filhos um nó específico possui, use o count método em um `DataReference`:
 
 ```Javascript
 const messageCount = aguardar db .ref('chat/mensagens'< a i=9>).contagem()< ai=14>;
 ```
 
 ### Limitar o carregamento de dados aninhados
-Se a estrutura do seu banco de dados estiver usando aninhamento (por exemplo, armazenando postagens em 'users/someuser/posts' em vez de em 'posts'), talvez você queira limitar a quantidade de dados que você estão recuperando na maioria dos casos. Por exemplo: se você deseja obter os detalhes de um usuário, mas não deseja carregar todos os dados aninhados, você pode limitar explicitamente a recuperação de dados aninhados passando exclude, include e/ou child_objects opções para .get:
+Se a estrutura do seu banco de dados estiver usando aninhamento (por exemplo, armazenando postagens em `'users/someuser/posts'` em vez de em `'posts'`), talvez você queira limitar a quantidade de dados que você estão recuperando na maioria dos casos. Por exemplo: se você deseja obter os detalhes de um usuário, mas não deseja carregar todos os dados aninhados, você pode limitar explicitamente a recuperação de dados aninhados passando `exclude`, include e/ou `child_objects` opções para `.get`:
 
 ```Javascript
 // Excluir dados aninhados específicos:
@@ -381,7 +381,7 @@ db.ref('usuários/algumusuário')
 . obter({ excluir:  ['postagens', 'comentários'< a i=17>]}).então< a i=22>(snap=>{// instantâneo contém todas as propriedades de 'someuser' exceto // 'users/someuser/posts' e 'users/someuser/comments'(obter.)'usuários/algumusuário /postagens'(ref.db// Inclui dados aninhados específicos:;)}incluir: ['*/ título','*/posted']}).então(snap=>{// instantâneo contém todas as postagens de 'someuser', mas cada postagem // contém apenas 'título' e 'publicado' propriedades});// Combine include & excluir:db.ref('usuários/algumusuário').obter ({excluir: [ 'comentários'],incluir: }< /span>encaixar< /span>// o instantâneo contém todos os dados do usuário sem a coleção de 'comentários', < /span>};)// e cada objeto na coleção 'posts' contém apenas uma propriedade 'title'.{=>(então.)]'posts/*/title'[ 
 ```
 
-**OBSERVAÇÃO:** isso permite que você faça o que o Firebase não consegue: armazenar seus dados em locais lógicos e obter apenas os dados de seu interesse, rapidamente. Além disso, você ainda pode indexar seus dados aninhados e consultá-los com ainda mais rapidez. Consulte Indexação de dados para obter mais informações.
+**OBSERVAÇÃO:** isso permite que você faça o que o Firebase não consegue: armazenar seus dados em locais lógicos e obter apenas os dados de seu interesse, rapidamente. Além disso, você ainda pode indexar seus dados aninhados e consultá-los com ainda mais rapidez. Consulte [Indexação de dados ](#Indexação) para obter mais informações.
 
 **Iterando (streaming) filhos**
 (NOVO desde v1.4.0)
