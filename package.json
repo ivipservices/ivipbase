@@ -9,9 +9,19 @@
 	"main": "dist/cjs/index.js",
 	"module": "./dist/esm/index.js",
 	"types": "./dist/types/index.d.ts",
-	"files": [
-		"dist/"
-	],
+	"exports": {
+		".": {
+			"import": "./dist/esm/index.js",
+			"require": "./dist/cjs/index.js",
+			"types": "./dist/types/index.d.ts"
+		}
+	},
+	"browser": {
+		"./dist/cjs/index.js": "./dist/cjs/browser.js",
+		"./dist/esm/index.js": "./dist/esm/browser.js",
+		"./dist/cjs/server/index.js": "./dist/cjs/server/browser.js",
+		"./dist/esm/server/index.js": "./dist/esm/server/browser.js"
+	},
 	"private": false,
 	"repository": "github:ivipcoin/ivipbase",
 	"scripts": {
