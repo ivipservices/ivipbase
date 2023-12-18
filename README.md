@@ -174,3 +174,4 @@ db.ready(() => {
 NOTA: A opção `logLevel` especifica quanto de informação deve ser gravado nos logs do console. Os valores possíveis são: `'verbose'`, `'log'` (padrão), `'warn'` e `'error'` (apenas erros são registrados)
 
 ### Carregando dados
+
