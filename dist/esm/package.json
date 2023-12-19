@@ -1,0 +1,10 @@
+{
+    "type": "module",
+    "types": "../types/index.d.ts",
+    "browser": {
+        "./index.js": "./browser.js",
+		"./server/index.js": "./server/browser.js",
+		"./app/verifyStorage/index.js": "./app/verifyStorage/browser.js",
+		"./controller/storage/index.js": "./controller/storage/browser.js"
+    }
+}

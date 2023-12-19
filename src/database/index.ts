@@ -177,7 +177,11 @@ export class DataBase extends DataBaseCore {
 		const appNow = typeof app === "string" ? getApp(app) : app instanceof IvipBaseApp ? app : getFirstApp();
 		super(appNow.settings.dbname, options);
 		this.app = appNow;
-		this.storage = appNow.isServer ? new StorageDBServer(this) : new StorageDBClient(this);
+
+		const hostnameRegex = /^(?:(?:https?|ftp):\/\/)?(?:localhost|(?:[a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.[a-zA-Z]{2,}|(?:\d{1,3}\.){3}\d{1,3})$/;
+		const valid_client = !!appNow.settings.client && typeof appNow.settings.client.host === "string" && hostnameRegex.test(appNow.settings.client.host.trim());
+
+		this.storage = appNow.isServer || !valid_client ? new StorageDBServer(this) : new StorageDBClient(this);
 
 		this.emitOnce("ready");
 	}

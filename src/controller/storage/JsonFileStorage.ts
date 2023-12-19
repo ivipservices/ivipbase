@@ -2,11 +2,9 @@ import { CustomStorage } from "./CustomStorage";
 import { StorageNode, StorageNodeInfo } from "./MDE";
 import * as fs from "fs";
 import * as path from "path";
-import { fileURLToPath } from "url";
 import { dirname } from "path";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = dirname(require.resolve("."));
 
 export class JsonFileStorageSettings {
 	filePath: string = "";

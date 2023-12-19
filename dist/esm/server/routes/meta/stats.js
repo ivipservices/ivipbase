@@ -1,0 +1,15 @@
+export const addRoute = (env) => {
+    env.router.get(`/stats/${env.db.name}`, async (req, res) => {
+        // Get database stats
+        try {
+            const stats = (await env.db.storage.stats());
+            res.send(stats);
+        }
+        catch (err) {
+            res.statusCode = 500;
+            res.send(err.message);
+        }
+    });
+};
+export default addRoute;
+//# sourceMappingURL=stats.js.map

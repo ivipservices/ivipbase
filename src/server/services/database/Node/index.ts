@@ -287,9 +287,9 @@ export class NodeSettings {
 }
 
 interface NodeChanges {
-	changed: string[];
-	added: string[];
-	removed: string[];
+	changed: string[] | any[];
+	added: string[] | any[];
+	removed: string[] | any[];
 }
 
 /**
@@ -418,7 +418,7 @@ export default class Node extends SimpleEventEmitter {
 			[k in keyof NodeChanges]: Array<[string, Array<StorageNodeInfo | undefined>]>;
 		} = Object.fromEntries(
 			Object.entries(changes).map(([change, paths]) => {
-				return [change, paths.map((p) => [p, this.getResponsibleNodeBy(p)])];
+				return [change, paths.map((p: string) => [p, this.getResponsibleNodeBy(p)])];
 			}) as [any, Array<[string, StorageNodeInfo | undefined]>][],
 		);
 
@@ -466,7 +466,7 @@ export default class Node extends SimpleEventEmitter {
 
 		pathsRegex.push(`${replasePathToRegex(path)}(/([^/]*))${allHeirs ? "+" : ""}?`);
 
-		const parentPath = new PathInfo(path).parentPath;
+		const parentPath: any = new PathInfo(path).parentPath;
 		pathsRegex.push(`${replasePathToRegex(parentPath)}(/([^/]*))${allHeirs ? "+" : ""}?`);
 
 		const fullRegex: RegExp = new RegExp(`^(${pathsRegex.join("$)|(")}$)`);
@@ -782,12 +782,20 @@ export default class Node extends SimpleEventEmitter {
 			revision_nr: content.revision_nr ?? 0,
 		});
 
-		const prepareValue = (value) => {
+		// const prepareValue = (value) => {
+		// 	return [VALUE_TYPES.OBJECT, VALUE_TYPES.ARRAY].includes(getValueType(value))
+		// 		? Object.keys(value).reduce((result, key) => {
+		// 				result[key] = this.getTypedChildValue(value[key]);
+		// 				return result;
+		// 		  }, {})
+		// 		: this.getTypedChildValue(value);
+		// };
+		const prepareValue = (value: any) => {
 			return [VALUE_TYPES.OBJECT, VALUE_TYPES.ARRAY].includes(getValueType(value))
 				? Object.keys(value).reduce((result, key) => {
 						result[key] = this.getTypedChildValue(value[key]);
 						return result;
-				  }, {})
+				  }, {} as Record<string, any>)
 				: this.getTypedChildValue(value);
 		};
 
@@ -841,12 +849,24 @@ export default class Node extends SimpleEventEmitter {
 			changed: [],
 			added: [],
 			removed: [],
-		};
+		} as any as unknown as NodeChanges;
+
+		// const joinChanges = (...c: NodeChanges[]): NodeChanges => {
+		// 	c.forEach((n) => {
+		// 		Object.entries(n).forEach(([change, keys]) => {
+		// 			pathChanges[change] = pathChanges[change].concat(keys).filter((p, i, l) => l.indexOf(p) === i);
+		// 		});
+		// 	});
+		// 	return pathChanges;
+		// };
+		type ChangeType = "changed" | "added" | "removed";
 
 		const joinChanges = (...c: NodeChanges[]): NodeChanges => {
 			c.forEach((n) => {
 				Object.entries(n).forEach(([change, keys]) => {
-					pathChanges[change] = pathChanges[change].concat(keys).filter((p, i, l) => l.indexOf(p) === i);
+					if (["changed", "added", "removed"].includes(change as ChangeType)) {
+						pathChanges[change as ChangeType] = pathChanges[change as ChangeType].concat(keys).filter((p, i, l) => l.indexOf(p) === i);
+					}
 				});
 			});
 			return pathChanges;
@@ -913,7 +933,7 @@ export default class Node extends SimpleEventEmitter {
 
 		const revision = ID.generate();
 
-		const mainNode = {
+		const mainNode: any = {
 			type: currentRow && currentRow.type === VALUE_TYPES.ARRAY ? VALUE_TYPES.ARRAY : VALUE_TYPES.OBJECT,
 			value: {} as Record<string, any> | string,
 		};
@@ -1009,8 +1029,8 @@ export default class Node extends SimpleEventEmitter {
 				}
 			});
 
-			const original = mainNode.value;
-			mainNode.value = {};
+			const original: any = mainNode.value;
+			mainNode.value = {} as any;
 			// If original is an array, it'll automatically be converted to an object now
 			Object.keys(original).forEach((key) => {
 				mainNode.value[key] = this.getTypedChildValue(original[key]);
@@ -1156,7 +1176,7 @@ export default class Node extends SimpleEventEmitter {
 
 		return Object.fromEntries(
 			Object.entries(pathChanges).map(([k, paths]) => {
-				return [k, paths.filter((p, i, l) => l.indexOf(p) === i)];
+				return [k, paths.filter((p: any, i: any, l: string | any[]) => l.indexOf(p) === i)];
 			}),
 		) as any;
 	}
@@ -1196,7 +1216,7 @@ export default class Node extends SimpleEventEmitter {
 			assert_revision?: string;
 		} = {},
 	): NodeChanges {
-		const pathInfo = PathInfo.get(path);
+		const pathInfo: any = PathInfo.get(path);
 
 		let changes: NodeChanges;
 
@@ -1258,7 +1278,7 @@ export default class Node extends SimpleEventEmitter {
 
 		try {
 			const nodeInfo = this.getInfoBy(path);
-			const pathInfo = PathInfo.get(path);
+			const pathInfo: any = PathInfo.get(path);
 
 			if (nodeInfo.exists && nodeInfo.address && nodeInfo.address.path === path) {
 				changes = this.writeNode(path, updates, { merge: true });
