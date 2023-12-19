@@ -141,7 +141,8 @@ export class MongodbStorage extends CustomStorage {
 			throw ERROR_FACTORY.create(AppError.DB_DISCONNECTED, { dbName: this.dbName });
 		}
 
-		await this.collection.replaceOne({ path: "root/admin" }, JSON.parse(JSON.stringify(node)));
+		await this.collection.updateOne({ path: path }, { $set: JSON.parse(JSON.stringify(node)) }, { upsert: true });
+		//await this.collection.replaceOne({ path: path }, JSON.parse(JSON.stringify(node)));
 	}
 
 	async removeNode(path: string, content: StorageNode, node: StorageNodeInfo) {
@@ -149,6 +150,6 @@ export class MongodbStorage extends CustomStorage {
 			throw ERROR_FACTORY.create(AppError.DB_DISCONNECTED, { dbName: this.dbName });
 		}
 
-		await this.collection.deleteOne({ path: "root/admin" });
+		await this.collection.deleteOne({ path: path });
 	}
 }

@@ -178,6 +178,14 @@ export function getValueType(value: unknown) {
 	return VALUE_TYPES.EMPTY;
 }
 
+const promiseState = (p: Promise<any>): Promise<"pending" | "fulfilled" | "rejected"> => {
+	const t = { __timestamp__: Date.now() };
+	return Promise.race([p, t]).then(
+		(v) => (v === t ? "pending" : "fulfilled"),
+		() => "rejected",
+	);
+};
+
 class NodeAddress {
 	constructor(public readonly path: string) {}
 
@@ -412,7 +420,7 @@ export class MDESettings {
 	}
 }
 
-type NodesPending = StorageNodeInfo & { type: "SET" | "MODIFY" | "VERIFY" };
+type NodesPending = StorageNodeInfo & { type?: "SET" | "MODIFY" | "VERIFY" };
 
 export default class MDE extends SimpleEventEmitter {
 	/**
@@ -426,6 +434,8 @@ export default class MDE extends SimpleEventEmitter {
 	 * @type {NodesPending[]}
 	 */
 	private nodes: NodesPending[] = [];
+
+	private sendingNodes: Promise<void> = Promise.resolve();
 
 	constructor(options: Partial<MDESettings> = {}) {
 		super();
@@ -767,6 +777,21 @@ export default class MDE extends SimpleEventEmitter {
 				return PathInfo.get(p1).isAncestorOf(p2) ? -1 : PathInfo.get(p1).isDescendantOf(p2) ? 1 : 0;
 			});
 
+		const verifyNodes = (comparison as NodesPending[]).filter(({ type }) => {
+			return type === "VERIFY";
+		});
+
+		for (let verify of verifyNodes) {
+			if (result.findIndex(({ path }) => PathInfo.get(verify.path).equals(path)) < 0) {
+				result.push(verify);
+				added.push(verify);
+			}
+		}
+
+		comparison = (comparison as NodesPending[]).filter(({ type }) => {
+			return type !== "VERIFY";
+		});
+
 		for (let node of comparison) {
 			const pathInfo = PathInfo.get(node.path);
 			let index = result.findIndex(({ path }) => pathInfo.equals(path));
@@ -929,6 +954,58 @@ export default class MDE extends SimpleEventEmitter {
 			.shift();
 	}
 
+	async sendNodes() {
+		const status = await promiseState(this.sendingNodes);
+		if (status === "pending") {
+			return;
+		}
+
+		this.sendingNodes = new Promise(async (resolve) => {
+			let batch = this.nodes.splice(0);
+			const { added, modified, removed } = this.prepareMergeNodes(batch);
+
+			try {
+				for (let node of removed) {
+					const reg = this.pathToRegex(node.path, false, true);
+					const byNodes = await this.settings.getMultiple(reg);
+
+					for (let r of byNodes) {
+						await this.settings.removeNode(r.path, r.content, r);
+						batch = batch.filter(({ path }) => PathInfo.get(path).equals(r.path) !== true);
+						this.emit("remove", {
+							name: "remove",
+							path: r.path,
+							value: r.content.value,
+						});
+					}
+				}
+
+				for (let node of modified) {
+					await this.settings.setNode(node.path, node.content, node);
+					batch = batch.filter(({ path }) => PathInfo.get(path).equals(node.path) !== true);
+					this.emit("change", {
+						name: "change",
+						path: node.path,
+						value: node.content.value,
+					});
+				}
+
+				for (let node of added) {
+					await this.settings.setNode(node.path, node.content, node);
+					batch = batch.filter(({ path }) => PathInfo.get(path).equals(node.path) !== true);
+					this.emit("add", {
+						name: "add",
+						path: node.path,
+						value: node.content.value,
+					});
+				}
+			} catch {}
+
+			this.nodes = this.nodes.concat(batch);
+			resolve();
+		});
+	}
+
 	/**
 	 * Adiciona um ou mais nodes a matriz de nodes atual e aplica evento de alteração.
 	 * @param nodes - Um ou mais nós a serem adicionados.
@@ -947,6 +1024,7 @@ export default class MDE extends SimpleEventEmitter {
 			this.nodes.push(node);
 		}
 
+		this.sendNodes();
 		return this;
 	}
 

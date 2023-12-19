@@ -1,3 +1,3 @@
-export { CustomStorage, DataStorage } from "./controller/storage";
+export { CustomStorage, DataStorageSettings } from "./controller/storage";
 export * from "./app";
 export * from "./database";

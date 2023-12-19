@@ -7,7 +7,8 @@ cat >dist/cjs/package.json <<JSON
     "browser": {
         "./index.js": "./browser.js",
 		"./server/index.js": "./server/browser.js",
-		"./app/verifyStorage/index.js": "./app/verifyStorage/browser.js"
+		"./app/verifyStorage/index.js": "./app/verifyStorage/browser.js",
+		"./controller/storage/index.js": "./controller/storage/browser.js"
     }
 }
 JSON
@@ -23,7 +24,8 @@ cat >dist/esm/package.json <<JSON
     "browser": {
         "./index.js": "./browser.js",
 		"./server/index.js": "./server/browser.js",
-		"./app/verifyStorage/index.js": "./app/verifyStorage/browser.js"
+		"./app/verifyStorage/index.js": "./app/verifyStorage/browser.js",
+		"./controller/storage/index.js": "./controller/storage/browser.js"
     }
 }
 JSON

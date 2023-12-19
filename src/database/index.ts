@@ -10,6 +10,20 @@ class StorageDBServer extends Api {
 		this.db.emit("ready");
 	}
 
+	async stats(): Promise<{
+		writes: number;
+		reads: number;
+		bytesRead: number;
+		bytesWritten: number;
+	}> {
+		return {
+			writes: 0,
+			reads: 0,
+			bytesRead: 0,
+			bytesWritten: 0,
+		};
+	}
+
 	subscribe(path: string, event: string, callback: Types.EventSubscriptionCallback) {
 		this.db.subscriptions.add(path, event, callback);
 	}
@@ -164,6 +178,8 @@ export class DataBase extends DataBaseCore {
 		super(appNow.settings.dbname, options);
 		this.app = appNow;
 		this.storage = appNow.isServer ? new StorageDBServer(this) : new StorageDBClient(this);
+
+		this.emitOnce("ready");
 	}
 
 	private _eventSubscriptions = {} as { [path: string]: Array<{ created: number; type: string; callback: Types.EventSubscriptionCallback }> };

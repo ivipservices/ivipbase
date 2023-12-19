@@ -1,0 +1,315 @@
+<html>
+
+<head>
+    <title>AceBase Web Manager</title>
+
+    <!-- <script src="/socket.io/socket.io.js"></script> -->
+
+    <!-- Materialize CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+
+    <!-- Material icons-->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Custom css -->
+    <style type="text/css">
+        form#signin .row {
+            margin-bottom: 0;
+        }
+
+        .connected_user,
+        .connected_db {
+            font-weight: bold;
+        }
+
+        #browse {
+            padding-bottom: 20px;
+        }
+
+        #impersonate_enabled {
+            display: none;
+        }
+
+        .browse_breadcrumb_node {
+            padding-left: 20px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .browse_breadcrumb_node::before {
+            left: 4px;
+            position: absolute;
+            display: inline-block;
+            content: '>';
+            color: black;
+        }
+
+        #browse_impersonate_access {
+            margin-left: 5px;
+        }
+
+        #browse_impersonate_access.access_allow_read_write::after {
+            color: green;
+            content: '(read/write)';
+        }
+
+        #browse_impersonate_access.access_deny::after {
+            color: red;
+            content: '(no access)';
+        }
+
+        #browse_impersonate_access.access_allow_read::after {
+            color: darkorange;
+            content: '(read-only)';
+        }
+
+        #browse_impersonate_access.access_allow_write::after {
+            color: darkorange;
+            content: '(write-only)';
+        }
+
+        #allow_read,
+        #allow_write {
+            color: green;
+        }
+
+        #deny_read,
+        #deny_write {
+            color: red;
+        }
+
+        #browse_container {
+            margin-top: 10px;
+        }
+
+        #browse_container .db_node {
+            padding-left: 20px;
+            position: relative;
+        }
+
+        #browse_container .db_node::before {
+            font-family: monospace;
+            position: absolute;
+            display: inline-block;
+            left: 0;
+            content: '|';
+            font-weight: bold;
+        }
+
+        #browse_container .db_node.db_node_expand::before {
+            content: '+';
+        }
+
+        #browse_container .db_node.db_node_expand {
+            cursor: pointer;
+        }
+
+        /* #browse_container .db_node .db_node_name {
+            font-family: monospace;
+        } */
+        #browse_container .db_node .db_node_name.allow_read.allow_write {
+            color: green;
+        }
+
+        #browse_container .db_node .db_node_name.deny_read.deny_write {
+            color: red;
+        }
+
+        #browse_container .db_node .db_node_name.allow_read.deny_write,
+        #browse_container .db_node.deny_read.allow_write {
+            color: darkorange;
+        }
+
+        #browse_container .db_node .db_node_name.allow_read.deny_write::after {
+            font-family: inherit;
+            margin-left: 3px;
+            content: '[read]';
+        }
+
+        #browse_container .db_node .db_node_name.deny_read.allow_write::after {
+            margin-left: 3px;
+            content: '[write]';
+        }
+
+        #browse_container .db_node .db_node_inlinevalue {
+            position: relative;
+            padding-left: 10px;
+        }
+
+        #browse_container .db_node .db_node_inlinevalue::before {
+            position: absolute;
+            left: 2px;
+            content: ':';
+        }
+
+        #browse_container .db_node .db_node_type {
+            padding-left: 10px;
+        }
+
+        #browse_container .db_node .db_node_type::before {
+            content: '(';
+        }
+
+        #browse_container .db_node .db_node_type::after {
+            content: ')';
+        }
+
+        #more_children {
+            display: none;
+            margin-top: 10px;
+        }
+
+        #more_children.visible {
+            display: block;
+        }
+
+        #export_node {
+            margin-top: 10px;
+        }
+
+        .clickable {
+            /* general class to get pointer */
+            cursor: pointer;
+        }
+
+        @keyframes flash {
+
+            0%,
+            100% {
+                background-color: transparent;
+            }
+
+            50% {
+                background-color: lightskyblue;
+            }
+        }
+
+        .flash span {
+            animation-name: flash;
+            animation-duration: 1s;
+            animation-timing-function: ease-in-out;
+            animation-iteration-count: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="nav-extended purple darken-4">
+        <div class="nav-wrapper">
+            <a href="#" class="brand-logo">&nbsp;AceBase&nbsp;server</a>
+            <ul id="nav-mobile" class="right hide-on-med-and-down">
+                <li><a href="https://www.npmjs.com/package/acebase">npm</a></li>
+                <li><a href="https://github.com/appy-one/acebase">github</a></li>
+            </ul>
+        </div>
+        <div class="nav-content">
+            <ul class="tabs tabs-transparent" id="main_tabs">
+                <li class="tab"><a class="active" href="#connect">Connect</a></li>
+                <li class="tab"><a href="#browse">Browse</a></li>
+                <li class="tab"><a href="#config">Configure</a></li>
+                <li class="tab"><a href="#stats">Stats</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div id="connect" class="container">
+        <h5>Connect to your database</h5>
+        <div class="divider"></div>
+        <p>
+            To connect to your database, please fill out the name of the database and admin password
+        </p>
+
+        <div class="row">
+            <form id="signin" class="col s12">
+                <div class="row">
+                    <div class="input-field col s12 l6">
+                        <input id="dbname" type="text" class="validate" value="default">
+                        <label for="dbname">Database name</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-field col s12 l6">
+                        <input id="username" type="text" class="validate">
+                        <label for="username">Username</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-field col s12 l6">
+                        <input id="password" type="password" class="validate">
+                        <label for="password">Password</label>
+                    </div>
+                </div>
+                <a id="connect_button" class="waves-effect waves-light btn purple darken-4"><i
+                        class="material-icons left">account_circle</i>Connect</a>
+                <div id="connecting" class="hide">Connecting...</div>
+                <div id="connect_success" class="green-text hide">Connected!</div>
+                <div id="connect_fail" class="red-text hide">Error connecting! <span id="fail_reason"></span></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="browse" class="container">
+        <h5>Browse database</h5>
+        <div class="divider"></div>
+        <p>
+            Welcome <span class="connected_user">anonymous</span>. The admin user has full access to the database.
+            <input type="hidden" id="impersonate_uid" value="" />
+            <span id="impersonate_disabled">To view access as a different user, you can <a
+                    href="javascript:impersonateUser()">impersonate a user</a> to check defined access rules.</span>
+            <span id="impersonate_enabled">Impersonating database access as user <a
+                    href="javascript:impersonateUser()"><span class="impersonate_uid_label">uid</span></a></span>
+        </p>
+        <div id="browse_breadcrumb">
+            <span class="connected_db">not connected</span>
+            <a id="browse_breadcrumb_root" class="browse_breadcrumb_node">root</a>
+            <span id="browse_breadcrumb_container"></span>
+            <span id="browse_impersonate_access"></span>
+        </div>
+        <div id="browse_container"></div>
+        <div id="more_children">
+            There's <a id="load_more_children" class="clickable">more</a>! If you want to browse a specific key, <a
+                href="javascript:specifyChildKey()">enter it here</a>
+        </div>
+        <div id="export_node" class="hide">
+            You can <a id="edit_node" class="clickable">update</a> this node or export the value of this node to <a
+                id="export_json" class="clickable">json</a>
+        </div>
+        <div id="edit_form" class="hide">
+            <textarea id="update_json">{ }</textarea>
+            <input type="button" value="update" id="update_button" />
+        </div>
+    </div>
+
+    <div id="config" class="container">
+        <h5>Browse database</h5>
+        <div class="divider"></div>
+        <p>
+            TODO: implement config of database indexes, edit rules.json file content etc
+        </p>
+    </div>
+
+    <div id="stats" class="container">
+        <h5>Database statistics</h5>
+        <div class="divider"></div>
+        <p>
+            TODO: show database/server statistics (disk size, indexes disk size, number of CPU's etc)
+        </p>
+    </div>
+
+</body>
+
+</html>
+<!-- Materialize js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+<script type="text/javascript">
+    M.AutoInit();
+</script>
+
+<!-- AceBase client js -->
+<!-- <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/acebase-client@1.15.0/dist/browser.min.js"></script> -->
+<script type="text/javascript" src="client-browser.min.js"></script>
+
+<!-- AceBase Webmanager js -->
+<script type="text/javascript" src="index.js"></script>

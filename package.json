@@ -22,7 +22,9 @@
 		"./dist/cjs/server/index.js": "./dist/cjs/server/browser.js",
 		"./dist/esm/server/index.js": "./dist/esm/server/browser.js",
 		"./dist/cjs/app/verifyStorage/index.js": "./dist/cjs/app/verifyStorage/browser.js",
-		"./dist/esm/app/verifyStorage/index.js": "./dist/esm/app/verifyStorage/browser.js"
+		"./dist/esm/app/verifyStorage/index.js": "./dist/esm/app/verifyStorage/browser.js",
+		"./dist/cjs/controller/storage/index.js": "./dist/cjs/controller/storage/browser.js",
+		"./dist/esm/controller/storage/index.js": "./dist/esm/controller/storage/browser.js"
 	},
 	"private": false,
 	"repository": "github:ivipcoin/ivipbase",
@@ -96,6 +98,9 @@
 		],
 		"delay": 2500,
 		"exec": "node --loader ts-node/esm",
-		"ext": "js,ts"
+		"ext": "js,ts",
+		"env": {
+			"NODE_ENV": "development"
+		}
 	}
 }

@@ -1,8 +1,8 @@
-import { Utils } from "ivipbase-core";
+import { SimpleEventEmitter, Utils } from "ivipbase-core";
 import { _apps } from "./internal";
 import { AppError, ERROR_FACTORY } from "../controller/erros";
 
-import { isPossiblyServer } from "../server";
+import { LocalServer, ServerSettings, isPossiblyServer } from "../server";
 import { StorageSettings, DataStorageSettings, validSettings, CustomStorage, DataStorage, applySettings } from "./verifyStorage";
 
 const DEFAULT_ENTRY_NAME = "[DEFAULT]";
@@ -13,12 +13,7 @@ class IvipBaseSettings {
 	logLevel: "log" | "warn" | "error" = "log";
 	storage: StorageSettings = new DataStorageSettings();
 
-	server?: {
-		host: string;
-		port: number;
-		maxPayloadSize?: string;
-		authentication?: any;
-	};
+	server?: Partial<ServerSettings>;
 
 	client?: {
 		host: string;
@@ -46,7 +41,7 @@ class IvipBaseSettings {
 			if (isPossiblyServer) {
 				this.server = options.server;
 			} else {
-				this.client = options.server;
+				this.client = options.server as any;
 			}
 		}
 
@@ -56,14 +51,19 @@ class IvipBaseSettings {
 	}
 }
 
-export class IvipBaseApp {
+export class IvipBaseApp extends SimpleEventEmitter {
+	protected _ready = false;
+
 	readonly name: string = DEFAULT_ENTRY_NAME;
 	readonly settings: IvipBaseSettings = new IvipBaseSettings();
 	readonly storage: CustomStorage = new DataStorage();
 	isDeleted: boolean = false;
 	readonly isServer: boolean;
+	readonly server?: LocalServer;
 
 	constructor(options: Partial<IvipBaseApp>) {
+		super();
+
 		if (typeof options.name === "string") {
 			this.name = options.name;
 		}
@@ -79,6 +79,36 @@ export class IvipBaseApp {
 		this.storage = applySettings(this.settings.dbname, this.settings.storage);
 
 		this.isServer = typeof this.settings.server === "object";
+
+		this.once("ready", () => {
+			this._ready = true;
+		});
+
+		if (this.isServer) {
+			this.server = new LocalServer(this.name, this.settings.server);
+			this.server.ready(() => {
+				this.emitOnce("ready");
+			});
+		} else {
+			this.emitOnce("ready");
+		}
+	}
+
+	/**
+	 * Aguarda o serviço estar pronto antes de executar o seu callback.
+	 * @param callback (opcional) função de retorno chamada quando o serviço estiver pronto para ser usado. Você também pode usar a promise retornada.
+	 * @returns retorna uma promise que resolve quando estiver pronto
+	 */
+	async ready(callback?: () => void) {
+		if (!this._ready) {
+			// Aguarda o evento ready
+			await new Promise((resolve) => this.on("ready", resolve));
+		}
+		callback?.();
+	}
+
+	get isReady() {
+		return this._ready;
 	}
 }
 
