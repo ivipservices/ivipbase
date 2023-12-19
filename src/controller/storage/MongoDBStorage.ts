@@ -13,17 +13,13 @@ export class MongodbSettings {
 	options: Record<string, any> | undefined;
 	mdeOptions: Partial<Omit<CustomStorageSettings, "getMultiple" | "setNode" | "removeNode">> = {};
 
-	constructor(options: Partial<MongodbSettings> = {}) {
+	constructor(options: Partial<Omit<MongodbSettings, "database">> = {}) {
 		if (typeof options.host === "string") {
 			this.host = options.host;
 		}
 
 		if (typeof options.port === "number") {
 			this.port = options.port;
-		}
-
-		if (typeof options.database === "string") {
-			this.database = options.database;
 		}
 
 		if (typeof options.username === "string") {
@@ -50,9 +46,10 @@ export class MongodbStorage extends CustomStorage {
 	db: Db | undefined;
 	collection: Collection<StorageNodeInfo> | undefined;
 
-	constructor(options: Partial<MongodbSettings>) {
+	constructor(database: string, options: Partial<Omit<MongodbSettings, "database">>) {
 		super(options.mdeOptions);
 		this.options = new MongodbSettings(options);
+		this.options.database = database;
 		this.dbName = "MongoDB";
 		this.ready = false;
 
@@ -144,7 +141,8 @@ export class MongodbStorage extends CustomStorage {
 			throw ERROR_FACTORY.create(AppError.DB_DISCONNECTED, { dbName: this.dbName });
 		}
 
-		await this.collection.replaceOne({ path: "root/admin" }, JSON.parse(JSON.stringify(node)));
+		await this.collection.updateOne({ path: path }, { $set: JSON.parse(JSON.stringify(node)) }, { upsert: true });
+		//await this.collection.replaceOne({ path: path }, JSON.parse(JSON.stringify(node)));
 	}
 
 	async removeNode(path: string, content: StorageNode, node: StorageNodeInfo) {
@@ -152,6 +150,6 @@ export class MongodbStorage extends CustomStorage {
 			throw ERROR_FACTORY.create(AppError.DB_DISCONNECTED, { dbName: this.dbName });
 		}
 
-		await this.collection.deleteOne({ path: "root/admin" });
+		await this.collection.deleteOne({ path: path });
 	}
 }

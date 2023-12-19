@@ -1,7 +1,9 @@
-import { initializeApp, DataStorageSettings, getDatabase } from "../../src";
+import { initializeApp, JsonFileStorageSettings, getDatabase } from "../../src";
 
 const app = initializeApp({
-	storage: new DataStorageSettings(),
+	storage: new JsonFileStorageSettings({
+		filePath: "../myjsonfile.json",
+	}),
 });
 
 const db = getDatabase(app);

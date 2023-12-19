@@ -295,7 +295,7 @@ export class NodeLock {
 	}
 
 	async moveToParent() {
-		const parentPath = PathInfo.get(this.path).parentPath; //getPathInfo(this.path).parent;
+		const parentPath: any = PathInfo.get(this.path).parentPath; //getPathInfo(this.path).parent;
 		const allowed = this.locker.isAllowed(parentPath, this.tid, this.forWriting); //_allowLock(parentPath, this.tid, this.forWriting);
 		if (allowed) {
 			DEBUG_MODE && console.error(`moveToParent ALLOWED for ${this.forWriting ? "write" : "read"} lock on "${this.path}" by tid ${this.tid} (${this.comment})`);

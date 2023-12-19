@@ -10,6 +10,20 @@ class StorageDBServer extends Api {
 		this.db.emit("ready");
 	}
 
+	async stats(): Promise<{
+		writes: number;
+		reads: number;
+		bytesRead: number;
+		bytesWritten: number;
+	}> {
+		return {
+			writes: 0,
+			reads: 0,
+			bytesRead: 0,
+			bytesWritten: 0,
+		};
+	}
+
 	subscribe(path: string, event: string, callback: Types.EventSubscriptionCallback) {
 		this.db.subscriptions.add(path, event, callback);
 	}
@@ -19,9 +33,8 @@ class StorageDBServer extends Api {
 	}
 
 	async set(path: string, value: any, options?: any): Promise<{ cursor?: string | undefined }> {
-		this.db.app.storage.set(path, value);
-		const cursor = value;
-		return { ...(cursor ? { cursor } : {}) };
+		await this.db.app.storage.set(path, value);
+		return {};
 	}
 
 	async get(
@@ -41,14 +54,13 @@ class StorageDBServer extends Api {
 			throw new TypeError(`options.exclude must be an array of key names`);
 		}
 
-		const value = this.db.app.storage.get(path);
+		const value = await this.db.app.storage.get(path);
 		return { value, context: { more: false } };
 	}
 
 	async update(path: string, updates: any, options?: any): Promise<{ cursor?: string | undefined }> {
-		this.db.app.storage.set(path, updates);
-		const cursor = updates;
-		return { ...(cursor ? { cursor } : {}) };
+		await this.db.app.storage.set(path, updates);
+		return {};
 	}
 
 	async exists(path: string) {
@@ -165,7 +177,13 @@ export class DataBase extends DataBaseCore {
 		const appNow = typeof app === "string" ? getApp(app) : app instanceof IvipBaseApp ? app : getFirstApp();
 		super(appNow.settings.dbname, options);
 		this.app = appNow;
-		this.storage = appNow.isServer ? new StorageDBServer(this) : new StorageDBClient(this);
+
+		const hostnameRegex = /^(?:(?:https?|ftp):\/\/)?(?:localhost|(?:[a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.[a-zA-Z]{2,}|(?:\d{1,3}\.){3}\d{1,3})$/;
+		const valid_client = !!appNow.settings.client && typeof appNow.settings.client.host === "string" && hostnameRegex.test(appNow.settings.client.host.trim());
+
+		this.storage = appNow.isServer || !valid_client ? new StorageDBServer(this) : new StorageDBClient(this);
+
+		this.emitOnce("ready");
 	}
 
 	private _eventSubscriptions = {} as { [path: string]: Array<{ created: number; type: string; callback: Types.EventSubscriptionCallback }> };
