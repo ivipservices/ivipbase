@@ -390,7 +390,7 @@ Para iterar todos os filhos de uma coleção de objetos sem carregar todos os da
 
 Os filhos a serem iterados são determinados no início da função. Como forEach não bloqueia a leitura/gravação da coleção, é possível que os dados sejam alterados durante a iteração. Os filhos adicionados durante a iteração serão ignorados, os filhos removidos serão ignorados.
 
-Também é possível carregar dados seletivamente para cada filho, utilizando o mesmo objeto de opções disponível pararef.get(options)
+Também é possível carregar dados seletivamente para cada filho, utilizando o mesmo objeto de opções disponível `pararef.get(options)`
 
 Exemplos:
 
@@ -402,7 +402,12 @@ await db.ref('livros') .forEach(bookSnapshot = > {
 ```
 
 
+Consulte também <span style="color:red;">[Como transmitir resultados da consulta](#resultados-de-pesquisa)</span>
 
+Afirmando tipos de dados em TypeScript
+Se estiver usando TypeScript, você pode passar um parâmetro de tipo para a maioria dos métodos de recuperação de dados que declararão o tipo do valor retornado. Observe que você é responsável por garantir que o valor corresponda ao tipo declarado em tempo de execução.
+
+Exemplos:
 
 
 
