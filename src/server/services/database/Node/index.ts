@@ -844,7 +844,8 @@ export default class Node extends SimpleEventEmitter {
 		} else if (path === "" && (typeof value !== "object" || value instanceof Array)) {
 			throw new Error(`Invalid root node value. Must be an object`);
 		}
-
+		/*
+		 */
 		const pathChanges: NodeChanges = {
 			changed: [],
 			added: [],
@@ -864,6 +865,7 @@ export default class Node extends SimpleEventEmitter {
 		const joinChanges = (...c: NodeChanges[]): NodeChanges => {
 			c.forEach((n) => {
 				Object.entries(n).forEach(([change, keys]) => {
+					// Verifica se 'change' é uma das propriedades esperadas
 					if (["changed", "added", "removed"].includes(change as ChangeType)) {
 						pathChanges[change as ChangeType] = pathChanges[change as ChangeType].concat(keys).filter((p, i, l) => l.indexOf(p) === i);
 					}
@@ -871,7 +873,6 @@ export default class Node extends SimpleEventEmitter {
 			});
 			return pathChanges;
 		};
-
 		if (options.merge && typeof options.currentValue === "undefined" && this.isPathExists(path)) {
 			options.currentValue = this.getNode(path).content.value;
 		}

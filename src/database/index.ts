@@ -1,4 +1,4 @@
-import { DataBase as DataBaseCore, DataBaseSettings, Api, Types, PathInfo } from "ivipbase-core";
+import { DataBase as DataBaseCore, Api, Types, PathInfo, DataBaseSettings } from "ivipbase-core";
 import { IvipBaseApp, getApp, getFirstApp } from "../app";
 import { VALUE_TYPES } from "../controller/storage/MDE";
 

@@ -31,16 +31,22 @@ O iVipBase é fácil de configurar e pode ser executado em qualquer lugar: na nu
     - [Armazenando dados](#armazenando-dados-1)
     - [Atualizando dados](#atualizando-dados-1)
     - [Removendo dados](#removendo-dados-1)
+    - [Afirmando tipos de dados em TypeScript](#afirmando-tipos-de-dados-em-typescript)
     - [Gerando chaves exclusivas](#gerando-chaves-exclusivas-1)
     - [Usando matrizes](#usando-matrizes-1)
   - [Contando crianças](#contando-crianças-1)
     - [Limitar o carregamento de dados aninhados](#limitar-o-carregamento-de-dados-aninhados-1)
-    - [Afirmando tipos de dados em TypeScript](#afirmando-tipos-de-dados-em-typescript)
     - [Monitorando alterações de dados em tempo real](#monitorando-alterações-de-dados-em-tempo-real)
+    - [Afirmando tipos de dados em TypeScript](#afirmando-tipos-de-dados-em-typescript-1)
     - [Notificar apenas eventos](#notificar-apenas-eventos)
     - [Aguarde a ativação dos eventos](#aguarde-a-ativação-dos-eventos)
     - [Obtenha o contexto desencadeador dos eventos](#obtenha-o-contexto-desencadeador-dos-eventos)
     - [Rastreamento de alterações usando "mutado" e "mutações" eventos](#rastreamento-de-alterações-usando-mutado-e-mutações-eventos)
+    - [Monitorando alterações de dados em tempo real](#monitorando-alterações-de-dados-em-tempo-real-1)
+    - [Notificar apenas eventos](#notificar-apenas-eventos-1)
+    - [Aguarde a ativação dos eventos](#aguarde-a-ativação-dos-eventos-1)
+    - [Obtenha o contexto desencadeador dos eventos](#obtenha-o-contexto-desencadeador-dos-eventos-1)
+    - [Rastreamento de alterações usando "mutado" e "mutações" eventos](#rastreamento-de-alterações-usando-mutado-e-mutações-eventos-1)
     - [Observe alterações de valor em tempo real](#observe-alterações-de-valor-em-tempo-real)
     - [Usando métodos proxy em Typescript](#usando-métodos-proxy-em-typescript)
   - [Consultando dados](#consultando-dados)
@@ -205,231 +211,6 @@ db.ready(() => {
 
 NOTA: A opção `logLevel` especifica quanto de informação deve ser gravado nos logs do console. Os valores possíveis são: `'verbose'`, `'log'` (padrão), `'warn'` e `'error'` (apenas erros são registrados)
  <a id="carregando-dados"></a> 
-### Carregando dados
-
-Execute `.get` em uma referência para obter o valor armazenado atualmente. É a abreviação da sintaxe do Firebase de `.once("value")`.
-
-```javascript
-const snapshot = await db.ref('game/config').get();
-if (snapshot.exists()) {
-    config = snapshot.val();
-}
-else {
-    config = defaultGameConfig; // use defaults
-}
- 
-```
-Observação: ao carregar dados, o valor atualmente armazenado será agrupado e retornado em um objeto `DataSnapshot`. Use `snapshot.exists()` para determinar se o nó existe, `snapshot.val()` para obter o valor.
-
-### Armazenando dados
-
-Definindo o valor de um nó, substituindo se existir:
-
-```Javascript
-const ref = await db.ref('game/config').set({
-    name: 'Name of the game',
-    max_players: 10
-});
-// stored at /game/config
-```
-
-Observação: ao armazenar dados, não importa se o caminho de destino e/ou os caminhos pai já existem. Se você armazenar dados em 'chats/somechatid/messages/msgid/receipts', qualquer nó inexistente será criado nesse caminho.
-
-### Atualizando dados
-
-
-A atualização do valor de um nó mescla o valor armazenado com o novo objeto. Se o nó de destino não existir, ele será criado com o valor passado.
-
-```javascript
-const ref = await db.ref('game/config').update({
-    description: 'The coolest game in the history of mankind'
-});
-
-// config was updated, now get the value (ref points to 'game/config')
-const snapshot = await ref.get();
-const config = snapshot.val();
-
-// `config` now has properties "name", "max_players" and "description"
-```
-
-### Removendo dados
-
-Você pode `remover` dados com o remove método
-
-```Javascript
-db.ref('animals/dog')
-.remove()
-.then(() => { /* removed successfully */ )};
-```
-
-
-A remoção de dados também pode ser feita definindo ou atualizando seu valor para `null`. Qualquer propriedade que tenha um valor nulo será removida do nó do objeto pai.
-
-```Javascript
-// Remove by setting it to null
-db.ref('animals/dog')
-.set(null)
-.then(ref => { /* dog property removed */ )};
-
-// Or, update its parent with a null value for 'dog' property
-db.ref('animals')
-.update({ dog: null })
-.then(ref => { /* dog property removed */ )};
-```
-
-
-### Gerando chaves exclusivas
-
-Para todos os dados genéricos adicionados, você precisa criar chaves que sejam exclusivas e que não entrem em conflito com chaves geradas por outros clientes. Para fazer isso, você pode gerar chaves exclusivas com `push`. Nos bastidores, push usa [cuid](https://www.npmjs.com/package/cuid) para gerar chaves que são garantidamente exclusivas e classificáveis ​​no tempo.
-
-```Javascript
-db.ref('users')
-.push({
-    name: 'Ewout',
-    country: 'The Netherlands'
-})
-.then(userRef => {
-    // user is saved, userRef points to something 
-    // like 'users/jld2cjxh0000qzrmn831i7rn'
-};
-```
-
-O exemplo acima gera a chave exclusiva e armazena o objeto imediatamente. Você também pode optar por gerar a chave, mas armazenar o valor posteriormente.
-
-```Javascript
-const postRef = db.ref('posts').push();
-console.log(`About to add a new post with key "${postRef.key}"..`);
-// ... do stuff ...
-postRef.set({
-    title: 'My first post'
-})
-.then(ref => {
-    console.log(`Saved post "${postRef.key}"`);
-};
-```
-
-**OBSERVAÇÃO:** essa abordagem é recomendada se você quiser adicionar vários objetos novos de uma vez, porque uma única atualização tem um desempenho muito mais rápido:
-
-```Javascript
-const newMessages = {};
-// We got messages from somewhere else (eg imported from file or other db)
-messages.forEach(message => {
-    const ref = db.ref('messages').push();
-    newMessages[ref.key] = message;
-})
-console.log(`About to add multiple messages in 1 update operation`);
-db.ref('messages').update(newMessages)
-.then(ref => {
-    console.log(`Added all messages at once`);
-};
-```
-
-### Usando matrizes
-
-IvipBase suporta armazenamento de arrays, mas há algumas ressalvas ao trabalhar com eles. Por exemplo, você não pode remover ou inserir itens que não estejam no final do array. Os arrays IvipBase funcionam como uma pilha, você pode adicionar e remover do topo, não de dentro. No entanto, é possível editar entradas individuais ou substituir todo o array. A maneira mais segura de editar arrays é com `transaction`, que exige que todos os dados sejam carregados e armazenados novamente. Em muitos casos, é mais sensato usar coleções de objetos.
-
-Você pode usar matrizes com segurança quando:
-
-- O número de itens é pequeno e finito, o que significa que você pode estimar o número médio típico de itens nele.
-- Não há necessidade de recuperar/editar itens individuais usando seu caminho armazenado. Se você reordenar os itens em uma matriz, seus caminhos mudam (por exemplo, de `"playlist/songs[4]"` para `"playlist/songs[1]")`
-- As entradas armazenadas são pequenas e não possuem muitos dados aninhados (strings pequenas ou objetos simples, por exemplo: chat/members com matriz de IDs de usuário `['ewout','john','pete']` )
-- A coleção não precisa ser editada com frequência.
-
-Use coleções de objetos quando:
-
-- A coleção continua crescendo (por exemplo: conteúdo gerado pelo usuário)
-- O caminho dos itens é importante e de preferência não muda, por exemplo, `"playlist/songs[4]"` pode apontar para uma entrada diferente se o array for editado. Ao usar uma coleção de objetos, `playlist/songs/jld2cjxh0000qzrmn831i7rn` sempre se referirá ao mesmo item.
-- As entradas armazenadas são grandes (por exemplo, strings/blobs/objetos grandes com muitos dados aninhados)
-Você precisa editar a coleção com frequência.
-
-Dito isto, veja como trabalhar com arrays com segurança:
-
-```Javascript
-// Store an array with 2 songs:
-await db.ref('playlist/songs').set([
-    { id: 13535, title: 'Daughters', artist: 'John Mayer' }, 
-    { id: 22345,  title: 'Crazy', artist: 'Gnarls Barkley' }
-]);
-
-// Editing an array safely:
-await db.ref('playlist/songs').transaction(snap => {
-    const songs = snap.val();
-    // songs is instanceof Array
-    // Add a song:
-    songs.push({ id: 7855, title: 'Formidable', artist: 'Stromae' });
-    // Edit the second song:
-    songs[1].title += ' (Live)';
-    // Remove the first song:
-    songs.splice(0, 1);
-    // Store the edited array:
-    return songs;
-});
-```
-
-Se você não alterar a ordem das entradas em um array, é seguro usá-las em caminhos referenciados:
-
-```Javascript
-// Update a single array entry:
-await db.ref('playlist/songs[4]/title').set('Blue on Black');
-
-// Or:
-await db.ref('playlist/songs[4]').update({ title: 'Blue on Black') };
-
-// Or:
-await db.ref('playlist/songs').update({
-    4: { title: 'Blue on Black', artist: 'Kenny Wayne Shepherd' }
-})
-
-// Get value of single array entry:
-let snap = await db.ref('playlist/songs[2]').get();
-
-// Get selected entries with an include filter (like you'd use with object collections)
-let snap = await db.ref('playlist/songs').get({ include: [0, 5, 8] });
-let songs = snap.val();
-// NOTE: songs is instanceof PartialArray, which is an object with properties '0', '5', '8'
-```
-
-NOTA: você NÃO PODE usar `ref.push()` para adicionar entradas a um array! push só pode ser usado em coleções de objetos porque gera IDs filho exclusivos, como `"jpx0k53u0002ecr7s354c51l"` (que obviamente não é um índice de array válido)
-
-Para resumir: use arrays SOMENTE se usar uma coleção de objetos parecer um exagero e seja muito cauteloso! Adicionar e remover itens só pode ser feito de/para o FIM de um array, a menos que você reescreva o array inteiro. Isso significa que você terá que saber antecipadamente quantas entradas seu array possui para poder adicionar novas entradas, o que não é realmente desejável na maioria das situações. Se você sentir necessidade de usar um array porque a ordem das entradas é importante para você ou seu aplicativo: considere usar uma coleção de objetos e adicione uma 'ordem' propriedade às entradas nas quais realizar uma classificação.
-
-## Contando crianças
-
-Para descobrir rapidamente quantos filhos um nó específico possui, use o count método em um `DataReference`:
-
-```Javascript
-const messageCount = aguardar db .ref('chat/mensagens'< a i=9>).contagem()< ai=14>;
-```
-
-### Limitar o carregamento de dados aninhados
-Se a estrutura do seu banco de dados estiver usando aninhamento (por exemplo, armazenando postagens em `'users/someuser/posts'` em vez de em `'posts'`), talvez você queira limitar a quantidade de dados que você estão recuperando na maioria dos casos. Por exemplo: se você deseja obter os detalhes de um usuário, mas não deseja carregar todos os dados aninhados, você pode limitar explicitamente a recuperação de dados aninhados passando `exclude`, include e/ou `child_objects` opções para `.get`:
-
-```Javascript
-// Excluir dados aninhados específicos:
-db.ref('usuários/algumusuário')
-. obter({ excluir:  ['postagens', 'comentários'< a i=17>]}).então< a i=22>(snap=>{// instantâneo contém todas as propriedades de 'someuser' exceto // 'users/someuser/posts' e 'users/someuser/comments'(obter.)'usuários/algumusuário /postagens'(ref.db// Inclui dados aninhados específicos:;)}incluir: ['*/ título','*/posted']}).então(snap=>{// instantâneo contém todas as postagens de 'someuser', mas cada postagem // contém apenas 'título' e 'publicado' propriedades});// Combine include & excluir:db.ref('usuários/algumusuário').obter ({excluir: [ 'comentários'],incluir: }< /span>encaixar< /span>// o instantâneo contém todos os dados do usuário sem a coleção de 'comentários', < /span>};)// e cada objeto na coleção 'posts' contém apenas uma propriedade 'title'.{=>(então.)]'posts/*/title'[ 
-```
-
-**OBSERVAÇÃO:** isso permite que você faça o que o Firebase não consegue: armazenar seus dados em locais lógicos e obter apenas os dados de seu interesse, rapidamente. Além disso, você ainda pode indexar seus dados aninhados e consultá-los com ainda mais rapidez. Consulte [Indexação de dados ](#Indexação) para obter mais informações.
-
-**Iterando (streaming) filhos**
-(NOVO desde v1.4.0)
-
-Para iterar todos os filhos de uma coleção de objetos sem carregar todos os dados na memória de uma só vez, você pode usar `forEach` que transmite cada filho e executa uma função de retorno de chamada com um instantâneo de seus dados . Se a função de retorno de chamada retornar `false`, a iteração será interrompida. Se o retorno de chamada retornar um Promise, a iteração aguardará a resolução antes de carregar o próximo filho.
-
-Os filhos a serem iterados são determinados no início da função. Como forEach não bloqueia a leitura/gravação da coleção, é possível que os dados sejam alterados durante a iteração. Os filhos adicionados durante a iteração serão ignorados, os filhos removidos serão ignorados.
-
-Também é possível carregar dados seletivamente para cada filho, utilizando o mesmo objeto de opções disponível pararef.get(options)
-
-Exemplos:
-
-```Javascript
-// Transmita todos os livros, um de cada vez (carrega todos os dados de cada livro):
-await db.ref('livros') .forEach(bookSnapshot = > {
-   const livro = bookSnapshot.val();
-   console.registro(`Recebi o livro "${livro.título'descrição','título' [: incluir{( forEach.)'livros'(ref.dbawait// Agora faça o mesmo, mas carregue apenas 'título' e 'descrição' de cada livro:;)};)"`}descrição.livro${": "}},bookSnapshot=>bookSnapshot;.;< /span>;)})"`}descriçãolivro${": "}título.livro${`Recebi o livro " ;(log.console)(valor.=bookconst{
-```
-
 ### Carregando dados
 
 Execute `.get` em uma referência para obter o valor armazenado atualmente. É a abreviação da sintaxe do Firebase de `.once("value")`.
@@ -689,6 +470,63 @@ await db.ref('books').forEach(
 );
 ```
 
+### Carregando dados
+
+Execute `.get` em uma referência para obter o valor armazenado atualmente. É a abreviação da sintaxe do Firebase de `.once("value")`.
+
+```javascript
+const snapshot = await db.ref('game/config').get();
+if (snapshot.exists()) {
+    config = snapshot.val();
+}
+else {
+    config = defaultGameConfig; // use defaults
+}
+ 
+```
+Observação: ao carregar dados, o valor atualmente armazenado será agrupado e retornado em um objeto `DataSnapshot`. Use `snapshot.exists()` para determinar se o nó existe, `snapshot.val()` para obter o valor.
+
+<a id="Armazenando"></a> 
+### Armazenando dados
+
+Definindo o valor de um nó, substituindo se existir:
+
+```Javascript
+const ref = await db.ref('game/config').set({
+    name: 'Name of the game',
+    max_players: 10
+});
+// stored at /game/config
+```
+
+Observação: ao armazenar dados, não importa se o caminho de destino e/ou os caminhos pai já existem. Se você armazenar dados em 'chats/somechatid/messages/msgid/receipts', qualquer nó inexistente será criado nesse caminho.
+
+<a id="Atualizando"></a> 
+### Atualizando dados
+
+A atualização do valor de um nó mescla o valor armazenado com o novo objeto. Se o nó de destino não existir, ele será criado com o valor passado.
+
+```javascript
+const ref = await db.ref('game/config').update({
+    description: 'The coolest game in the history of mankind'
+});
+
+// config was updated, now get the value (ref points to 'game/config')
+const snapshot = await ref.get();
+const config = snapshot.val();
+
+// `config` now has properties "name", "max_players" and "description"
+```
+<a id="Removendo"></a> 
+### Removendo dados
+
+Você pode `remover` dados com o remove método
+
+```Javascript
+db.ref('animals/dog')
+.remove()
+.then(() => { /* removed successfully */ )};
+```
 
 Consulte também [Como transmitir resultados da consulta](#resultados-de-pesquisa)
 <a id="Afirmando"></a> 
@@ -718,6 +556,205 @@ await db.ref('users').forEach<UserClass>(userSnapshot => {
 })
 ```
 
+A remoção de dados também pode ser feita definindo ou atualizando seu valor para `null`. Qualquer propriedade que tenha um valor nulo será removida do nó do objeto pai.
+
+```Javascript
+// Remove by setting it to null
+db.ref('animals/dog')
+.set(null)
+.then(ref => { /* dog property removed */ )};
+
+// Or, update its parent with a null value for 'dog' property
+db.ref('animals')
+.update({ dog: null })
+.then(ref => { /* dog property removed */ )};
+```
+
+<a id="Gerando"></a> 
+### Gerando chaves exclusivas
+
+Para todos os dados genéricos adicionados, você precisa criar chaves que sejam exclusivas e que não entrem em conflito com chaves geradas por outros clientes. Para fazer isso, você pode gerar chaves exclusivas com `push`. Nos bastidores, push usa [cuid](https://www.npmjs.com/package/cuid) para gerar chaves que são garantidamente exclusivas e classificáveis ​​no tempo.
+
+```Javascript
+db.ref('users')
+.push({
+    name: 'Ewout',
+    country: 'The Netherlands'
+})
+.then(userRef => {
+    // user is saved, userRef points to something 
+    // like 'users/jld2cjxh0000qzrmn831i7rn'
+};
+```
+
+O exemplo acima gera a chave exclusiva e armazena o objeto imediatamente. Você também pode optar por gerar a chave, mas armazenar o valor posteriormente.
+
+```Javascript
+const postRef = db.ref('posts').push();
+console.log(`About to add a new post with key "${postRef.key}"..`);
+// ... do stuff ...
+postRef.set({
+    title: 'My first post'
+})
+.then(ref => {
+    console.log(`Saved post "${postRef.key}"`);
+};
+```
+
+**OBSERVAÇÃO:** essa abordagem é recomendada se você quiser adicionar vários objetos novos de uma vez, porque uma única atualização tem um desempenho muito mais rápido:
+
+```Javascript
+const newMessages = {};
+// We got messages from somewhere else (eg imported from file or other db)
+messages.forEach(message => {
+    const ref = db.ref('messages').push();
+    newMessages[ref.key] = message;
+})
+console.log(`About to add multiple messages in 1 update operation`);
+db.ref('messages').update(newMessages)
+.then(ref => {
+    console.log(`Added all messages at once`);
+};
+```
+<a id="Usando"></a> 
+### Usando matrizes
+
+IvipBase suporta armazenamento de arrays, mas há algumas ressalvas ao trabalhar com eles. Por exemplo, você não pode remover ou inserir itens que não estejam no final do array. Os arrays IvipBase funcionam como uma pilha, você pode adicionar e remover do topo, não de dentro. No entanto, é possível editar entradas individuais ou substituir todo o array. A maneira mais segura de editar arrays é com `transaction`, que exige que todos os dados sejam carregados e armazenados novamente. Em muitos casos, é mais sensato usar coleções de objetos.
+
+Você pode usar matrizes com segurança quando:
+
+- O número de itens é pequeno e finito, o que significa que você pode estimar o número médio típico de itens nele.
+- Não há necessidade de recuperar/editar itens individuais usando seu caminho armazenado. Se você reordenar os itens em uma matriz, seus caminhos mudam (por exemplo, de `"playlist/songs[4]"` para `"playlist/songs[1]")`
+- As entradas armazenadas são pequenas e não possuem muitos dados aninhados (strings pequenas ou objetos simples, por exemplo: chat/members com matriz de IDs de usuário `['ewout','john','pete']` )
+- A coleção não precisa ser editada com frequência.
+
+Use coleções de objetos quando:
+
+- A coleção continua crescendo (por exemplo: conteúdo gerado pelo usuário)
+- O caminho dos itens é importante e de preferência não muda, por exemplo, `"playlist/songs[4]"` pode apontar para uma entrada diferente se o array for editado. Ao usar uma coleção de objetos, `playlist/songs/jld2cjxh0000qzrmn831i7rn` sempre se referirá ao mesmo item.
+- As entradas armazenadas são grandes (por exemplo, strings/blobs/objetos grandes com muitos dados aninhados)
+Você precisa editar a coleção com frequência.
+
+Dito isto, veja como trabalhar com arrays com segurança:
+
+```Javascript
+// Store an array with 2 songs:
+await db.ref('playlist/songs').set([
+    { id: 13535, title: 'Daughters', artist: 'John Mayer' }, 
+    { id: 22345,  title: 'Crazy', artist: 'Gnarls Barkley' }
+]);
+
+// Editing an array safely:
+await db.ref('playlist/songs').transaction(snap => {
+    const songs = snap.val();
+    // songs is instanceof Array
+    // Add a song:
+    songs.push({ id: 7855, title: 'Formidable', artist: 'Stromae' });
+    // Edit the second song:
+    songs[1].title += ' (Live)';
+    // Remove the first song:
+    songs.splice(0, 1);
+    // Store the edited array:
+    return songs;
+});
+```
+
+Se você não alterar a ordem das entradas em um array, é seguro usá-las em caminhos referenciados:
+
+```Javascript
+// Update a single array entry:
+await db.ref('playlist/songs[4]/title').set('Blue on Black');
+
+// Or:
+await db.ref('playlist/songs[4]').update({ title: 'Blue on Black') };
+
+// Or:
+await db.ref('playlist/songs').update({
+    4: { title: 'Blue on Black', artist: 'Kenny Wayne Shepherd' }
+})
+
+// Get value of single array entry:
+let snap = await db.ref('playlist/songs[2]').get();
+
+// Get selected entries with an include filter (like you'd use with object collections)
+let snap = await db.ref('playlist/songs').get({ include: [0, 5, 8] });
+let songs = snap.val();
+// NOTE: songs is instanceof PartialArray, which is an object with properties '0', '5', '8'
+```
+
+NOTA: você NÃO PODE usar `ref.push()` para adicionar entradas a um array! push só pode ser usado em coleções de objetos porque gera IDs filho exclusivos, como `"jpx0k53u0002ecr7s354c51l"` (que obviamente não é um índice de array válido)
+
+Para resumir: use arrays SOMENTE se usar uma coleção de objetos parecer um exagero e seja muito cauteloso! Adicionar e remover itens só pode ser feito de/para o FIM de um array, a menos que você reescreva o array inteiro. Isso significa que você terá que saber antecipadamente quantas entradas seu array possui para poder adicionar novas entradas, o que não é realmente desejável na maioria das situações. Se você sentir necessidade de usar um array porque a ordem das entradas é importante para você ou seu aplicativo: considere usar uma coleção de objetos e adicione uma 'ordem' propriedade às entradas nas quais realizar uma classificação.
+
+<a id="Contando"></a> 
+## Contando crianças
+
+Para descobrir rapidamente quantos filhos um nó específico possui, use o count método em um `DataReference`:
+
+```Javascript
+const messageCount = aguardar db .ref('chat/mensagens'< a i=9>).contagem()< ai=14>;
+```
+
+<a id="Limitar"></a> 
+### Limitar o carregamento de dados aninhados
+Se a estrutura do seu banco de dados estiver usando aninhamento (por exemplo, armazenando postagens em `'users/someuser/posts'` em vez de em `'posts'`), talvez você queira limitar a quantidade de dados que você estão recuperando na maioria dos casos. Por exemplo: se você deseja obter os detalhes de um usuário, mas não deseja carregar todos os dados aninhados, você pode limitar explicitamente a recuperação de dados aninhados passando `exclude`, include e/ou `child_objects` opções para `.get`:
+
+```Javascript
+// Exclude specific nested data:
+db.ref('users/someuser')
+.get({ exclude: ['posts', 'comments'] })
+.then(snap => {
+    // snapshot contains all properties of 'someuser' except 
+    // 'users/someuser/posts' and 'users/someuser/comments'
+});
+
+// Include specific nested data:
+db.ref('users/someuser/posts')
+.get({ include: ['*/title', '*/posted'] })
+.then(snap => {
+    // snapshot contains all posts of 'someuser', but each post 
+    // only contains 'title' and 'posted' properties
+});
+
+// Combine include & exclude:
+db.ref('users/someuser')
+.get({ exclude: ['comments'], include: ['posts/*/title'] })
+.then(snap => {
+    // snapshot contains all user data without the 'comments' collection, 
+    // and each object in the 'posts' collection only contains a 'title' property.
+});
+```
+
+**OBSERVAÇÃO:** isso permite que você faça o que o Firebase não consegue: armazenar seus dados em locais lógicos e obter apenas os dados de seu interesse, rapidamente. Além disso, você ainda pode indexar seus dados aninhados e consultá-los com ainda mais rapidez. Consulte [Indexação de dados ](#Indexação) para obter mais informações.
+
+<a id="Iterando"></a> 
+**Iterando (streaming) filhos**
+(NOVO desde v1.4.0)
+
+Para iterar todos os filhos de uma coleção de objetos sem carregar todos os dados na memória de uma só vez, você pode usar `forEach` que transmite cada filho e executa uma função de retorno de chamada com um instantâneo de seus dados . Se a função de retorno de chamada retornar `false`, a iteração será interrompida. Se o retorno de chamada retornar um Promise, a iteração aguardará a resolução antes de carregar o próximo filho.
+
+Os filhos a serem iterados são determinados no início da função. Como forEach não bloqueia a leitura/gravação da coleção, é possível que os dados sejam alterados durante a iteração. Os filhos adicionados durante a iteração serão ignorados, os filhos removidos serão ignorados.
+
+Também é possível carregar dados seletivamente para cada filho, utilizando o mesmo objeto de opções disponível `pararef.get(options)`
+
+Exemplos:
+
+```Javascript
+// Stream all books one at a time (loads all data for each book):
+await db.ref('books').forEach(bookSnapshot => {
+   const book = bookSnapshot.val();
+   console.log(`Got book "${book.title}": "${book.description}"`);
+});
+
+// Now do the same but only load 'title' and 'description' of each book:
+await db.ref('books').forEach(
+   { include: ['title', 'description'] }, 
+   bookSnapshot => {
+      const book = bookSnapshot.val();
+      console.log(`Got book "${book.title}": "${book.description}"`);
+   }
+);
+```
 
 ### Monitorando alterações de dados em tempo real
 Você pode assinar eventos de dados para receber notificações em tempo real à medida que o nó monitorado é alterado. Quando conectado a um servidor AceBase remoto, os eventos serão enviados aos clientes por meio de uma conexão websocket. Os eventos suportados são:
@@ -740,6 +777,33 @@ db.ref('users')
 
 ```
 
+Consulte também [Como transmitir resultados da consulta](#resultados-de-pesquisa)
+<a id="Afirmando"></a> 
+### Afirmando tipos de dados em TypeScript
+Se estiver usando TypeScript, você pode passar um parâmetro de tipo para a maioria dos métodos de recuperação de dados que declararão o tipo do valor retornado. Observe que você é responsável por garantir que o valor corresponda ao tipo declarado em tempo de execução.
+
+Exemplos:
+
+```javascript
+const snapshot = await db.ref<MyClass>('users/someuser/posts').get<MyClass>();
+//                            ^ type parameter can go here,        ^ here,
+if (snapshot.exists()) {
+    config = snapshot.val<MyClass>();
+    //                    ^ or here
+}
+
+// A type parameter can also be used to assert the type of a callback parameter
+await db.ref('users/someuser/posts')
+    .transaction<MyClass>(snapshot => {
+        const posts = snapshot.val(); // posts is of type MyClass
+        return posts;
+    })
+
+// Or when iterating over children
+await db.ref('users').forEach<UserClass>(userSnapshot => {
+    const user = snapshot.val(); // user is of type UserClass
+})
+```
 
 ``` Javascript
 // To be able to unsubscribe later:
@@ -942,6 +1006,238 @@ Dito isto, veja como usá-los:
 
 Se você deseja monitorar o valor de um nó específico, mas não deseja obter todo o seu novo valor toda vez que uma pequena mutação é feita nele, assine a opção "mutada". evento. Este evento só é acionado quando os dados de destino estão realmente sendo alterados. Isso permite que você mantenha uma cópia em cache de seus dados na memória (ou banco de dados de cache) e replique todas as alterações feitas nele:
 
+### Monitorando alterações de dados em tempo real
+Você pode assinar eventos de dados para receber notificações em tempo real à medida que o nó monitorado é alterado. Quando conectado a um servidor AceBase remoto, os eventos serão enviados aos clientes por meio de uma conexão websocket. Os eventos suportados são:
+
+- `'value'`: acionado quando o valor de um nó muda (incluindo alterações em qualquer valor filho)
+- `'child_added'`: acionado quando um nó filho é adicionado, o retorno de chamada contém um instantâneo do nó filho adicionado
+- `'child_changed'`: acionado quando o valor de um nó filho é alterado, o retorno de chamada contém um instantâneo do nó filho alterado
+- `'child_removed'`: acionado quando um nó filho é removido, o retorno de chamada contém um instantâneo do nó filho removido
+- `'mutated'`: (NOVO v0.9.51) acionado quando qualquer propriedade aninhada de um nó é alterada, o retorno de chamada contém um instantâneo e uma referência da mutação exata.
+- `'mutations'`: (NOVA v0.9.60) como 'mutated', mas dispara com uma matriz de todas as mutações causadas por uma única atualização do banco de dados.
+- `'notify_*'`: versão apenas para notificação dos eventos acima sem dados, consulte "Notificar apenas eventos" abaixo
+
+``` Javascript
+// Using event callback
+db.ref('users')
+.on('child_added', userSnapshot => {
+    // fires for all current children, 
+    // and for each new user from then on
+});
+
+```
+
+```Javascript
+const chatRef = db.ref('chats/chat_id');
+// Get current value
+const chat = (await chatRef.get()).val();
+
+``` Javascript
+// To be able to unsubscribe later:
+function userAdded(userSnapshot) { /* ... */ }
+db.ref('users').on('child_added', userAdded);
+// Unsubscribe later with .off:
+db.ref('users').off('child_added', userAdded);
+
+```
+AceBase usa as mesmas assinaturas de método `.on` e `.off` do Firebase, mas também oferece outra maneira de assinar os eventos usando o retornado. `EventStream` você pode `subscribe`. Ter uma assinatura ajuda a cancelar mais facilmente a inscrição nos eventos posteriormente. Além disso, subscribe os retornos de chamada são acionados apenas para eventos futuros por padrão, ao contrário do .on retorno de chamada, que também é acionado para valores atuais de eventos `'value'` e `'child_added'`:
+
+``` Javascript
+// Using .subscribe
+const addSubscription = db.ref('users')
+.on('child_added')
+.subscribe(newUserSnapshot => {
+    // .subscribe only fires for new children from now on
+});
+
+const removeSubscription = db.ref('users')
+.on('child_removed')
+.subscribe(removedChildSnapshot => {
+    // removedChildSnapshot contains the removed data
+    // NOTE: snapshot.exists() will return false, 
+    // and snapshot.val() contains the removed child value
+});
+
+const changesSubscription = db.ref('users')
+.on('child_changed')
+.subscribe(updatedUserSnapshot => {
+    // Got new value for an updated user object
+});
+
+// Stopping all subscriptions later:
+addSubscription.stop();
+removeSubscription.stop();
+changesSubscription.stop();
+
+```
+Se você quiser usar `.subscribe` enquanto também obtém retornos de chamada de dados existentes, passe `true` como argumento de retorno de chamada:
+
+``` Javascript
+
+db.ref('users/some_user')
+.on('value', true) // passing true triggers .subscribe callback for current value as well
+.subscribe(userSnapshot => {
+    // Got current value (1st call), or new value (2nd+ call) for some_user
+});
+```
+O `EventStream` retornado por `.on` também pode ser usado para `subscribe` mais de uma vez:
+``` Javascript
+const newPostStream = db.ref('posts').on('child_added');
+const subscription1 = newPostStream.subscribe(childSnapshot => { /* do something */ });
+const subscription2 = newPostStream.subscribe(childSnapshot => { /* do something else */ });
+// To stop 1's subscription:
+subscription1.stop(); 
+// or, to stop all active subscriptions:
+newPostStream.stop();
+
+```
+Se estiver usando TypeScript, você pode passar um parâmetro de tipo para `.on` ou para `.subscribe` para declarar o tipo do valor armazenado no instantâneo. Este tipo não é verificado pelo TypeScript; é sua responsabilidade garantir que o valor armazenado corresponda à sua afirmação.
+
+``` Javascript
+const newPostStream = db.ref('posts').on<MyClass>('child_added');
+const subscription1 = newPostStream.subscribe(childSnapshot => {
+    const child = childSnapshot.val(); // child is of type MyClass
+ });
+const subscription2 = newPostStream.subscribe<MyOtherClass>(childSnapshot => { 
+    const child = childSnapshot.val(); // child is of type MyOtherClass
+    // .subscribe overrode .on's type parameter
+ });
+
+### Using variables and wildcards in subscription paths
+
+It is also possible to subscribe to events using wildcards and variables in the path:
+```javascript
+// Using wildcards:
+db.ref('users/*/posts')
+.on('child_added')
+.subscribe(snap => {
+    // This will fire for every post added by any user,
+    // so for our example .push this will be the result:
+    // snap.ref.vars === { 0: "ewout" }
+    const vars = snap.ref.vars;
+    console.log(`New post added by user "${vars[0]}"`)
+});
+db.ref('users/ewout/posts').push({ title: 'new post' });
+
+// Using named variables:
+db.ref('users/$userid/posts/$postid/title')
+.on('value')
+.subscribe(snap => {
+    // This will fire for every new or changed post title,
+    // so for our example .push below this will be the result:
+    // snap.ref.vars === { 0: "ewout", 1: "jpx0k53u0002ecr7s354c51l", userid: "ewout", postid: (...), $userid: (...), $postid: (...) }
+    // The user id will be in vars[0], vars.userid and vars.$userid
+    const title = snap.val();
+    const vars = snap.ref.vars; // contains the variable values in path
+    console.log(`The title of post ${vars.postid} by user ${vars.userid} was set to: "${title}"`);
+});
+db.ref('users/ewout/posts').push({ title: 'new post' });
+
+// Or a combination:
+db.ref('users/*/posts/$postid/title')
+.on('value')
+.subscribe(snap => {
+    // snap.ref.vars === { 0: 'ewout', 1: "jpx0k53u0002ecr7s354c51l", postid: "jpx0k53u0002ecr7s354c51l", $postid: (...) }
+});
+db.ref('users/ewout/posts').push({ title: 'new post' });
+```
+### Notificar apenas eventos
+Além dos eventos mencionados acima, você também pode assinar seus `notify_` equivalentes que fazem o mesmo, mas com uma referência aos dados alterados em vez de um instantâneo. Isto é bastante útil se você deseja monitorar alterações, mas não está interessado nos valores reais. Isso também economiza recursos do servidor e resulta na transferência de menos dados do servidor. Ex: `notify_child_changed` executará seu retorno de chamada com uma referência ao nó alterado:
+
+``` Javascript
+ref.on('notify_child_changed', childRef => {
+    console.log(`child "${childRef.key}" changed`);
+})
+
+```
+### Aguarde a ativação dos eventos
+Em algumas situações, é útil aguardar que os manipuladores de eventos estejam ativos antes de modificar os dados. Por exemplo, se quiser que um evento seja acionado para alterações que você está prestes a fazer, você deve certificar-se de que a assinatura está ativa antes de realizar as atualizações.
+
+``` Javascript
+var subscription = db.ref('users')
+.on('child_added')
+.subscribe(snap => { /*...*/ });
+
+// Use activated promise
+subscription.activated()
+.then(() => {
+    // We now know for sure the subscription is active,
+    // adding a new user will trigger the .subscribe callback
+    db.ref('users').push({ name: 'Ewout' });
+})
+.catch(err => {
+    // Access to path denied by server?
+    console.error(`Subscription canceled: ${err.message}`);
+});
+
+```
+Se você quiser lidar com alterações no estado da assinatura depois que ela foi ativada (por exemplo, porque os direitos de acesso do lado do servidor foram alterados), forneça uma função de retorno de chamada para a chamada `activated`:
+
+``` Javascript
+subscription.activated((activated, cancelReason) => {
+    if (!activated) {
+        // Access to path denied by server?
+        console.error(`Subscription canceled: ${cancelReason}`);
+    }
+});
+
+```
+### Obtenha o contexto desencadeador dos eventos
+(NOVO v0.9.51)
+
+Em alguns casos, é benéfico saber o que (e/ou quem) acionou o disparo de um evento de dados, para que você possa escolher o que deseja fazer com as atualizações de dados. Agora é possível passar informações de contexto com todos os `update`, `set`, `remove` e `transaction` operações, que serão repassadas para qualquer evento acionado nos caminhos afetados (em qualquer cliente conectado!)
+
+Imagine a seguinte situação: você tem um editor de documentos que permite que várias pessoas editem ao mesmo tempo. Ao carregar um documento você atualiza sua `last_accessed` propriedade:
+``` Javascript
+// Load document & subscribe to changes
+db.ref('users/ewout/documents/some_id').on('value', snap => {
+    // Document loaded, or changed. Display its contents
+    const document = snap.val();
+    displayDocument(document);
+});
+
+// Set last_accessed to current time
+db.ref('users/ewout/documents/some_id').update({ last_accessed: new Date() })
+
+```
+Isso acionará o evento `value` DUAS VEZES e fará com que o documento seja renderizado DUAS VEZES. Além disso, se qualquer outro usuário abrir o mesmo documento, ele será acionado novamente, mesmo que não seja necessário redesenhar!
+
+Para evitar isso, você pode passar informações contextuais com a atualização:
+``` Javascript
+// Load document & subscribe to changes (context aware!)
+db.ref('users/ewout/documents/some_id')
+    .on('value', snap => {
+        // Document loaded, or changed.
+        const context = snap.context();
+        if (context.redraw === false) {
+            // No need to redraw!
+            return;
+        }
+        // Display its contents
+        const document = snap.val();
+        displayDocument(document);
+    });
+
+// Set last_accessed to current time, with context
+db.ref('users/ewout/documents/some_id')
+    .context({ redraw: false }) // prevent redraws!
+    .update({ last_accessed: new Date() })
+
+```
+### Rastreamento de alterações usando "mutado" e "mutações" eventos
+(NOVO v0.9.51)
+
+Esses eventos são usados ​​principalmente pelo AceBase nos bastidores para atualizar automaticamente os valores na memória com mutações remotas. Consulte [Observar alterações de valor em tempo real](#observar) e [Sincronização em tempo real com um proxy de dados ativo](#sincronizacao). É possível usar esses eventos sozinho, mas eles exigem alguns detalhes adicionais e provavelmente será melhor usar os métodos mencionados acima.
+
+Dito isto, veja como usá-los:
+
+Se você deseja monitorar o valor de um nó específico, mas não deseja obter todo o seu novo valor toda vez que uma pequena mutação é feita nele, assine a opção "mutada". evento. Este evento só é acionado quando os dados de destino estão realmente sendo alterados. Isso permite que você mantenha uma cópia em cache de seus dados na memória (ou banco de dados de cache) e replique todas as alterações feitas nele:
+
+    // Navigate to the in-memory chat property target:
+    let targetObject = propertyTrail.slice(0,-1).reduce((target, prop) => target[prop], chat);
+    // targetObject === chat.messages
+    const targetProperty = propertyTrail.slice(-1)[0]; // The last item in array
+    // targetProperty === 'message_id'
 
 ```Javascript
 const chatRef = db.ref('chats/chat_id');
