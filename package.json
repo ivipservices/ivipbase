@@ -27,7 +27,7 @@
 		"./dist/esm/controller/storage/index.js": "./dist/esm/controller/storage/browser.js"
 	},
 	"private": false,
-	"repository": "github:ivipcoin/ivipbase",
+	"repository": "github:ivipservices/ivipbase",
 	"scripts": {
 		"dev": "nodemon ./src/server/services/database/Node/NodeRestructureJson.ts",
 		"dev2": "nodemon ./src/server/services/database/Node/NodeResultWithPath.ts",
@@ -53,9 +53,9 @@
 	"author": "IVIPCOIN LTDA <desenvolvimento@ivipcoin.com> (https://ivipcoin.com)",
 	"license": "MIT",
 	"bugs": {
-		"url": "https://github.com/ivipcoin/ivipbase/issues"
+		"url": "https://github.com/ivipservices/ivipbase/issues"
 	},
-	"homepage": "https://github.com/ivipcoin/ivipbase#readme",
+	"homepage": "https://github.com/ivipservices/ivipbase#readme",
 	"dependencies": {
 		"dotenv": "^16.0.3",
 		"express": "^4.17.1",
