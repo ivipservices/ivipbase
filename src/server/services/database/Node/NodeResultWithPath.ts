@@ -218,12 +218,12 @@ class NodeJsonTransformer {
 		return results;
 	}
 
-	private filterKeysFromObject(obj) {
-		const checkIsValidDate = (string) => {
+	private filterKeysFromObject(obj: Record<string, unknown>) {
+		const checkIsValidDate = (string: string | number | Date) => {
 			// Expressão regular para validar o padrão da string de data
 			const datePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?([+-]\d{2}:\d{2})?Z?$/;
 
-			if (datePattern.test(string)) {
+			if (datePattern.test(string as any)) {
 				let date = new Date(string);
 				return !isNaN(date.getTime());
 			}
@@ -231,8 +231,8 @@ class NodeJsonTransformer {
 			return false;
 		};
 
-		const processObject = (inputObj) => {
-			const filteredObject = {};
+		const processObject = (inputObj: { [x: string]: any }) => {
+			const filteredObject = {} as any;
 
 			for (const key in inputObj) {
 				if (checkIsValidDate(inputObj[key])) {

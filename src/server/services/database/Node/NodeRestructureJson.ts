@@ -32,7 +32,7 @@ export class NoderestructureJson {
 			array_entries = [entries];
 		}
 
-		function convertDates(obj) {
+		function convertDates(obj: { [x: string]: any } | null) {
 			// Verifica se o argumento é um objeto
 			if (typeof obj === "object" && obj !== null) {
 				// Percorre as chaves do objeto
@@ -54,8 +54,8 @@ export class NoderestructureJson {
 		const result = {};
 		const KEY_THAT_MUST_BE_ARRAY = ["costs"];
 
-		array_entries.forEach((entry) => {
-			const { path, content } = entry;
+		array_entries.forEach((entry: { [x: string]: any } | null) => {
+			const { path, content } = entry as any;
 			convertDates(entry);
 
 			if (typeof path !== "string") {
@@ -64,7 +64,7 @@ export class NoderestructureJson {
 			}
 
 			const parts = path.split("/");
-			let current = result;
+			let current: any = result;
 
 			for (let i = 0; i < parts.length; i++) {
 				const part = parts[i];
@@ -112,7 +112,7 @@ export class NoderestructureJson {
 	}
 
 	// Convert JSON data to string and save it to a file
-	public convertToJsonAndSaveToFile(dataWithOutPathFromMongodb) {
+	public convertToJsonAndSaveToFile(dataWithOutPathFromMongodb: string | NodeJS.ArrayBufferView) {
 		// console.log(dataWithOutPathFromMongodb);
 
 		const fileAddress: any = "./test/outputRestructuredJSON.json";
@@ -127,7 +127,7 @@ export class NoderestructureJson {
 		return dataWithOutPathFromMongodb;
 	}
 
-	private async readFilesUsingPath(inputFile) {
+	private async readFilesUsingPath(inputFile: string) {
 		const filePath = path.join(__dirname, inputFile);
 
 		try {

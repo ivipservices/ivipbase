@@ -1192,7 +1192,7 @@ export default class MDE extends SimpleEventEmitter {
 			return;
 		}
 
-		const nonObjectKeys = {};
+		const nonObjectKeys: any = {};
 		let otherObject;
 		let maior;
 
@@ -1240,7 +1240,7 @@ export default class MDE extends SimpleEventEmitter {
 					if (String(value).length >= MAX_KEY_LENGTH) {
 						maior = Object.entries(nonObjectKeys)
 							.filter(([k, v]) => typeof v !== "string" || String(v).length >= MAX_KEY_LENGTH)
-							.reduce((acc, [k, v]) => {
+							.reduce((acc: any, [k, v]) => {
 								acc[k] = v;
 								return acc;
 							}, {});
