@@ -9,3 +9,4 @@ test
 .prettierrc*.*
 create-package-files
 previous_src
+*.tgz
