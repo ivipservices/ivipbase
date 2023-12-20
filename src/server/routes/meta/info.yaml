@@ -2,19 +2,19 @@
     get:
         tags:
             - metadata
-        summary: Get server info
-        description: Returns info about the server, such as version, current date/time and process id. When signed in as the admin user, info about the platform, cpu, memory, and network will also be included
+        summary: Obtenha informações do servidor
+        description: Retorna informações sobre o servidor, como versão, data/hora atual e ID do processo. Quando autenticado como usuário administrador, informações sobre a plataforma, CPU, memória e rede também serão incluídas.
         parameters:
             - name: dbname
               in: path
-              description: name of the database
+              description: Nome do banco de dados
               required: true
               schema:
                   type: string
                   example: mydb
         responses:
             200:
-                description: Returns server information
+                description: Retorna informações do servidor
                 content:
                     "application/json":
                         schema:
@@ -23,19 +23,19 @@
                                 version:
                                     type: string
                                     example: 1.10.0
-                                    summary: server version number
+                                    summary: Número da versão do servidor
                                 time:
                                     type: number
                                     example: 868
-                                    summary: unix timestamp (ms since Jan 1, 1970)
+                                    summary: Timestamp Unix (milissegundos desde 1º de janeiro de 1970).
                                 process:
                                     type: integer
                                     example: 465
-                                    summary: process number
+                                    summary: número do processo
             500:
-                description: Returns the server error
+                description: Retorna o erro do servidor
                 content:
                     "text/plain":
                         schema:
                             type: string
-                            example: Some error message
+                            example: Alguma mensagem de erro

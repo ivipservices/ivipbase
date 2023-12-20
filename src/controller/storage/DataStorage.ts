@@ -18,14 +18,13 @@ export class DataStorage extends CustomStorage {
 
 	async getMultiple(expression: RegExp): Promise<StorageNodeInfo[]> {
 		const list: StorageNodeInfo[] = [];
-		for (let path in this.data) {
+		this.data.forEach((content, path) => {
 			if (expression.test(path)) {
-				const content = this.data.get(path);
 				if (content) {
 					list.push({ path, content });
 				}
 			}
-		}
+		});
 		return list;
 	}
 

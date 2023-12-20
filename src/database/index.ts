@@ -54,12 +54,12 @@ class StorageDBServer extends Api {
 			throw new TypeError(`options.exclude must be an array of key names`);
 		}
 
-		const value = await this.db.app.storage.get(path);
+		const value = await this.db.app.storage.get(path, options);
 		return { value, context: { more: false } };
 	}
 
 	async update(path: string, updates: any, options?: any): Promise<{ cursor?: string | undefined }> {
-		await this.db.app.storage.set(path, updates);
+		await this.db.app.storage.update(path, updates);
 		return {};
 	}
 
@@ -178,10 +178,7 @@ export class DataBase extends DataBaseCore {
 		super(appNow.settings.dbname, options);
 		this.app = appNow;
 
-		const hostnameRegex = /^(?:(?:https?|ftp):\/\/)?(?:localhost|(?:[a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.[a-zA-Z]{2,}|(?:\d{1,3}\.){3}\d{1,3})$/;
-		const valid_client = !!appNow.settings.client && typeof appNow.settings.client.host === "string" && hostnameRegex.test(appNow.settings.client.host.trim());
-
-		this.storage = appNow.isServer || !valid_client ? new StorageDBServer(this) : new StorageDBClient(this);
+		this.storage = appNow.isServer || !appNow.settings.isValidClient ? new StorageDBServer(this) : new StorageDBClient(this);
 
 		this.emitOnce("ready");
 	}

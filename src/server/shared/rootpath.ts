@@ -12,6 +12,6 @@ if (process.platform === "win32" && currentDir.startsWith("/")) {
 // tsc-esm-fix também não usa decodeURI para remover caracteres codificados (como %20 para espaços)
 currentDir = decodeURI(currentDir);
 
-export const packageRootPath = resolve(currentDir, "../../..");
+export const packageRootPath = resolve(currentDir, "../..");
 
 export default packageRootPath;
