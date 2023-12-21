@@ -8,10 +8,10 @@ type SimpleStorageStats = {
 };
 
 export const addRoute = (env: LocalServer) => {
-	env.router.get(`/stats/${env.db.name}`, async (req, res) => {
+	env.router.get(`/stats/:dbName`, async (req, res) => {
 		// Get database stats
 		try {
-			const stats = (await env.db.storage.stats()) as SimpleStorageStats;
+			const stats = (await env.db(req.params["dbName"]).storage.stats()) as SimpleStorageStats;
 			res.send(stats);
 		} catch (err: any) {
 			res.statusCode = 500;

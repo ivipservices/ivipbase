@@ -14,30 +14,30 @@ export abstract class CustomStorage extends MDE {
 	constructor(options: Partial<Omit<MDESettings, "getMultiple" | "setNode" | "removeNode">> = {}) {
 		super({
 			...options,
-			getMultiple: (e) => {
+			getMultiple: (database, e) => {
 				if (!this.ready) {
 					throw ERROR_FACTORY.create(AppError.DB_DISCONNECTED, { dbName: this.dbName });
 				}
-				return this.getMultiple(e);
+				return this.getMultiple(database, e);
 			},
-			setNode: (path, content, node) => {
+			setNode: (database, path, content, node) => {
 				if (!this.ready) {
 					throw ERROR_FACTORY.create(AppError.DB_DISCONNECTED, { dbName: this.dbName });
 				}
-				return this.setNode(path, content, node);
+				return this.setNode(database, path, content, node);
 			},
-			removeNode: (path, content, node) => {
+			removeNode: (database, path, content, node) => {
 				if (!this.ready) {
 					throw ERROR_FACTORY.create(AppError.DB_DISCONNECTED, { dbName: this.dbName });
 				}
-				return this.removeNode(path, content, node);
+				return this.removeNode(database, path, content, node);
 			},
 		});
 	}
 
-	abstract getMultiple(expression: RegExp): Promise<StorageNodeInfo[]>;
+	abstract getMultiple(database: string, expression: RegExp): Promise<StorageNodeInfo[]>;
 
-	abstract setNode(path: string, content: StorageNode, node: StorageNodeInfo): Promise<any>;
+	abstract setNode(database: string, path: string, content: StorageNode, node: StorageNodeInfo): Promise<any>;
 
-	abstract removeNode(path: string, content: StorageNode, node: StorageNodeInfo): Promise<any>;
+	abstract removeNode(database: string, path: string, content: StorageNode, node: StorageNodeInfo): Promise<any>;
 }

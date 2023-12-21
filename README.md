@@ -4,6 +4,10 @@ Um motor e servidor de banco de dados NoSQL rápido, de baixo consumo de memóri
 
 Inspirado por (e amplamente compatível com) o banco de dados em tempo real do Firebase e AceBase, com funcionalidades adicionais e menos fragmentação/duplicação de dados. Capaz de armazenar até 2^48 (281 trilhões) de nós de objeto em um arquivo de banco de dados binário que teoricamente pode crescer até um tamanho máximo de 8 petabytes.
 
+O iVipBase foi concebido para fornecer serviços de controle e gerenciamento de dados, com ênfase em outros serviços como autenticação, armazenamento em nuvem, funções de nuvem e extensões de nuvem, de maneira rápida e menos burocrática possível. A proposta é oferecer aos desenvolvedores do projeto alternativas, autonomia e/ou evitar encargos financeiros associados ao uso de serviços, em contraste com o Firebase.
+
+Com o iVipBase, os usuários têm a opção de armazenar e consumir dados localmente, em sua própria máquina ou servidor virtual. Além disso, há a possibilidade de contar com serviços remotos nos servidores da iVipServices (ainda em fase de planejamento). Em outras palavras, o iVipBase proporciona aos projetos a liberdade de tomar decisões quanto aos serviços de controle e gerenciamento de dados, oferecendo flexibilidade e escolha em relação aos recursos adicionais disponíveis.
+
 O iVipBase é fácil de configurar e pode ser executado em qualquer lugar: na nuvem, NAS, servidor local, PC/Mac, Raspberry Pi, no [navegador](#experimente-o-ivipbase-no-seu-navegador), onde você quiser.
 
 ## Índice

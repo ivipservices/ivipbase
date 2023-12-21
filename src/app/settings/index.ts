@@ -88,9 +88,18 @@ interface AppServerSettings {
 	email: InitialServerEmailSettings;
 }
 
+interface DatabaseSettings {
+	dbname: string;
+}
+
 export class IvipBaseSettings extends BrowserSettings {
 	readonly isServer: boolean = false;
 	readonly isValidClient: boolean = false;
+
+	readonly dbname: string | string[] = "root";
+	readonly database: DatabaseSettings | DatabaseSettings[] = {
+		dbname: "root",
+	};
 
 	readonly server?: ServerSettings;
 
@@ -103,10 +112,20 @@ export class IvipBaseSettings extends BrowserSettings {
 		super(options);
 
 		if (options.isServer && isPossiblyServer) {
+			this.isServer = true;
 			this.server = new ServerSettings(options);
 
 			if (typeof options.email === "object") {
 				this.email = new ServerEmailSettings(options.email);
+			}
+
+			if (Array.isArray(options.database) || typeof options.database === "object") {
+				this.database = (Array.isArray(options.database) ? options.database : [options.database]).filter((o) => {
+					return typeof o === "object" && typeof o.dbname === "string" && o.dbname.trim() !== "";
+				});
+
+				this.dbname = this.database.map(({ dbname }) => dbname);
+				this.dbname = this.dbname.length > 0 ? this.dbname : "root";
 			}
 		}
 	}

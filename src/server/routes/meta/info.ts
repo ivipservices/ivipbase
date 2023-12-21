@@ -1,6 +1,5 @@
 import { LocalServer, RouteRequest } from "../../";
 import * as os from "os";
-const SERVER_VERSION = "%SERVER_VERSION%"; // Loaded from package.json by npm scripts
 
 export type RequestQuery = null;
 export type RequestBody = null;
@@ -13,9 +12,9 @@ export type Request = RouteRequest<RequestQuery, RequestBody, ResponseBody>;
 
 export const addRoute = (env: LocalServer) => {
 	// Add info endpoint
-	env.router.get(`/info/${env.db.name}`, (req: Request, res) => {
+	env.router.get(`/info/:dbName`, (req: Request, res) => {
 		const info = {
-			version: SERVER_VERSION,
+			version: env.settings.serverVersion,
 			time: Date.now(),
 			process: process.pid,
 		};
@@ -38,7 +37,7 @@ export const addRoute = (env: LocalServer) => {
 			};
 			const mem = process.memoryUsage();
 			const adminInfo = {
-				dbname: env.db.name,
+				dbname: req.params["dbName"],
 				platform: os.platform(),
 				arch: os.arch(),
 				release: os.release(),

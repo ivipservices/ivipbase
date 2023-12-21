@@ -11,7 +11,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 
 	readonly name: string = DEFAULT_ENTRY_NAME;
 	readonly settings: IvipBaseSettings = new IvipBaseSettings();
-	readonly storage: CustomStorage = new DataStorage();
+	readonly storage: CustomStorage = new DataStorage(this.settings.dbname);
 	isDeleted: boolean = false;
 	readonly isServer: boolean;
 	server?: LocalServer;
@@ -43,7 +43,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 	init() {
 		if (!this._ready) {
 			if (this.isServer) {
-				this.server = new LocalServer(this.name, this.settings.server);
+				this.server = new LocalServer(this, this.settings.server);
 				this.server.ready(() => {
 					this.emitOnce("ready");
 				});
@@ -109,6 +109,10 @@ export function getApp(name: string = DEFAULT_ENTRY_NAME): IvipBaseApp {
 
 export function getApps(): IvipBaseApp[] {
 	return Array.from(_apps.values());
+}
+
+export function getAppsName(): string[] {
+	return Array.from(_apps.keys());
 }
 
 export function getFirstApp(): IvipBaseApp {

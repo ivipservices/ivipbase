@@ -101,7 +101,7 @@ const hostnameRegex = /^(?:(?:https?|ftp):\/\/)?(?:localhost|(?:[a-zA-Z0-9-]+\.)
 
 export class IvipBaseSettings {
 	readonly name: string = DEFAULT_ENTRY_NAME;
-	readonly dbname: string = "root";
+	readonly dbname: string | string[] = "root";
 	readonly logLevel: "log" | "warn" | "error" = "log";
 	readonly storage: StorageSettings = new DataStorageSettings();
 
@@ -116,8 +116,9 @@ export class IvipBaseSettings {
 			this.name = options.name;
 		}
 
-		if (typeof options.dbname === "string") {
-			this.dbname = options.dbname;
+		if (typeof options.dbname === "string" || Array.isArray(options.dbname)) {
+			this.dbname = (Array.isArray(options.dbname) ? options.dbname : [options.dbname]).filter((n) => typeof n === "string" && n.trim() !== "");
+			this.dbname = this.dbname.length > 0 ? this.dbname : "root";
 		}
 
 		if (typeof options.logLevel === "string" && ["log", "warn", "error"].includes(options.logLevel)) {

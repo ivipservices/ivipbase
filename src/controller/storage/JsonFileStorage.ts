@@ -3,6 +3,7 @@ import { StorageNode, StorageNodeInfo } from "./MDE";
 import * as fs from "fs";
 import * as path from "path";
 import { dirname } from "path";
+import { AppError, ERROR_FACTORY } from "../erros";
 
 const dirnameRoot = dirname(require.resolve("."));
 
@@ -19,12 +20,18 @@ export class JsonFileStorageSettings {
 
 export class JsonFileStorage extends CustomStorage {
 	readonly options: JsonFileStorageSettings;
-	data: Map<string, StorageNode> = new Map();
+	private data: Record<string, Map<string, StorageNode>> = {};
 
-	constructor(options: Partial<JsonFileStorageSettings> = {}) {
+	constructor(database: string | string[], options: Partial<JsonFileStorageSettings> = {}) {
 		super();
 		this.options = new JsonFileStorageSettings(options);
 		this.ready = false;
+
+		(Array.isArray(database) ? database : [database])
+			.filter((name) => typeof name === "string" && name.trim() !== "")
+			.forEach((name) => {
+				this.data[name] = new Map<string, StorageNode>();
+			});
 
 		fs.readFile(this.options.filePath, "utf8", (err, data) => {
 			if (err) {
@@ -32,12 +39,17 @@ export class JsonFileStorage extends CustomStorage {
 			}
 
 			try {
-				const jsonData: Array<{
-					path: string;
-					content: StorageNode;
-				}> = JSON.parse(data);
+				const jsonData: Record<
+					string,
+					Array<{
+						path: string;
+						content: StorageNode;
+					}>
+				> = JSON.parse(data);
 
-				this.data = new Map<string, StorageNode>(jsonData.map((item) => [item.path, item.content]));
+				for (let name in jsonData) {
+					this.data[name] = new Map<string, StorageNode>(jsonData[name].map((item) => [item.path, item.content]));
+				}
 			} catch (parseError) {
 				throw `Erro ao fazer o parse do JSON: ${String(parseError)}`;
 			}
@@ -46,11 +58,15 @@ export class JsonFileStorage extends CustomStorage {
 		});
 	}
 
-	async getMultiple(expression: RegExp): Promise<StorageNodeInfo[]> {
+	async getMultiple(database: string, expression: RegExp): Promise<StorageNodeInfo[]> {
+		if (!this.ready || !this.data[database]) {
+			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
+		}
+
 		const list: StorageNodeInfo[] = [];
 		for (let path in this.data) {
 			if (expression.test(path)) {
-				const content = this.data.get(path);
+				const content = this.data[database].get(path);
 				if (content) {
 					list.push({ path, content });
 				}
@@ -59,29 +75,42 @@ export class JsonFileStorage extends CustomStorage {
 		return list;
 	}
 
-	async setNode(path: string, content: StorageNode, node: StorageNodeInfo) {
-		this.data.set(path, content);
+	async setNode(database: string, path: string, content: StorageNode, node: StorageNodeInfo) {
+		if (!this.ready || !this.data[database]) {
+			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
+		}
+
+		this.data[database].set(path, content);
 		await this.saveFile();
 	}
 
-	async removeNode(path: string, content: StorageNode, node: StorageNodeInfo) {
-		this.data.delete(path);
+	async removeNode(database: string, path: string, content: StorageNode, node: StorageNodeInfo) {
+		if (!this.ready || !this.data[database]) {
+			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
+		}
+
+		this.data[database].delete(path);
 		await this.saveFile();
 	}
 
 	saveFile(): Promise<void> {
 		return new Promise((resolve, reject) => {
-			const jsonData: Array<{
-				path: string;
-				content: StorageNode;
-			}> = [];
+			const jsonData: Record<
+				string,
+				Array<{
+					path: string;
+					content: StorageNode;
+				}>
+			> = {};
 
-			this.data.forEach((content, path) => {
-				jsonData.push({
-					path,
-					content,
+			for (let name in this.data) {
+				this.data[name].forEach((content, path) => {
+					jsonData[name].push({
+						path,
+						content,
+					});
 				});
-			});
+			}
 
 			const jsonString = JSON.stringify(jsonData, null, 4);
 			fs.writeFileSync(this.options.filePath, jsonString, "utf8");

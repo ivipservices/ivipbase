@@ -6,14 +6,14 @@ import { MongoClient, Collection, Db } from "mongodb";
 export class MongodbSettings {
 	host: string = "localhost";
 	port: number = 27017;
-	database: string = "root";
+	database: string[] = ["root"];
 	collection: string = "main-database";
 	username: string | undefined;
 	password: string | undefined;
 	options: Record<string, any> | undefined;
 	mdeOptions: Partial<Omit<CustomStorageSettings, "getMultiple" | "setNode" | "removeNode">> = {};
 
-	constructor(options: Partial<Omit<MongodbSettings, "database">> = {}) {
+	constructor(options: Partial<Omit<MongodbSettings, "database" | "collection">> = {}) {
 		if (typeof options.host === "string") {
 			this.host = options.host;
 		}
@@ -41,15 +41,20 @@ export class MongodbSettings {
 }
 
 export class MongodbStorage extends CustomStorage {
-	options: MongodbSettings;
-	client: MongoClient;
-	db: Db | undefined;
-	collection: Collection<StorageNodeInfo> | undefined;
+	private options: MongodbSettings;
+	private client: MongoClient;
+	private database: Record<
+		string,
+		{
+			db: Db;
+			collection: Collection<StorageNodeInfo>;
+		}
+	> = {};
 
-	constructor(database: string, options: Partial<Omit<MongodbSettings, "database">>) {
+	constructor(database: string | string[], options: Partial<Omit<MongodbSettings, "database">>) {
 		super(options.mdeOptions);
 		this.options = new MongodbSettings(options);
-		this.options.database = database;
+		this.options.database = (Array.isArray(database) ? database : [database]).filter((name) => typeof name === "string" && name.trim() !== "");
 		this.dbName = "MongoDB";
 		this.ready = false;
 
@@ -79,27 +84,29 @@ export class MongodbStorage extends CustomStorage {
 			await this.client.connect();
 			this.ready = true;
 
-			this.db = this.client.db(this.options.database);
-			this.collection = await this.getCollectionBy(this.options.collection);
+			for (let name of this.options.database) {
+				this.database[name].db = this.client.db(name);
+				this.database[name].collection = await this.getCollectionBy(name, this.options.collection);
+			}
 		} catch (err) {
 			this.ready = false;
 			throw ERROR_FACTORY.create(AppError.DB_CONNECTION_ERROR, { error: String(err) });
 		}
 	}
 
-	private async getCollectionBy(collectionName: string): Promise<Collection<StorageNodeInfo>> {
-		if (!this.ready || !this.db) {
-			throw ERROR_FACTORY.create(AppError.DB_DISCONNECTED, { dbName: this.dbName });
+	private async getCollectionBy(name: string, collectionName: string): Promise<Collection<StorageNodeInfo>> {
+		if (!this.ready || !this.database[name] || !this.database[name].db) {
+			throw ERROR_FACTORY.create(AppError.DB_DISCONNECTED, { dbName: name });
 		}
 
-		const collectionNames = await this.db.listCollections().toArray();
+		const collectionNames = await this.database[name].db.listCollections().toArray();
 		const collectionExists = collectionNames.some((col) => col.name === collectionName);
 
 		if (!collectionExists) {
-			await this.db.createCollection<StorageNodeInfo>(collectionName);
+			await this.database[name].db.createCollection<StorageNodeInfo>(collectionName);
 		}
 
-		return this.db.collection<StorageNodeInfo>(collectionName);
+		return this.database[name].db.collection<StorageNodeInfo>(collectionName);
 	}
 
 	get mongoUri() {
@@ -122,9 +129,9 @@ export class MongodbStorage extends CustomStorage {
 		return uri;
 	}
 
-	async getMultiple(expression: RegExp): Promise<StorageNodeInfo[]> {
-		if (!this.ready || !this.collection) {
-			throw ERROR_FACTORY.create(AppError.DB_DISCONNECTED, { dbName: this.dbName });
+	async getMultiple(database: string, expression: RegExp): Promise<StorageNodeInfo[]> {
+		if (!this.ready || !this.database[database] || !this.database[database].collection) {
+			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
 		}
 
 		const query = {
@@ -133,23 +140,23 @@ export class MongodbStorage extends CustomStorage {
 			},
 		};
 
-		return await this.collection.find(query).toArray();
+		return await this.database[database].collection.find(query).toArray();
 	}
 
-	async setNode(path: string, content: StorageNode, node: StorageNodeInfo) {
-		if (!this.ready || !this.collection) {
-			throw ERROR_FACTORY.create(AppError.DB_DISCONNECTED, { dbName: this.dbName });
+	async setNode(database: string, path: string, content: StorageNode, node: StorageNodeInfo) {
+		if (!this.ready || !this.database[database] || !this.database[database].collection) {
+			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
 		}
 
-		await this.collection.updateOne({ path: path }, { $set: JSON.parse(JSON.stringify(node)) }, { upsert: true });
-		//await this.collection.replaceOne({ path: path }, JSON.parse(JSON.stringify(node)));
+		await this.database[database].collection.updateOne({ path: path }, { $set: JSON.parse(JSON.stringify(node)) }, { upsert: true });
+		//await this.database[database].collection.replaceOne({ path: path }, JSON.parse(JSON.stringify(node)));
 	}
 
-	async removeNode(path: string, content: StorageNode, node: StorageNodeInfo) {
-		if (!this.ready || !this.collection) {
-			throw ERROR_FACTORY.create(AppError.DB_DISCONNECTED, { dbName: this.dbName });
+	async removeNode(database: string, path: string, content: StorageNode, node: StorageNodeInfo) {
+		if (!this.ready || !this.database[database] || !this.database[database].collection) {
+			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
 		}
 
-		await this.collection.deleteOne({ path: path });
+		await this.database[database].collection.deleteOne({ path: path });
 	}
 }

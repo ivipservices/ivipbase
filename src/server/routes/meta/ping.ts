@@ -6,7 +6,7 @@ export type ResponseBody = "pong";
 export type Request = RouteRequest<RequestQuery, RequestBody, ResponseBody>;
 
 export const addRoute = (env: LocalServer) => {
-	env.router.get(`/ping/${env.db.name}`, (req: Request, res) => {
+	env.router.get(`/ping/:dbName`, (req: Request, res) => {
 		// For simple connectivity check
 		res.send("pong");
 	});

@@ -50,7 +50,7 @@ export class MDESettings {
 	 * @type {((expression: RegExp) => Promise<StorageNodeInfo[]> | StorageNodeInfo[]) | undefined}
 	 * @default undefined
 	 */
-	getMultiple: (expression: RegExp) => Promise<StorageNodeInfo[]> | StorageNodeInfo[] = () => [];
+	getMultiple: (database: string, expression: RegExp) => Promise<StorageNodeInfo[]> | StorageNodeInfo[] = () => [];
 
 	/**
 	 * Uma função que realiza um set de um node na base de dados com base em um path especificado.
@@ -58,7 +58,7 @@ export class MDESettings {
 	 * @type {(((path:string, content: StorageNode, node: StorageNodeInfo) => Promise<void> | void) | undefined}
 	 * @default undefined
 	 */
-	setNode: (path: string, content: StorageNode, node: StorageNodeInfo) => Promise<void> | void = () => {};
+	setNode: (database: string, path: string, content: StorageNode, node: StorageNodeInfo) => Promise<void> | void = () => {};
 
 	/**
 	 * Uma função que realiza um remove de um node na base de dados com base em um path especificado.
@@ -66,7 +66,7 @@ export class MDESettings {
 	 * @type {(((path:string, content: StorageNode, node: StorageNodeInfo) => Promise<void> | void) | undefined}
 	 * @default undefined
 	 */
-	removeNode: (path: string, content: StorageNode, node: StorageNodeInfo) => Promise<void> | void = () => {};
+	removeNode: (database: string, path: string, content: StorageNode, node: StorageNodeInfo) => Promise<void> | void = () => {};
 
 	init: ((this: MDE) => void) | undefined;
 
@@ -99,22 +99,22 @@ export class MDESettings {
 			this.rollback = options.rollback;
 		}
 
-		this.getMultiple = async (reg) => {
+		this.getMultiple = async (database, reg) => {
 			if (typeof options.getMultiple === "function") {
-				return await Promise.race([options.getMultiple(reg)]);
+				return await Promise.race([options.getMultiple(database, reg)]);
 			}
 			return [];
 		};
 
-		this.setNode = async (path, content, node) => {
+		this.setNode = async (database, path, content, node) => {
 			if (typeof options.setNode === "function") {
-				await Promise.race([options.setNode(path, content, node)]);
+				await Promise.race([options.setNode(database, path, content, node)]);
 			}
 		};
 
-		this.removeNode = async (path, content, node) => {
+		this.removeNode = async (database, path, content, node) => {
 			if (typeof options.removeNode === "function") {
-				await Promise.race([options.removeNode(path, content, node)]);
+				await Promise.race([options.removeNode(database, path, content, node)]);
 			}
 		};
 
@@ -135,9 +135,9 @@ export default class MDE extends SimpleEventEmitter {
 	 *
 	 * @type {NodesPending[]}
 	 */
-	private nodes: NodesPending[] = [];
+	private nodes: Record<string, NodesPending[]> = {};
 
-	private batch: NodesPending[] = [];
+	private batch: Record<string, NodesPending[]> = {};
 
 	private sendingNodes: Promise<void> = Promise.resolve();
 
@@ -195,11 +195,12 @@ export default class MDE extends SimpleEventEmitter {
 
 	/**
 	 * Verifica se um caminho específico existe no nó.
+	 * @param {string} database - Nome do banco de dados.
 	 * @param path - O caminho a ser verificado.
 	 * @returns {Promise<boolean>} `true` se o caminho existir no nó, `false` caso contrário.
 	 */
-	async isPathExists(path: string): Promise<boolean> {
-		const nodeList = await this.getNodesBy(path, false, false).then((nodes) => {
+	async isPathExists(database: string, path: string): Promise<boolean> {
+		const nodeList = await this.getNodesBy(database, path, false, false).then((nodes) => {
 			return Promise.resolve(
 				nodes
 					.sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
@@ -227,19 +228,20 @@ export default class MDE extends SimpleEventEmitter {
 	/**
 	 * Obtém uma lista de nodes com base em um caminho e opções adicionais.
 	 *
+	 * @param {string} database - Nome do banco de dados.
 	 * @param {string} path - O caminho a ser usado para filtrar os nodes.
 	 * @param {boolean} [onlyChildren=false] - Se verdadeiro, exporta apenas os filhos do node especificado.
 	 * @param {boolean} [allHeirs=false] - Se verdadeiro, exporta todos os descendentes em relação ao path especificado.
 	 * @returns {Promise<StorageNodeInfo[]>} - Uma Promise que resolve para uma lista de informações sobre os nodes.
 	 * @throws {Error} - Lança um erro se ocorrer algum problema durante a busca assíncrona.
 	 */
-	async getNodesBy(path: string, onlyChildren: boolean = false, allHeirs: boolean = false): Promise<StorageNodeInfo[]> {
+	async getNodesBy(database: string, path: string, onlyChildren: boolean = false, allHeirs: boolean = false): Promise<StorageNodeInfo[]> {
 		const reg = this.pathToRegex(path, onlyChildren, allHeirs);
-		let nodeList: StorageNodeInfo[] = this.nodes.concat(this.batch).filter(({ path }) => reg.test(path));
+		let nodeList: StorageNodeInfo[] = (this.nodes[database] ?? []).concat(this.batch[database] ?? []).filter(({ path }) => reg.test(path));
 		let byNodes: StorageNodeInfo[] = [];
 
 		try {
-			byNodes = await this.settings.getMultiple(reg);
+			byNodes = await this.settings.getMultiple(database, reg);
 		} catch {}
 
 		const { result } = prepareMergeNodes.apply(this, [byNodes, nodeList]);
@@ -259,13 +261,14 @@ export default class MDE extends SimpleEventEmitter {
 
 	/**
 	 * Obtém o node pai de um caminho específico.
+	 * @param {string} database - Nome do banco de dados.
 	 * @param path - O caminho para o qual o node pai deve ser obtido.
 	 * @returns {Promise<StorageNodeInfo | undefined>} O node pai correspondente ao caminho ou `undefined` se não for encontrado.
 	 */
-	async getNodeParentBy(path: string): Promise<StorageNodeInfo | undefined> {
+	async getNodeParentBy(database: string, path: string): Promise<StorageNodeInfo | undefined> {
 		const pathInfo = PathInfo.get(path);
 
-		const nodes = await this.getNodesBy(path, false);
+		const nodes = await this.getNodesBy(database, path, false);
 
 		return nodes
 			.filter((node) => {
@@ -280,14 +283,14 @@ export default class MDE extends SimpleEventEmitter {
 			.shift();
 	}
 
-	async sendNodes() {
+	async sendNodes(database: string) {
 		const status = await promiseState(this.sendingNodes);
 		if (status === "pending") {
 			return;
 		}
 
 		this.sendingNodes = new Promise(async (resolve) => {
-			this.batch = this.nodes
+			this.batch[database] = (this.nodes[database] ?? [])
 				.splice(0)
 				.sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
 					return aM > bM ? 1 : aM < bM ? -1 : 0;
@@ -302,17 +305,17 @@ export default class MDE extends SimpleEventEmitter {
 			let listBatchRemoved: StorageNodeInfo[] = [];
 
 			try {
-				for (let node of this.batch) {
+				for (let node of this.batch[database]) {
 					const reg = this.pathToRegex(node.path, false, false);
-					const byNodes = await this.settings.getMultiple(reg);
+					const byNodes = await this.settings.getMultiple(database, reg);
 
 					const { added, modified, removed } = prepareMergeNodes.apply(this, [byNodes, [node]]);
 
 					listBatchRemoved = listBatchRemoved.concat(removed);
 
 					for (let node of modified) {
-						await this.settings.setNode(node.path, node.content, node);
-						this.batch = this.batch.filter(({ path }) => PathInfo.get(path).equals(node.path) !== true);
+						await this.settings.setNode(database, node.path, node.content, node);
+						this.batch[database] = this.batch[database].filter(({ path }) => PathInfo.get(path).equals(node.path) !== true);
 						this.emit("change", {
 							name: "change",
 							path: node.path,
@@ -321,8 +324,8 @@ export default class MDE extends SimpleEventEmitter {
 					}
 
 					for (let node of added) {
-						await this.settings.setNode(node.path, node.content, node);
-						this.batch = this.batch.filter(({ path }) => PathInfo.get(path).equals(node.path) !== true);
+						await this.settings.setNode(database, node.path, node.content, node);
+						this.batch[database] = this.batch[database].filter(({ path }) => PathInfo.get(path).equals(node.path) !== true);
 						this.emit("add", {
 							name: "add",
 							path: node.path,
@@ -332,11 +335,11 @@ export default class MDE extends SimpleEventEmitter {
 				}
 				for (let node of listBatchRemoved) {
 					const reg = this.pathToRegex(node.path, false, true);
-					const byNodes = await this.settings.getMultiple(reg);
+					const byNodes = await this.settings.getMultiple(database, reg);
 
 					for (let r of byNodes) {
-						await this.settings.removeNode(r.path, r.content, r);
-						this.batch = this.batch.filter(({ path }) => PathInfo.get(path).equals(r.path) !== true);
+						await this.settings.removeNode(database, r.path, r.content, r);
+						this.batch[database] = this.batch[database].filter(({ path }) => PathInfo.get(path).equals(r.path) !== true);
 						this.emit("remove", {
 							name: "remove",
 							path: r.path,
@@ -346,17 +349,19 @@ export default class MDE extends SimpleEventEmitter {
 				}
 			} catch {}
 
-			this.nodes = this.nodes.concat(this.batch);
+			this.nodes[database] = (this.nodes[database] ?? []).concat(this.batch[database]);
+			this.batch[database] = [];
 			resolve();
 		});
 	}
 
 	/**
 	 * Adiciona um ou mais nodes a matriz de nodes atual e aplica evento de alteração.
+	 * @param {string} database - Nome do banco de dados.
 	 * @param nodes - Um ou mais nós a serem adicionados.
 	 * @returns {MDE} O nó atual após a adição dos nós.
 	 */
-	pushNode(...nodes: (NodesPending[] | NodesPending)[]): MDE {
+	pushNode(database: string, ...nodes: (NodesPending[] | NodesPending)[]): MDE {
 		const forNodes: NodesPending[] =
 			Array.prototype.concat
 				.apply(
@@ -365,28 +370,34 @@ export default class MDE extends SimpleEventEmitter {
 				)
 				.filter((node: any = {}) => node && typeof node.path === "string" && "content" in node) ?? [];
 
-		for (let node of forNodes) {
-			this.nodes.push(node);
+		if (!Array.isArray(this.nodes[database])) {
+			this.nodes[database] = [];
 		}
 
-		this.sendNodes();
+		for (let node of forNodes) {
+			this.nodes[database].push(node);
+		}
+
+		this.sendNodes(database);
 		return this;
 	}
 
 	/**
 	 * Obtém informações personalizadas sobre um node com base no caminho especificado.
 	 *
+	 * @param {string} database - Nome do banco de dados.
 	 * @param {string} path - O caminho do node para o qual as informações devem ser obtidas.
 	 * @returns {CustomStorageNodeInfo} - Informações personalizadas sobre o node especificado.
 	 */
 	async getInfoBy(
+		database: string,
 		path: string,
 		options: {
 			include_child_count?: boolean;
 		} = {},
 	): Promise<CustomStorageNodeInfo> {
 		const pathInfo = PathInfo.get(path);
-		const nodes = await this.getNodesBy(path, options.include_child_count, false);
+		const nodes = await this.getNodesBy(database, path, options.include_child_count, false);
 		const mainNode = nodes.find(({ path: p }) => PathInfo.get(p).equals(path) || PathInfo.get(p).isParentOf(path));
 
 		const defaultNode = new CustomStorageNodeInfo({
@@ -446,11 +457,11 @@ export default class MDE extends SimpleEventEmitter {
 		return info;
 	}
 
-	getChildren(path: string) {
+	getChildren(database: string, path: string) {
 		const pathInfo = PathInfo.get(path);
 
 		const next = async (callback: (info: CustomStorageNodeInfo) => false | undefined) => {
-			const nodes = await this.getNodesBy(path, true, false);
+			const nodes = await this.getNodesBy(database, path, true, false);
 			let isContinue = true;
 
 			for (let node of nodes) {
@@ -462,7 +473,7 @@ export default class MDE extends SimpleEventEmitter {
 					continue;
 				}
 
-				const info = await this.getInfoBy(node.path, { include_child_count: false });
+				const info = await this.getInfoBy(database, node.path, { include_child_count: false });
 
 				isContinue = callback(info) ?? true;
 			}
@@ -477,11 +488,13 @@ export default class MDE extends SimpleEventEmitter {
 	 * Obtém valor referente ao path específico.
 	 *
 	 * @template T - Tipo genérico para o retorno da função.
+	 * @param {string} database - Nome do banco de dados.
 	 * @param {string} path - Caminho de um node raiz.
 	 * @param {boolean} [onlyChildren=true] - Se verdadeiro, exporta apenas os filhos do node especificado.
 	 * @return {Promise<T | undefined>} - Retorna valor referente ao path ou undefined se nenhum node for encontrado.
 	 */
 	async get<t = any>(
+		database: string,
 		path: string,
 		options?: {
 			include?: string[];
@@ -490,13 +503,14 @@ export default class MDE extends SimpleEventEmitter {
 		},
 	): Promise<t | undefined> {
 		path = PathInfo.get([this.settings.prefix, path]).path;
-		const nodes = await this.getNodesBy(path, options?.onlyChildren, true);
+		const nodes = await this.getNodesBy(database, path, options?.onlyChildren, true);
 		return structureNodes(path, nodes, options);
 	}
 
 	/**
 	 * Define um valor no armazenamento com o caminho especificado.
 	 *
+	 * @param {string} database - Nome do banco de dados.
 	 * @param {string} path - O caminho do node a ser definido.
 	 * @param {any} value - O valor a ser armazenado em nodes.
 	 * @param {Object} [options] - Opções adicionais para controlar o comportamento da definição.
@@ -504,6 +518,7 @@ export default class MDE extends SimpleEventEmitter {
 	 * @returns {Promise<void>}
 	 */
 	async set(
+		database: string,
 		path: string,
 		value: any,
 		options: {
@@ -512,10 +527,11 @@ export default class MDE extends SimpleEventEmitter {
 	): Promise<void> {
 		path = PathInfo.get([this.settings.prefix, path]).path;
 		const nodes = destructureData.apply(this, ["SET", path, value, options]);
-		this.pushNode(nodes);
+		this.pushNode(database, nodes);
 	}
 
 	async update(
+		database: string,
 		path: string,
 		value: any,
 		options: {
@@ -524,6 +540,6 @@ export default class MDE extends SimpleEventEmitter {
 	): Promise<void> {
 		path = PathInfo.get([this.settings.prefix, path]).path;
 		const nodes = destructureData.apply(this, ["UPDATE", path, value, options]);
-		this.pushNode(nodes);
+		this.pushNode(database, nodes);
 	}
 }

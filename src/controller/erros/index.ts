@@ -7,6 +7,7 @@ export const enum AppError {
 	APP_DELETED = "app-deleted",
 	DB_DISCONNECTED = "db-disconnected",
 	DB_CONNECTION_ERROR = "db-connection-error",
+	DB_NOT_FOUND = "db-not-found",
 }
 
 const ERRORS: ErrorMap<AppError> = {
@@ -16,6 +17,7 @@ const ERRORS: ErrorMap<AppError> = {
 	[AppError.APP_DELETED]: "Aplicativo iVipBase chamado '{$appName}' já excluído",
 	[AppError.DB_DISCONNECTED]: "Banco de dados '{$dbName}' desconectado",
 	[AppError.DB_CONNECTION_ERROR]: "Database connection error: {$error}",
+	[AppError.DB_NOT_FOUND]: "Banco de dados '{$dbName}' não encontrado",
 };
 
 interface ErrorParams {
@@ -25,6 +27,7 @@ interface ErrorParams {
 	[AppError.APP_DELETED]: { appName: string };
 	[AppError.DB_DISCONNECTED]: { dbName: string };
 	[AppError.DB_CONNECTION_ERROR]: { error: string };
+	[AppError.DB_NOT_FOUND]: { dbName: string };
 }
 
 export const ERROR_FACTORY = new ErrorFactory<AppError, ErrorParams>("app", "Firebase", ERRORS);

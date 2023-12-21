@@ -5,8 +5,8 @@
 import { initializeApp, getDatabase } from "../src";
 
 const app = initializeApp({
-	// port: 8080,
-	// isSerer: true,
+	port: 8080,
+	isServer: true,
 });
 
 app.ready(async () => {

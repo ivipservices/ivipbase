@@ -6,6 +6,7 @@ import { addMetadataRoutes } from "./routes";
 import { Server, createServer } from "http";
 import { DbUserAccountDetails } from "./schema/user";
 import { add404Middleware, addCacheMiddleware, addCorsMiddleware } from "./middleware";
+import type { IvipBaseApp } from "../app";
 const createExpress = (express as any).default ?? express;
 
 export { ServerSettings, ServerInitialSettings };
@@ -41,8 +42,8 @@ export class LocalServer extends AbstractLocalServer<LocalServer> {
 	readonly router: HttpRouter = this.createRouter();
 	readonly server: Server = createServer(this.app);
 
-	constructor(readonly appName: string, settings: Partial<ServerSettings> = {}) {
-		super(appName, settings);
+	constructor(localApp: IvipBaseApp, settings: Partial<ServerSettings> = {}) {
+		super(localApp, settings);
 		this.init();
 	}
 
@@ -70,8 +71,8 @@ export class LocalServer extends AbstractLocalServer<LocalServer> {
 			(await import("./middleware/swagger")).addMiddleware(this);
 		}
 
-		this.extend = (method: HttpMethod, ext_path: string, handler: (req: HttpRequest, res: HttpResponse) => any) => {
-			const route = `/ext/${this.db.name}/${ext_path}`;
+		this.extend = (database: string, method: HttpMethod, ext_path: string, handler: (req: HttpRequest, res: HttpResponse) => any) => {
+			const route = `/ext/${database}/${ext_path}`;
 			this.debug.log(`Extending server: `, method, route);
 			this.router[method.toLowerCase() as expressRouteMethod](route, handler);
 		};
@@ -84,7 +85,7 @@ export class LocalServer extends AbstractLocalServer<LocalServer> {
 		// Iniciar escuta
 		this.server.listen(this.settings.port, this.settings.host, () => {
 			// Ready!!
-			this.debug.log(`"${this.db.name}" server running at ${this.url}`);
+			this.debug.log(`Server running at ${this.url}`);
 			this.emitOnce(`ready`);
 		});
 	}
@@ -105,7 +106,7 @@ export class LocalServer extends AbstractLocalServer<LocalServer> {
 			throw new Error("O servidor já está pausado");
 		}
 		this.server.close();
-		this.debug.warn(`Paused "${this.db.name}" server at ${this.url}`);
+		this.debug.warn(`Paused server at ${this.url}`);
 		this.emit("pause");
 		this.paused = true;
 	}
@@ -119,7 +120,7 @@ export class LocalServer extends AbstractLocalServer<LocalServer> {
 		}
 		return new Promise((resolve) => {
 			this.server.listen(this.settings.port, this.settings.host, () => {
-				this.debug.warn(`Resumed "${this.db.name}" server at ${this.url}`);
+				this.debug.warn(`Resumed server at ${this.url}`);
 				this.emit("resume");
 				this.paused = false;
 				resolve();
@@ -146,7 +147,7 @@ export class LocalServer extends AbstractLocalServer<LocalServer> {
 	 * @param ext_path Caminho para associar (anexado a /ext/)
 	 * @param handler Seu callback de manipulador de solicitação do Express
 	 */
-	extend(method: HttpMethod, ext_path: string, handler: (req: HttpRequest, res: HttpResponse) => void) {
+	extend(database: string, method: HttpMethod, ext_path: string, handler: (req: HttpRequest, res: HttpResponse) => void) {
 		throw new ServerNotReadyError();
 	}
 }

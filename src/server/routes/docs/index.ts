@@ -16,7 +16,7 @@ export const addRoute = (env: LocalServer) => {
 				title: "iVipBase",
 				description:
 					"Documentação de endpoint e ambiente de teste da API iVipBase. Esta documentação está disponível no servidor porque está sendo executada em modo de desenvolvimento. Para desabilitar isso, defina sua variável de ambiente NODE_ENV para produção. Muitos endpoints exigem que você se autentique usando a autenticação Bearer. Use o endpoint _/auth/{dbname}/signin_ para obter um token de acesso, clique no botão _Authorize_ e cole seu token no campo de entrada. Para obter mais informações sobre iVipBase, consulte GitHub",
-				version: "%SERVER_VERSION%",
+				version: env.settings.serverVersion,
 				contact: {
 					name: "iVipBase API Support",
 					email: "desenvolvimento@ivipcoin.com",

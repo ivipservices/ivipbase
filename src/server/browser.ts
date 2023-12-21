@@ -1,5 +1,6 @@
 import { DataBase, DebugLogger, SimpleEventEmitter } from "ivipbase-core";
 import { getDatabase } from "../database";
+import type { IvipBaseApp } from "../app";
 
 export class ServerNotReadyError extends Error {
 	constructor() {
@@ -134,6 +135,8 @@ export type ServerInitialSettings<LocalServer = any> = Partial<{
 	 * @param server Instância do `iVipBaseServer`
 	 */
 	init?: (server: LocalServer) => Promise<void>;
+
+	serverVersion: string;
 }>;
 
 export class ServerSettings<LocalServer = any> {
@@ -146,6 +149,7 @@ export class ServerSettings<LocalServer = any> {
 	readonly trustProxy: boolean = true;
 	readonly auth: ServerAuthenticationSettings;
 	readonly init?: (server: LocalServer) => Promise<void>;
+	readonly serverVersion: string = "1.0.0";
 
 	constructor(options: ServerInitialSettings<LocalServer> = {}) {
 		if (typeof options.logLevel === "string" && ["verbose", "log", "warn", "error"].includes(options.logLevel)) {
@@ -177,6 +181,10 @@ export class ServerSettings<LocalServer = any> {
 		if (typeof options.init === "function") {
 			this.init = options.init;
 		}
+
+		if (typeof options.serverVersion === "string") {
+			this.serverVersion = options.serverVersion;
+		}
 	}
 }
 
@@ -186,12 +194,12 @@ export abstract class AbstractLocalServer<LocalServer = any> extends SimpleEvent
 	protected _ready = false;
 	readonly settings: ServerSettings<LocalServer>;
 	readonly debug: DebugLogger;
-	readonly db: DataBase;
+	readonly db: (dbName: string) => DataBase;
 
-	constructor(readonly appName: string, settings: Partial<ServerSettings> = {}) {
+	constructor(readonly localApp: IvipBaseApp, settings: Partial<ServerSettings> = {}) {
 		super();
 		this.settings = new ServerSettings<LocalServer>(settings);
-		this.db = getDatabase(appName);
+		this.db = (dbName) => getDatabase(dbName, localApp);
 		this.debug = new DebugLogger(this.settings.logLevel, `[${this.db.name}]`);
 
 		this.once("ready", () => {
@@ -223,15 +231,15 @@ export abstract class AbstractLocalServer<LocalServer = any> extends SimpleEvent
 	 */
 	get url() {
 		//return `http${this.settings.https.enabled ? 's' : ''}://${this.settings.host}:${this.settings.port}/${this.settings.rootPath}`;
-		return `http://${this.settings.host}:${this.settings.port}/${this.settings.rootPath}`;
+		return `http://${this.settings.host}:${this.settings.port}/${this.settings.rootPath}`.replace(/\/+$/gi, "");
 	}
 }
 
 export class LocalServer extends AbstractLocalServer<LocalServer> {
 	readonly isServer: boolean = false;
 
-	constructor(readonly appName: string, settings: Partial<ServerSettings> = {}) {
-		super(appName, settings);
+	constructor(localApp: IvipBaseApp, settings: Partial<ServerSettings> = {}) {
+		super(localApp, settings);
 		this.init();
 	}
 
