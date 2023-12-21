@@ -1,40 +1,9 @@
 import { SimpleEventEmitter, Utils } from "ivipbase-core";
-import { _apps } from "./internal.js";
+import { DEFAULT_ENTRY_NAME, _apps } from "./internal.js";
 import { ERROR_FACTORY } from "../controller/erros/index.js";
-import { LocalServer, isPossiblyServer } from "../server/index.js";
-import { DataStorageSettings, validSettings, DataStorage, applySettings } from "./verifyStorage/index.js";
-const DEFAULT_ENTRY_NAME = "[DEFAULT]";
-class IvipBaseSettings {
-    constructor(options = {}) {
-        this.name = DEFAULT_ENTRY_NAME;
-        this.dbname = "root";
-        this.logLevel = "log";
-        this.storage = new DataStorageSettings();
-        if (typeof options.name === "string") {
-            this.name = options.name;
-        }
-        if (typeof options.dbname === "string") {
-            this.dbname = options.dbname;
-        }
-        if (typeof options.logLevel === "string" && ["log", "warn", "error"].includes(options.logLevel)) {
-            this.logLevel = options.logLevel;
-        }
-        if (validSettings(options.storage)) {
-            this.storage = options.storage;
-        }
-        if (typeof options.server === "object") {
-            if (isPossiblyServer) {
-                this.server = options.server;
-            }
-            else {
-                this.client = options.server;
-            }
-        }
-        if (typeof options.client === "object") {
-            this.client = Object.assign(this.client ?? {}, options.client);
-        }
-    }
-}
+import { LocalServer } from "../server/index.js";
+import { DataStorage, applySettings } from "./verifyStorage/index.js";
+import { IvipBaseSettings } from "./settings/index.js";
 export class IvipBaseApp extends SimpleEventEmitter {
     constructor(options) {
         super();
@@ -57,14 +26,18 @@ export class IvipBaseApp extends SimpleEventEmitter {
         this.once("ready", () => {
             this._ready = true;
         });
-        if (this.isServer) {
-            this.server = new LocalServer(this.name, this.settings.server);
-            this.server.ready(() => {
+    }
+    init() {
+        if (!this._ready) {
+            if (this.isServer) {
+                this.server = new LocalServer(this.name, this.settings.server);
+                this.server.ready(() => {
+                    this.emitOnce("ready");
+                });
+            }
+            else {
                 this.emitOnce("ready");
-            });
-        }
-        else {
-            this.emitOnce("ready");
+            }
         }
     }
     /**
@@ -99,6 +72,7 @@ export function initializeApp(options) {
         }
     }
     _apps.set(newApp.name, newApp);
+    newApp.init();
     return newApp;
 }
 export function appExists(name) {

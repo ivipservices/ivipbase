@@ -1,5 +1,4 @@
 import { DataBase, DebugLogger, SimpleEventEmitter } from "ivipbase-core";
-import { EmailRequest } from "./shared/email";
 export declare class ServerNotReadyError extends Error {
     constructor();
 }
@@ -24,7 +23,7 @@ export declare class ServerAuthenticationSettings {
      */
     readonly newUserRateLimit: number;
     /**
-     * Quantos minutos antes dos tokens de acesso expirarem. 0 para sem expiração. (não implementado ainda)
+     * Quantos minutos antes dos tokens de acesso expirarem. 0 para sem expiração.
      */
     readonly tokensExpire: number;
     /**
@@ -41,21 +40,7 @@ export declare class ServerAuthenticationSettings {
     readonly separateDb: boolean | "v2";
     constructor(settings?: Partial<ServerAuthenticationSettings>);
 }
-export interface ServerEmailServerSettings {
-    host: string;
-    port: number;
-    username?: string;
-    password?: string;
-    secure: boolean;
-}
-export interface ServerEmailSettings {
-    /** AINDA NÃO IMPLEMENTADO - Use a propriedade "send" para a sua própria implementação */
-    server?: ServerEmailServerSettings;
-    /** Função a ser chamada quando um e-mail precisa ser enviado */
-    send: (request: EmailRequest) => Promise<void>;
-}
 export type ServerInitialSettings<LocalServer = any> = Partial<{
-    serverName: string;
     /**
      * Nível de mensagens registradas no console
      */
@@ -89,18 +74,13 @@ export type ServerInitialSettings<LocalServer = any> = Partial<{
      */
     authentication: Partial<ServerAuthenticationSettings>;
     /**
-     * Configurações de e-mail que habilitam o AceBaseServer a enviar e-mails, por exemplo, para dar as boas-vindas a novos usuários, redefinir senhas, notificar sobre novos logins, etc.
-     */
-    email: ServerEmailSettings;
-    /**
      * Função de inicialização que é executada antes do servidor adicionar o middleware 404 e começar a ouvir chamadas recebidas.
      * Utilize esta função de retorno de chamada para estender o servidor com rotas personalizadas, adicionar regras de validação de dados, aguardar eventos externos, etc.
-     * @param server Instância do `AceBaseServer`
+     * @param server Instância do `iVipBaseServer`
      */
     init?: (server: LocalServer) => Promise<void>;
 }>;
 export declare class ServerSettings<LocalServer = any> {
-    readonly serverName: string;
     readonly logLevel: "verbose" | "log" | "warn" | "error";
     readonly host: string;
     readonly port: number;
@@ -109,7 +89,6 @@ export declare class ServerSettings<LocalServer = any> {
     readonly allowOrigin: string;
     readonly trustProxy: boolean;
     readonly auth: ServerAuthenticationSettings;
-    readonly email?: ServerEmailSettings;
     readonly init?: (server: LocalServer) => Promise<void>;
     constructor(options?: ServerInitialSettings<LocalServer>);
 }

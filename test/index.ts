@@ -2,7 +2,7 @@
 //require("./MDE/test_ismael");
 //require("./MDE/test_initial_app");
 
-const { initializeApp, getDatabase } = require("../src");
+import { initializeApp, getDatabase } from "../src";
 
 const app = initializeApp({
 	// port: 8080,
@@ -11,14 +11,10 @@ const app = initializeApp({
 
 app.ready(async () => {
 	console.log("App iniciado!");
-	try {
-		const db = getDatabase(app);
+	const db = getDatabase(app);
 
-		await db.ref("test").set({ text: "This is my first AceBase test in RunKit" });
+	await db.ref("test").set({ text: "This is my first AceBase test in RunKit" });
 
-		const snap = await db.ref("test/text").get();
-		console.log(`value of "test/text": ` + snap.val());
-	} catch (e) {
-		console.log(e);
-	}
+	const snap = await db.ref("test/text").get();
+	console.log(snap.val());
 });

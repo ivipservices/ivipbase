@@ -89,7 +89,7 @@ interface AppServerSettings {
 }
 
 export class IvipBaseSettings extends BrowserSettings {
-	readonly isSerer: boolean = false;
+	readonly isServer: boolean = false;
 	readonly isValidClient: boolean = false;
 
 	readonly server?: ServerSettings;
@@ -102,7 +102,7 @@ export class IvipBaseSettings extends BrowserSettings {
 	constructor(options: Partial<IvipBaseSettings & ServerInitialSettings<LocalServer> & AppServerSettings> = {}) {
 		super(options);
 
-		if (options.isSerer && isPossiblyServer) {
+		if (options.isServer && isPossiblyServer) {
 			this.server = new ServerSettings(options);
 
 			if (typeof options.email === "object") {

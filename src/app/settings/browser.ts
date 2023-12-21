@@ -108,10 +108,10 @@ export class IvipBaseSettings {
 	readonly host?: string;
 	readonly port?: number;
 
-	readonly isSerer: boolean = false;
+	readonly isServer: boolean = false;
 	readonly isValidClient: boolean = false;
 
-	constructor(options: Partial<IvipBaseSettings> = {}) {
+	constructor(options: Partial<Omit<IvipBaseSettings, "isServer" | "isValidClient">> = {}) {
 		if (typeof options.name === "string") {
 			this.name = options.name;
 		}

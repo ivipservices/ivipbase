@@ -1,6 +1,6 @@
 import { DataBase as DataBaseCore, Api, PathInfo } from "ivipbase-core";
 import { IvipBaseApp, getApp, getFirstApp } from "../app/index.js";
-import { VALUE_TYPES } from "../controller/storage/MDE.js";
+import { VALUE_TYPES } from "../controller/storage/MDE/index.js";
 class StorageDBServer extends Api {
     constructor(db) {
         super();
@@ -36,11 +36,11 @@ class StorageDBServer extends Api {
         if (typeof options.exclude !== "undefined" && !(options.exclude instanceof Array)) {
             throw new TypeError(`options.exclude must be an array of key names`);
         }
-        const value = await this.db.app.storage.get(path);
+        const value = await this.db.app.storage.get(path, options);
         return { value, context: { more: false } };
     }
     async update(path, updates, options) {
-        await this.db.app.storage.set(path, updates);
+        await this.db.app.storage.update(path, updates);
         return {};
     }
     async exists(path) {
@@ -308,9 +308,7 @@ export class DataBase extends DataBaseCore {
             },
         };
         this.app = appNow;
-        const hostnameRegex = /^(?:(?:https?|ftp):\/\/)?(?:localhost|(?:[a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.[a-zA-Z]{2,}|(?:\d{1,3}\.){3}\d{1,3})$/;
-        const valid_client = !!appNow.settings.client && typeof appNow.settings.client.host === "string" && hostnameRegex.test(appNow.settings.client.host.trim());
-        this.storage = appNow.isServer || !valid_client ? new StorageDBServer(this) : new StorageDBClient(this);
+        this.storage = appNow.isServer || !appNow.settings.isValidClient ? new StorageDBServer(this) : new StorageDBClient(this);
         this.emitOnce("ready");
     }
 }

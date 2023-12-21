@@ -6,51 +6,19 @@ const internal_1 = require("./internal");
 const erros_1 = require("../controller/erros");
 const server_1 = require("../server");
 const verifyStorage_1 = require("./verifyStorage");
-const DEFAULT_ENTRY_NAME = "[DEFAULT]";
-class IvipBaseSettings {
-    constructor(options = {}) {
-        var _a;
-        this.name = DEFAULT_ENTRY_NAME;
-        this.dbname = "root";
-        this.logLevel = "log";
-        this.storage = new verifyStorage_1.DataStorageSettings();
-        if (typeof options.name === "string") {
-            this.name = options.name;
-        }
-        if (typeof options.dbname === "string") {
-            this.dbname = options.dbname;
-        }
-        if (typeof options.logLevel === "string" && ["log", "warn", "error"].includes(options.logLevel)) {
-            this.logLevel = options.logLevel;
-        }
-        if ((0, verifyStorage_1.validSettings)(options.storage)) {
-            this.storage = options.storage;
-        }
-        if (typeof options.server === "object") {
-            if (server_1.isPossiblyServer) {
-                this.server = options.server;
-            }
-            else {
-                this.client = options.server;
-            }
-        }
-        if (typeof options.client === "object") {
-            this.client = Object.assign((_a = this.client) !== null && _a !== void 0 ? _a : {}, options.client);
-        }
-    }
-}
+const settings_1 = require("./settings");
 class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
     constructor(options) {
         super();
         this._ready = false;
-        this.name = DEFAULT_ENTRY_NAME;
-        this.settings = new IvipBaseSettings();
+        this.name = internal_1.DEFAULT_ENTRY_NAME;
+        this.settings = new settings_1.IvipBaseSettings();
         this.storage = new verifyStorage_1.DataStorage();
         this.isDeleted = false;
         if (typeof options.name === "string") {
             this.name = options.name;
         }
-        if (options.settings instanceof IvipBaseSettings) {
+        if (options.settings instanceof settings_1.IvipBaseSettings) {
             this.settings = options.settings;
         }
         if (typeof options.isDeleted === "boolean") {
@@ -61,14 +29,18 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         this.once("ready", () => {
             this._ready = true;
         });
-        if (this.isServer) {
-            this.server = new server_1.LocalServer(this.name, this.settings.server);
-            this.server.ready(() => {
+    }
+    init() {
+        if (!this._ready) {
+            if (this.isServer) {
+                this.server = new server_1.LocalServer(this.name, this.settings.server);
+                this.server.ready(() => {
+                    this.emitOnce("ready");
+                });
+            }
+            else {
                 this.emitOnce("ready");
-            });
-        }
-        else {
-            this.emitOnce("ready");
+            }
         }
     }
     /**
@@ -89,7 +61,7 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
 }
 exports.IvipBaseApp = IvipBaseApp;
 function initializeApp(options) {
-    const settings = new IvipBaseSettings(options);
+    const settings = new settings_1.IvipBaseSettings(options);
     const newApp = new IvipBaseApp({
         name: settings.name,
         settings,
@@ -104,6 +76,7 @@ function initializeApp(options) {
         }
     }
     internal_1._apps.set(newApp.name, newApp);
+    newApp.init();
     return newApp;
 }
 exports.initializeApp = initializeApp;
@@ -111,7 +84,7 @@ function appExists(name) {
     return typeof name === "string" && internal_1._apps.has(name);
 }
 exports.appExists = appExists;
-function getApp(name = DEFAULT_ENTRY_NAME) {
+function getApp(name = internal_1.DEFAULT_ENTRY_NAME) {
     const app = internal_1._apps.get(name);
     if (!app) {
         throw erros_1.ERROR_FACTORY.create("no-app" /* AppError.NO_APP */, { appName: name });
@@ -125,12 +98,12 @@ function getApps() {
 exports.getApps = getApps;
 function getFirstApp() {
     let app;
-    if (internal_1._apps.has(DEFAULT_ENTRY_NAME)) {
-        app = internal_1._apps.get(DEFAULT_ENTRY_NAME);
+    if (internal_1._apps.has(internal_1.DEFAULT_ENTRY_NAME)) {
+        app = internal_1._apps.get(internal_1.DEFAULT_ENTRY_NAME);
     }
     app = !app ? getApps()[0] : app;
     if (!app) {
-        throw erros_1.ERROR_FACTORY.create("no-app" /* AppError.NO_APP */, { appName: DEFAULT_ENTRY_NAME });
+        throw erros_1.ERROR_FACTORY.create("no-app" /* AppError.NO_APP */, { appName: internal_1.DEFAULT_ENTRY_NAME });
     }
     return app;
 }

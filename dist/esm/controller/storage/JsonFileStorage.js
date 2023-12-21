@@ -2,12 +2,12 @@ import { CustomStorage } from "./CustomStorage.js";
 import * as fs from "fs";
 import * as path from "path";
 import { dirname } from "path";
-const `${process.platform === 'win32' ? '' : '/'}${/file:\/{2,3}(.+)\/[^/]/.exec(import.meta.url)[1]}` = dirname(require.resolve("."));
+const dirnameRoot = dirname(require.resolve("."));
 export class JsonFileStorageSettings {
     constructor(options = {}) {
         this.filePath = "";
         if (typeof options.filePath === "string") {
-            this.filePath = path.resolve(`${process.platform === 'win32' ? '' : '/'}${/file:\/{2,3}(.+)\/[^/]/.exec(import.meta.url)[1]}`, options.filePath);
+            this.filePath = path.resolve(dirnameRoot, options.filePath);
             console.log(this.filePath);
         }
     }

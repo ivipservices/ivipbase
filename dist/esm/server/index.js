@@ -1,4 +1,4 @@
-import { AbstractLocalServer, ServerSettings } from "./browser.js";
+import { AbstractLocalServer, ServerSettings, ServerNotReadyError } from "./browser.js";
 import * as express from "express";
 import { addMetadataRoutes } from "./routes/index.js";
 import { createServer } from "http";
@@ -32,16 +32,21 @@ export class LocalServer extends AbstractLocalServer {
         // If environment is development, add API docs
         if (process.env.NODE_ENV && process.env.NODE_ENV.trim() === "development") {
             this.debug.warn("DEVELOPMENT MODE: adding API docs endpoint at /docs");
-            (await import("./routes/docs.js")).addRoute(this);
+            (await import("./routes/docs/index.js")).addRoute(this);
             (await import("./middleware/swagger.js")).addMiddleware(this);
         }
+        this.extend = (method, ext_path, handler) => {
+            const route = `/ext/${this.db.name}/${ext_path}`;
+            this.debug.log(`Extending server: `, method, route);
+            this.router[method.toLowerCase()](route, handler);
+        };
         // Executar o retorno de chamada de inicialização para permitir que o código do usuário chame `server.extend`, `server.router.[method]`, `server.setRule`, etc., antes de o servidor começar a ouvir
         await this.settings.init?.(this);
         add404Middleware(this);
         // Iniciar escuta
         this.server.listen(this.settings.port, this.settings.host, () => {
             // Ready!!
-            this.debug.log(`"${this.settings.serverName}" server running at ${this.url}`);
+            this.debug.log(`"${this.db.name}" server running at ${this.url}`);
             this.emitOnce(`ready`);
         });
     }
@@ -60,7 +65,7 @@ export class LocalServer extends AbstractLocalServer {
             throw new Error("O servidor já está pausado");
         }
         this.server.close();
-        this.debug.warn(`Paused "${this.settings.serverName}" server at ${this.url}`);
+        this.debug.warn(`Paused "${this.db.name}" server at ${this.url}`);
         this.emit("pause");
         this.paused = true;
     }
@@ -73,12 +78,34 @@ export class LocalServer extends AbstractLocalServer {
         }
         return new Promise((resolve) => {
             this.server.listen(this.settings.port, this.settings.host, () => {
-                this.debug.warn(`Resumed "${this.settings.serverName}" server at ${this.url}`);
+                this.debug.warn(`Resumed "${this.db.name}" server at ${this.url}`);
                 this.emit("resume");
                 this.paused = false;
                 resolve();
             });
         });
+    }
+    /**
+     * Estende a API do servidor com suas próprias funções personalizadas. Seu manipulador estará ouvindo
+     * no caminho /ext/[nome do banco de dados]/[ext_path].
+     * @example
+     * // Lado do servidor:
+     * const _quotes = [...];
+     * server.extend('get', 'quotes/random', (req, res) => {
+     *      let index = Math.round(Math.random() * _quotes.length);
+     *      res.send(quotes[index]);
+     * })
+     * // Lado do cliente:
+     * client.callExtension('get', 'quotes/random')
+     * .then(quote => {
+     *      console.log(`Got random quote: ${quote}`);
+     * })
+     * @param method Método HTTP para associar
+     * @param ext_path Caminho para associar (anexado a /ext/)
+     * @param handler Seu callback de manipulador de solicitação do Express
+     */
+    extend(method, ext_path, handler) {
+        throw new ServerNotReadyError();
     }
 }
 //# sourceMappingURL=index.js.map
