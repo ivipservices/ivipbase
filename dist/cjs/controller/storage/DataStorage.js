@@ -17,14 +17,13 @@ class DataStorage extends CustomStorage_1.CustomStorage {
     }
     async getMultiple(expression) {
         const list = [];
-        for (let path in this.data) {
+        this.data.forEach((content, path) => {
             if (expression.test(path)) {
-                const content = this.data.get(path);
                 if (content) {
                     list.push({ path, content });
                 }
             }
-        }
+        });
         return list;
     }
     async setNode(path, content) {

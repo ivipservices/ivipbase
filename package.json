@@ -1,6 +1,6 @@
 {
 	"name": "ivipbase",
-	"version": "1.0.4",
+	"version": "1.1.0",
 	"description": "Componentes principais compartilhados do iVipBase, sem necessidade de instalação manual",
 	"comments": {
 		"browser": "As substituições de arquivo webpack/browserify foram movidas para package.json em dist/cjs e dist/esm. Veja README.md para mais informações",
@@ -27,15 +27,15 @@
 		"./dist/esm/controller/storage/index.js": "./dist/esm/controller/storage/browser.js"
 	},
 	"private": false,
-	"repository": "github:ivipcoin/ivipbase",
+	"repository": "github:ivipservices/ivipbase",
 	"scripts": {
-		"dev": "nodemon ./src/server/services/database/Node/NodeRestructureJson.ts",
+		"dev": "nodemon ./test/index.ts",
 		"dev2": "nodemon ./src/server/services/database/Node/NodeResultWithPath.ts",
 		"dev3": "nodemon ./test/set.ts",
 		"dev4": "nodemon ./test/mde.ts",
 		"build": "npm run build:clean && npm run build:esm && npm run build:cjs && npm run build:packages && npm run browserify && echo Done!",
 		"build:clean": "rimraf dist",
-		"build:esm": "tsc -p tsconfig.json && npx tsc-esm-fix ---target='dist/esm'",
+		"build:esm": "tsc -p tsconfig-esm.json && npx tsc-esm-fix ---target='dist/esm'",
 		"build:cjs": "tsc -p tsconfig-cjs.json",
 		"build:packages": "bash ./create-package-files",
 		"browserify": "browserify dist/cjs/browser.js -o dist/browser.js --standalone ivipbase --ignore rxjs --ignore process --ignore buffer && terser dist/browser.js -o dist/browser.min.js",
@@ -53,19 +53,21 @@
 	"author": "IVIPCOIN LTDA <desenvolvimento@ivipcoin.com> (https://ivipcoin.com)",
 	"license": "MIT",
 	"bugs": {
-		"url": "https://github.com/ivipcoin/ivipbase/issues"
+		"url": "https://github.com/ivipservices/ivipbase/issues"
 	},
-	"homepage": "https://github.com/ivipcoin/ivipbase#readme",
+	"homepage": "https://github.com/ivipservices/ivipbase#readme",
 	"dependencies": {
+		"@types/nodemailer": "^6.4.14",
 		"dotenv": "^16.0.3",
 		"express": "^4.17.1",
-		"ivip-utils": "^1.1.6",
-		"ivipbase-core": "^1.6.4",
+		"ivip-utils": "^1.1.7",
+		"ivipbase-core": "^1.6.5",
+		"juice": "^10.0.0",
 		"mongodb": "^5.9.1",
+		"nodemailer": "^6.9.7",
 		"proper-lockfile": "^4.1.2",
 		"socket.io": "^4.5.0",
 		"swagger-jsdoc": "^6.1.0",
-		"swagger-ui-express": "^4.3.0",
 		"unidecode": "^0.1.8"
 	},
 	"devDependencies": {

@@ -63,13 +63,18 @@ class LocalServer extends browser_1.AbstractLocalServer {
             (await Promise.resolve().then(() => __importStar(require("./routes/docs")))).addRoute(this);
             (await Promise.resolve().then(() => __importStar(require("./middleware/swagger")))).addMiddleware(this);
         }
+        this.extend = (method, ext_path, handler) => {
+            const route = `/ext/${this.db.name}/${ext_path}`;
+            this.debug.log(`Extending server: `, method, route);
+            this.router[method.toLowerCase()](route, handler);
+        };
         // Executar o retorno de chamada de inicialização para permitir que o código do usuário chame `server.extend`, `server.router.[method]`, `server.setRule`, etc., antes de o servidor começar a ouvir
         await ((_b = (_a = this.settings).init) === null || _b === void 0 ? void 0 : _b.call(_a, this));
         (0, middleware_1.add404Middleware)(this);
         // Iniciar escuta
         this.server.listen(this.settings.port, this.settings.host, () => {
             // Ready!!
-            this.debug.log(`"${this.settings.serverName}" server running at ${this.url}`);
+            this.debug.log(`"${this.db.name}" server running at ${this.url}`);
             this.emitOnce(`ready`);
         });
     }
@@ -88,7 +93,7 @@ class LocalServer extends browser_1.AbstractLocalServer {
             throw new Error("O servidor já está pausado");
         }
         this.server.close();
-        this.debug.warn(`Paused "${this.settings.serverName}" server at ${this.url}`);
+        this.debug.warn(`Paused "${this.db.name}" server at ${this.url}`);
         this.emit("pause");
         this.paused = true;
     }
@@ -101,12 +106,34 @@ class LocalServer extends browser_1.AbstractLocalServer {
         }
         return new Promise((resolve) => {
             this.server.listen(this.settings.port, this.settings.host, () => {
-                this.debug.warn(`Resumed "${this.settings.serverName}" server at ${this.url}`);
+                this.debug.warn(`Resumed "${this.db.name}" server at ${this.url}`);
                 this.emit("resume");
                 this.paused = false;
                 resolve();
             });
         });
+    }
+    /**
+     * Estende a API do servidor com suas próprias funções personalizadas. Seu manipulador estará ouvindo
+     * no caminho /ext/[nome do banco de dados]/[ext_path].
+     * @example
+     * // Lado do servidor:
+     * const _quotes = [...];
+     * server.extend('get', 'quotes/random', (req, res) => {
+     *      let index = Math.round(Math.random() * _quotes.length);
+     *      res.send(quotes[index]);
+     * })
+     * // Lado do cliente:
+     * client.callExtension('get', 'quotes/random')
+     * .then(quote => {
+     *      console.log(`Got random quote: ${quote}`);
+     * })
+     * @param method Método HTTP para associar
+     * @param ext_path Caminho para associar (anexado a /ext/)
+     * @param handler Seu callback de manipulador de solicitação do Express
+     */
+    extend(method, ext_path, handler) {
+        throw new browser_1.ServerNotReadyError();
     }
 }
 exports.LocalServer = LocalServer;

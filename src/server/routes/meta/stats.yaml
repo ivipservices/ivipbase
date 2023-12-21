@@ -1,20 +1,20 @@
 /stats/{dbname}:
     get:
         tags:
-            - metadata
-        summary: Get basic database statistics
-        description: Returns basic statistics about the database
+            - metadados
+        summary: Obter estatísticas básicas do banco de dados
+        description: Retorna estatísticas básicas sobre o banco de dados
         parameters:
             - name: dbname
               in: path
-              description: name of the database
+              description: nome do banco de dados
               required: true
               schema:
                   type: string
                   example: mydb
         responses:
             200:
-                description: Returns basic database statistics
+                description: Retorna estatísticas básicas do banco de dados
                 content:
                     "application/json":
                         schema:
@@ -33,9 +33,9 @@
                                     type: integer
                                     example: 12560
             500:
-                description: Returns the server error
+                description: Retorna erro do servidor
                 content:
                     "text/plain":
                         schema:
                             type: string
-                            example: Some error message
+                            example: Alguma mensagem de erro

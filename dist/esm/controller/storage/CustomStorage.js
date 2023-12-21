@@ -1,5 +1,5 @@
 import { ERROR_FACTORY } from "../erros/index.js";
-import MDE, { MDESettings } from "./MDE.js";
+import MDE, { MDESettings } from "./MDE/index.js";
 export class CustomStorageSettings extends MDESettings {
     constructor(options = {}) {
         super(options);

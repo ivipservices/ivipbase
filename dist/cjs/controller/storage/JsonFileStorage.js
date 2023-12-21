@@ -28,12 +28,12 @@ const CustomStorage_1 = require("./CustomStorage");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const path_1 = require("path");
-const __dirname = (0, path_1.dirname)(require.resolve("."));
+const dirnameRoot = (0, path_1.dirname)(require.resolve("."));
 class JsonFileStorageSettings {
     constructor(options = {}) {
         this.filePath = "";
         if (typeof options.filePath === "string") {
-            this.filePath = path.resolve(__dirname, options.filePath);
+            this.filePath = path.resolve(dirnameRoot, options.filePath);
             console.log(this.filePath);
         }
     }

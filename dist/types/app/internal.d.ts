@@ -1,4 +1,5 @@
-import { IvipBaseApp } from ".";
+import type { IvipBaseApp } from ".";
+export declare const DEFAULT_ENTRY_NAME = "[DEFAULT]";
 /**
  * @internal
  */

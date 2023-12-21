@@ -2,19 +2,19 @@
     get:
         tags:
             - metadata
-        summary: Ping the server
-        description: Ping endpoint to test connectivity with the server. Returns `"pong"`
+        summary: Faça ping no servidor
+        description: Efetue ping no endpoint para testar a conectividade com o servidor. Retorna `"pong"`
         parameters:
             - name: dbname
               in: path
-              description: name of the database
+              description: Nome do banco de dados
               required: true
               schema:
                   type: string
                   example: mydb
         responses:
             200:
-                description: Returns the string `"pong"`
+                description: Retorna a string `"pong"`
                 content:
                     "text/plain":
                         schema:

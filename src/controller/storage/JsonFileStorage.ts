@@ -4,14 +4,14 @@ import * as fs from "fs";
 import * as path from "path";
 import { dirname } from "path";
 
-const __dirname = dirname(require.resolve("."));
+const dirnameRoot = dirname(require.resolve("."));
 
 export class JsonFileStorageSettings {
 	filePath: string = "";
 
 	constructor(options: Partial<JsonFileStorageSettings> = {}) {
 		if (typeof options.filePath === "string") {
-			this.filePath = path.resolve(__dirname, options.filePath);
+			this.filePath = path.resolve(dirnameRoot, options.filePath);
 			console.log(this.filePath);
 		}
 	}

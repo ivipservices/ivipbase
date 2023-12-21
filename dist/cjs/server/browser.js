@@ -35,7 +35,7 @@ class ServerAuthenticationSettings {
          */
         this.newUserRateLimit = 0;
         /**
-         * Quantos minutos antes dos tokens de acesso expirarem. 0 para sem expiração. (não implementado ainda)
+         * Quantos minutos antes dos tokens de acesso expirarem. 0 para sem expiração.
          */
         this.tokensExpire = 0;
         /**
@@ -78,7 +78,6 @@ class ServerAuthenticationSettings {
 exports.ServerAuthenticationSettings = ServerAuthenticationSettings;
 class ServerSettings {
     constructor(options = {}) {
-        this.serverName = "IVIPBASE";
         this.logLevel = "log";
         this.host = "localhost";
         this.port = 3000;
@@ -86,9 +85,6 @@ class ServerSettings {
         this.maxPayloadSize = "10mb";
         this.allowOrigin = "*";
         this.trustProxy = true;
-        if (typeof options.serverName === "string") {
-            this.serverName = options.serverName;
-        }
         if (typeof options.logLevel === "string" && ["verbose", "log", "warn", "error"].includes(options.logLevel)) {
             this.logLevel = options.logLevel;
         }
@@ -107,9 +103,6 @@ class ServerSettings {
         if (typeof options.trustProxy === "boolean") {
             this.trustProxy = options.trustProxy;
         }
-        if (typeof options.email === "object") {
-            this.email = options.email;
-        }
         this.auth = new ServerAuthenticationSettings(options.authentication);
         if (typeof options.init === "function") {
             this.init = options.init;
@@ -124,8 +117,8 @@ class AbstractLocalServer extends ivipbase_core_1.SimpleEventEmitter {
         this.appName = appName;
         this._ready = false;
         this.settings = new ServerSettings(settings);
-        this.debug = new ivipbase_core_1.DebugLogger(this.settings.logLevel, `[${this.settings.serverName}]`);
         this.db = (0, database_1.getDatabase)(appName);
+        this.debug = new ivipbase_core_1.DebugLogger(this.settings.logLevel, `[${this.db.name}]`);
         this.once("ready", () => {
             this._ready = true;
         });

@@ -1,55 +1,10 @@
 import { SimpleEventEmitter, Utils } from "ivipbase-core";
-import { _apps } from "./internal";
+import { DEFAULT_ENTRY_NAME, _apps } from "./internal";
 import { AppError, ERROR_FACTORY } from "../controller/erros";
 
-import { LocalServer, ServerSettings, isPossiblyServer } from "../server";
-import { StorageSettings, DataStorageSettings, validSettings, CustomStorage, DataStorage, applySettings } from "./verifyStorage";
-
-const DEFAULT_ENTRY_NAME = "[DEFAULT]";
-
-class IvipBaseSettings {
-	name: string = DEFAULT_ENTRY_NAME;
-	dbname: string = "root";
-	logLevel: "log" | "warn" | "error" = "log";
-	storage: StorageSettings = new DataStorageSettings();
-
-	server?: Partial<ServerSettings>;
-
-	client?: {
-		host: string;
-		port: number;
-	};
-
-	constructor(options: Partial<IvipBaseSettings> = {}) {
-		if (typeof options.name === "string") {
-			this.name = options.name;
-		}
-
-		if (typeof options.dbname === "string") {
-			this.dbname = options.dbname;
-		}
-
-		if (typeof options.logLevel === "string" && ["log", "warn", "error"].includes(options.logLevel)) {
-			this.logLevel = options.logLevel;
-		}
-
-		if (validSettings(options.storage)) {
-			this.storage = options.storage;
-		}
-
-		if (typeof options.server === "object") {
-			if (isPossiblyServer) {
-				this.server = options.server;
-			} else {
-				this.client = options.server as any;
-			}
-		}
-
-		if (typeof options.client === "object") {
-			this.client = Object.assign(this.client ?? {}, options.client);
-		}
-	}
-}
+import { LocalServer } from "../server";
+import { CustomStorage, DataStorage, applySettings } from "./verifyStorage";
+import { IvipBaseSettings } from "./settings";
 
 export class IvipBaseApp extends SimpleEventEmitter {
 	protected _ready = false;
@@ -59,7 +14,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 	readonly storage: CustomStorage = new DataStorage();
 	isDeleted: boolean = false;
 	readonly isServer: boolean;
-	readonly server?: LocalServer;
+	server?: LocalServer;
 
 	constructor(options: Partial<IvipBaseApp>) {
 		super();
@@ -83,14 +38,18 @@ export class IvipBaseApp extends SimpleEventEmitter {
 		this.once("ready", () => {
 			this._ready = true;
 		});
+	}
 
-		if (this.isServer) {
-			this.server = new LocalServer(this.name, this.settings.server);
-			this.server.ready(() => {
+	init() {
+		if (!this._ready) {
+			if (this.isServer) {
+				this.server = new LocalServer(this.name, this.settings.server);
+				this.server.ready(() => {
+					this.emitOnce("ready");
+				});
+			} else {
 				this.emitOnce("ready");
-			});
-		} else {
-			this.emitOnce("ready");
+			}
 		}
 	}
 
@@ -130,6 +89,8 @@ export function initializeApp(options: Partial<IvipBaseSettings>): IvipBaseApp {
 	}
 
 	_apps.set(newApp.name, newApp);
+
+	newApp.init();
 
 	return newApp;
 }
