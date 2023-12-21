@@ -912,26 +912,26 @@ Ao executar uma consulta, todos os nós filhos do caminho referenciado serão co
 
 Para filtrar resultados, diversas instruções `filter(key, operator, compare)` podem ser adicionadas. Os resultados filtrados devem corresponder a todas as condições definidas (E lógico). Os operadores de consulta suportados são:
 
--   '<': o valor deve ser menor quecompare
--   '<=': o valor deve ser menor ou igual acompare
--   '==': o valor deve ser igual acompare
--   '!=': o valor não deve ser igual acompare
--   '>': o valor deve ser maior quecompare
--   '>=': o valor deve ser maior ou igual acompare
--   'exists': key deve existir
--   '!exists': key não deve existir
--   'between': o valor deve estar entre os 2 valores no compare array (compare[0] <= valor <= compare[1] ). Se compare[0] > compare[1], seus valores serão trocados
--   '!between': o valor não deve estar entre os 2 valores em compare array (valor < compare[0] ou valor > compare[1]). Se compare[0] > compare[1], seus valores serão trocados
--   'like': o valor deve ser uma string e deve corresponder ao padrão fornecido compare. Os padrões não diferenciam maiúsculas de minúsculas e podem conter curingas _ para 0 ou mais caracteres e ?"Th?"< a i=5> para 1 caractere. (padrão corresponde a "The", não "That"; padrão "Th_" corresponde a "the" e "That")
--   '!like': o valor deve ser uma string e não deve corresponder ao padrão fornecidocompare
--   'matches': o valor deve ser uma string e deve corresponder à expressão regularcompare
--   '!matches': o valor deve ser uma string e não deve corresponder à expressão regularcompare
--   'in': o valor deve ser igual a um dos valores em compare array
--   '!in': o valor não deve ser igual a nenhum valor na compare matriz
--   'has': o valor deve ser um objeto e deve ter propriedade compare.
--   '!has': o valor deve ser um objeto e não deve ter propriedadecompare
--   'contains': o valor deve ser um array e deve conter um valor igual a compare ou conter todos os valores em compare array
--   '!contains': o valor deve ser um array e não deve conter um valor igual a compare, ou não conter nenhum dos valores em compare array
+-   `"<"`: o valor deve ser menor quecompare
+-   `"<="`: o valor deve ser menor ou igual acompare
+-   `"=="`: o valor deve ser igual acompare
+-   `"!="`: o valor não deve ser igual acompare
+-   `">"`: o valor deve ser maior quecompare
+-   `">="`: o valor deve ser maior ou igual acompare
+-   `"exists"`: key deve existir
+-   `"!exists"`: key não deve existir
+-   `"between"`: o valor deve estar entre os 2 valores no compare array (compare[0] <= valor <= compare[1] ). Se compare[0] > compare[1], seus valores serão trocados
+-   `"!between"`: o valor não deve estar entre os 2 valores em compare array (valor < compare[0] ou valor > compare[1]). Se compare[0] > compare[1], seus valores serão trocados
+-   `"like"`: o valor deve ser uma string e deve corresponder ao padrão fornecido compare. Os padrões não diferenciam maiúsculas de minúsculas e podem conter curingas _ para 0 ou mais caracteres e ?"Th?"< a i=5> para 1 caractere. (padrão corresponde a "The", não "That"; padrão "Th_" corresponde a "the" e "That")
+-   `"!like"`: o valor deve ser uma string e não deve corresponder ao padrão fornecidocompare
+-   `"matches"`: o valor deve ser uma string e deve corresponder à expressão regularcompare
+-   `"!matches"`: o valor deve ser uma string e não deve corresponder à expressão regularcompare
+-   `"in"`: o valor deve ser igual a um dos valores em compare array
+-   `"!in"`: o valor não deve ser igual a nenhum valor na compare matriz
+-   `"has"`: o valor deve ser um objeto e deve ter propriedade compare.
+-   `"!has"`: o valor deve ser um objeto e não deve ter propriedadecompare
+-   `"contains"`: o valor deve ser um array e deve conter um valor igual a compare ou conter todos os valores em compare array
+-   `"!contains"`: o valor deve ser um array e não deve conter um valor igual a compare, ou não conter nenhum dos valores em compare array
 -   NOTA: uma consulta não requer nenhum `filter` critério. Você também pode usar um `query` para paginar seus dados usando `skip`, `take` e `sort`. Se você não especificar nenhum deles, o iVipBase usará `.take`(100) como padrão. Se você não especificar um `sort`, a ordem dos valores retornados poderá variar entre as execuções.
 
 ```typescript
