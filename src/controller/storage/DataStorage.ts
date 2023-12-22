@@ -1,3 +1,4 @@
+import { Utils } from "ivipbase-core";
 import { AppError, ERROR_FACTORY } from "../erros";
 import { CustomStorage, CustomStorageSettings } from "./CustomStorage";
 import { StorageNode, StorageNodeInfo } from "./MDE";
@@ -33,7 +34,7 @@ export class DataStorage extends CustomStorage {
 		this.data[database].forEach((content, path) => {
 			if (expression.test(path)) {
 				if (content) {
-					list.push({ path, content });
+					list.push(Utils.cloneObject({ path, content }));
 				}
 			}
 		});

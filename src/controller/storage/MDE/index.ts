@@ -1,4 +1,4 @@
-import { PathInfo, SimpleEventEmitter } from "ivipbase-core";
+import { PathInfo, SimpleEventEmitter, Utils } from "ivipbase-core";
 import { CustomStorageNodeInfo, NodeAddress, NodesPending, StorageNode, StorageNodeInfo } from "./NodeInfo";
 import { NodeValueType, VALUE_TYPES, getValueType, nodeValueTypes, processReadNodeValue, promiseState } from "./utils";
 import prepareMergeNodes from "./prepareMergeNodes";
@@ -302,63 +302,98 @@ export default class MDE extends SimpleEventEmitter {
 			return;
 		}
 
+		//console.count("sendNodes");
+
 		this.sendingNodes = true;
 
 		this.batch[database] = this.nodes[database].splice(0).sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
 			return aM > bM ? -1 : aM < bM ? 1 : 0;
 		});
 
-		let listBatchRemoved: StorageNodeInfo[] = [];
+		const batchError: NodesPending[] = [];
 
 		try {
-			for (let node of this.batch[database]) {
+			const forAsync = prepareMergeNodes.apply(this, [this.batch[database]]);
+
+			let byNodes: StorageNodeInfo[] = [];
+
+			for (const node of forAsync.result.concat(forAsync.removed)) {
 				const reg = this.pathToRegex(node.path, false, false);
-				const byNodes = await this.settings.getMultiple(database, reg);
-
-				const { added, modified, removed } = prepareMergeNodes.apply(this, [byNodes, [node]]);
-
-				listBatchRemoved = listBatchRemoved.concat(removed);
-
-				for (let node of modified) {
-					await this.settings.setNode(database, node.path, node.content, node);
-					this.batch[database] = this.batch[database].filter(({ path }) => PathInfo.get(path).equals(node.path) !== true);
-					this.emit("change", {
-						name: "change",
-						path: PathInfo.get(PathInfo.get(node.path).keys.slice(2)).path,
-						value: removeNulls(node.content.value),
-						previous: removeNulls(node.previous_content?.value),
-					});
-				}
-
-				for (let node of added) {
-					await this.settings.setNode(database, node.path, node.content, node);
-					this.batch[database] = this.batch[database].filter(({ path }) => PathInfo.get(path).equals(node.path) !== true);
-					this.emit("add", {
-						name: "add",
-						path: PathInfo.get(PathInfo.get(node.path).keys.slice(2)).path,
-						value: removeNulls(node.content.value),
-					});
-				}
+				const by = await this.settings.getMultiple(database, reg);
+				byNodes = byNodes.concat(by);
 			}
-			for (let node of listBatchRemoved) {
+
+			// console.log("byNodes: ", JSON.stringify(byNodes, null, 4));
+
+			const { added, modified, removed, result } = prepareMergeNodes.apply(this, [byNodes, this.batch[database]]);
+
+			// console.log("added: ", JSON.stringify(added, null, 4));
+			// console.log("modified: ", JSON.stringify(modified, null, 4));
+			// console.log("removed: ", JSON.stringify(removed, null, 4));
+			// console.log("result: ", JSON.stringify(result, null, 4));
+
+			for (let node of modified) {
+				await Promise.race([this.settings.setNode(database, node.path, node.content, node)])
+					.then(() => {
+						this.emit("change", {
+							name: "change",
+							path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
+							value: removeNulls(node.content.value),
+							previous: removeNulls(node.previous_content?.value),
+						});
+						return Promise.resolve();
+					})
+					.catch(() => {
+						batchError.push(node);
+					});
+			}
+
+			for (let node of added) {
+				await Promise.race([this.settings.setNode(database, node.path, node.content, node)])
+					.then(() => {
+						this.emit("add", {
+							name: "add",
+							path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
+							value: removeNulls(node.content.value),
+						});
+						return Promise.resolve();
+					})
+					.catch(() => {
+						batchError.push(node);
+					});
+			}
+
+			for (let node of removed) {
 				const reg = this.pathToRegex(node.path, false, true);
 				const byNodes = await this.settings.getMultiple(database, reg);
 
 				for (let r of byNodes) {
-					await this.settings.removeNode(database, r.path, r.content, r);
-					this.batch[database] = this.batch[database].filter(({ path }) => PathInfo.get(path).equals(r.path) !== true);
-					this.emit("remove", {
-						name: "remove",
-						path: PathInfo.get(PathInfo.get(node.path).keys.slice(2)).path,
-						value: removeNulls(r.content.value),
-					});
+					await Promise.race([this.settings.removeNode(database, r.path, r.content, r)])
+						.then(() => {
+							this.emit("remove", {
+								name: "remove",
+								path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
+								value: removeNulls(r.content.value),
+							});
+							return Promise.resolve();
+						})
+						.catch(() => {
+							batchError.push({
+								path: r.path,
+								content: {
+									...r.content,
+									type: 0,
+									value: null,
+								},
+							});
+						});
 				}
 			}
 		} catch {}
 
 		this.nodes[database] = (this.nodes[database] ?? [])
 			.concat(
-				this.batch[database].filter(({ type }) => {
+				batchError.filter(({ type }) => {
 					return type !== "VERIFY";
 				}),
 			)
@@ -372,8 +407,9 @@ export default class MDE extends SimpleEventEmitter {
 		this.batch[database] = [];
 		this.sendingNodes = false;
 
-		if (this.nodes[database].length > 0) {
-			this.sendNodes(database);
+		const next = Object.keys(this.nodes).find((n) => this.nodes[n].length > 0);
+		if (next) {
+			this.sendNodes(next);
 		}
 	}
 

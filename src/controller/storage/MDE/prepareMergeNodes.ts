@@ -72,7 +72,7 @@ export default function prepareMergeNodes(
 		} else {
 			const modifiedIndex = modified.findIndex(({ path }) => PathInfo.get(node.path).equals(path));
 			const previous_content = nodes[nodesIndex].content;
-			const dataChanges = Utils.compareValues(node.content, previous_content);
+			const dataChanges = Utils.compareValues(node.content.value, previous_content.value);
 			if (dataChanges !== "identical") {
 				if (modifiedIndex < 0) {
 					modified.push({ ...node, previous_content });

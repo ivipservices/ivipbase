@@ -15,12 +15,12 @@ export class DataBase extends DataBaseCore {
 		this.emitOnce("ready");
 
 		app.storage.on("add", (e: { name: string; path: string; value: any }) => {
-			console.log(e);
+			//console.log(e);
 			this.subscriptions.triggerAllEvents(e.path, null, e.value);
 		});
 
 		app.storage.on("change", (e: { name: string; path: string; value: any; previous: any }) => {
-			console.log(e);
+			//console.log(e);
 			this.subscriptions.triggerAllEvents(e.path, e.previous, e.value);
 		});
 

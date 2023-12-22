@@ -79,7 +79,7 @@ export class Subscriptions {
 					.filter((sub) => !sub.type.startsWith("notify_")) // Eventos de notificação não precisam de carregamento de valor adicional
 					.forEach((sub) => {
 						let dataPath: null | string = null;
-						if (sub.type === "value") {
+						if (sub.type === "value" && pathInfo.equals(eventPath)) {
 							// ["value", "notify_value"].includes(sub.type)
 							dataPath = eventPath;
 						} else if (["mutated", "mutations"].includes(sub.type) && pathInfo.isDescendantOf(eventPath)) {
@@ -88,11 +88,11 @@ export class Subscriptions {
 						} else if (sub.type === "child_changed" && path !== eventPath) {
 							// ["child_changed", "notify_child_changed"].includes(sub.type)
 							const childKey = PathInfo.getPathKeys(path.slice(eventPath.length).replace(/^\//, ""))[0];
-							dataPath = PathInfo.getChildPath(eventPath, childKey);
+							dataPath = childKey !== "" ? PathInfo.getChildPath(eventPath, childKey) : null;
 						} else if (["child_added", "child_removed"].includes(sub.type) && pathInfo.isChildOf(eventPath)) {
 							//["child_added", "child_removed", "notify_child_added", "notify_child_removed"]
 							const childKey = PathInfo.getPathKeys(path.slice(eventPath.length).replace(/^\//, ""))[0];
-							dataPath = PathInfo.getChildPath(eventPath, childKey);
+							dataPath = childKey !== "" ? PathInfo.getChildPath(eventPath, childKey) : null;
 						}
 
 						if (dataPath !== null && !valueSubscribers.some((s) => s.type === sub.type && s.eventPath === eventPath)) {
@@ -121,11 +121,11 @@ export class Subscriptions {
 
 				pathSubs.forEach((sub) => {
 					let dataPath: null | string = null;
-					if (sub.type === "value" || sub.type === "notify_value") {
+					if ((sub.type === "value" || sub.type === "notify_value") && pathInfo.equals(eventPath)) {
 						dataPath = eventPath;
 					} else if (["child_changed", "notify_child_changed"].includes(sub.type)) {
 						const childKey = path === eventPath || pathInfo.isAncestorOf(eventPath) ? "*" : PathInfo.getPathKeys(path.slice(eventPath.length).replace(/^\//, ""))[0];
-						dataPath = PathInfo.getChildPath(eventPath, childKey);
+						dataPath = childKey !== "" ? PathInfo.getChildPath(eventPath, childKey) : null;
 					} else if (["mutated", "mutations", "notify_mutated", "notify_mutations"].includes(sub.type)) {
 						dataPath = path;
 					} else if (
@@ -133,7 +133,7 @@ export class Subscriptions {
 						(pathInfo.isChildOf(eventPath) || path === eventPath || pathInfo.isAncestorOf(eventPath))
 					) {
 						const childKey = path === eventPath || pathInfo.isAncestorOf(eventPath) ? "*" : PathInfo.getPathKeys(path.slice(eventPath.length).replace(/^\//, ""))[0];
-						dataPath = PathInfo.getChildPath(eventPath, childKey); //NodePath(subscriptionPath).childPath(childKey);
+						dataPath = childKey !== "" ? PathInfo.getChildPath(eventPath, childKey) : null; //NodePath(subscriptionPath).childPath(childKey);
 					}
 					if (dataPath !== null && !subscribers.some((s) => s.type === sub.type && s.eventPath === eventPath && s.subscriptionPath === subscriptionPath)) {
 						// && subscribers.findIndex(s => s.type === sub.type && s.dataPath === dataPath) < 0
