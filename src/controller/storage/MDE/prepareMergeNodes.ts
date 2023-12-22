@@ -1,7 +1,8 @@
-import { PathInfo } from "ivipbase-core";
+import { PathInfo, Utils } from "ivipbase-core";
 import { NodesPending, StorageNode, StorageNodeInfo } from "./NodeInfo";
 import { nodeValueTypes, valueFitsInline } from "./utils";
 import type MDE from ".";
+import { removeNulls } from "../../../utils";
 
 /**
  * Responsável pela mesclagem de nodes soltos, apropriado para evitar conflitos de dados.
@@ -18,18 +19,20 @@ import type MDE from ".";
  */
 export default function prepareMergeNodes(
 	this: MDE,
-	nodes: StorageNodeInfo[] | NodesPending[],
-	comparison: StorageNodeInfo[] | NodesPending[] | undefined = undefined,
+	nodes: NodesPending[],
+	comparison: NodesPending[] | undefined = undefined,
 ): {
 	result: StorageNodeInfo[];
 	added: StorageNodeInfo[];
-	modified: StorageNodeInfo[];
+	modified: (StorageNodeInfo & { previous_content?: StorageNode })[];
 	removed: StorageNodeInfo[];
 } {
-	let result: StorageNodeInfo[] | NodesPending[] = [];
-	let added: StorageNodeInfo[] | NodesPending[] = [];
-	let modified: StorageNodeInfo[] | NodesPending[] = [];
-	let removed: StorageNodeInfo[] | NodesPending[] = [];
+	let result: NodesPending[] = [];
+	let added: NodesPending[] = [];
+	let modified: (NodesPending & { previous_content?: StorageNode })[] = [];
+	let removed: NodesPending[] = [];
+
+	//console.log(nodes);
 
 	if (!comparison) {
 		comparison = nodes;
@@ -55,29 +58,34 @@ export default function prepareMergeNodes(
 		return aM > bM ? -1 : aM < bM ? 1 : 0;
 	});
 
-	const setNodeBy = (node: StorageNodeInfo | NodesPending): number => {
+	const setNodeBy = (n: NodesPending): number => {
+		const node: NodesPending = Utils.cloneObject(n);
 		const nodesIndex = nodes.findIndex(({ path }) => PathInfo.get(node.path).equals(path));
 
 		if (nodesIndex < 0) {
 			const addedIndex = added.findIndex(({ path }) => PathInfo.get(node.path).equals(path));
 			if (addedIndex < 0) {
-				added.push(node as any);
+				added.push(node);
 			} else {
 				added[addedIndex] = node;
 			}
 		} else {
 			const modifiedIndex = modified.findIndex(({ path }) => PathInfo.get(node.path).equals(path));
-			if (modifiedIndex < 0) {
-				modified.push(node as any);
-			} else {
-				modified[modifiedIndex] = node;
+			const previous_content = nodes[nodesIndex].content;
+			const dataChanges = Utils.compareValues(node.content, previous_content);
+			if (dataChanges !== "identical") {
+				if (modifiedIndex < 0) {
+					modified.push({ ...node, previous_content });
+				} else {
+					modified[modifiedIndex] = { ...node, previous_content };
+				}
 			}
 		}
 
 		const index = result.findIndex(({ path }) => PathInfo.get(node.path).equals(path));
 
 		if (index < 0) {
-			result.push(node as any);
+			result.push(node);
 			result = result.sort(({ path: p1 }, { path: p2 }) => {
 				return PathInfo.get(p1).isAncestorOf(p2) ? -1 : PathInfo.get(p1).isDescendantOf(p2) ? 1 : 0;
 			});
@@ -147,6 +155,7 @@ export default function prepareMergeNodes(
 		const pathInfo = PathInfo.get(node.path);
 		let index = result.findIndex(({ path }) => pathInfo.equals(path));
 		index = index < 0 ? result.findIndex(({ path }) => pathInfo.isParentOf(path) || pathInfo.isChildOf(path)) : index;
+
 		if (index < 0) {
 			setNodeBy(node);
 			continue;
@@ -160,36 +169,40 @@ export default function prepareMergeNodes(
 		}
 
 		if (pathInfo.equals(lastNode.path)) {
-			switch (lastNode.content.type) {
-				case nodeValueTypes.OBJECT:
-				case nodeValueTypes.ARRAY: {
-					const { created, revision_nr } = lastNode.content.modified > node.content.modified ? node.content : lastNode.content;
+			if (node.type === "SET") {
+				setNodeBy(node);
+			} else {
+				switch (lastNode.content.type) {
+					case nodeValueTypes.OBJECT:
+					case nodeValueTypes.ARRAY: {
+						const { created, revision_nr } = lastNode.content.modified > node.content.modified ? node.content : lastNode.content;
 
-					const contents = lastNode.content.modified > node.content.modified ? [node.content, lastNode.content] : [lastNode.content, node.content];
-					const content_values: object[] = contents.map<any>(({ value }) => value);
+						const contents = lastNode.content.modified > node.content.modified ? [node.content, lastNode.content] : [lastNode.content, node.content];
+						const content_values: object[] = contents.map<any>(({ value }) => value);
 
-					const new_content_value = Object.assign.apply(null, content_values as any);
+						const new_content_value = Object.assign.apply(null, content_values as any);
 
-					const content = Object.assign.apply(null, [
-						...contents,
-						{
-							value: Object.fromEntries(Object.entries(new_content_value).filter(([k, v]) => v !== null)),
-							created,
-							revision_nr: revision_nr + 1,
-						} as StorageNode,
-					] as any);
+						const content = Object.assign.apply(null, [
+							...contents,
+							{
+								value: removeNulls(new_content_value),
+								created,
+								revision_nr: revision_nr + 1,
+							} as StorageNode,
+						] as any);
 
-					setNodeBy(
-						Object.assign(lastNode, {
-							content,
-						}),
-					);
+						setNodeBy(
+							Object.assign(lastNode, {
+								content,
+							}),
+						);
 
-					break;
-				}
-				default: {
-					if (lastNode.content.modified < node.content.modified) {
-						setNodeBy(node);
+						break;
+					}
+					default: {
+						if (lastNode.content.modified < node.content.modified) {
+							setNodeBy(node);
+						}
 					}
 				}
 			}
@@ -198,8 +211,8 @@ export default function prepareMergeNodes(
 		}
 
 		const parentNodeIsLast = pathInfo.isChildOf(lastNode.path);
-		const parentNode = !parentNodeIsLast ? node : lastNode;
-		const childNode = parentNodeIsLast ? node : lastNode;
+		const parentNode: NodesPending = Utils.cloneObject(!parentNodeIsLast ? node : lastNode);
+		const childNode: NodesPending = Utils.cloneObject(parentNodeIsLast ? node : lastNode);
 		const childKey = PathInfo.get(childNode.path).key;
 
 		if (parentNode.content.type === nodeValueTypes.OBJECT && childKey !== null) {
@@ -217,8 +230,7 @@ export default function prepareMergeNodes(
 			}
 
 			if (parentNodeModified) {
-				result[index] = parentNode;
-				setNodeBy(result[index]);
+				setNodeBy(parentNode);
 				continue;
 			}
 		}
@@ -238,13 +250,18 @@ export default function prepareMergeNodes(
 		.sort(({ path: p1 }, { path: p2 }) => {
 			return PathInfo.get(p1).isAncestorOf(p2) ? -1 : PathInfo.get(p1).isDescendantOf(p2) ? 1 : 0;
 		})
-		.map(({ path, content }) => ({ path, content }));
+		.map(({ path, content, previous_content }: any) => ({ path, content, previous_content }));
 
 	removed = removed
 		.sort(({ path: p1 }, { path: p2 }) => {
 			return PathInfo.get(p1).isAncestorOf(p2) ? -1 : PathInfo.get(p1).isDescendantOf(p2) ? 1 : 0;
 		})
 		.map(({ path, content }) => ({ path, content }));
+
+	// console.log("added: ", JSON.stringify(added, null, 4));
+	// console.log("modified: ", JSON.stringify(modified, null, 4));
+	// console.log("removed: ", JSON.stringify(removed, null, 4));
+	// console.log("result: ", JSON.stringify(result, null, 4));
 
 	return { result, added, modified, removed } as any;
 }

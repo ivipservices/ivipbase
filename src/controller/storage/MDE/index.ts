@@ -4,6 +4,7 @@ import { NodeValueType, VALUE_TYPES, getValueType, nodeValueTypes, processReadNo
 import prepareMergeNodes from "./prepareMergeNodes";
 import structureNodes from "./structureNodes";
 import destructureData from "./destructureData";
+import { removeNulls } from "../../../utils";
 
 export { VALUE_TYPES, StorageNode, StorageNodeInfo };
 
@@ -139,7 +140,8 @@ export default class MDE extends SimpleEventEmitter {
 
 	private batch: Record<string, NodesPending[]> = {};
 
-	private sendingNodes: Promise<void> = Promise.resolve();
+	private sendNodesTime?: NodeJS.Timeout;
+	private sendingNodes: boolean = false;
 
 	constructor(options: Partial<MDESettings> = {}) {
 		super();
@@ -237,7 +239,19 @@ export default class MDE extends SimpleEventEmitter {
 	 */
 	async getNodesBy(database: string, path: string, onlyChildren: boolean = false, allHeirs: boolean = false): Promise<StorageNodeInfo[]> {
 		const reg = this.pathToRegex(path, onlyChildren, allHeirs);
-		let nodeList: StorageNodeInfo[] = (this.nodes[database] ?? []).concat(this.batch[database] ?? []).filter(({ path }) => reg.test(path));
+		let nodeList: StorageNodeInfo[] = (this.nodes[database] ?? [])
+			.concat(this.batch[database] ?? [])
+			.filter(({ path }) => reg.test(path))
+			.sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
+				return aM > bM ? -1 : aM < bM ? 1 : 0;
+			})
+			.filter(({ path }, i, list) => {
+				return list.findIndex(({ path: p }) => PathInfo.get(p).equals(path)) === i;
+			})
+			.sort(({ path: a }, { path: b }) => {
+				return PathInfo.get(a).isAncestorOf(b) ? 1 : PathInfo.get(a).isDescendantOf(b) ? -1 : 0;
+			});
+
 		let byNodes: StorageNodeInfo[] = [];
 
 		try {
@@ -284,75 +298,83 @@ export default class MDE extends SimpleEventEmitter {
 	}
 
 	async sendNodes(database: string) {
-		const status = await promiseState(this.sendingNodes);
-		if (status === "pending") {
+		if (this.sendingNodes || !Array.isArray(this.nodes[database]) || this.nodes[database].length <= 0) {
 			return;
 		}
 
-		this.sendingNodes = new Promise(async (resolve) => {
-			this.batch[database] = (this.nodes[database] ?? [])
-				.splice(0)
-				.sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
-					return aM > bM ? 1 : aM < bM ? -1 : 0;
-				})
-				.filter(({ path }, i, list) => {
-					return list.findIndex(({ path: p }) => PathInfo.get(p).equals(path)) === i;
-				})
-				.sort(({ path: a }, { path: b }) => {
-					return PathInfo.get(a).isAncestorOf(b) ? 1 : PathInfo.get(a).isDescendantOf(b) ? -1 : 0;
-				});
+		this.sendingNodes = true;
 
-			let listBatchRemoved: StorageNodeInfo[] = [];
-
-			try {
-				for (let node of this.batch[database]) {
-					const reg = this.pathToRegex(node.path, false, false);
-					const byNodes = await this.settings.getMultiple(database, reg);
-
-					const { added, modified, removed } = prepareMergeNodes.apply(this, [byNodes, [node]]);
-
-					listBatchRemoved = listBatchRemoved.concat(removed);
-
-					for (let node of modified) {
-						await this.settings.setNode(database, node.path, node.content, node);
-						this.batch[database] = this.batch[database].filter(({ path }) => PathInfo.get(path).equals(node.path) !== true);
-						this.emit("change", {
-							name: "change",
-							path: node.path,
-							value: node.content.value,
-						});
-					}
-
-					for (let node of added) {
-						await this.settings.setNode(database, node.path, node.content, node);
-						this.batch[database] = this.batch[database].filter(({ path }) => PathInfo.get(path).equals(node.path) !== true);
-						this.emit("add", {
-							name: "add",
-							path: node.path,
-							value: node.content.value,
-						});
-					}
-				}
-				for (let node of listBatchRemoved) {
-					const reg = this.pathToRegex(node.path, false, true);
-					const byNodes = await this.settings.getMultiple(database, reg);
-
-					for (let r of byNodes) {
-						await this.settings.removeNode(database, r.path, r.content, r);
-						this.batch[database] = this.batch[database].filter(({ path }) => PathInfo.get(path).equals(r.path) !== true);
-						this.emit("remove", {
-							name: "remove",
-							path: r.path,
-							value: r.content.value,
-						});
-					}
-				}
-			} catch {}
-
-			this.nodes[database] = (this.nodes[database] ?? []).concat(this.batch[database]);
-			this.batch[database] = [];
-			resolve();
+		this.batch[database] = this.nodes[database].splice(0).sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
+			return aM > bM ? -1 : aM < bM ? 1 : 0;
 		});
+
+		let listBatchRemoved: StorageNodeInfo[] = [];
+
+		try {
+			for (let node of this.batch[database]) {
+				const reg = this.pathToRegex(node.path, false, false);
+				const byNodes = await this.settings.getMultiple(database, reg);
+
+				const { added, modified, removed } = prepareMergeNodes.apply(this, [byNodes, [node]]);
+
+				listBatchRemoved = listBatchRemoved.concat(removed);
+
+				for (let node of modified) {
+					await this.settings.setNode(database, node.path, node.content, node);
+					this.batch[database] = this.batch[database].filter(({ path }) => PathInfo.get(path).equals(node.path) !== true);
+					this.emit("change", {
+						name: "change",
+						path: PathInfo.get(PathInfo.get(node.path).keys.slice(2)).path,
+						value: removeNulls(node.content.value),
+						previous: removeNulls(node.previous_content?.value),
+					});
+				}
+
+				for (let node of added) {
+					await this.settings.setNode(database, node.path, node.content, node);
+					this.batch[database] = this.batch[database].filter(({ path }) => PathInfo.get(path).equals(node.path) !== true);
+					this.emit("add", {
+						name: "add",
+						path: PathInfo.get(PathInfo.get(node.path).keys.slice(2)).path,
+						value: removeNulls(node.content.value),
+					});
+				}
+			}
+			for (let node of listBatchRemoved) {
+				const reg = this.pathToRegex(node.path, false, true);
+				const byNodes = await this.settings.getMultiple(database, reg);
+
+				for (let r of byNodes) {
+					await this.settings.removeNode(database, r.path, r.content, r);
+					this.batch[database] = this.batch[database].filter(({ path }) => PathInfo.get(path).equals(r.path) !== true);
+					this.emit("remove", {
+						name: "remove",
+						path: PathInfo.get(PathInfo.get(node.path).keys.slice(2)).path,
+						value: removeNulls(r.content.value),
+					});
+				}
+			}
+		} catch {}
+
+		this.nodes[database] = (this.nodes[database] ?? [])
+			.concat(
+				this.batch[database].filter(({ type }) => {
+					return type !== "VERIFY";
+				}),
+			)
+			.sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
+				return aM > bM ? -1 : aM < bM ? 1 : 0;
+			})
+			.sort(({ path: a }, { path: b }) => {
+				return PathInfo.get(a).isAncestorOf(b) ? 1 : PathInfo.get(a).isDescendantOf(b) ? -1 : 0;
+			});
+
+		this.batch[database] = [];
+		this.sendingNodes = false;
+
+		if (this.nodes[database].length > 0) {
+			this.sendNodes(database);
+		}
 	}
 
 	/**

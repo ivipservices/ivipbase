@@ -24,7 +24,7 @@ export class StorageDBServer extends Api {
 		};
 	}
 
-	subscribe(path: string, event: string, callback: Types.EventSubscriptionCallback) {
+	subscribe(path: string, event: string, callback: Types.EventSubscriptionCallback, settings?: Types.EventSubscriptionSettings) {
 		this.db.subscriptions.add(path, event, callback);
 	}
 

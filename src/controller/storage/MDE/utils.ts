@@ -217,7 +217,7 @@ export function valueFitsInline(value: any, settings: MDESettings) {
 	} else if (value instanceof Array) {
 		return value.length === 0;
 	} else if (typeof value === "object") {
-		return Object.keys(value).length === 0;
+		return value === null || Object.keys(value).length === 0;
 	} else {
 		throw new TypeError("What else is there?");
 	}
@@ -237,9 +237,11 @@ export function getTypedChildValue(val: any):
 			type: (typeof nodeValueTypes)[keyof Pick<typeof nodeValueTypes, "DATETIME" | "REFERENCE" | "BINARY">];
 			value: string | number | boolean;
 	  }
-	| undefined {
+	| undefined
+	| null {
 	if (val === null) {
-		throw new Error(`Not allowed to store null values. remove the property`);
+		return null;
+		//throw new Error(`Not allowed to store null values. remove the property`);
 	} else if (isDate(val)) {
 		return { type: VALUE_TYPES.DATETIME as any, value: new Date(val).getTime() };
 	} else if (["string", "number", "boolean"].includes(typeof val)) {
@@ -282,17 +284,22 @@ export function processReadNodeValue(node: StorageNode): StorageNode {
 	node = JSON.parse(JSON.stringify(node));
 
 	switch (node.type) {
-		case VALUE_TYPES.ARRAY:
+		case VALUE_TYPES.ARRAY: {
+			node.value = [];
+			break;
+		}
 		case VALUE_TYPES.OBJECT: {
 			// Verifica se algum valor precisa ser convertido
 			// NOTA: Arrays são armazenados com propriedades numéricas
 			const obj: any = node.value;
-			Object.keys(obj).forEach((key) => {
-				const item = obj[key];
-				if (typeof item === "object" && "type" in item) {
-					obj[key] = getTypedChildValue(item);
-				}
-			});
+			if (obj !== null) {
+				Object.keys(obj).forEach((key) => {
+					const item = obj[key];
+					if (item !== null && typeof item === "object" && "type" in item) {
+						obj[key] = getTypedChildValue(item);
+					}
+				});
+			}
 			node.value = obj;
 			break;
 		}
