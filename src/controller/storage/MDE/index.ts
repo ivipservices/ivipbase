@@ -126,6 +126,8 @@ export class MDESettings {
 }
 
 export default class MDE extends SimpleEventEmitter {
+	protected _ready = false;
+
 	/**
 	 * As configurações do node.
 	 */
@@ -146,6 +148,9 @@ export default class MDE extends SimpleEventEmitter {
 	constructor(options: Partial<MDESettings> = {}) {
 		super();
 		this.settings = new MDESettings(options);
+		this.once("ready", () => {
+			this._ready = true;
+		});
 		this.init();
 	}
 
@@ -153,6 +158,19 @@ export default class MDE extends SimpleEventEmitter {
 		if (typeof this.settings.init === "function") {
 			this.settings.init.apply(this, []);
 		}
+	}
+
+	/**
+	 * Aguarda o serviço estar pronto antes de executar o seu callback.
+	 * @param callback (opcional) função de retorno chamada quando o serviço estiver pronto para ser usado. Você também pode usar a promise retornada.
+	 * @returns retorna uma promise que resolve quando estiver pronto
+	 */
+	async ready(callback?: () => void) {
+		if (!this._ready) {
+			// Aguarda o evento ready
+			await new Promise((resolve) => this.on("ready", resolve));
+		}
+		callback?.();
 	}
 
 	/**

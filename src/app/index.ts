@@ -48,7 +48,9 @@ export class IvipBaseApp extends SimpleEventEmitter {
 					this.emitOnce("ready");
 				});
 			} else {
-				this.emitOnce("ready");
+				this.storage.ready(() => {
+					this.emitOnce("ready");
+				});
 			}
 		}
 	}

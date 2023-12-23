@@ -9,7 +9,6 @@ export class CustomStorageSettings extends MDESettings implements Omit<MDESettin
 
 export abstract class CustomStorage extends MDE {
 	dbName: string = "CustomStorage";
-	ready: boolean = false;
 
 	constructor(options: Partial<Omit<MDESettings, "getMultiple" | "setNode" | "removeNode">> = {}) {
 		super({

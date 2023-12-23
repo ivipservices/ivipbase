@@ -22,11 +22,11 @@ export class DataStorage extends CustomStorage {
 				this.data[name] = new Map<string, StorageNode>();
 			});
 
-		this.ready = true;
+		this.emitOnce("ready");
 	}
 
 	async getMultiple(database: string, expression: RegExp): Promise<StorageNodeInfo[]> {
-		if (!this.ready || !this.data[database]) {
+		if (!this.data[database]) {
 			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
 		}
 
@@ -42,7 +42,7 @@ export class DataStorage extends CustomStorage {
 	}
 
 	async setNode(database: string, path: string, content: StorageNode) {
-		if (!this.ready || !this.data[database]) {
+		if (!this.data[database]) {
 			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
 		}
 
@@ -50,7 +50,7 @@ export class DataStorage extends CustomStorage {
 	}
 
 	async removeNode(database: string, path: string) {
-		if (!this.ready || !this.data[database]) {
+		if (!this.data[database]) {
 			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
 		}
 

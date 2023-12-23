@@ -2,23 +2,26 @@
 //require("./MDE/test_ismael");
 //require("./MDE/test_initial_app");
 
-import { initializeApp, getDatabase } from "../src";
+import { initializeApp, getDatabase, DataStorageSettings, JsonFileStorageSettings } from "../src";
 
 const app = initializeApp({
-	port: 8080,
-	isServer: true,
+	// port: 8080,
+	// isServer: true,
+	storage: new JsonFileStorageSettings({
+		filePath: "./test_file.json",
+	}),
 });
 
 app.ready(async () => {
-	//console.log("App iniciado!");
+	console.log("App iniciado!");
 	const db = getDatabase(app);
 
-	db.ref("test").on("child_added", (snap) => console.log("child_added", snap.ref.path, snap.val()));
-	db.ref("test").on("child_changed", (snap) => console.log("child_changed", snap.ref.path, snap.val()));
-	db.ref("test").on("child_removed", (snap) => console.log("child_removed", snap.ref.path, snap.val()));
-	db.ref("test").on("mutated", (snap) => console.log("mutated", snap.ref.path, snap.val()));
-	db.ref("test").on("mutations", (snap) => console.log("mutations", snap.ref.path, snap.val()));
-	db.ref("test").on("value", (snap) => console.log("value", snap.ref.path, snap.val()));
+	// db.ref("test").on("child_added", (snap) => console.log("child_added", snap.ref.path, snap.val()));
+	// db.ref("test").on("child_changed", (snap) => console.log("child_changed", snap.ref.path, snap.val()));
+	// db.ref("test").on("child_removed", (snap) => console.log("child_removed", snap.ref.path, snap.val()));
+	// db.ref("test").on("mutated", (snap) => console.log("mutated", snap.ref.path, snap.val()));
+	// db.ref("test").on("mutations", (snap) => console.log("mutations", snap.ref.path, snap.val()));
+	// db.ref("test").on("value", (snap) => console.log("value", snap.ref.path, snap.val()));
 
 	await db.ref("test").set({ text: "This is my first iVipCoin test in RunKit" });
 
@@ -58,5 +61,8 @@ app.ready(async () => {
 
 	await db.ref("test").update({ text: null });
 
-	//snap = await db.ref("test").get();
+	setTimeout(async () => {
+		snap = await db.ref("test").get();
+		console.log(JSON.stringify(snap.val(), null, 4));
+	}, 1000);
 });

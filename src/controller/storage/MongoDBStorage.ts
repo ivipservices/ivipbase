@@ -41,6 +41,7 @@ export class MongodbSettings {
 }
 
 export class MongodbStorage extends CustomStorage {
+	protected isConnected: boolean = false;
 	private options: MongodbSettings;
 	private client: MongoClient;
 	private database: Record<
@@ -56,21 +57,21 @@ export class MongodbStorage extends CustomStorage {
 		this.options = new MongodbSettings(options);
 		this.options.database = (Array.isArray(database) ? database : [database]).filter((name) => typeof name === "string" && name.trim() !== "");
 		this.dbName = "MongoDB";
-		this.ready = false;
 
 		this.client = new MongoClient(this.mongoUri, {});
 
 		this.client.on("connected", () => {
-			this.ready = true;
+			this.emitOnce("ready");
+			this.isConnected = true;
 		});
 
 		this.client.on("error", (err) => {
-			this.ready = false;
+			this.isConnected = false;
 			throw ERROR_FACTORY.create(AppError.DB_CONNECTION_ERROR, { error: String(err) });
 		});
 
 		this.client.on("disconnected", () => {
-			this.ready = false;
+			this.isConnected = false;
 			setTimeout(() => {
 				this.connect();
 			}, 10000);
@@ -82,20 +83,20 @@ export class MongodbStorage extends CustomStorage {
 	private async connect() {
 		try {
 			await this.client.connect();
-			this.ready = true;
+			this.isConnected = true;
 
 			for (let name of this.options.database) {
 				this.database[name].db = this.client.db(name);
 				this.database[name].collection = await this.getCollectionBy(name, this.options.collection);
 			}
 		} catch (err) {
-			this.ready = false;
+			this.isConnected = false;
 			throw ERROR_FACTORY.create(AppError.DB_CONNECTION_ERROR, { error: String(err) });
 		}
 	}
 
 	private async getCollectionBy(name: string, collectionName: string): Promise<Collection<StorageNodeInfo>> {
-		if (!this.ready || !this.database[name] || !this.database[name].db) {
+		if (!this.isConnected || !this.database[name] || !this.database[name].db) {
 			throw ERROR_FACTORY.create(AppError.DB_DISCONNECTED, { dbName: name });
 		}
 
@@ -130,7 +131,7 @@ export class MongodbStorage extends CustomStorage {
 	}
 
 	async getMultiple(database: string, expression: RegExp): Promise<StorageNodeInfo[]> {
-		if (!this.ready || !this.database[database] || !this.database[database].collection) {
+		if (!this.isConnected || !this.database[database] || !this.database[database].collection) {
 			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
 		}
 
@@ -144,7 +145,7 @@ export class MongodbStorage extends CustomStorage {
 	}
 
 	async setNode(database: string, path: string, content: StorageNode, node: StorageNodeInfo) {
-		if (!this.ready || !this.database[database] || !this.database[database].collection) {
+		if (!this.isConnected || !this.database[database] || !this.database[database].collection) {
 			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
 		}
 
@@ -153,7 +154,7 @@ export class MongodbStorage extends CustomStorage {
 	}
 
 	async removeNode(database: string, path: string, content: StorageNode, node: StorageNodeInfo) {
-		if (!this.ready || !this.database[database] || !this.database[database].collection) {
+		if (!this.isConnected || !this.database[database] || !this.database[database].collection) {
 			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
 		}
 

@@ -185,7 +185,7 @@ export default function prepareMergeNodes(
 						const content = Object.assign.apply(null, [
 							...contents,
 							{
-								value: removeNulls(new_content_value),
+								value: new_content_value,
 								created,
 								revision_nr: revision_nr + 1,
 							} as StorageNode,
@@ -238,25 +238,40 @@ export default function prepareMergeNodes(
 		setNodeBy(node);
 	}
 
-	result = result.map(({ path, content }) => ({ path, content }));
+	result = result.map(({ path, content }) => {
+		content.value = removeNulls(content.value);
+		return { path, content };
+	});
 
 	added = added
 		.sort(({ path: p1 }, { path: p2 }) => {
 			return PathInfo.get(p1).isAncestorOf(p2) ? -1 : PathInfo.get(p1).isDescendantOf(p2) ? 1 : 0;
 		})
-		.map(({ path, content }) => ({ path, content }));
+		.map(({ path, content }) => {
+			content.value = removeNulls(content.value);
+			return { path, content };
+		});
 
 	modified = modified
 		.sort(({ path: p1 }, { path: p2 }) => {
 			return PathInfo.get(p1).isAncestorOf(p2) ? -1 : PathInfo.get(p1).isDescendantOf(p2) ? 1 : 0;
 		})
-		.map(({ path, content, previous_content }: any) => ({ path, content, previous_content }));
+		.map(({ path, content, previous_content }) => {
+			content.value = removeNulls(content.value);
+			if (previous_content) {
+				previous_content.value = removeNulls(previous_content.value);
+			}
+			return { path, content, previous_content };
+		});
 
 	removed = removed
 		.sort(({ path: p1 }, { path: p2 }) => {
 			return PathInfo.get(p1).isAncestorOf(p2) ? -1 : PathInfo.get(p1).isDescendantOf(p2) ? 1 : 0;
 		})
-		.map(({ path, content }) => ({ path, content }));
+		.map(({ path, content }) => {
+			content.value = removeNulls(content.value);
+			return { path, content };
+		});
 
 	// console.log("added: ", JSON.stringify(added, null, 4));
 	// console.log("modified: ", JSON.stringify(modified, null, 4));

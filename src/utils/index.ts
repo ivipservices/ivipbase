@@ -13,18 +13,16 @@ export function removeNulls(obj: any) {
 	if (obj === null || typeof obj !== "object") {
 		return obj;
 	}
-	Object.keys(obj).forEach((prop) => {
+	const result = Array.isArray(obj) ? [] : {};
+	for (let prop in obj) {
 		const val = obj[prop];
 		if (val === null) {
-			delete obj[prop];
-			if (obj instanceof Array) {
-				obj.length--;
-			}
+			continue;
 		}
+		result[prop] = val;
 		if (typeof val === "object") {
-			obj[prop] = removeNulls(val);
+			result[prop] = removeNulls(val);
 		}
-	});
-
-	return obj;
+	}
+	return result;
 }
