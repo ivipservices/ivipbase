@@ -26,10 +26,10 @@
                     "currency_id": "BRL",
                     "history_id": "1677138262468"
                 },
-                "revision": "lqioqcu600026khx1g8p08tq",
+                "revision": "lqk43cpp0002fchx4d31bqxg",
                 "revision_nr": 3,
-                "created": 1703373718335,
-                "modified": 1703373718399
+                "created": 1703459985092,
+                "modified": 1703459985181
             }
         },
         {
@@ -44,10 +44,10 @@
                     "currency_id": "BRL",
                     "history_id": "1677138262468"
                 },
-                "revision": "lqioqcu300016khxdqn7a6ad",
-                "revision_nr": 9,
+                "revision": "lqk43cpo0001fchxfp0r75of",
+                "revision_nr": 14,
                 "created": 1703373269336,
-                "modified": 1703373718398
+                "modified": 1703459985181
             }
         },
         {
@@ -66,10 +66,10 @@
             "content": {
                 "type": 2,
                 "value": {},
-                "revision": "lqioqcu300016khxdqn7a6ad",
-                "revision_nr": 9,
+                "revision": "lqk43cpo0001fchxfp0r75of",
+                "revision_nr": 14,
                 "created": 1703373269335,
-                "modified": 1703373718396
+                "modified": 1703459985181
             }
         },
         {
@@ -81,10 +81,10 @@
                     "label": "Taxa de R$ 3,49",
                     "amount": 3.49
                 },
-                "revision": "lqioqcu300016khxdqn7a6ad",
-                "revision_nr": 9,
+                "revision": "lqk43cpo0001fchxfp0r75of",
+                "revision_nr": 14,
                 "created": 1703373269335,
-                "modified": 1703373718396
+                "modified": 1703459985181
             }
         },
         {
@@ -103,10 +103,10 @@
             "content": {
                 "type": 2,
                 "value": {},
-                "revision": "lqioqcu300016khxdqn7a6ad",
-                "revision_nr": 9,
+                "revision": "lqk43cpo0001fchxfp0r75of",
+                "revision_nr": 14,
                 "created": 1703373269335,
-                "modified": 1703373718398
+                "modified": 1703459985181
             }
         },
         {
@@ -118,10 +118,10 @@
                     "label": "Taxa de R$ 3,49",
                     "amount": 3.49
                 },
-                "revision": "lqioqcu300016khxdqn7a6ad",
-                "revision_nr": 9,
+                "revision": "lqk43cpo0001fchxfp0r75of",
+                "revision_nr": 14,
                 "created": 1703373269335,
-                "modified": 1703373718398
+                "modified": 1703459985181
             }
         },
         {
@@ -133,10 +133,10 @@
                     "label": "Taxa de R$ 4,00",
                     "amount": 4
                 },
-                "revision": "lqioqcu300016khxdqn7a6ad",
-                "revision_nr": 9,
+                "revision": "lqk43cpo0001fchxfp0r75of",
+                "revision_nr": 14,
                 "created": 1703373269335,
-                "modified": 1703373718398
+                "modified": 1703459985181
             }
         },
         {

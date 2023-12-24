@@ -21,7 +21,13 @@ app.ready(async () => {
 	// db.ref("test").on("child_removed", (snap) => console.log("child_removed", snap.ref.path, snap.val()));
 	// db.ref("test").on("mutated", (snap) => console.log("mutated", snap.ref.path, snap.val()));
 	// db.ref("test").on("mutations", (snap) => console.log("mutations", snap.ref.path, snap.val()));
-	// db.ref("test").on("value", (snap) => console.log("value", snap.ref.path, snap.val()));
+	//db.ref("test").on("value", (snap) => console.log("value", snap.ref.path, snap.val()));
+
+	// db.ref("test")
+	// 	.observe()
+	// 	.subscribe((val) => {
+	// 		console.log("text: ", val.text);
+	// 	});
 
 	await db.ref("test").set({ text: "This is my first iVipCoin test in RunKit" });
 
@@ -61,8 +67,8 @@ app.ready(async () => {
 
 	await db.ref("test").update({ text: null });
 
-	setTimeout(async () => {
-		snap = await db.ref("test").get();
-		console.log(JSON.stringify(snap.val(), null, 4));
-	}, 1000);
+	// setTimeout(async () => {
+	// 	snap = await db.ref("test").get();
+	// 	console.log(JSON.stringify(snap.val(), null, 4));
+	// }, 1000);
 });
