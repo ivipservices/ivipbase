@@ -1,3 +1,5 @@
+import { PathInfo } from "ivipbase-core";
+
 /**
  * Substituição para console.assert, lança um erro se a condição não for atendida.
  * @param condition Condição 'truthy'
@@ -7,6 +9,18 @@ export function assert(condition: any, error?: string) {
 	if (!condition) {
 		throw new Error(`Asserção falhou: ${error ?? "verifique seu código"}`);
 	}
+}
+
+export function pathValueToObject(dataPath: string, currentPath: string, value: any): typeof value {
+	const result = value;
+	const pathInfo = PathInfo.get(dataPath);
+	const currentPathInfo = PathInfo.get(currentPath);
+	const currentKeys = currentPathInfo.pathKeys.slice(currentPathInfo.pathKeys.findIndex((k) => !pathInfo.pathKeys.includes(k)));
+
+	for (let k of currentKeys) {
+	}
+
+	return result;
 }
 
 export function removeNulls(obj: any) {

@@ -1,5 +1,5 @@
 import { Types, PathInfo, Utils } from "ivipbase-core";
-import { assert } from "../utils";
+import { assert, pathValueToObject } from "../utils";
 
 const SUPPORTED_EVENTS = ["value", "child_added", "child_changed", "child_removed", "mutated", "mutations"];
 SUPPORTED_EVENTS.push(...SUPPORTED_EVENTS.map((event) => `notify_${event}`));
@@ -79,7 +79,7 @@ export class Subscriptions {
 					.filter((sub) => !sub.type.startsWith("notify_")) // Eventos de notificação não precisam de carregamento de valor adicional
 					.forEach((sub) => {
 						let dataPath: null | string = null;
-						if (sub.type === "value" && pathInfo.equals(eventPath)) {
+						if (sub.type === "value") {
 							// ["value", "notify_value"].includes(sub.type)
 							dataPath = eventPath;
 						} else if (["mutated", "mutations"].includes(sub.type) && pathInfo.isDescendantOf(eventPath)) {
@@ -121,7 +121,7 @@ export class Subscriptions {
 
 				pathSubs.forEach((sub) => {
 					let dataPath: null | string = null;
-					if ((sub.type === "value" || sub.type === "notify_value") && pathInfo.equals(eventPath)) {
+					if (sub.type === "value" || sub.type === "notify_value") {
 						dataPath = eventPath;
 					} else if (["child_changed", "notify_child_changed"].includes(sub.type)) {
 						const childKey = path === eventPath || pathInfo.isAncestorOf(eventPath) ? "*" : PathInfo.getPathKeys(path.slice(eventPath.length).replace(/^\//, ""))[0];
@@ -220,7 +220,13 @@ export class Subscriptions {
 	 * @param newValue Novo valor.
 	 * @param variables Array de objetos contendo variáveis a serem substituídas no caminho.
 	 */
-	callSubscriberWithValues(sub: ReturnType<typeof this.getValueSubscribersForPath>[0], oldValue: any, newValue: any, variables: Array<{ name: string; value: string | number }> = []) {
+	callSubscriberWithValues(
+		sub: ReturnType<typeof this.getValueSubscribersForPath>[0],
+		currentPath: string,
+		oldValue: any,
+		newValue: any,
+		variables: Array<{ name: string; value: string | number }> = [],
+	) {
 		let trigger = true;
 		let type = sub.type;
 		if (type.startsWith("notify_")) {
@@ -250,6 +256,12 @@ export class Subscriptions {
 			pathKeys[index] = variable.value;
 		});
 		const dataPath = pathKeys.reduce<string>((path, key) => (key !== "" ? PathInfo.getChildPath(path, key) : path), "");
+
+		if (type === "value") {
+			oldValue = pathValueToObject(dataPath, currentPath, oldValue);
+			newValue = pathValueToObject(dataPath, currentPath, newValue);
+		}
+
 		this.trigger(sub.type, sub.subscriptionPath, dataPath, oldValue, newValue, {});
 	}
 
@@ -377,7 +389,7 @@ export class Subscriptions {
 								const childValues = Utils.getChildValues(key, oldValue, newValue);
 								const vars = variables.concat({ name: subKey, value: key });
 								if (trailKeys.length === 0) {
-									this.callSubscriberWithValues(sub, childValues.oldValue, childValues.newValue, vars);
+									this.callSubscriberWithValues(sub, path, childValues.oldValue, childValues.newValue, vars);
 								} else {
 									process(PathInfo.getChildPath(currentPath, subKey), childValues.oldValue, childValues.newValue, vars);
 								}
@@ -390,7 +402,7 @@ export class Subscriptions {
 							newValue = childValues.newValue;
 						}
 					}
-					this.callSubscriberWithValues(sub, oldValue, newValue, variables);
+					this.callSubscriberWithValues(sub, path, oldValue, newValue, variables);
 				};
 
 				if (sub.type.startsWith("notify_") && PathInfo.get(sub.eventPath).isAncestorOf(topEventPath)) {

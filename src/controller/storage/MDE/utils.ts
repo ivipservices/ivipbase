@@ -168,7 +168,7 @@ export function getValueType(value: unknown) {
 	// TODO else if (value instanceof DataDocument) { return VALUE_TYPES.DOCUMENT; }
 	else if (typeof value === "string") {
 		return VALUE_TYPES.STRING;
-	} else if (typeof value === "object") {
+	} else if (typeof value === "object" && value !== null) {
 		return VALUE_TYPES.OBJECT;
 	} else if (typeof value === "number") {
 		return VALUE_TYPES.NUMBER;
@@ -237,7 +237,6 @@ export function getTypedChildValue(val: any):
 			type: (typeof nodeValueTypes)[keyof Pick<typeof nodeValueTypes, "DATETIME" | "REFERENCE" | "BINARY">];
 			value: string | number | boolean;
 	  }
-	| undefined
 	| null {
 	if (val === null) {
 		return null;
@@ -254,6 +253,7 @@ export function getTypedChildValue(val: any):
 		assert(Object.keys(val).length === 0 || ("type" in val && val.type === VALUE_TYPES.DEDICATED_RECORD), "child object stored in parent can only be empty");
 		return val;
 	}
+	return val;
 }
 
 /**
