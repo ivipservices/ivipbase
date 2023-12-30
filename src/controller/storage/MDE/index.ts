@@ -351,34 +351,15 @@ export default class MDE extends SimpleEventEmitter {
 			// console.log("result: ", JSON.stringify(result, null, 4));
 
 			for (let node of modified) {
-				await Promise.race([this.settings.setNode(database, node.path, node.content, node)])
-					.then(() => {
-						this.emit("change", {
-							name: "change",
-							path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
-							value: removeNulls(node.content.value),
-							previous: removeNulls(node.previous_content?.value),
-						});
-						return Promise.resolve();
-					})
-					.catch(() => {
-						batchError.push(node);
-					});
+				await Promise.race([this.settings.setNode(database, node.path, node.content, node)]).catch(() => {
+					batchError.push(node);
+				});
 			}
 
 			for (let node of added) {
-				await Promise.race([this.settings.setNode(database, node.path, node.content, node)])
-					.then(() => {
-						this.emit("add", {
-							name: "add",
-							path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
-							value: removeNulls(node.content.value),
-						});
-						return Promise.resolve();
-					})
-					.catch(() => {
-						batchError.push(node);
-					});
+				await Promise.race([this.settings.setNode(database, node.path, node.content, node)]).catch(() => {
+					batchError.push(node);
+				});
 			}
 
 			for (let node of removed) {
@@ -386,25 +367,16 @@ export default class MDE extends SimpleEventEmitter {
 				const byNodes = await this.settings.getMultiple(database, reg);
 
 				for (let r of byNodes) {
-					await Promise.race([this.settings.removeNode(database, r.path, r.content, r)])
-						.then(() => {
-							this.emit("remove", {
-								name: "remove",
-								path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
-								value: removeNulls(r.content.value),
-							});
-							return Promise.resolve();
-						})
-						.catch(() => {
-							batchError.push({
-								path: r.path,
-								content: {
-									...r.content,
-									type: 0,
-									value: null,
-								},
-							});
+					await Promise.race([this.settings.removeNode(database, r.path, r.content, r)]).catch(() => {
+						batchError.push({
+							path: r.path,
+							content: {
+								...r.content,
+								type: 0,
+								value: null,
+							},
 						});
+					});
 				}
 			}
 		} catch {}
@@ -600,9 +572,43 @@ export default class MDE extends SimpleEventEmitter {
 		options: {
 			assert_revision?: string;
 		} = {},
+		type: "SET" | "UPDATE" = "SET",
 	): Promise<void> {
 		path = PathInfo.get([this.settings.prefix, path]).path;
-		const nodes = destructureData.apply(this, ["SET", path, value, options]);
+		const nodes = destructureData.apply(this, [type, path, value, options]);
+		const byNodes = await this.getNodesBy(database, path, false, true);
+		const { added, modified, removed } = prepareMergeNodes.apply(this, [byNodes, nodes]);
+
+		for (let node of modified) {
+			this.emit("change", {
+				name: "change",
+				path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
+				value: removeNulls(node.content.value),
+				previous: removeNulls(node.previous_content?.value),
+			});
+		}
+
+		for (let node of added) {
+			this.emit("add", {
+				name: "add",
+				path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
+				value: removeNulls(node.content.value),
+			});
+		}
+
+		for (let node of removed) {
+			const reg = this.pathToRegex(node.path, false, true);
+			Promise.race([this.settings.getMultiple(database, reg)]).then((byNodes) => {
+				for (let r of byNodes) {
+					this.emit("remove", {
+						name: "remove",
+						path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
+						value: removeNulls(r.content.value),
+					});
+				}
+			});
+		}
+
 		this.pushNode(database, nodes);
 	}
 
@@ -614,8 +620,6 @@ export default class MDE extends SimpleEventEmitter {
 			assert_revision?: string;
 		} = {},
 	): Promise<void> {
-		path = PathInfo.get([this.settings.prefix, path]).path;
-		const nodes = destructureData.apply(this, ["UPDATE", path, value, options]);
-		this.pushNode(database, nodes);
+		this.set(database, path, value, options);
 	}
 }

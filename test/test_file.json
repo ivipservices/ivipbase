@@ -15,21 +15,11 @@
             "path": "root/test",
             "content": {
                 "type": 1,
-                "value": {
-                    "type": "deposit",
-                    "payment_method": "bolbradesco",
-                    "original_amount": 603,
-                    "id": 1311772470,
-                    "operation_type": "regular_payment",
-                    "payment_type": "ticket",
-                    "status_detail": "pending_waiting_payment",
-                    "currency_id": "BRL",
-                    "history_id": "1677138262468"
-                },
-                "revision": "lqk43cpp0002fchx4d31bqxg",
-                "revision_nr": 3,
-                "created": 1703459985092,
-                "modified": 1703459985181
+                "value": {},
+                "revision": "lqnzb5xm0002fshxe1gv44zx",
+                "revision_nr": 1,
+                "created": 1703693816266,
+                "modified": 1703693816266
             }
         },
         {
