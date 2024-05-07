@@ -141,7 +141,6 @@ export const addRoute = (env: LocalServer) => {
 					},
 					ReflectionNodeInfo: {
 						type: "object",
-						required: ["key", "exists", "type"],
 						properties: {
 							key: {
 								description: "Key or index of the node",
@@ -177,7 +176,6 @@ export const addRoute = (env: LocalServer) => {
 							address: {
 								type: "object",
 								description: "The physical location of the node in the database",
-								required: ["pageNr", "recordNr"],
 								properties: {
 									pageNr: { type: "integer" },
 									recordNr: { type: "integer" },
@@ -186,7 +184,6 @@ export const addRoute = (env: LocalServer) => {
 							children: {
 								type: "object",
 								description: `Information about the node's children (if requested)`,
-								required: ["more", "list"],
 								properties: {
 									count: {
 										type: "integer",

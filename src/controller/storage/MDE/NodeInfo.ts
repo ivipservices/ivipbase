@@ -23,7 +23,7 @@ export class NodeInfo {
 	key?: string;
 	exists?: boolean;
 	/** TODO: Move this to BinaryNodeInfo */
-	address?: NodeAddress;
+	address?: NodeAddress | null;
 	value?: any;
 	childCount?: number;
 
@@ -51,11 +51,11 @@ export class NodeInfo {
 	}
 
 	get valueType() {
-		return this.type;
+		return this.type ?? -1;
 	}
 
 	get valueTypeName() {
-		return getValueTypeName(this.valueType as any);
+		return getValueTypeName(this.valueType);
 	}
 
 	toString() {
@@ -71,7 +71,7 @@ export class NodeInfo {
 }
 
 export class CustomStorageNodeInfo extends NodeInfo {
-	address?: NodeAddress;
+	address?: NodeAddress | null;
 	revision: string;
 	revision_nr: number;
 	created: Date;

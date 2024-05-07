@@ -1,6 +1,6 @@
 import { PathInfo, SimpleEventEmitter, Utils } from "ivipbase-core";
 import { CustomStorageNodeInfo, NodeAddress, NodesPending, StorageNode, StorageNodeInfo } from "./NodeInfo";
-import { NodeValueType, VALUE_TYPES, getValueType, nodeValueTypes, processReadNodeValue, promiseState } from "./utils";
+import { NodeValueType, VALUE_TYPES, getTypeFromStoredValue, getValueType, nodeValueTypes, processReadNodeValue, promiseState } from "./utils";
 import prepareMergeNodes from "./prepareMergeNodes";
 import structureNodes from "./structureNodes";
 import destructureData from "./destructureData";
@@ -427,14 +427,19 @@ export default class MDE extends SimpleEventEmitter {
 		path: string,
 		options: {
 			include_child_count?: boolean;
+			include_prefix?: boolean;
+			cache_nodes?: StorageNodeInfo[];
 		} = {},
 	): Promise<CustomStorageNodeInfo> {
-		const pathInfo = PathInfo.get(path);
-		const nodes = await this.getNodesBy(database, path, options.include_child_count, false);
-		const mainNode = nodes.find(({ path: p }) => PathInfo.get(p).equals(path) || PathInfo.get(p).isParentOf(path));
+		const { include_child_count = true, include_prefix = true, cache_nodes } = options;
+
+		const pathInfo = include_prefix ? PathInfo.get([this.settings.prefix, path]) : PathInfo.get(path);
+		const mainPath = include_prefix ? pathInfo.path.replace(this.settings.prefix + "/", "") : pathInfo.path;
+		const nodes = await this.getNodesBy(database, pathInfo.path, include_child_count, false);
+		const mainNode = nodes.find(({ path: p }) => PathInfo.get(p).equals(pathInfo.path) || PathInfo.get(p).isParentOf(pathInfo.path));
 
 		const defaultNode = new CustomStorageNodeInfo({
-			path: pathInfo.path,
+			path: mainPath,
 			key: typeof pathInfo.key === "string" ? pathInfo.key : undefined,
 			index: typeof pathInfo.key === "number" ? pathInfo.key : undefined,
 			type: 0 as NodeValueType,
@@ -469,12 +474,12 @@ export default class MDE extends SimpleEventEmitter {
 		const isArrayChild = !containsChild && mainNode.content.type === nodeValueTypes.ARRAY;
 
 		const info = new CustomStorageNodeInfo({
-			path: pathInfo.path,
+			path: mainPath,
 			key: typeof pathInfo.key === "string" ? pathInfo.key : undefined,
 			index: typeof pathInfo.key === "number" ? pathInfo.key : undefined,
 			type: value !== null ? getValueType(value) : containsChild ? (isArrayChild ? VALUE_TYPES.ARRAY : VALUE_TYPES.OBJECT) : (0 as NodeValueType),
 			exists: value !== null || containsChild,
-			address: new NodeAddress(mainNode.path),
+			address: new NodeAddress(mainPath),
 			created: new Date(content.created) ?? new Date(),
 			modified: new Date(content.modified) ?? new Date(),
 			revision: content.revision ?? "",
@@ -483,30 +488,95 @@ export default class MDE extends SimpleEventEmitter {
 
 		info.value = value ? value : null;
 
-		if (options.include_child_count && (containsChild || isArrayChild)) {
+		// if (!PathInfo.get(mainNode.path).equals(pathInfo.path)) {
+		// 	info.value = (typeof info.key === "string" ? info.value[info.key] : typeof info.index === "number" ? info.value[info.index] : null) ?? null;
+		// }
+
+		if (include_child_count && (containsChild || isArrayChild)) {
 			info.childCount = nodes.reduce((c, { path: p }) => c + (pathInfo.isParentOf(p) ? 1 : 0), Object.keys(info.value).length);
 		}
 
 		return info;
 	}
 
-	getChildren(database: string, path: string) {
-		const pathInfo = PathInfo.get(path);
+	getChildren(database: string, path: string, options: { keyFilter?: string[] | number[] } = {}) {
+		const pathInfo = PathInfo.get([this.settings.prefix, path]);
 
 		const next = async (callback: (info: CustomStorageNodeInfo) => false | undefined) => {
-			const nodes = await this.getNodesBy(database, path, true, false);
+			const nodes = await this.getNodesBy(database, pathInfo.path, true, false);
+			const mainNode = nodes.find(({ path: p }) => PathInfo.get(p).equals(pathInfo.path));
+
 			let isContinue = true;
+
+			if (!mainNode || ![VALUE_TYPES.OBJECT, VALUE_TYPES.ARRAY].includes(mainNode.content.type ?? -1)) {
+				return;
+			}
+
+			const isArray = mainNode.content.type === VALUE_TYPES.ARRAY;
+			const value = mainNode.content.value as object;
+			let keys = Object.keys(value).map((key) => (isArray ? parseInt(key) : key));
+
+			if (options.keyFilter) {
+				keys = keys.filter((key) => (options.keyFilter as any[]).includes(key));
+			}
+
+			keys.length > 0 &&
+				keys.every((key) => {
+					const child = getTypeFromStoredValue(value[key]);
+
+					const info = new CustomStorageNodeInfo({
+						path: pathInfo.childPath(key).replace(this.settings.prefix + "/", ""),
+						key: isArray ? undefined : (key as string),
+						index: isArray ? (key as number) : undefined,
+						type: child.type,
+						address: null,
+						exists: true,
+						value: child.value,
+						revision: mainNode.content.revision,
+						revision_nr: mainNode.content.revision_nr,
+						created: new Date(mainNode.content.created),
+						modified: new Date(mainNode.content.modified),
+					});
+
+					isContinue = callback(info) ?? true;
+					return isContinue; // stop .every loop if canceled
+				});
+
+			if (!isContinue) {
+				return;
+			}
 
 			for (let node of nodes) {
 				if (!isContinue) {
 					break;
 				}
 
-				if (pathInfo.equals(node.path) && pathInfo.isDescendantOf(node.path)) {
+				if (pathInfo.equals(node.path) || !pathInfo.isParentOf(node.path)) {
 					continue;
 				}
 
-				const info = await this.getInfoBy(database, node.path, { include_child_count: false });
+				if (options.keyFilter) {
+					const key = PathInfo.get(node.path).key;
+					if ((options.keyFilter as Array<string | number>).includes(key ?? "")) {
+						continue;
+					}
+				}
+
+				const key = PathInfo.get(node.path).key;
+
+				const info = new CustomStorageNodeInfo({
+					path: node.path.replace(this.settings.prefix + "/", ""),
+					type: node.content.type,
+					key: isArray ? undefined : (key as string),
+					index: isArray ? (key as number) : undefined,
+					address: new NodeAddress(node.path),
+					exists: true,
+					value: null, // not loaded
+					revision: node.content.revision,
+					revision_nr: node.content.revision_nr,
+					created: new Date(node.content.created),
+					modified: new Date(node.content.modified),
+				});
 
 				isContinue = callback(info) ?? true;
 			}

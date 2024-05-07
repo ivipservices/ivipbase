@@ -2,26 +2,26 @@
     post:
         tags:
             - data
-        summary: Import (stream) a new value for a path
-        description: Imports (streams) the sent data for a path into the database (beta functionality, currently not very fast)
+        summary: Importar (stream) um novo valor para um caminho
+        description: Importa (transmite) os dados enviados para um caminho no banco de dados (funcionalidade beta, atualmente não muito rápida)
         parameters:
             - name: dbname
               in: path
-              description: name of the database
+              description: nome do banco de dados
               required: true
               schema:
                   type: string
                   example: mydb
             - name: path
               in: path
-              description: database path
+              description: caminho do banco de dados
               required: true
               schema:
                   type: string
                   example: collection
             - name: format
               in: query
-              description: used data format. Only `json` is currently supported
+              description: formato de dados usado. Apenas `json` é atualmente suportado
               schema:
                   type: string
                   enum:
@@ -29,7 +29,7 @@
                   example: json
             - name: suppress_events
               in: query
-              description: Whether to suppress firing data change events during the import
+              description: Se deve suprimir a emissão de eventos de alteração de dados durante a importação
               schema:
                   type: string
                   enum:
@@ -37,7 +37,7 @@
                       - 1
                   example: 0
         requestBody:
-            description: value to store in the database, can use typesafe values as exported by the _export_ endpoint
+            description: valor a ser armazenado no banco de dados, pode usar valores seguros por tipo como exportados pelo endpoint _export_
             content:
                 "text/plain":
                     schema:
@@ -46,16 +46,16 @@
                             {
                                 "l27mgh8r000009mhh84jdp9c":
                                     {
-                                        "name": "My todo list",
+                                        "name": "Minha lista de afazeres",
                                         "stats":
                                             { "size": 216, "created": { ".type": "date", ".val": "2022-04-07T15:11:42.000Z" }, "modified": { ".type": "date", ".val": "2022-03-08T12:24:05.000Z" } },
                                     },
-                                "l27mhwz2000109mh11yi7rbo": { "name": "Another child" },
-                                "l27mjf9k000209mhafylc3eo": { "name": "And another.." },
+                                "l27mhwz2000109mh11yi7rbo": { "name": "Outro filho" },
+                                "l27mjf9k000209mhafylc3eo": { "name": "E outro.." },
                             }
         responses:
             200:
-                description: Returns "200 OK" when the database operation succeeded
+                description: Retorna "200 OK" quando a operação no banco de dados for bem-sucedida
                 content:
                     "application/json":
                         schema:
@@ -65,13 +65,13 @@
                                     type: boolean
                                     example: true
             403:
-                description: Returns "403 Forbidden" if the signed in user is not allowed to write to the target path
+                description: Retorna "403 Proibido" se o usuário conectado não tiver permissão para escrever no caminho de destino
                 content:
                     "application/json":
                         schema:
                             $ref: "#/components/schemas/Error"
             500:
-                description: An error occurred
+                description: Ocorreu um erro
                 content:
                     "application/json":
                         schema:
@@ -82,4 +82,4 @@
                                     example: false
                                 reason:
                                     type: string
-                                    example: Something went wrong
+                                    example: Algo deu errado

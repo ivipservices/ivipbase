@@ -63,7 +63,7 @@ export function getValueTypeName(valueType: number) {
 		case VALUE_TYPES.DEDICATED_RECORD:
 			return "dedicated_record";
 		default:
-			"unknown";
+			return "unknown";
 	}
 }
 
@@ -326,3 +326,32 @@ export function processReadNodeValue(node: StorageNode): StorageNode {
 
 	return node;
 }
+
+export const getTypeFromStoredValue = (val: unknown) => {
+	let type: NodeValueType;
+	if (typeof val === "string") {
+		type = VALUE_TYPES.STRING;
+	} else if (typeof val === "number") {
+		type = VALUE_TYPES.NUMBER;
+	} else if (typeof val === "boolean") {
+		type = VALUE_TYPES.BOOLEAN;
+	} else if (val instanceof Array) {
+		type = VALUE_TYPES.ARRAY;
+	} else if (typeof val === "object") {
+		if (val && "type" in val) {
+			const serialized = val as { type: NodeValueType; value: number | string };
+			type = serialized.type;
+			val = serialized.value;
+			if (type === VALUE_TYPES.DATETIME) {
+				val = new Date(val as number);
+			} else if (type === VALUE_TYPES.REFERENCE) {
+				val = new PathReference(val as string);
+			}
+		} else {
+			type = VALUE_TYPES.OBJECT;
+		}
+	} else {
+		throw new Error(`Unknown value type`);
+	}
+	return { type, value: val };
+};

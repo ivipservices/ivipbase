@@ -3,6 +3,11 @@ import addGetDataRoute from "./get";
 import addExistsRoute from "./exists";
 import addExportDataRoute from "./export";
 import addQueryRoute from "./query";
+import addReflectRoute from "./reflect";
+import addGetSchemaRoute from "./schema-get";
+import addSetSchemaRoute from "./schema-set";
+import addTestSchemaRoute from "./schema-test";
+import addListSchemasRoute from "./schemas-list";
 
 export const addRoutes = (env: LocalServer) => {
 	// Adicione middleware de contexto que lida com o cabeçalho DataBase-Context
@@ -24,7 +29,7 @@ export const addRoutes = (env: LocalServer) => {
 	addExistsRoute(env);
 
 	// Add reflect endpoint
-	// addReflectRoute(env);
+	addReflectRoute(env);
 
 	// Add import endpoint
 	// addImportDataRoute(env);
@@ -41,10 +46,10 @@ export const addRoutes = (env: LocalServer) => {
 	// addDeleteIndexRoute(env);       // delete index
 
 	// Add schema endpoints:
-	// addListSchemasRoute(env);   // list all
-	// addGetSchemaRoute(env);     // get schema
-	// addSetSchemaRoute(env);     // set schema
-	// addTestSchemaRoute(env);    // test
+	addListSchemasRoute(env); // list all
+	addGetSchemaRoute(env); // get schema
+	addSetSchemaRoute(env); // set schema
+	addTestSchemaRoute(env); // test
 
 	// Add sync mutations endpoint
 	// addSyncMutationsRoute(env);

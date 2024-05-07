@@ -1,0 +1,41 @@
+/schema/{dbname}:
+    get:
+        tags:
+            - data
+            - schemas
+        summary: Obter todas as definições de esquema definidas
+        description: Obtém uma lista de todas as definições de esquema definidas
+        parameters:
+            - name: dbname
+              in: path
+              description: nome do banco de dados
+              required: true
+              schema:
+                  type: string
+                  example: mydb
+        responses:
+            200:
+                description: Retorna todos os esquemas definidos no banco de dados
+                content:
+                    "application/json":
+                        schema:
+                            type: array
+                            items:
+                                type: object
+                            description: Objeto contendo a representação em string do esquema
+                            example:
+                                - path: coleção/filho
+                                  schema: "{ name: string, stats?: { size: number, created: Date, modified: Date, deleted?: Date } }"
+                                  text: "{ name: string, stats?: { size: number, created: Date, modified: Date, deleted?: Date } }"
+            403:
+                description: Retorna "403 Proibido" se o usuário conectado não for um administrador
+                content:
+                    "application/json":
+                        schema:
+                            $ref: "#/components/schemas/Error"
+            500:
+                description: Ocorreu um erro inesperado
+                content:
+                    "application/json":
+                        schema:
+                            $ref: "#/components/schemas/UnexpectedError"

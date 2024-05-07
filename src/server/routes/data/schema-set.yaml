@@ -1,0 +1,64 @@
+/schema/{dbname}:
+    post:
+        tags:
+            - data
+            - schemas
+        summary: Adicionar uma definição de esquema
+        description: Adiciona uma definição de esquema no caminho especificado. Este esquema será ativado enquanto o servidor estiver em execução e será apagado ao reiniciar. Se precisar que o esquema seja persistido, adicione-o ao arquivo rules.json do seu servidor.
+        parameters:
+            - name: dbname
+              in: path
+              description: nome do banco de dados
+              required: true
+              schema:
+                  type: string
+                  example: mydb
+        requestBody:
+            description: detalhes sobre os dados e esquema a serem testados
+            content:
+                "application/json":
+                    schema:
+                        type: object
+                        properties:
+                            action:
+                                type: string
+                                description: A operação desejada `'set'` (opcional, obsoleta desde a versão 1.10.0)
+                                example: set
+                            path:
+                                type: string
+                                description: caminho do banco de dados para o valor dado
+                                example: coleção/item
+                            schema:
+                                type: string
+                                description: Quando fornecido, testa esta definição de esquema contra o valor passado em vez dos definidos no banco de dados
+                                example: "{ name: string, stats?: { size: number, created: Date, modified: Date, deleted?: Date } }"
+                            warnOnly:
+                                type: boolean
+                                description: se deve emitir avisos para falhas nos testes de esquema em vez de negar gravações. Isso permite adicionar esquemas a um banco de dados existente e testá-los sem aplicá-los ainda. O padrão é `false`
+                                example: false
+                        required:
+                            - path
+                            - schema
+        responses:
+            200:
+                description: Retorna "200 OK" se o esquema foi adicionado com sucesso
+                content:
+                    "application/json":
+                        schema:
+                            type: object
+                            properties:
+                                success:
+                                    type: boolean
+                                    example: true
+            403:
+                description: Retorna "403 Proibido" se o usuário conectado não for um administrador
+                content:
+                    "application/json":
+                        schema:
+                            $ref: "#/components/schemas/Error"
+            500:
+                description: Ocorreu um erro
+                content:
+                    "application/json":
+                        schema:
+                            $ref: "#/components/schemas/UnexpectedError"

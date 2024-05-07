@@ -1,0 +1,53 @@
+/schema/{dbname}/{path}:
+    get:
+        tags:
+            - data
+            - schemas
+        summary: Obtém o esquema definido em um caminho
+        description: Obtém o esquema definido em um caminho específico
+        parameters:
+            - name: dbname
+              in: path
+              description: nome do banco de dados
+              required: true
+              schema:
+                  type: string
+                  example: mydb
+            - name: path
+              in: path
+              description: caminho do banco de dados
+              required: true
+              schema:
+                  type: string
+                  example: coleção/item
+        responses:
+            200:
+                description: Retorna o esquema definido no caminho de destino
+                content:
+                    "application/json":
+                        schema:
+                            type: object
+                            description: Objeto contendo a representação em string do esquema
+                            example:
+                                path: coleção/filho
+                                schema: "{ name: string, stats?: { size: number, created: Date, modified: Date, deleted?: Date } }"
+                                text: "{ name: string, stats?: { size: number, created: Date, modified: Date, deleted?: Date } }"
+            403:
+                description: Retorna "403 Proibido" se o usuário conectado não for um administrador
+                content:
+                    "application/json":
+                        schema:
+                            $ref: "#/components/schemas/Error"
+            410:
+                description: Retorna "410 Ausente" se não houver definição de esquema no caminho solicitado
+                content:
+                    "text/plain":
+                        schema:
+                            type: texto
+                            example: Não encontrado
+            500:
+                description: Ocorreu um erro inesperado
+                content:
+                    "application/json":
+                        schema:
+                            $ref: "#/components/schemas/UnexpectedError"

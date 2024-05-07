@@ -3,38 +3,38 @@
         tags:
             - data
             - query
-        summary: Query an object collection
-        description: Query an object collection in the database
+        summary: Consultar uma coleção de objetos
+        description: Consulta uma coleção de objetos no banco de dados
         parameters:
             - name: dbname
               in: path
-              description: name of the database
+              description: nome do banco de dados
               required: true
               schema:
                   type: string
                   example: mydb
             - name: path
               in: path
-              description: database path
+              description: caminho do banco de dados
               required: true
               schema:
                   type: string
                   example: books
         requestBody:
-            description: serialized query object
+            description: objeto de consulta serializado
             content:
                 "application/json":
                     schema:
                         type: object
                         properties:
                             map:
-                                description: Data type mappings for the value in _val_. See the _SerializedValue_ schema for more info
+                                description: Mapeamentos de tipo de dados para o valor em _val_. Consulte o esquema _SerializedValue_ para obter mais informações
                                 oneOf:
                                     - type: string
                                     - type: object
                                 example: {}
                             val:
-                                description: Information about the query to execute
+                                description: Informações sobre a consulta a ser executada
                                 type: object
                                 properties:
                                     query:
@@ -48,14 +48,14 @@
                                                         key:
                                                             type: string
                                                             example: title
-                                                            description: Key to apply filter on
+                                                            description: Chave para aplicar o filtro
                                                         op:
                                                             type: string
-                                                            description: Comparison operator to use, such as `==`, `>`, 'like' etc
+                                                            description: Operador de comparação a ser usado, como `==`, `>`, 'like', etc
                                                             example: like
                                                         compare:
                                                             example: AceBase*
-                                                            description: Value to compare with
+                                                            description: Valor a ser comparado
                                                             oneOf:
                                                                 - type: string
                                                                 - type: number
@@ -63,11 +63,11 @@
                                             skip:
                                                 type: integer
                                                 example: 0
-                                                description: Number of results to skip, useful for paging
+                                                description: Número de resultados a serem ignorados, útil para paginação
                                             take:
                                                 type: integer
                                                 example: 10
-                                                description: Max number of results to return
+                                                description: Número máximo de resultados a serem retornados
                                             order:
                                                 type: array
                                                 items:
@@ -75,50 +75,50 @@
                                                     properties:
                                                         key:
                                                             type: string
-                                                            description: Name of the key to sort the results on
+                                                            description: Nome da chave para classificar os resultados
                                                             example: rating
                                                         ascending:
                                                             type: boolean
-                                                            description: Whether to sort the results in ascending or descending order
+                                                            description: Se os resultados devem ser classificados em ordem ascendente ou descendente
                                                             example: false
                                     query_id:
                                         type: string
-                                        description: (realtime queries only) client's query id for realtime event notifications through the websocket
+                                        description: (consultas em tempo real apenas) id da consulta do cliente para notificações de eventos em tempo real por meio do websocket
                                         example: l27nswgz000009l58bo7gqhf
                                     client_id:
                                         type: string
-                                        description: (realtime queries only) client's socket id for realtime event notifications through websocket
+                                        description: (consultas em tempo real apenas) id do socket do cliente para notificações de eventos em tempo real por meio do websocket
                                         example: l27mjf9k000209mhafylc3eo
                                     options:
                                         type: object
                                         properties:
                                             snapshots:
                                                 type: boolean
-                                                description: Whether to return snapshots of the data, or references to the results only (default)
+                                                description: Se deve retornar snapshots dos dados ou referências apenas para os resultados (padrão)
                                                 example: true
                                             monitor:
-                                                description: (optional, realtime queries only) which realtime events to monitor
+                                                description: (opcional, consultas em tempo real apenas) quais eventos em tempo real monitorar
                                                 oneOf:
                                                     - type: boolean
-                                                      description: Whether to monitor all or none of the realtime events (add, change, remove)
+                                                      description: Se deve monitorar todos ou nenhum dos eventos em tempo real (adicionar, alterar, remover)
                                                     - type: object
-                                                      description: Which realtime events to monitor
+                                                      description: Quais eventos em tempo real monitorar
                                                       properties:
                                                           add:
                                                               type: boolean
-                                                              description: Monitors results that are added after initial query execution
+                                                              description: Monitora resultados que são adicionados após a execução da consulta inicial
                                                           change:
                                                               type: boolean
-                                                              description: Monitors results that are changed after initial query execution
+                                                              description: Monitora resultados que são alterados após a execução da consulta inicial
                                                           remove:
                                                               type: boolean
-                                                              description: Monitors results that are removed after initial query execution
+                                                              description: Monitora resultados que são removidos após a execução da consulta inicial
                                                 example: false
                                             include:
                                                 type: array
                                                 items:
                                                     type: string
-                                                    description: (optional) keys to include in the results set
+                                                    description: (opcional) chaves a serem incluídas no conjunto de resultados
                                                 example:
                                                     - title
                                                     - author
@@ -129,15 +129,15 @@
                                                 type: array
                                                 items:
                                                     type: string
-                                                    description: (optional) keys to exclude from the results set
+                                                    description: (opcional) chaves a serem excluídas do conjunto de resultados
                                                 example: []
                                             child_objects:
                                                 type: boolean
-                                                description: (optional) whether to load child object values
+                                                description: (opcional) se deve carregar os valores dos objetos filhos
                                                 example: true
         responses:
             200:
-                description: Returns the serialized count and list of query results
+                description: Retorna a contagem serializada e a lista de resultados da consulta
                 content:
                     "application/json":
                         schema:
@@ -155,23 +155,23 @@
                                                     path: "books/l27oxggz000009ml9ri26y2d",
                                                     val:
                                                         {
-                                                            title: "AceBase is cool",
-                                                            author: "Database guru",
+                                                            title: "AceBase é legal",
+                                                            author: "Guru do banco de dados",
                                                             rating: 5.0,
-                                                            reviews: { "cl27ozp2g000009lbfopcbkd2": { author: "DB admin", text: "The title says it all!" } },
+                                                            reviews: { "cl27ozp2g000009lbfopcbkd2": { author: "Administrador do BD", text: "O título diz tudo!" } },
                                                         },
                                                 },
                                             ],
                                     }
                                 map: { "stats/created": "date", "stats/modified": "date" }
             403:
-                description: Returns a "403 Forbidden" if the signed in user is not allowed to read from the target path
+                description: Retorna "403 Proibido" se o usuário conectado não tiver permissão para ler no caminho de destino
                 content:
                     "application/json":
                         schema:
                             $ref: "#/components/schemas/Error"
             500:
-                description: An unexpected error occurred
+                description: Ocorreu um erro inesperado
                 content:
                     "application/json":
                         schema:

@@ -1,6 +1,7 @@
 import { Api, PathInfo, Types, Utils } from "ivipbase-core";
 import { VALUE_TYPES } from "../controller/storage/MDE";
 import type { DataBase } from ".";
+import { removeNulls } from "../utils";
 
 export class StorageDBServer extends Api {
 	public cache: { [path: string]: any } = {};
@@ -145,15 +146,17 @@ export class StorageDBServer extends Api {
 					n++;
 					const include = from !== null && childInfo.key ? childInfo.key > from : skip === 0 || n > skip;
 					if (include) {
-						children.push({
-							key: (typeof childInfo.key === "string" ? childInfo.key : childInfo.index) ?? "",
-							type: (childInfo.valueTypeName as any) ?? "unknown",
-							value: childInfo.value,
-							// address is now only added when storage is acebase. Not when eg sqlite, mssql
-							...(typeof childInfo.address === "object" && {
-								address: childInfo.address,
+						children.push(
+							removeNulls({
+								key: (typeof childInfo.key === "string" ? childInfo.key : childInfo.index) ?? "",
+								type: (childInfo.valueTypeName as any) ?? "unknown",
+								value: childInfo.value ?? null,
+								// address is now only added when storage is acebase. Not when eg sqlite, mssql
+								...(typeof childInfo.address === "object" && {
+									address: childInfo.address,
+								}),
 							}),
-						});
+						);
 					}
 					stop = limit > 0 && children.length === limit;
 				})
@@ -190,9 +193,12 @@ export class StorageDBServer extends Api {
 				info.key = (typeof nodeInfo.key !== "undefined" ? nodeInfo.key : nodeInfo.index) ?? "";
 				info.exists = nodeInfo.exists ?? false;
 				info.type = (nodeInfo.exists ? (nodeInfo.valueTypeName as any) : undefined) ?? "unknown";
-				info.value = nodeInfo.value;
+				if (![VALUE_TYPES.OBJECT, VALUE_TYPES.ARRAY].includes(nodeInfo.type ?? 0)) {
+					info.value = nodeInfo.value;
+				}
 				info.address = typeof nodeInfo.address === "object" ? nodeInfo.address : undefined;
 				const isObjectOrArray = nodeInfo.exists && nodeInfo.address && ([VALUE_TYPES.OBJECT, VALUE_TYPES.ARRAY] as number[]).includes(nodeInfo.type ?? 0);
+
 				if (args.child_count === true) {
 					info.children = { count: isObjectOrArray ? nodeInfo.childCount ?? 0 : 0 };
 				} else if (typeof args.child_limit === "number" && args.child_limit > 0) {
@@ -200,6 +206,7 @@ export class StorageDBServer extends Api {
 						info.children = await getChildren(path, args.child_limit, args.child_skip, args.child_from);
 					}
 				}
+
 				return info;
 			}
 		}

@@ -1,0 +1,66 @@
+/schema/{dbname}/test:
+    post:
+        tags:
+            - data
+            - schemas
+        summary: Testar um esquema de dados
+        description: Testa um esquema de dados existente no banco de dados ou um esquema personalizado fornecido.
+        parameters:
+            - name: dbname
+              in: path
+              description: nome do banco de dados
+              required: true
+              schema:
+                  type: string
+                  example: mydb
+        requestBody:
+            description: detalhes sobre os dados e esquema a serem testados
+            content:
+                "application/json":
+                    schema:
+                        type: object
+                        properties:
+                            path:
+                                type: string
+                                description: caminho do banco de dados para o valor dado
+                                example: coleção/item
+                            value:
+                                $ref: "#/components/schemas/SerializedValue"
+                            partial:
+                                type: boolean
+                                description: Se deve apenas testar os dados passados (`update` operação de banco de dados) ou validar o valor em relação ao esquema inteiro (`set` operação de banco de dados). As operações de atualização permitem que crianças necessárias no esquema não estejam presentes no valor passado.
+                                example: false
+                            schema:
+                                type: string
+                                description: Quando fornecido, testa esta definição de esquema contra o valor passado em vez dos definidos no banco de dados
+                                example: "{ name: string, stats?: { size: number, created: Date, modified: Date, deleted?: Date } }"
+                        required:
+                            - path
+                            - value
+                            - partial
+        responses:
+            200:
+                description: Retorna um objeto que indica se o valor foi validado com sucesso em relação ao esquema
+                content:
+                    "application/json":
+                        schema:
+                            type: object
+                            properties:
+                                ok:
+                                    type: boolean
+                                    example: false
+                                reason:
+                                    type: string
+                                    example: caminho "livros/livro1/título" deve ser do tipo string
+            403:
+                description: Retorna "403 Proibido" se o usuário conectado não for um administrador
+                content:
+                    "application/json":
+                        schema:
+                            $ref: "#/components/schemas/Error"
+            500:
+                description: Ocorreu um erro inesperado
+                content:
+                    "application/json":
+                        schema:
+                            $ref: "#/components/schemas/UnexpectedError"

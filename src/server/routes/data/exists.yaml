@@ -2,26 +2,26 @@
     get:
         tags:
             - data
-        summary: Get existence of a path
-        description: Gets the existence of a path in the database
+        summary: Obter a existência de um caminho
+        description: Obtém a existência de um caminho no banco de dados
         parameters:
             - name: dbname
               in: path
-              description: name of the database
+              description: nome do banco de dados
               required: true
               schema:
                   type: string
                   example: mydb
             - name: path
               in: path
-              description: database path
+              description: caminho do banco de dados
               required: true
               schema:
                   type: string
                   example: collection/child/property
         responses:
             200:
-                description: returns whether the target path exists in the database
+                description: retorna se o caminho alvo existe no banco de dado
                 content:
                     "application/json":
                         schema:
@@ -31,13 +31,13 @@
                                     type: boolean
                                     example: true
             403:
-                description: Returns a "403 Forbidden" if the signed in user is not allowed to read from the target path
+                description: Retorna um "403 Proibido" se o usuário conectado não tem permissão para ler do caminho alvo
                 content:
                     "application/json":
                         schema:
                             $ref: "#/components/schemas/Error"
             500:
-                description: An unexpected error occurred
+                description: Ocorreu um erro inesperado
                 content:
                     "application/json":
                         schema:
