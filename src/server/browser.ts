@@ -1,6 +1,7 @@
 import { DataBase, DebugLogger, SimpleEventEmitter } from "ivipbase-core";
-import { getDatabase } from "../database";
+import { getDatabase, hasDatabase } from "../database";
 import type { IvipBaseApp } from "../app";
+import { PathBasedRules } from "./services/rules";
 
 export class ServerNotReadyError extends Error {
 	constructor() {
@@ -20,6 +21,38 @@ export const AUTH_ACCESS_DEFAULT: { [key: string]: AuthAccessDefault } = {
 	ALLOW_ALL: "allow",
 	ALLOW_AUTHENTICATED: "auth",
 };
+
+export class DataBaseServerTransactionSettings {
+	/**
+	 * Se deve ativar o log de transações
+	 */
+	log = false;
+
+	/**
+	 * Idade máxima em dias para manter as transações no arquivo de log
+	 */
+	maxAge = 30;
+
+	/**
+	 * Se as operações de gravação do banco de dados não devem esperar até que a transação seja registrada
+	 */
+	noWait = false;
+
+	constructor(settings: Partial<DataBaseServerTransactionSettings>) {
+		if (typeof settings !== "object") {
+			return;
+		}
+		if (typeof settings.log === "boolean") {
+			this.log = settings.log;
+		}
+		if (typeof settings.maxAge === "number") {
+			this.maxAge = settings.maxAge;
+		}
+		if (typeof settings.noWait === "boolean") {
+			this.noWait = settings.noWait;
+		}
+	}
+}
 
 export class ServerAuthenticationSettings {
 	/**
@@ -137,6 +170,11 @@ export type ServerInitialSettings<LocalServer = any> = Partial<{
 	init?: (server: LocalServer) => Promise<void>;
 
 	serverVersion: string;
+
+	/**
+	 * Configurações de registro de transações. Aviso: estágio BETA, NÃO use em produção ainda
+	 */
+	transactions: Partial<DataBaseServerTransactionSettings>;
 }>;
 
 export class ServerSettings<LocalServer = any> {
@@ -150,6 +188,7 @@ export class ServerSettings<LocalServer = any> {
 	readonly auth: ServerAuthenticationSettings;
 	readonly init?: (server: LocalServer) => Promise<void>;
 	readonly serverVersion: string = "1.0.0";
+	readonly transactions: DataBaseServerTransactionSettings;
 
 	constructor(options: ServerInitialSettings<LocalServer> = {}) {
 		if (typeof options.logLevel === "string" && ["verbose", "log", "warn", "error"].includes(options.logLevel)) {
@@ -185,6 +224,8 @@ export class ServerSettings<LocalServer = any> {
 		if (typeof options.serverVersion === "string") {
 			this.serverVersion = options.serverVersion;
 		}
+
+		this.transactions = new DataBaseServerTransactionSettings(options.transactions ?? {});
 	}
 }
 
@@ -195,11 +236,31 @@ export abstract class AbstractLocalServer<LocalServer = any> extends SimpleEvent
 	readonly settings: ServerSettings<LocalServer>;
 	readonly debug: DebugLogger;
 	readonly db: (dbName: string) => DataBase;
+	readonly hasDatabase: (dbName: string) => boolean;
+	readonly rules: (dbName: string) => PathBasedRules;
+	private rules_db: Map<string, PathBasedRules> = new Map();
 
 	constructor(readonly localApp: IvipBaseApp, settings: Partial<ServerSettings> = {}) {
 		super();
 		this.settings = new ServerSettings<LocalServer>(settings);
 		this.db = (dbName) => getDatabase(dbName, localApp);
+		this.hasDatabase = (dbName) => hasDatabase(dbName);
+		this.rules = (dbName) => {
+			if (this.rules_db.has(dbName)) {
+				return this.rules_db.get(dbName)!;
+			}
+
+			const db = this.db(dbName);
+
+			const rules = new PathBasedRules(this.settings.auth.defaultAccessRule, {
+				debug: this.debug,
+				db,
+				authEnabled: this.settings.auth.enabled,
+			});
+
+			this.rules_db.set(dbName, rules);
+			return rules;
+		};
 		this.debug = new DebugLogger(this.settings.logLevel, `[${this.db.name}]`);
 
 		this.once("ready", () => {

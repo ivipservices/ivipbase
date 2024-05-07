@@ -102,20 +102,22 @@ export class MDESettings {
 
 		this.getMultiple = async (database, reg) => {
 			if (typeof options.getMultiple === "function") {
-				return await Promise.race([options.getMultiple(database, reg)]);
+				return await Promise.race([options.getMultiple(database, reg)]).then((response) => {
+					return Promise.resolve(response ?? []);
+				});
 			}
 			return [];
 		};
 
 		this.setNode = async (database, path, content, node) => {
 			if (typeof options.setNode === "function") {
-				await Promise.race([options.setNode(database, path, content, node)]);
+				await Promise.race([options.setNode(database, path, removeNulls(content), removeNulls(node))]);
 			}
 		};
 
 		this.removeNode = async (database, path, content, node) => {
 			if (typeof options.removeNode === "function") {
-				await Promise.race([options.removeNode(database, path, content, node)]);
+				await Promise.race([options.removeNode(database, path, removeNulls(content), removeNulls(node))]);
 			}
 		};
 
@@ -139,11 +141,6 @@ export default class MDE extends SimpleEventEmitter {
 	 * @type {NodesPending[]}
 	 */
 	private nodes: Record<string, NodesPending[]> = {};
-
-	private batch: Record<string, NodesPending[]> = {};
-
-	private sendNodesTime?: NodeJS.Timeout;
-	private sendingNodes: boolean = false;
 
 	constructor(options: Partial<MDESettings> = {}) {
 		super();
@@ -220,6 +217,7 @@ export default class MDE extends SimpleEventEmitter {
 	 * @returns {Promise<boolean>} `true` se o caminho existir no nó, `false` caso contrário.
 	 */
 	async isPathExists(database: string, path: string): Promise<boolean> {
+		path = PathInfo.get([this.settings.prefix, path]).path;
 		const nodeList = await this.getNodesBy(database, path, false, false).then((nodes) => {
 			return Promise.resolve(
 				nodes
@@ -258,7 +256,6 @@ export default class MDE extends SimpleEventEmitter {
 	async getNodesBy(database: string, path: string, onlyChildren: boolean = false, allHeirs: boolean = false): Promise<StorageNodeInfo[]> {
 		const reg = this.pathToRegex(path, onlyChildren, allHeirs);
 		let nodeList: StorageNodeInfo[] = (this.nodes[database] ?? [])
-			.concat(this.batch[database] ?? [])
 			.filter(({ path }) => reg.test(path))
 			.sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
 				return aM > bM ? -1 : aM < bM ? 1 : 0;
@@ -270,11 +267,15 @@ export default class MDE extends SimpleEventEmitter {
 				return PathInfo.get(a).isAncestorOf(b) ? 1 : PathInfo.get(a).isDescendantOf(b) ? -1 : 0;
 			});
 
+		// console.log("getNodesBy::1::", JSON.stringify(nodeList, null, 4));
+
 		let byNodes: StorageNodeInfo[] = [];
 
 		try {
 			byNodes = await this.settings.getMultiple(database, reg);
 		} catch {}
+
+		// console.log("getNodesBy::2::", JSON.stringify(byNodes, null, 4));
 
 		const { result } = prepareMergeNodes.apply(this, [byNodes, nodeList]);
 
@@ -316,34 +317,34 @@ export default class MDE extends SimpleEventEmitter {
 	}
 
 	async sendNodes(database: string) {
-		if (this.sendingNodes || !Array.isArray(this.nodes[database]) || this.nodes[database].length <= 0) {
-			return;
-		}
-
-		//console.count("sendNodes");
-
-		this.sendingNodes = true;
-
-		this.batch[database] = this.nodes[database].splice(0).sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
+		const batch = this.nodes[database].splice(0).sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
 			return aM > bM ? -1 : aM < bM ? 1 : 0;
 		});
 
 		const batchError: NodesPending[] = [];
 
 		try {
-			const forAsync = prepareMergeNodes.apply(this, [this.batch[database]]);
+			const forAsync = prepareMergeNodes.apply(this, [batch]);
 
 			let byNodes: StorageNodeInfo[] = [];
 
-			for (const node of forAsync.result.concat(forAsync.removed)) {
-				const reg = this.pathToRegex(node.path, false, false);
+			const paths = batch
+				.filter((node, i, self) => {
+					return self.findIndex(({ path }) => path === node.path) === i;
+				})
+				.map(({ path }) => path);
+
+			for (const path of paths) {
+				const reg = this.pathToRegex(path, false, false);
 				const by = await this.settings.getMultiple(database, reg);
 				byNodes = byNodes.concat(by);
 			}
 
-			// console.log("byNodes: ", JSON.stringify(byNodes, null, 4));
+			byNodes = byNodes.filter((node, i, self) => {
+				return self.findIndex(({ path }) => path === node.path) === i;
+			});
 
-			const { added, modified, removed, result } = prepareMergeNodes.apply(this, [byNodes, this.batch[database]]);
+			const { added, modified, removed, result } = prepareMergeNodes.apply(this, [byNodes, batch]);
 
 			// console.log("added: ", JSON.stringify(added, null, 4));
 			// console.log("modified: ", JSON.stringify(modified, null, 4));
@@ -351,13 +352,13 @@ export default class MDE extends SimpleEventEmitter {
 			// console.log("result: ", JSON.stringify(result, null, 4));
 
 			for (let node of modified) {
-				await Promise.race([this.settings.setNode(database, node.path, node.content, node)]).catch(() => {
+				await Promise.race([this.settings.setNode(database, node.path, removeNulls(node.content), removeNulls(node))]).catch(() => {
 					batchError.push(node);
 				});
 			}
 
 			for (let node of added) {
-				await Promise.race([this.settings.setNode(database, node.path, node.content, node)]).catch(() => {
+				await Promise.race([this.settings.setNode(database, node.path, removeNulls(node.content), removeNulls(node))]).catch(() => {
 					batchError.push(node);
 				});
 			}
@@ -380,22 +381,6 @@ export default class MDE extends SimpleEventEmitter {
 				}
 			}
 		} catch {}
-
-		this.nodes[database] = (this.nodes[database] ?? [])
-			.concat(
-				batchError.filter(({ type }) => {
-					return type !== "VERIFY";
-				}),
-			)
-			.sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
-				return aM > bM ? -1 : aM < bM ? 1 : 0;
-			})
-			.sort(({ path: a }, { path: b }) => {
-				return PathInfo.get(a).isAncestorOf(b) ? 1 : PathInfo.get(a).isDescendantOf(b) ? -1 : 0;
-			});
-
-		this.batch[database] = [];
-		this.sendingNodes = false;
 
 		const next = Object.keys(this.nodes).find((n) => this.nodes[n].length > 0);
 		if (next) {
@@ -552,7 +537,8 @@ export default class MDE extends SimpleEventEmitter {
 	): Promise<t | undefined> {
 		path = PathInfo.get([this.settings.prefix, path]).path;
 		const nodes = await this.getNodesBy(database, path, options?.onlyChildren, true);
-		return structureNodes(path, nodes, options);
+		// console.log(JSON.stringify(nodes, null, 4));
+		return removeNulls(structureNodes(path, nodes, options));
 	}
 
 	/**
@@ -576,8 +562,15 @@ export default class MDE extends SimpleEventEmitter {
 	): Promise<void> {
 		path = PathInfo.get([this.settings.prefix, path]).path;
 		const nodes = destructureData.apply(this, [type, path, value, options]);
+		//console.log("now", JSON.stringify(nodes.find((node) => node.path === "root/test") ?? {}, null, 4));
 		const byNodes = await this.getNodesBy(database, path, false, true);
+		//console.log("olt", JSON.stringify(byNodes.find((node) => node.path === "root/test") ?? {}, null, 4));
 		const { added, modified, removed } = prepareMergeNodes.apply(this, [byNodes, nodes]);
+
+		// console.log("set", JSON.stringify(nodes, null, 4));
+		// console.log("set-added", JSON.stringify(added, null, 4));
+		// console.log("set-modified", JSON.stringify(modified, null, 4));
+		// console.log("set-removed", JSON.stringify(removed, null, 4));
 
 		for (let node of modified) {
 			this.emit("change", {
@@ -620,6 +613,6 @@ export default class MDE extends SimpleEventEmitter {
 			assert_revision?: string;
 		} = {},
 	): Promise<void> {
-		this.set(database, path, value, options);
+		this.set(database, path, value, options, "UPDATE");
 	}
 }

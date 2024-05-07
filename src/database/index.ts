@@ -57,3 +57,7 @@ export function getDatabase(...args: any[]) {
 		args.find((s) => typeof s === "object" && !(s instanceof IvipBaseApp)),
 	);
 }
+
+export function hasDatabase(database: string): boolean {
+	return getAppsName().some((name) => getApp(name).settings.dbname === database);
+}

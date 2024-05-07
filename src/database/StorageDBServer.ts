@@ -1,4 +1,4 @@
-import { Api, Types } from "ivipbase-core";
+import { Api, PathInfo, Types, Utils } from "ivipbase-core";
 import { VALUE_TYPES } from "../controller/storage/MDE";
 import type { DataBase } from ".";
 
@@ -65,6 +65,54 @@ export class StorageDBServer extends Api {
 
 	async exists(path: string) {
 		return await this.db.app.storage.isPathExists(this.db.database, path);
+	}
+
+	async export(path: string, stream: Types.StreamWriteFunction, options?: { format?: "json"; type_safe?: boolean }): Promise<void> {
+		const data = await this.get(path);
+		const json = JSON.stringify(data.value);
+
+		for (let i = 0; i < json.length; i += 1000) {
+			await stream(json.slice(i, i + 1000));
+		}
+	}
+
+	async import(
+		path: string,
+		read: Types.StreamReadFunction,
+		options?: {
+			format?: "json";
+			suppress_events?: boolean;
+			method?: "set" | "update" | "merge";
+		},
+	): Promise<void> {
+		let json = "";
+		const chunkSize = 256 * 1024; // 256KB
+		const maxQueueBytes = 1024 * 1024; // 1MB
+		const state = {
+			data: "",
+			index: 0,
+			offset: 0,
+		};
+		const readNextChunk = async (append = false) => {
+			let data = await read(chunkSize);
+			if (data === null) {
+				if (state.data) {
+					throw new Error(`Unexpected EOF at index ${state.offset + state.data.length}`);
+				} else {
+					throw new Error("Unable to read data from stream");
+				}
+			} else if (typeof data === "object") {
+				data = Utils.decodeString(data);
+			}
+			if (append) {
+				state.data += data;
+			} else {
+				state.offset += state.data.length;
+				state.data = data;
+				state.index = 0;
+			}
+		};
+		return;
 	}
 
 	reflect(path: string, type: "children", args: any): Promise<Types.ReflectionChildrenInfo>;

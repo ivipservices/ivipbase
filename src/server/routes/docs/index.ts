@@ -5,9 +5,8 @@ import { packageRootPath } from "../../shared/rootpath";
 import path from "path";
 import fs from "fs";
 
-const yamlPath = path.join(packageRootPath, "/server/routes/*/*.yaml");
-
 export const addRoute = (env: LocalServer) => {
+	const yamlPath = path.join(packageRootPath, "/server/routes/*/*.yaml");
 	// Generate docs from all yaml files
 	const options: swaggerJsdoc.Options = {
 		definition: {
@@ -121,23 +120,20 @@ export const addRoute = (env: LocalServer) => {
 						type: "object",
 						properties: {
 							val: {
-								description: "Any value (serialized for transport)",
 								oneOf: [{ type: "string" }, { type: "number" }, { type: "integer" }, { type: "boolean" }, { type: "object" }, { type: "array" }],
+								description: "Any value (serialized for transport)",
 								example: "2022-04-07T16:36:21Z",
-								required: true,
 							},
 							map: {
-								description:
-									'If the value has been serialized for transport, contains a string defining `val`s data type (eg `"date"` or `"binary"`), or an object with deep property mappings for an object value in `val`',
 								oneOf: [
 									{ type: "string", example: "date" },
 									{ type: "object", example: { "stats/created": "date" } },
 								],
+								description:
+									'If the value has been serialized for transport, contains a string defining `val`s data type (eg `"date"` or `"binary"`), or an object with deep property mappings for an object value in `val`',
 								example: "date",
-								required: false,
 							},
 						},
-						required: ["val"],
 						example: {
 							val: { name: "My todo list", stats: { size: 216, created: "2022-04-07T15:11:42Z", modified: "2022-03-08T12:24:05Z" } },
 							map: { "stats/created": "date", "stats/modified": "date" },

@@ -2,11 +2,12 @@ import { AbstractLocalServer, ServerSettings, ServerInitialSettings, ServerNotRe
 import type { Socket } from "socket.io";
 import type { Express, Request, Response } from "express";
 import * as express from "express";
-import { addMetadataRoutes } from "./routes";
+import { addMetadataRoutes, addDataRoutes } from "./routes";
 import { Server, createServer } from "http";
 import { DbUserAccountDetails } from "./schema/user";
 import { add404Middleware, addCacheMiddleware, addCorsMiddleware } from "./middleware";
 import type { IvipBaseApp } from "../app";
+import { ConnectedClient } from "./shared/clients";
 const createExpress = (express as any).default ?? express;
 
 export { ServerSettings, ServerInitialSettings };
@@ -42,6 +43,8 @@ export class LocalServer extends AbstractLocalServer<LocalServer> {
 	readonly router: HttpRouter = this.createRouter();
 	readonly server: Server = createServer(this.app);
 
+	readonly clients: Map<string, ConnectedClient> = new Map();
+
 	constructor(localApp: IvipBaseApp, settings: Partial<ServerSettings> = {}) {
 		super(localApp, settings);
 		this.init();
@@ -70,6 +73,8 @@ export class LocalServer extends AbstractLocalServer<LocalServer> {
 			(await import("./routes/docs")).addRoute(this);
 			(await import("./middleware/swagger")).addMiddleware(this);
 		}
+
+		addDataRoutes(this);
 
 		this.extend = (database: string, method: HttpMethod, ext_path: string, handler: (req: HttpRequest, res: HttpResponse) => any) => {
 			const route = `/ext/${database}/${ext_path}`;

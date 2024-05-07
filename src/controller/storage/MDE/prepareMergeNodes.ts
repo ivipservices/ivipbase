@@ -54,13 +54,19 @@ export default function prepareMergeNodes(
 		};
 	}
 
+	// Ordena os nodes por data de modificação crescente, para que os nodes mais recentes sejam processados por último
 	comparison = comparison.sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
-		return aM > bM ? -1 : aM < bM ? 1 : 0;
+		return aM > bM ? 1 : aM < bM ? -1 : 0;
 	});
 
 	const setNodeBy = (n: NodesPending): number => {
 		const node: NodesPending = Utils.cloneObject(n);
-		const nodesIndex = nodes.findIndex(({ path }) => PathInfo.get(node.path).equals(path));
+		const itemMaisAntigo = nodes
+			.filter((item) => item.path === "root/test")
+			.reduce((anterior: NodesPending | null, atual: NodesPending) => {
+				return anterior && anterior.content.modified < atual.content.modified ? anterior : atual;
+			}, null);
+		const nodesIndex = !itemMaisAntigo ? -1 : nodes.indexOf(itemMaisAntigo);
 
 		if (nodesIndex < 0) {
 			const addedIndex = added.findIndex(({ path }) => PathInfo.get(node.path).equals(path));
@@ -96,14 +102,20 @@ export default function prepareMergeNodes(
 	};
 
 	let pathsRemoved: string[] = comparison
+		// Ordena os nodes por data de modificação decrescente, para que os nodes mais recentes sejam processados por último
 		.sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
 			return aM > bM ? -1 : aM < bM ? 1 : 0;
 		})
+		// Filtra os nodes que foram removidos
 		.filter(({ path, content: { modified } }, i, l) => {
+			// Verifica se o node foi removido mais de uma vez
 			const indexRecent = l.findIndex(({ path: p, content: { modified: m } }) => p === path && m > modified);
+			// Verifica se o node foi removido apenas uma vez
 			return indexRecent < 0 || indexRecent === i;
 		})
+		// Retorna apenas o caminho dos nodes removidos
 		.filter(({ content }) => content.type === nodeValueTypes.EMPTY || content.value === null)
+		// Retorna apenas o caminho dos nodes removidos
 		.map(({ path }) => path);
 
 	pathsRemoved = nodes

@@ -1,0 +1,72 @@
+/data/{dbname}/{path}:
+    get:
+        tags:
+            - data
+        summary: Obtenha o valor de um caminho
+        description: Obtém o valor armazenado de um caminho no banco de dados
+        parameters:
+            - name: dbname
+              in: path
+              description: nome do banco de dados
+              required: true
+              schema:
+                  type: string
+                  example: mydb
+            - name: path
+              in: path
+              description: caminho do banco de dados
+              required: true
+              schema:
+                  type: string
+                  example: collection/child/property
+            - name: include
+              in: query
+              description: lista separada por vírgula de propriedades filhas a serem incluídas
+              required: false
+              schema:
+                  type: string
+            - name: exclude
+              in: query
+              description: lista separada por vírgula de propriedades filhas a serem excluídas
+              required: false
+              schema:
+                  type: string
+            - name: child_objects
+              in: query
+              description: se deve incluir objetos filhos
+              required: false
+              schema:
+                  type: boolean
+        responses:
+            200:
+                description: Retorna o valor serializado do caminho de destino e se ele existe no banco de dados
+                content:
+                    "application/json":
+                        schema:
+                            allOf:
+                                - $ref: "#/components/schemas/SerializedValue"
+                                - type: object
+                                  properties:
+                                      exists:
+                                          type: boolean
+                                          description: indica se o caminho existe (quando `false`, a propriedade `val` será `null`)
+                                          example: true
+                            required:
+                                - val
+                                - exists
+                            example:
+                                exists: true
+                                val: { name: "My todo list", stats: { size: 216, created: "2022-04-07T15:11:42Z", modified: "2022-03-08T12:24:05Z" } }
+                                map: { "stats/created": "date", "stats/modified": "date" }
+            403:
+                description: Retorna "403 Proibido" se o usuário conectado não tiver permissão para ler o caminho de destino
+                content:
+                    "application/json":
+                        schema:
+                            $ref: "#/components/schemas/Error"
+            500:
+                description: Um erro inesperado ocorreu
+                content:
+                    "application/json":
+                        schema:
+                            $ref: "#/components/schemas/UnexpectedError"
