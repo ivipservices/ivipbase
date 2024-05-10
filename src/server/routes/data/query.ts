@@ -96,7 +96,7 @@ export const addRoutes = (env: LocalServer) => {
 			const { results, context, stop } = await env.db(dbName).storage.query(path, query, options);
 			cancelSubscription = stop;
 			if (!env.settings.transactions?.log) {
-				delete context.acebase_cursor;
+				delete context.database_cursor;
 			}
 			const response = {
 				count: results.length,

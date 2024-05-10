@@ -8,8 +8,8 @@ export interface UserSettings {
 	[key: string]: string | number | boolean;
 }
 
-export type iVipBaseUser = ({ username: string } | { email: string }) & {
-	uid: string;
+export type iVipBaseUser = ({ username: "admin" } | { uid: string; username: string } | { uid: string; email: string }) & {
+	uid?: string;
 	displayName?: string;
 	picture?: UserProfilePicture;
 	emailVerified: boolean;
@@ -29,9 +29,9 @@ export type iVipBaseUser = ({ username: string } | { email: string }) & {
 	settings: UserSettings;
 };
 
-export type DbUserAccountDetails = ({ username: string } | { email: string }) & {
+export type DbUserAccountDetails = ({ username: "admin" } | { uid: string; username: string } | { uid: string; email: string }) & {
 	/** uid, not stored in the database object (uid is the node's key) */
-	uid: string;
+	uid?: string;
 	username?: string;
 	email?: string;
 	/** If the supplied email address has been verified */
@@ -95,5 +95,5 @@ export const getPublicAccountDetails = (account: DbUserAccountDetails): iVipBase
 		changePasswordRequested: (account.change_password_requested ?? new Date(0)).toISOString(),
 		changePasswordBefore: (account.change_password_before ?? new Date(0)).toISOString(),
 		settings: account.settings,
-	};
+	} as any;
 };

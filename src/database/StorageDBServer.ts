@@ -8,7 +8,10 @@ export class StorageDBServer extends Api {
 
 	constructor(readonly db: DataBase) {
 		super();
-		this.db.emit("ready");
+
+		this.db.app.storage.ready(() => {
+			this.db.emit("ready");
+		});
 	}
 
 	async stats(): Promise<{
@@ -62,6 +65,21 @@ export class StorageDBServer extends Api {
 	async update(path: string, updates: any, options?: any): Promise<{ cursor?: string | undefined }> {
 		await this.db.app.storage.update(this.db.database, path, updates);
 		return {};
+	}
+
+	async transaction(
+		path: string,
+		callback: (currentValue: any) => Promise<any>,
+		options: {
+			suppress_events?: boolean;
+			context?: any;
+		} = {
+			suppress_events: false,
+			context: null,
+		},
+	) {
+		const cursor = await this.db.app.storage.transact(this.db.database, path, callback, { suppress_events: options.suppress_events, context: options.context });
+		return { ...(cursor && { cursor }) };
 	}
 
 	async exists(path: string) {

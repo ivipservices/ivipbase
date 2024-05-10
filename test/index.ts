@@ -10,13 +10,14 @@ const app = initializeApp({
 	storage: new JsonFileStorageSettings({
 		filePath: "./test_file.json",
 	}),
+	authentication: {
+		enabled: true,
+		defaultAdminPassword: "admin",
+	},
 });
 
 app.ready(async () => {
-	console.log("App iniciado!");
 	const db = getDatabase(app);
-
-	console.log(`Database ${db.name} iniciado!`);
 
 	// db.ref("test").on("child_added", (snap) => console.log("child_added", snap.ref.path, snap.val()));
 	// db.ref("test").on("child_changed", (snap) => console.log("child_changed", snap.ref.path, snap.val()));

@@ -1,0 +1,82 @@
+/transaction/{dbname}/finish:
+    post:
+        tags:
+            - data
+        summary: Finaliza uma transação em um caminho
+        description: "Finaliza uma transação em um caminho no banco de dados sobrescrevendo-o com um novo valor. OBS: Este endpoint da API também está disponível por meio da conexão websocket, que é o método preferido. Este endpoint da API é fornecido para clientes que não suportam websockets e aqueles que não têm uma conexão websocket por escolha ou devido a limitações de rede."
+        parameters:
+            - name: dbname
+              in: path
+              description: nome do banco de dados
+              required: true
+              schema:
+                  type: string
+                  example: mydb
+        requestBody:
+            description: detalhes da transação e o novo valor a ser armazenado
+            content:
+                "application/json":
+                    schema:
+                        type: object
+                        properties:
+                            id:
+                                type: string
+                                description: id da transação retornado pelo endpoint _start_
+                                example: jld2cjxh0000qzrmn831i7rn
+                            path:
+                                type: string
+                                description: o mesmo caminho usado na chamada do endpoint _start_
+                                example: coleção/filho/propriedade
+                            value:
+                                $ref: "#/components/schemas/SerializedValue"
+        responses:
+            200:
+                description: Se bem-sucedido, retorna a string `"done"`
+                content:
+                    "text/plain":
+                        headers:
+                            "AceBase-Context":
+                                description: Retorna o contexto que foi passado para o endpoint de início da transação, aumentado com um `database_cursor` se o log de transações estiver ativado no servidor.
+                                schema:
+                                    type: string
+                                    example: '{ "database_cursor": "l3lf2iwd000109mgdn0d6pqt" }'
+                        schema:
+                            type: string
+                            value: done
+                            example: done
+                            description: a string `"done"`
+            400:
+                description: Retorna "400 Bad Request" se o valor enviado estiver incorreto
+                content:
+                    "application/json":
+                        schema:
+                            $ref: "#/components/schemas/Error"
+                            example:
+                                code: invalid_serialized_value
+                                message: O valor enviado não está corretamente serializado
+            403:
+                description: Retorna "403 Proibido" se o usuário conectado não tiver permissão para escrever no caminho de destino
+                content:
+                    "application/json":
+                        schema:
+                            $ref: "#/components/schemas/Error"
+            410:
+                description: Retorna "410 Gone" se a transação especificada não foi encontrada, expirou ou o caminho não corresponde ao fornecido no endpoint _start_.
+                content:
+                    "text/plain":
+                        schema:
+                            type: string
+                            value: transação não encontrada
+                            example: transação não encontrada
+            422:
+                description: Retorna "422 Unprocessable Entity" se a validação de esquema para o valor enviado falhou.
+                content:
+                    "application/json":
+                        schema:
+                            $ref: "#/components/schemas/SchemaValidationError"
+            500:
+                description: Ocorreu um erro inesperado
+                content:
+                    "application/json":
+                        schema:
+                            $ref: "#/components/schemas/UnexpectedError"

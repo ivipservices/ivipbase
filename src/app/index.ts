@@ -4,7 +4,7 @@ import { AppError, ERROR_FACTORY } from "../controller/erros";
 
 import { LocalServer } from "../server";
 import { CustomStorage, DataStorage, applySettings } from "./verifyStorage";
-import { IvipBaseSettings } from "./settings";
+import { IvipBaseSettings, IvipBaseSettingsOptions } from "./settings";
 
 export class IvipBaseApp extends SimpleEventEmitter {
 	protected _ready = false;
@@ -73,7 +73,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 	}
 }
 
-export function initializeApp(options: Partial<IvipBaseSettings>): IvipBaseApp {
+export function initializeApp(options: IvipBaseSettingsOptions): IvipBaseApp {
 	const settings = new IvipBaseSettings(options);
 
 	const newApp: IvipBaseApp = new IvipBaseApp({

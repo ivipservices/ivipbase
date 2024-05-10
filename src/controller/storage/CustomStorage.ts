@@ -1,3 +1,4 @@
+import { DebugLogger } from "ivipbase-core";
 import { AppError, ERROR_FACTORY } from "../erros";
 import MDE, { MDESettings, StorageNode, StorageNodeInfo } from "./MDE";
 
@@ -8,11 +9,14 @@ export class CustomStorageSettings extends MDESettings implements Omit<MDESettin
 }
 
 export abstract class CustomStorage extends MDE {
-	dbName: string = "CustomStorage";
+	private _dbName: string = "CustomStorage";
+	private logLevel: "verbose" | "log" | "warn" | "error" = "log";
+	private _debug: DebugLogger;
 
-	constructor(options: Partial<Omit<MDESettings, "getMultiple" | "setNode" | "removeNode">> = {}) {
+	constructor(options: Partial<Omit<MDESettings, "getMultiple" | "setNode" | "removeNode"> & { logLevel: "verbose" | "log" | "warn" | "error" }> = {}) {
+		const { logLevel, ..._options } = options;
 		super({
-			...options,
+			..._options,
 			getMultiple: (database, e) => {
 				if (!this.ready) {
 					throw ERROR_FACTORY.create(AppError.DB_DISCONNECTED, { dbName: this.dbName });
@@ -32,6 +36,22 @@ export abstract class CustomStorage extends MDE {
 				return this.removeNode(database, path, content, node);
 			},
 		});
+
+		this.logLevel = logLevel || "log";
+		this._debug = new DebugLogger(this.logLevel, `[${this.dbName}]`);
+	}
+
+	get dbName(): string {
+		return this._dbName;
+	}
+
+	set dbName(value: string) {
+		this._dbName = value;
+		this._debug = new DebugLogger(this.logLevel, `[${this._dbName}]`);
+	}
+
+	get debug(): DebugLogger {
+		return this._debug;
 	}
 
 	abstract getMultiple(database: string, expression: RegExp): Promise<StorageNodeInfo[]>;

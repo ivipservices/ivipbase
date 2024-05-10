@@ -40,3 +40,18 @@ export function removeNulls(obj: any) {
 	}
 	return result;
 }
+
+export function replaceUndefined(obj: any) {
+	if (!obj || obj === null || typeof obj !== "object") {
+		return obj ?? null;
+	}
+	const result = Array.isArray(obj) ? [] : {};
+	for (let prop in obj) {
+		const val = obj[prop];
+		result[prop] = val === undefined ? null : val;
+		if (typeof val === "object") {
+			result[prop] = replaceUndefined(val);
+		}
+	}
+	return result;
+}

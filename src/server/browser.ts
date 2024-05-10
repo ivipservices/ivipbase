@@ -1,7 +1,8 @@
 import { DataBase, DebugLogger, SimpleEventEmitter } from "ivipbase-core";
-import { getDatabase, hasDatabase } from "../database";
+import { getDatabase, getDatabasesNames, hasDatabase } from "../database";
 import type { IvipBaseApp } from "../app";
 import { PathBasedRules } from "./services/rules";
+import { DbUserAccountDetails } from "./schema/user";
 
 export class ServerNotReadyError extends Error {
 	constructor() {
@@ -234,6 +235,7 @@ export const isPossiblyServer = false;
 export abstract class AbstractLocalServer<LocalServer = any> extends SimpleEventEmitter {
 	protected _ready = false;
 	readonly settings: ServerSettings<LocalServer>;
+	readonly log: DebugLogger;
 	readonly debug: DebugLogger;
 	readonly db: (dbName: string) => DataBase;
 	readonly hasDatabase: (dbName: string) => boolean;
@@ -261,7 +263,8 @@ export abstract class AbstractLocalServer<LocalServer = any> extends SimpleEvent
 			this.rules_db.set(dbName, rules);
 			return rules;
 		};
-		this.debug = new DebugLogger(this.settings.logLevel, `[${this.db.name}]`);
+		this.debug = new DebugLogger(this.settings.logLevel, `[SERVER]`);
+		this.log = this.debug;
 
 		this.once("ready", () => {
 			this._ready = true;
@@ -288,11 +291,34 @@ export abstract class AbstractLocalServer<LocalServer = any> extends SimpleEvent
 	}
 
 	/**
-	 * Gets the url the server is running at
+	 * Obtém a URL na qual o servidor está sendo executado
 	 */
 	get url() {
 		//return `http${this.settings.https.enabled ? 's' : ''}://${this.settings.host}:${this.settings.port}/${this.settings.rootPath}`;
 		return `http://${this.settings.host}:${this.settings.port}/${this.settings.rootPath}`.replace(/\/+$/gi, "");
+	}
+
+	get dbNames(): string[] {
+		return getDatabasesNames();
+	}
+
+	/**
+	 * Redefine a senha do usuário. Isso também pode ser feito usando o ponto de extremidade da API auth/reset_password
+	 * @param clientIp endereço IP do usuário
+	 * @param code código de redefinição que foi enviado para o endereço de e-mail do usuário
+	 * @param newPassword nova senha escolhida pelo usuário
+	 */
+	resetPassword(clientIp: string, code: string, newPassword: string): Promise<DbUserAccountDetails> {
+		throw new ServerNotReadyError();
+	}
+
+	/**
+	 * Marca o endereço de e-mail da conta do usuário como validado. Isso também pode ser feito usando o ponto de extremidade da API auth/verify_email
+	 * @param clientIp endereço IP do usuário
+	 * @param code código de verificação enviado para o endereço de e-mail do usuário
+	 */
+	verifyEmailAddress(clientIp: string, code: string): Promise<void> {
+		throw new ServerNotReadyError();
 	}
 }
 

@@ -61,13 +61,15 @@
 		"dotenv": "^16.0.3",
 		"express": "^4.17.1",
 		"ivip-utils": "^1.1.7",
-		"ivipbase-core": "^1.6.9",
+		"ivipbase-core": "^1.6.91",
 		"juice": "^10.0.0",
 		"mongodb": "^5.9.1",
 		"nodemailer": "^6.9.7",
+		"os-utils": "^0.0.14",
 		"proper-lockfile": "^4.1.2",
 		"socket.io": "^4.5.0",
 		"swagger-jsdoc": "^6.1.0",
+		"systeminformation": "^5.22.8",
 		"unidecode": "^0.1.8"
 	},
 	"devDependencies": {

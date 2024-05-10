@@ -1,12 +1,16 @@
-import { PathInfo, SimpleEventEmitter, Utils } from "ivipbase-core";
+import { DebugLogger, ID, PathInfo, SimpleEventEmitter, Utils } from "ivipbase-core";
 import { CustomStorageNodeInfo, NodeAddress, NodesPending, StorageNode, StorageNodeInfo } from "./NodeInfo";
 import { NodeValueType, VALUE_TYPES, getTypeFromStoredValue, getValueType, nodeValueTypes, processReadNodeValue, promiseState } from "./utils";
 import prepareMergeNodes from "./prepareMergeNodes";
 import structureNodes from "./structureNodes";
 import destructureData from "./destructureData";
-import { removeNulls } from "../../../utils";
+import { removeNulls, replaceUndefined } from "../../../utils";
 
 export { VALUE_TYPES, StorageNode, StorageNodeInfo };
+
+const DEBUG_MODE = false;
+
+const NOOP = () => {};
 
 /**
  * Representa as configurações de um MDE.
@@ -129,6 +133,7 @@ export class MDESettings {
 
 export default class MDE extends SimpleEventEmitter {
 	protected _ready = false;
+	// readonly debug: DebugLogger = new DebugLogger(undefined, "MDE");
 
 	/**
 	 * As configurações do node.
@@ -142,13 +147,23 @@ export default class MDE extends SimpleEventEmitter {
 	 */
 	private nodes: Record<string, NodesPending[]> = {};
 
+	private _lastTid: number;
+	createTid() {
+		return DEBUG_MODE ? ++this._lastTid : ID.generate();
+	}
+
 	constructor(options: Partial<MDESettings> = {}) {
 		super();
 		this.settings = new MDESettings(options);
+		this._lastTid = 0;
 		this.once("ready", () => {
 			this._ready = true;
 		});
 		this.init();
+	}
+
+	get debug(): DebugLogger {
+		return new DebugLogger(undefined, "MDE");
 	}
 
 	private init() {
@@ -324,7 +339,7 @@ export default class MDE extends SimpleEventEmitter {
 		const batchError: NodesPending[] = [];
 
 		try {
-			const forAsync = prepareMergeNodes.apply(this, [batch]);
+			// const forAsync = prepareMergeNodes.apply(this, [batch]);
 
 			let byNodes: StorageNodeInfo[] = [];
 
@@ -593,7 +608,10 @@ export default class MDE extends SimpleEventEmitter {
 	 * @template T - Tipo genérico para o retorno da função.
 	 * @param {string} database - Nome do banco de dados.
 	 * @param {string} path - Caminho de um node raiz.
-	 * @param {boolean} [onlyChildren=true] - Se verdadeiro, exporta apenas os filhos do node especificado.
+	 * @param {Object} [options] - Opções adicionais para controlar o comportamento da busca.
+	 * @param {string[]} [options.include] - Lista de chaves a serem incluídas no valor.
+	 * @param {string[]} [options.exclude] - Lista de chaves a serem excluídas do valor.
+	 * @param {boolean} [options.onlyChildren] - Se verdadeiro, exporta apenas os filhos do node especificado.
 	 * @return {Promise<T | undefined>} - Retorna valor referente ao path ou undefined se nenhum node for encontrado.
 	 */
 	async get<t = any>(
@@ -604,11 +622,51 @@ export default class MDE extends SimpleEventEmitter {
 			exclude?: string[];
 			onlyChildren?: boolean;
 		},
-	): Promise<t | undefined> {
+	): Promise<t | undefined>;
+
+	/**
+	 * Obtém valor referente ao path específico.
+	 * @param {string} database - Nome do banco de dados.
+	 * @param {string} path - Caminho de um node raiz.
+	 * @param {Object} options - Opções adicionais para controlar o comportamento da busca.
+	 * @param {string[]} options.include - Lista de chaves a serem incluídas no valor.
+	 * @param {string[]} options.exclude - Lista de chaves a serem excluídas do valor.
+	 * @param {boolean} options.onlyChildren - Se verdadeiro, exporta apenas os filhos do node especificado.
+	 * @param {boolean} options.include_info_node - Se verdadeiro, inclui informações sobre o node no retorno.
+	 * @return {Promise<StorageNode | undefined>} - Retorna valor referente ao path ou undefined se nenhum node for encontrado.
+	 */
+	async get<t = any>(
+		database: string,
+		path: string,
+		options: {
+			include?: string[];
+			exclude?: string[];
+			onlyChildren?: boolean;
+			include_info_node: boolean;
+		},
+	): Promise<StorageNode | undefined>;
+	async get<t = any>(
+		database: string,
+		path: string,
+		options?: {
+			include?: string[];
+			exclude?: string[];
+			onlyChildren?: boolean;
+			include_info_node?: boolean;
+		},
+	): Promise<t | StorageNode | undefined> {
+		const { include_info_node, onlyChildren, ..._options } = options ?? {};
 		path = PathInfo.get([this.settings.prefix, path]).path;
-		const nodes = await this.getNodesBy(database, path, options?.onlyChildren, true);
+		const nodes = await this.getNodesBy(database, path, onlyChildren, true);
+		const main_node = nodes.find(({ path: p }) => PathInfo.get(p).equals(path));
+		if (!main_node) {
+			return undefined;
+		}
+
 		// console.log(JSON.stringify(nodes, null, 4));
-		return removeNulls(structureNodes(path, nodes, options));
+		const value = removeNulls(structureNodes(path, nodes, _options)) ?? null;
+
+		return !include_info_node ? value : { ...main_node.content, value };
 	}
 
 	/**
@@ -627,6 +685,11 @@ export default class MDE extends SimpleEventEmitter {
 		value: any,
 		options: {
 			assert_revision?: string;
+			tid?: string;
+			suppress_events?: boolean;
+			context?: {
+				[k: string]: any;
+			};
 		} = {},
 		type: "SET" | "UPDATE" = "SET",
 	): Promise<void> {
@@ -681,8 +744,72 @@ export default class MDE extends SimpleEventEmitter {
 		value: any,
 		options: {
 			assert_revision?: string;
+			tid?: string;
+			suppress_events?: boolean;
+			context?: {
+				[k: string]: any;
+			};
 		} = {},
 	): Promise<void> {
 		this.set(database, path, value, options, "UPDATE");
+	}
+
+	/**
+	 * Atualiza um nó obtendo seu valor, executando uma função de retorno de chamada que transforma
+	 * o valor atual e retorna o novo valor a ser armazenado. Garante que o valor lido
+	 * não mude enquanto a função de retorno de chamada é executada, ou executa a função de retorno de chamada novamente se isso acontecer.
+	 * @param database nome do banco de dados
+	 * @param path caminho
+	 * @param callback função que transforma o valor atual e retorna o novo valor a ser armazenado. Pode retornar uma Promise
+	 * @param options opções opcionais usadas pela implementação para chamadas recursivas
+	 * @returns Retorna um novo cursor se o registro de transação estiver habilitado
+	 */
+	async transact(
+		database: string,
+		path: string,
+		callback: (value: any) => any,
+		options: Partial<{
+			tid: string;
+			suppress_events: boolean;
+			context: object;
+			no_lock: boolean;
+		}> = { no_lock: false, suppress_events: false, context: undefined },
+	): Promise<string | void> {
+		const useFakeLock = options && options.no_lock === true;
+		const tid = this.createTid() as string;
+		// const lock = useFakeLock
+		//     ? { tid, release: NOOP } // Trava falsa, vamos usar verificação de revisão e tentativas novamente em vez disso
+		//     : await this.nodeLocker.lock(path, tid, true, 'transactNode');
+		const lock = { tid, release: NOOP };
+
+		try {
+			const node = await this.get(database, path, { include_info_node: true });
+			const checkRevision = node?.revision ?? ID.generate();
+			let newValue: any;
+			try {
+				newValue = await Promise.race([callback(node?.value ?? null)]).catch((err) => {
+					this.debug.error(`Error in transaction callback: ${err.message}`);
+				});
+			} catch (err) {
+				this.debug.error(`Error in transaction callback: ${(err as any).message}`);
+			}
+			if (typeof newValue === "undefined") {
+				// Callback did not return value. Cancel transaction
+				return;
+			}
+			const cursor = await this.update(database, path, newValue, { assert_revision: checkRevision, tid: lock.tid, suppress_events: options.suppress_events, context: options.context });
+			return cursor;
+		} catch (err) {
+			throw err;
+		} finally {
+			lock.release();
+		}
+	}
+
+	byPrefix(prefix: string): MDE {
+		return {
+			...this,
+			prefix: prefix,
+		};
 	}
 }

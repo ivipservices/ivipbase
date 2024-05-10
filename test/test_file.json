@@ -149,6 +149,82 @@
                 "created": 1715039313868,
                 "modified": 1715039313868
             }
+        },
+        {
+            "path": "root/__auth__",
+            "content": {
+                "type": 1,
+                "value": {},
+                "revision": "lvzqq1cq0001c0hxge090i2f",
+                "revision_nr": 1,
+                "created": 1715288899422,
+                "modified": 1715288899422
+            }
+        },
+        {
+            "path": "root/__auth__/security",
+            "content": {
+                "type": 1,
+                "value": {},
+                "revision": "lvzqq1cq0001c0hxge090i2f",
+                "revision_nr": 1,
+                "created": 1715288899422,
+                "modified": 1715288899422
+            }
+        },
+        {
+            "path": "root/__auth__/security/token_salt",
+            "content": {
+                "type": 5,
+                "value": "ebcc1c67480abc9c54b6de37e47ad97440eb072b6bda2ff0eb2fa8baaeba743cbcb6a4f1fc15abd5157b5f30527b7415a8583705876fd29b4305f280cdfc0035ed3d3b4889135854fcd6bce1993bc49da046f1aa7aaa57dbc0e42c55d8b73405ece2a3681e3d21953a82288fa5b9fd2ec7a2ad755d65628698a3e564b16c805e",
+                "revision": "lvzqq1cq0001c0hxge090i2f",
+                "revision_nr": 1,
+                "created": 1715288899422,
+                "modified": 1715288899422
+            }
+        },
+        {
+            "path": "root/__auth__/accounts",
+            "content": {
+                "type": 1,
+                "value": {},
+                "revision": "lvzr13lo000228hx06aa5tz2",
+                "revision_nr": 1,
+                "created": 1715289415560,
+                "modified": 1715289415560
+            }
+        },
+        {
+            "path": "root/__auth__/accounts/admin",
+            "content": {
+                "type": 1,
+                "value": {
+                    "username": "admin",
+                    "display_name": "[root] IvipBase admin",
+                    "password_salt": "11459491091e4a01",
+                    "change_password": true,
+                    "created": {
+                        "type": 6,
+                        "value": 1715294044588
+                    },
+                    "settings": {}
+                },
+                "revision": "lvztsbe300028ohx6azpgq12",
+                "revision_nr": 1,
+                "created": 1715294044608,
+                "modified": 1715294044608
+            }
+        },
+        {
+            "path": "root/__auth__/accounts/admin/password",
+            "content": {
+                "type": 5,
+                "value": "23d43138ec7000482d7b9ea7d34d9ff8790ba4fbd6e63edbcde24b7e668dc42e99921ec931bb9d8dab9ad9046aa73162e291158040cca739f15cf952dab3f125",
+                "revision": "lvztsbe300028ohx6azpgq12",
+                "revision_nr": 1,
+                "created": 1715294044599,
+                "modified": 1715294044599
+            }
         }
     ]
 }

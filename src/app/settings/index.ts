@@ -84,13 +84,15 @@ class ServerEmailSettings extends BrowserEmailSettings {
 	}
 }
 
-interface AppServerSettings {
+interface AppServerSettings extends ServerInitialSettings<LocalServer> {
 	email: InitialServerEmailSettings;
 }
 
 interface DatabaseSettings {
 	dbname: string;
 }
+
+export type IvipBaseSettingsOptions = Partial<IvipBaseSettings & ServerInitialSettings<LocalServer> & AppServerSettings>;
 
 export class IvipBaseSettings extends BrowserSettings {
 	readonly isServer: boolean = false;
@@ -108,7 +110,7 @@ export class IvipBaseSettings extends BrowserSettings {
 	 */
 	readonly email?: ServerEmailSettings;
 
-	constructor(options: Partial<IvipBaseSettings & ServerInitialSettings<LocalServer> & AppServerSettings> = {}) {
+	constructor(options: IvipBaseSettingsOptions = {}) {
 		super(options);
 
 		if (options.isServer && isPossiblyServer) {

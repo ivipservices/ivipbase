@@ -196,6 +196,7 @@ export const promiseState = (p: Promise<any>): Promise<"pending" | "fulfilled" |
  * @throws {TypeError} Lança um erro se o tipo do valor não for suportado.
  */
 export function valueFitsInline(value: any, settings: MDESettings) {
+	value = value == undefined ? null : value;
 	if (typeof value === "number" || typeof value === "boolean" || isDate(value)) {
 		return true;
 	} else if (typeof value === "string") {
@@ -238,7 +239,7 @@ export function getTypedChildValue(val: any):
 			value: string | number | boolean;
 	  }
 	| null {
-	if (val === null) {
+	if (val === null || val === undefined) {
 		return null;
 		//throw new Error(`Not allowed to store null values. remove the property`);
 	} else if (isDate(val)) {

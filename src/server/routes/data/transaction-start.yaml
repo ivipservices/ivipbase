@@ -1,0 +1,58 @@
+/transaction/{dbname}/start:
+    post:
+        tags:
+            - data
+        summary: Inicia uma transação em um caminho
+        description: "Inicia uma transação em um caminho no banco de dados retornando seu valor atual, bloqueando-o até que o endpoint _finish_ seja chamado. OBS: Este endpoint da API também está disponível por meio da conexão websocket, que é o método preferido. Este endpoint da API é fornecido para clientes que não suportam websockets e aqueles que não têm uma conexão websocket por escolha ou devido a limitações de rede."
+        parameters:
+            - name: dbname
+              in: path
+              description: nome do banco de dados
+              required: true
+              schema:
+                  type: string
+                  example: mydb
+            - name: AceBase-Context
+              in: header
+              description: Informações contextuais sobre a operação do banco de dados (deve ser JSON válido). Essas informações são incluídas em notificações de eventos enviadas para clientes observando dados neste ou em caminhos filhos
+              schema:
+                  type: string
+                  example: {}
+        requestBody:
+            description: caminho para iniciar a transação
+            content:
+                "application/json":
+                    schema:
+                        type: object
+                        properties:
+                            path:
+                                type: string
+                                description: caminho do banco de dados
+                        example:
+                            path: coleção/filho/propriedade
+        responses:
+            200:
+                description: retorna um objeto com o id da transação e o valor atual (serializado) do caminho fornecido
+                content:
+                    "application/json":
+                        schema:
+                            type: object
+                            properties:
+                                id:
+                                    type: string
+                                    description: id da transação
+                                    example: jld2cjxh0000qzrmn831i7rn
+                                value:
+                                    $ref: "#/components/schemas/SerializedValue"
+            403:
+                description: Retorna "403 Proibido" se o usuário conectado não tiver permissão para escrever no caminho de destino
+                content:
+                    "application/json":
+                        schema:
+                            $ref: "#/components/schemas/Error"
+            500:
+                description: Ocorreu um erro inesperado
+                content:
+                    "application/json":
+                        schema:
+                            $ref: "#/components/schemas/UnexpectedError"

@@ -2,12 +2,14 @@ import { AbstractLocalServer, ServerSettings, ServerInitialSettings, ServerNotRe
 import type { Socket } from "socket.io";
 import type { Express, Request, Response } from "express";
 import * as express from "express";
-import { addMetadataRoutes, addDataRoutes } from "./routes";
+import { addMetadataRoutes, addDataRoutes, addAuthenticionRoutes } from "./routes";
 import { Server, createServer } from "http";
 import { DbUserAccountDetails } from "./schema/user";
 import { add404Middleware, addCacheMiddleware, addCorsMiddleware } from "./middleware";
 import type { IvipBaseApp } from "../app";
 import { ConnectedClient } from "./shared/clients";
+import { setupAuthentication } from "./services/auth";
+import { SimpleCache } from "ivipbase-core";
 const createExpress = (express as any).default ?? express;
 
 export { ServerSettings, ServerInitialSettings };
@@ -45,6 +47,23 @@ export class LocalServer extends AbstractLocalServer<LocalServer> {
 
 	readonly clients: Map<string, ConnectedClient> = new Map();
 
+	authCache: SimpleCache<string, DbUserAccountDetails> = new SimpleCache<string, DbUserAccountDetails>({ expirySeconds: 300, cloneValues: false, maxEntries: 1000 });
+
+	readonly metaInfoCache: SimpleCache<
+		number,
+		{
+			cpuUsage: number;
+			networkStats: {
+				sent: number;
+				received: number;
+			};
+			memoryUsage: { total: number; free: number; used: number };
+			time: number;
+		}
+	> = new SimpleCache<number, any>({ expirySeconds: 300, cloneValues: false, maxEntries: 1000 });
+
+	tokenSalt: string | null = null;
+
 	constructor(localApp: IvipBaseApp, settings: Partial<ServerSettings> = {}) {
 		super(localApp, settings);
 		this.init();
@@ -65,6 +84,17 @@ export class LocalServer extends AbstractLocalServer<LocalServer> {
 		// Adiciona middleware de cache
 		addCacheMiddleware(this);
 
+		if (this.settings.auth.enabled) {
+			// Setup auth database
+			await setupAuthentication(this);
+
+			// Add auth endpoints
+			const { resetPassword, verifyEmailAddress } = addAuthenticionRoutes(this);
+			this.resetPassword = resetPassword;
+			this.verifyEmailAddress = verifyEmailAddress;
+		}
+
+		// Add metadata endpoints
 		addMetadataRoutes(this);
 
 		// If environment is development, add API docs
