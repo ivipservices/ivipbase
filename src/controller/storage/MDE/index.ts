@@ -609,8 +609,8 @@ export default class MDE extends SimpleEventEmitter {
 	 * @param {string} database - Nome do banco de dados.
 	 * @param {string} path - Caminho de um node raiz.
 	 * @param {Object} [options] - Opções adicionais para controlar o comportamento da busca.
-	 * @param {string[]} [options.include] - Lista de chaves a serem incluídas no valor.
-	 * @param {string[]} [options.exclude] - Lista de chaves a serem excluídas do valor.
+	 * @param {Array<string|number>} [options.include] - Lista de chaves a serem incluídas no valor.
+	 * @param {Array<string|number>} [options.exclude] - Lista de chaves a serem excluídas do valor.
 	 * @param {boolean} [options.onlyChildren] - Se verdadeiro, exporta apenas os filhos do node especificado.
 	 * @return {Promise<T | undefined>} - Retorna valor referente ao path ou undefined se nenhum node for encontrado.
 	 */
@@ -618,9 +618,10 @@ export default class MDE extends SimpleEventEmitter {
 		database: string,
 		path: string,
 		options?: {
-			include?: string[];
-			exclude?: string[];
+			include?: Array<string | number>;
+			exclude?: Array<string | number>;
 			onlyChildren?: boolean;
+			include_info_node?: boolean;
 		},
 	): Promise<t | undefined>;
 
@@ -629,8 +630,8 @@ export default class MDE extends SimpleEventEmitter {
 	 * @param {string} database - Nome do banco de dados.
 	 * @param {string} path - Caminho de um node raiz.
 	 * @param {Object} options - Opções adicionais para controlar o comportamento da busca.
-	 * @param {string[]} options.include - Lista de chaves a serem incluídas no valor.
-	 * @param {string[]} options.exclude - Lista de chaves a serem excluídas do valor.
+	 * @param {Array<string|number>} options.include - Lista de chaves a serem incluídas no valor.
+	 * @param {Array<string|number>} options.exclude - Lista de chaves a serem excluídas do valor.
 	 * @param {boolean} options.onlyChildren - Se verdadeiro, exporta apenas os filhos do node especificado.
 	 * @param {boolean} options.include_info_node - Se verdadeiro, inclui informações sobre o node no retorno.
 	 * @return {Promise<StorageNode | undefined>} - Retorna valor referente ao path ou undefined se nenhum node for encontrado.
@@ -639,8 +640,8 @@ export default class MDE extends SimpleEventEmitter {
 		database: string,
 		path: string,
 		options: {
-			include?: string[];
-			exclude?: string[];
+			include?: Array<string | number>;
+			exclude?: Array<string | number>;
 			onlyChildren?: boolean;
 			include_info_node: boolean;
 		},
@@ -649,8 +650,8 @@ export default class MDE extends SimpleEventEmitter {
 		database: string,
 		path: string,
 		options?: {
-			include?: string[];
-			exclude?: string[];
+			include?: Array<string | number>;
+			exclude?: Array<string | number>;
 			onlyChildren?: boolean;
 			include_info_node?: boolean;
 		},

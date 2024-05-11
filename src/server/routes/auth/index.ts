@@ -1,4 +1,5 @@
 import type { LocalServer } from "../../";
+import addBearerAuthMiddleware from "../../middleware/user";
 
 export const addAuthenticionRoutes = (env: LocalServer) => {
 	if (!env.settings.auth.enabled) {
@@ -6,7 +7,7 @@ export const addAuthenticionRoutes = (env: LocalServer) => {
 	}
 
 	// Bearer authentication middleware
-	// addBearerAuthMiddleware(env);
+	addBearerAuthMiddleware(env);
 
 	// Auth state endpoint
 	// addStateRoute(env);

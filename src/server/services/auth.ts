@@ -47,6 +47,7 @@ export const setupAuthentication = async (env: LocalServer) => {
 							created: new Date(),
 							access_token: undefined, // Will be set upon login, so bearer authentication strategy can find user with this token
 							settings: {},
+							adminLevel: "root",
 						};
 						env.debug.warn(`__________________________________________________________________`);
 						env.debug.warn(``);

@@ -18,6 +18,19 @@ const app = initializeApp({
 
 app.ready(async () => {
 	const db = getDatabase(app);
+	db.ref("__auth__/accounts")
+		.query()
+		.filter("username", "==", "admin")
+		.get()
+		.then((snaps) => {
+			if (snaps.length <= 0) {
+				console.log("Não encontrado!");
+				return;
+			}
+			const snap = snaps[0];
+			console.log(snap.val());
+		})
+		.catch(console.log);
 
 	// db.ref("test").on("child_added", (snap) => console.log("child_added", snap.ref.path, snap.val()));
 	// db.ref("test").on("child_changed", (snap) => console.log("child_changed", snap.ref.path, snap.val()));

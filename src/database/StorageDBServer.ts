@@ -86,6 +86,11 @@ export class StorageDBServer extends Api {
 		return await this.db.app.storage.isPathExists(this.db.database, path);
 	}
 
+	async query(path: string, query: Types.Query, options: Types.QueryOptions = { snapshots: false }): ReturnType<Api["query"]> {
+		const results = await executeQuery(this, path, query, options);
+		return results;
+	}
+
 	async export(path: string, stream: Types.StreamWriteFunction, options?: { format?: "json"; type_safe?: boolean }): Promise<void> {
 		const data = await this.get(path);
 		const json = JSON.stringify(data.value);

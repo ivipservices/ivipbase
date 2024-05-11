@@ -6,8 +6,8 @@ export default function structureNodes(
 	path: string,
 	nodes: StorageNodeInfo[],
 	options: {
-		include?: string[];
-		exclude?: string[];
+		include?: Array<string | number>;
+		exclude?: Array<string | number>;
 		path_main?: string;
 	} = {},
 ): any {
