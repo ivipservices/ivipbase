@@ -24,7 +24,7 @@ export function pathValueToObject(dataPath: string, currentPath: string, value: 
 }
 
 export function removeNulls(obj: any) {
-	if (obj === null || typeof obj !== "object") {
+	if (obj === null || !(typeof obj === "object" && Object.prototype.toString.call(obj) === "[object Object]")) {
 		return obj;
 	}
 	const result = Array.isArray(obj) ? [] : {};

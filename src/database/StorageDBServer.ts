@@ -2,6 +2,7 @@ import { Api, PathInfo, Types, Utils } from "ivipbase-core";
 import { VALUE_TYPES } from "../controller/storage/MDE";
 import type { DataBase } from ".";
 import { removeNulls } from "../utils";
+import executeQuery from "../controller/executeQuery";
 
 export class StorageDBServer extends Api {
 	public cache: { [path: string]: any } = {};
@@ -87,7 +88,7 @@ export class StorageDBServer extends Api {
 	}
 
 	async query(path: string, query: Types.Query, options: Types.QueryOptions = { snapshots: false }): ReturnType<Api["query"]> {
-		const results = await executeQuery(this, path, query, options);
+		const results = await executeQuery(this.db.app, this.db.database, path, query, options);
 		return results;
 	}
 

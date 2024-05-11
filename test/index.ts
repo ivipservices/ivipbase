@@ -21,6 +21,7 @@ app.ready(async () => {
 	db.ref("__auth__/accounts")
 		.query()
 		.filter("username", "==", "admin")
+		.sort("created", true)
 		.get()
 		.then((snaps) => {
 			if (snaps.length <= 0) {
