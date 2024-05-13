@@ -1,0 +1,152 @@
+/auth/{dbname}/update:
+    post:
+        tags:
+            - auth
+        summary: Atualizar detalhes do usuário
+        description: Atualiza os detalhes da conta do usuário
+        parameters:
+            - name: dbname
+              in: path
+              description: nome do banco de dados
+              required: true
+              schema:
+                  type: string
+                  example: mydb
+        requestBody:
+            description: detalhes do usuário a serem atualizados
+            content:
+                "application/json":
+                    schema:
+                        type: object
+                        properties:
+                            uid:
+                                type: string
+                                description: (somente para administradores) para alterar as configurações da conta de um usuário, o `uid` da conta de destino deve ser passado na solicitação
+                            is_disabled:
+                                type: boolean
+                                description: (somente para administradores) se a conta de destino deve ser desativada para habilitar/desabilitar o login
+                            email:
+                                type: string
+                                description: Novo endereço de e-mail
+                            username:
+                                type: string
+                                description: Novo nome de usuário
+                            displayName:
+                                type: string
+                                description: "Nome do usuário para fins de exibição pública. Considere isso como um nome real, apelido ou identificador. (OBSERVAÇÃO: esta propriedade é equivalente ao `display_name` depreciado, ambos são permitidos para uso a partir do acebase-server v1.8.1)"
+                            display_name:
+                                type: string
+                                description: "Nome do usuário para fins de exibição pública. Considere isso como um nome real, apelido ou identificador. (OBSERVAÇÃO: esta propriedade é depreciada, use `displayName` em vez disso)"
+                            picture:
+                                type: object
+                                description: Foto do perfil
+                                properties:
+                                    url:
+                                        type: string
+                                    width:
+                                        type: number
+                                    height:
+                                        type: number
+                                example:
+                                    url: https://meu.perfil/foto.jpg
+                                    width: 500
+                                    height: 500
+                            settings:
+                                type: object
+                                otherProperties: true
+                                description: (opcional) outras informações diversas para armazenar com a conta do usuário
+                        required:
+                            - username
+                            - email
+                            - displayName
+                            - password
+        responses:
+            200:
+                description: Quando a atualização é bem-sucedida, retorna um objeto com os novos detalhes do usuário
+                content:
+                    "application/json":
+                        schema:
+                            type: object
+                            properties:
+                                user:
+                                    $ref: "#/components/schemas/User"
+            401:
+                description: Se esta for uma solicitação não autenticada (não conectada), é retornado `"401 Unauthorized"`
+                content:
+                    "application/json":
+                        schema:
+                            type: object
+                            properties:
+                                code:
+                                    type: string
+                                    value: unauthenticated_update
+                                message:
+                                    type: string
+                                    value: Faça login para alterar os detalhes
+                            example:
+                                code: unauthenticated_update
+                                message: Faça login para alterar os detalhes
+            403:
+                description: Se um usuário não administrador tentar atualizar os detalhes da conta de um usuário, é retornado `"403 Forbidden"`
+                content:
+                    "application/json":
+                        schema:
+                            type: object
+                            properties:
+                                code:
+                                    type: string
+                                    value: unauthorized_update
+                                message:
+                                    type: string
+                                    value: Você não está autorizado a realizar esta atualização. Esta tentativa foi registrada.
+                            example:
+                                code: unauthorized_update
+                                message: Você não está autorizado a realizar esta atualização. Esta tentativa foi registrada.
+            404:
+                description: A conta de usuário a ser atualizada não existe
+                content:
+                    "application/json":
+                        schema:
+                            type: object
+                            properties:
+                                code:
+                                    type: string
+                                    value: user_not_found
+                                message:
+                                    type: string
+                                    value: Nenhum usuário encontrado com o uid jld2cjxh0000qzrmn831i7rn
+                            example:
+                                code: user_not_found
+                                message: Nenhum usuário encontrado com o uid jld2cjxh0000qzrmn831i7rn
+            422:
+                description: Quando os detalhes da solicitação enviada estão incorretos, é retornado "422 Unprocessable Entity"
+                content:
+                    "application/json":
+                        schema:
+                            type: object
+                            properties:
+                                code:
+                                    type: string
+                                    description: O código de erro exato
+                                    enum:
+                                        - invalid_email
+                                        - email_conflict
+                                        - invalid_username
+                                        - username_conflict
+                                        - invalid_display_name
+                                        - invalid_picture
+                                        - invalid_settings
+                                    example: user_not_found
+                                message:
+                                    type: string
+                                    description: Descrição do erro
+                                    example: Conta com endereço de e-mail já existente
+                            example:
+                                code: username_conflict
+                                message: Conta com nome de usuário já existente
+            500:
+                description: Ocorreu um erro inesperado no servidor
+                content:
+                    "application/json":
+                        schema:
+                            $ref: "#/components/schemas/UnexpectedError"

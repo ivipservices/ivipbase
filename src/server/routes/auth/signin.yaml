@@ -1,0 +1,130 @@
+/auth/{dbname}/signin:
+    post:
+        tags:
+            - auth
+        summary: Entrar como usuário
+        description: Realiza o login de um usuário existente
+        parameters:
+            - name: dbname
+              in: path
+              description: nome do banco de dados
+              required: true
+              schema:
+                  type: string
+                  example: mydb
+        requestBody:
+            description: detalhes do login
+            content:
+                "application/json":
+                    schema:
+                        oneOf:
+                            - type: object
+                              properties:
+                                  client_id:
+                                      description: ID do websocket conectado
+                                      type: string
+                                  method:
+                                      description: Método de autenticação (email)
+                                      type: string
+                                      value: email
+                                  email:
+                                      description: Endereço de e-mail do usuário
+                                      type: string
+                                  password:
+                                      description: Senha
+                                      type: string
+                                      format: password
+                              required:
+                                  - method
+                                  - email
+                                  - password
+                              example:
+                                  method: email
+                                  email: user@example.com
+                                  password: sup3rs3cr3t
+                            - type: object
+                              properties:
+                                  client_id:
+                                      description: ID do websocket conectado
+                                      type: string
+                                  method:
+                                      description: Método de autenticação (conta)
+                                      type: string
+                                      value: account
+                                  username:
+                                      description: Nome de usuário
+                                      type: string
+                                  password:
+                                      description: Senha
+                                      type: string
+                                      format: password
+                              required:
+                                  - method
+                                  - username
+                                  - password
+                              example:
+                                  method: account
+                                  username: admin
+                                  password: sup3rs3cr3t
+                            - type: object
+                              properties:
+                                  client_id:
+                                      type: string
+                                      description: ID do websocket conectado
+                                  method:
+                                      type: string
+                                      value: token
+                                      description: Método de autenticação (token)
+                                  access_token:
+                                      type: string
+                                      description: Token de acesso previamente adquirido para fazer login
+                              required:
+                                  - method
+                                  - access_token
+                              example:
+                                  method: token
+                                  access_token: bewufh387f3fyubqwekrjbcqwkuiec7gq3euyfbqwkuyebqjk..
+        responses:
+            200:
+                description: Quando o login é bem-sucedido, retorna um objeto com o resultado
+                content:
+                    "application/json":
+                        schema:
+                            type: object
+                            properties:
+                                access_token:
+                                    description: O token de acesso que fornece acesso às chamadas de API que requerem autenticação. Este token de acesso deve ser adicionado ao cabeçalho de autorização dessas solicitações. O token pode ser armazenado em cache pelo cliente para fazer login com o método de token posteriormente
+                                    type: string
+                                    example: ewufh387f3fyubqwekrjbcqwkuiec7gq3euyfbqwkuyebqjk..
+                                user:
+                                    $ref: "#/components/schemas/User"
+            401:
+                description: Quando os detalhes da solicitação enviada estão incorretos, é retornado um "401 Não autorizado"
+                content:
+                    "application/json":
+                        schema:
+                            type: object
+                            properties:
+                                code:
+                                    type: string
+                                    description: O código de erro exato
+                                    enum:
+                                        - invalid_token
+                                        - not_found
+                                        - duplicate
+                                        - token_mismatch
+                                        - wrong_password
+                                    example: not_found
+                                message:
+                                    type: string
+                                    description: Descrição do erro
+                                    example: E-mail incorreto
+                            example:
+                                code: wrong_password
+                                message: Senha incorreta
+            500:
+                description: Ocorreu um erro inesperado no servidor
+                content:
+                    "application/json":
+                        schema:
+                            $ref: "#/components/schemas/UnexpectedError"

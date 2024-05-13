@@ -1,5 +1,15 @@
 import type { LocalServer } from "../../";
 import addBearerAuthMiddleware from "../../middleware/user";
+import addStateRoute from "./state";
+import addSignInRoute from "./signin";
+import addSignOutRoute from "./signout";
+import addVerifyEmailRoute from "./verify-email";
+import addForgotPasswordRoute from "./forgot-password";
+import addResetPasswordRoute from "./reset-password";
+import addChangePasswordRoute from "./change-password";
+import addSignUpRoute from "./signup";
+import addUpdateRoute from "./update";
+import addDeleteRoute from "./delete";
 
 export const addAuthenticionRoutes = (env: LocalServer) => {
 	if (!env.settings.auth.enabled) {
@@ -10,40 +20,34 @@ export const addAuthenticionRoutes = (env: LocalServer) => {
 	addBearerAuthMiddleware(env);
 
 	// Auth state endpoint
-	// addStateRoute(env);
+	addStateRoute(env);
 
 	// signin endpoint
-	// addSignInRoute(env);
+	addSignInRoute(env);
 
 	// signout endpoint
-	// addSignOutRoute(env);
+	addSignOutRoute(env);
 
 	// verify email endpoint
-	const verifyEmailAddress: (clientIp: string, code: string) => Promise<void> = () => {
-		return Promise.resolve();
-	};
-	// const verifyEmailAddress = addVerifyEmailRoute(env);
+	const verifyEmailAddress = addVerifyEmailRoute(env);
 
 	// forgot password endpoint (issue password reset)
-	// addForgotPasswordRoute(env);
+	addForgotPasswordRoute(env);
 
 	// reset password endpoint (finish password reset)
-	const resetPassword: (clientIp: string, code: string, newPassword: string) => Promise<any> = () => {
-		return Promise.resolve({});
-	};
-	// const resetPassword = addResetPasswordRoute(env);
+	const resetPassword = addResetPasswordRoute(env);
 
 	// change password endpoint
-	// addChangePasswordRoute(env);
+	addChangePasswordRoute(env);
 
 	// signup endpoint
-	// addSignUpRoute(env);
+	addSignUpRoute(env);
 
 	// update enpoint
-	// addUpdateRoute(env);
+	addUpdateRoute(env);
 
 	// delete endpoint
-	// addDeleteRoute(env);
+	addDeleteRoute(env);
 
 	// OAuth2 init endpoint
 	// addOAuth2InitRoute(env);

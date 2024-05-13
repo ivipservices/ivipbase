@@ -1,8 +1,9 @@
-import { DataBase, DebugLogger, SimpleEventEmitter } from "ivipbase-core";
-import { getDatabase, getDatabasesNames, hasDatabase } from "../database";
+import { DataReference, DebugLogger, SimpleEventEmitter } from "ivipbase-core";
+import { DataBase, getDatabase, getDatabasesNames, hasDatabase } from "../database";
 import type { IvipBaseApp } from "../app";
 import { PathBasedRules } from "./services/rules";
 import { DbUserAccountDetails } from "./schema/user";
+import { EmailRequest } from "../app/settings/browser";
 
 export class ServerNotReadyError extends Error {
 	constructor() {
@@ -242,6 +243,33 @@ export abstract class AbstractLocalServer<LocalServer = any> extends SimpleEvent
 	readonly rules: (dbName: string) => PathBasedRules;
 	private rules_db: Map<string, PathBasedRules> = new Map();
 
+	readonly securityRef: (dbName: string) => any = (dbName): DataReference<any> => {
+		return this.db(dbName).ref("__auth__/security");
+	};
+
+	readonly authRef: (dbName: string) => any = (dbName): DataReference<any> => {
+		return this.db(dbName).ref("__auth__/accounts");
+	};
+
+	readonly send_email = (dbName: string, request: EmailRequest) => {
+		return new Promise((resolve, reject) => {
+			try {
+				if (!this.hasDatabase(dbName)) {
+					throw new Error(`Database '${dbName}' not found`);
+				}
+				const send_email = this.db(dbName).app.settings.email;
+
+				if (!send_email || !send_email.send) {
+					throw new Error("Email not configured");
+				}
+
+				send_email.send(request).then(resolve);
+			} catch (e) {
+				reject(e);
+			}
+		});
+	};
+
 	constructor(readonly localApp: IvipBaseApp, settings: Partial<ServerSettings> = {}) {
 		super();
 		this.settings = new ServerSettings<LocalServer>(settings);
@@ -308,7 +336,7 @@ export abstract class AbstractLocalServer<LocalServer = any> extends SimpleEvent
 	 * @param code código de redefinição que foi enviado para o endereço de e-mail do usuário
 	 * @param newPassword nova senha escolhida pelo usuário
 	 */
-	resetPassword(clientIp: string, code: string, newPassword: string): Promise<DbUserAccountDetails> {
+	resetPassword(dbName: string, clientIp: string, code: string, newPassword: string): Promise<DbUserAccountDetails> {
 		throw new ServerNotReadyError();
 	}
 
@@ -317,7 +345,7 @@ export abstract class AbstractLocalServer<LocalServer = any> extends SimpleEvent
 	 * @param clientIp endereço IP do usuário
 	 * @param code código de verificação enviado para o endereço de e-mail do usuário
 	 */
-	verifyEmailAddress(clientIp: string, code: string): Promise<void> {
+	verifyEmailAddress(dbName: string, clientIp: string, code: string): Promise<void> {
 		throw new ServerNotReadyError();
 	}
 }

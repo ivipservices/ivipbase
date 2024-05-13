@@ -1,0 +1,78 @@
+/auth/{dbname}/delete:
+    post:
+        tags:
+            - auth
+        summary: Excluir uma conta de usuário
+        description: Exclui uma conta de usuário existente
+        parameters:
+            - name: dbname
+              in: path
+              description: nome do banco de dados
+              required: true
+              schema:
+                  type: string
+                  example: mydb
+        requestBody:
+            description: Conta a ser excluída
+            content:
+                "text/plain":
+                    schema:
+                        type: string
+                        value: ""
+                        example: ""
+                        description: Conteúdo vazio para excluir a conta do usuário conectado
+                "application/json":
+                    schema:
+                        type: object
+                        properties:
+                            uid:
+                                type: string
+                                description: (somente usuário administrador) para excluir uma conta de usuário específica, o `uid` da conta de destino deve ser passado na solicitação
+                                example: jpx0k53u0002ecr7s354c51l
+        responses:
+            200:
+                description: Quando a exclusão é bem-sucedida, retorna a string `"Adeus"`
+                content:
+                    "text/plain":
+                        schema:
+                            type: text
+                            value: Adeus
+                            example: Adeus
+            401:
+                description: Se esta for uma solicitação não autenticada (não conectada), é retornado `"401 Não autorizado"`
+                content:
+                    "application/json":
+                        schema:
+                            type: object
+                            properties:
+                                code:
+                                    type: string
+                                    value: unauthenticated_delete
+                                message:
+                                    type: string
+                                    value: Você não está autorizado a realizar esta operação, sua tentativa foi registrada
+                            example:
+                                code: unauthenticated_delete
+                                message: Você não está autorizado a realizar esta operação, sua tentativa foi registrada
+            403:
+                description: Se um usuário não administrador tentar atualizar os detalhes da conta de um usuário, é retornado `"403 Proibido"`
+                content:
+                    "application/json":
+                        schema:
+                            type: object
+                            properties:
+                                code:
+                                    type: string
+                                    value: unauthorized_delete
+                                message:
+                                    type: string
+                                    value: Você não está autorizado a realizar esta operação. Esta tentativa foi registrada.
+                            example:
+                                code: unauthorized_delete
+                                message: Você não está autorizado a realizar esta operação. Esta tentativa foi registrada.
+            500:
+                description: Ocorreu um erro inesperado no servidor
+                content:
+                    "application/json":
+                        schema:
+                            $ref: "#/components/schemas/UnexpectedError"

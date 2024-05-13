@@ -1,0 +1,29 @@
+/auth/{dbname}/state:
+    get:
+        tags:
+            - auth
+        summary: Obter estado de autenticação
+        description: Obtém o estado atual de autenticação
+        parameters:
+            - name: dbname
+              in: path
+              description: nome do banco de dados
+              required: true
+              schema:
+                  type: string
+                  example: mydb
+        responses:
+            200:
+                description: Retorna se a solicitação foi autenticada e por qual usuário (determinado pelo cabeçalho Authorization enviado)
+                content:
+                    "application/json":
+                        schema:
+                            type: object
+                            properties:
+                                signed_in:
+                                    type: boolean
+                                    example: true
+                                user:
+                                    $ref: "#/components/schemas/User"
+                            required:
+                                - signed_in

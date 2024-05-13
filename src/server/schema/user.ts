@@ -27,8 +27,6 @@ export type iVipBaseUser = ({ username: "admin" } | { uid: string; username: str
 	/** ISO date string */
 	changePasswordBefore: string;
 	settings: UserSettings;
-	/** Nível do usuário como admin */
-	adminLevel: "root" | "basic" | "denied";
 };
 
 export type DbUserAccountDetails = ({ username: "admin" } | { uid: string; username: string } | { uid: string; email: string }) & {
@@ -79,7 +77,7 @@ export type DbUserAccountDetails = ({ username: "admin" } | { uid: string; usern
 	/** Additional settings for this user */
 	settings: UserSettings;
 	/** Nível do usuário como admin */
-	adminLevel: "root" | "basic" | "denied";
+	admin_level: "root" | "basic" | "denied";
 };
 
 export const getPublicAccountDetails = (account: DbUserAccountDetails): iVipBaseUser => {

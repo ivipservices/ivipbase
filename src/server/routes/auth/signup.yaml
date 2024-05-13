@@ -1,0 +1,136 @@
+/auth/{dbname}/signup:
+    post:
+        tags:
+            - auth
+        summary: Criar um novo usuário
+        description: Cria um novo usuário (deve estar habilitado na configuração do servidor)
+        parameters:
+            - name: dbname
+              in: path
+              description: nome do banco de dados
+              required: true
+              schema:
+                  type: string
+                  example: mydb
+        requestBody:
+            description: detalhes do novo usuário
+            content:
+                "application/json":
+                    schema:
+                        type: object
+                        properties:
+                            username:
+                                type: string
+                                description: Nome de usuário solicitado (opcional se o `email` for fornecido)
+                            email:
+                                type: string
+                                description: Endereço de e-mail (opcional se o `username` for fornecido)
+                            displayName:
+                                type: string
+                                description: Nome do usuário para exibição pública. Considere isso um nome real, apelido ou identificador
+                            password:
+                                type: string
+                                format: password
+                                description: Senha para a conta
+                            picture:
+                                type: object
+                                description: Foto de perfil
+                                properties:
+                                    url:
+                                        type: string
+                                    width:
+                                        type: number
+                                    height:
+                                        type: number
+                                example:
+                                    url: https://my.profile.pic/me.jpg
+                                    width: 500
+                                    height: 500
+                            settings:
+                                type: object
+                                otherProperties: true
+                                desciption: (opcional) informações diversas adicionais para armazenar com a conta do usuário
+                        required:
+                            - username
+                            - email
+                            - displayName
+                            - password
+                        example:
+                            email: user@example.com
+                            displayName: Nome Real
+                            password: sup3rs3cr3t
+        responses:
+            200:
+                description: Quando o cadastro é bem-sucedido, ele retorna um objeto com o resultado
+                content:
+                    "application/json":
+                        schema:
+                            type: object
+                            properties:
+                                access_token:
+                                    description: O token de acesso que fornece acesso às chamadas de API que requerem autenticação. Este token de acesso deve ser adicionado ao cabeçalho de Autorização dessas solicitações. O token pode ser armazenado em cache pelo cliente para fazer login posteriormente com o método de token
+                                    type: string
+                                    example: ewufh387f3fyubqwekrjbcqwkuiec7gq3euyfbqwkuyebqjk..
+                                user:
+                                    $ref: "#/components/schemas/User"
+            403:
+                description: Se o cadastro de usuário estiver desativado na configuração do servidor, apenas o usuário administrador pode criar novas contas e é retornado "403 Proibido"
+                content:
+                    "application/json":
+                        schema:
+                            type: object
+                            properties:
+                                code:
+                                    type: string
+                                    value: admin_only
+                                message:
+                                    type: string
+                                    value: Apenas o administrador tem permissão para criar usuários
+                            example:
+                                code: admin_only
+                                message: Apenas o administrador tem permissão para criar usuários
+            409:
+                description: Já existe uma conta com o mesmo nome de usuário ou endereço de e-mail
+                content:
+                    "application/json":
+                        schema:
+                            type: object
+                            properties:
+                                code:
+                                    type: string
+                                    value: conflict
+                                message:
+                                    type: string
+                                    value: Conta com nome de usuário e/ou e-mail já existe
+            422:
+                description: Quando os detalhes da solicitação enviada estão incorretos, é retornado "422 Entidade Não Processável"
+                content:
+                    "application/json":
+                        schema:
+                            type: object
+                            properties:
+                                code:
+                                    type: string
+                                    description: O código de erro exato
+                                    enum:
+                                        - missing_details
+                                        - invalid_email
+                                        - invalid_username
+                                        - invalid_display_name
+                                        - invalid_password
+                                        - invalid_settings
+                                        - invalid_picture
+                                    example: missing_details
+                                message:
+                                    type: string
+                                    description: Descrição do erro
+                                    example: Nenhum nome de usuário ou e-mail fornecido
+                            example:
+                                code: invalid_password
+                                message: Senha inválida, deve ter pelo menos 8 caracteres e não pode conter espaços
+            500:
+                description: Ocorreu um erro inesperado no servidor
+                content:
+                    "application/json":
+                        schema:
+                            $ref: "#/components/schemas/UnexpectedError"

@@ -33,7 +33,7 @@ export const signIn = async (credentials: SignInCredentials, env: LocalServer, r
 			throw new SignInError("not_ready", "Token salt not ready");
 		}
 
-		const query = env.db(credentials.database).ref("__auth__/accounts").query();
+		const query = env.authRef(credentials.database).query();
 		let tokenDetails: PublicAccessToken | undefined;
 
 		switch (credentials.method) {

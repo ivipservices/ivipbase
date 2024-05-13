@@ -12,8 +12,7 @@ export const setupAuthentication = async (env: LocalServer) => {
 	for (const dbName of env.dbNames) {
 		env.db(dbName).ready(async () => {
 			await env
-				.db(dbName)
-				.ref("__auth__/security")
+				.securityRef(dbName)
 				.child("token_salt")
 				.transaction((snap) => {
 					env.tokenSalt = snap.val();
@@ -28,8 +27,7 @@ export const setupAuthentication = async (env: LocalServer) => {
 
 			// Setup admin account
 			await env
-				.db(dbName)
-				.ref("__auth__/accounts")
+				.authRef(dbName)
 				.child("admin")
 				.transaction((snap) => {
 					let adminAccount: DbUserAccountDetails | null = snap.val();
@@ -47,7 +45,7 @@ export const setupAuthentication = async (env: LocalServer) => {
 							created: new Date(),
 							access_token: undefined, // Will be set upon login, so bearer authentication strategy can find user with this token
 							settings: {},
-							adminLevel: "root",
+							admin_level: "root",
 						};
 						env.debug.warn(`__________________________________________________________________`);
 						env.debug.warn(``);

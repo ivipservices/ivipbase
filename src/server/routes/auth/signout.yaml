@@ -1,0 +1,45 @@
+/auth/{dbname}/signout:
+    post:
+        tags:
+            - auth
+        summary: Encerrar sessão do usuário atual
+        description: Encerra a sessão do usuário atualmente conectado
+        parameters:
+            - name: dbname
+              in: path
+              description: nome do banco de dados
+              required: true
+              schema:
+                  type: string
+                  example: mydb
+        requestBody:
+            description: Detalhes do encerramento de sessão
+            content:
+                "application/json":
+                    schema:
+                        type: object
+                        properties:
+                            client_id:
+                                type: string
+                                description: ID do websocket conectado
+                            everywhere:
+                                type: boolean
+                                description: Se o usuário deve encerrar a sessão em TODOS os clientes
+                        example:
+                            client_id: x8WIv7-mJelg7on_ALbx
+                            everywhere: false
+        responses:
+            200:
+                description: Retorna `"Até logo!"` se o encerramento de sessão for bem-sucedido
+                content:
+                    "text/plain":
+                        schema:
+                            type: string
+                            value: Até logo!
+                            example: Até logo!
+            500:
+                description: Retorna um objeto descrevendo um erro inesperado
+                content:
+                    "application/json":
+                        schema:
+                            $ref: "#/components/schemas/Error"

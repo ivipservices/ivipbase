@@ -1,0 +1,53 @@
+/auth/{dbname}/verify_email:
+    post:
+        tags:
+            - auth
+        summary: Verifica um endereço de e-mail
+        description: Verifica um endereço de e-mail com um código enviado por e-mail
+        parameters:
+            - name: dbname
+              in: path
+              description: nome do banco de dados
+              required: true
+              schema:
+                  type: string
+                  example: mydb
+        requestBody:
+            description: objeto de verificação
+            content:
+                "application/json":
+                    schema:
+                        type: object
+                        properties:
+                            code:
+                                type: string
+                                description: Código de verificação enviado para o endereço de e-mail do usuário
+                        required:
+                            - code
+                        example:
+                            code: ewrg235235g23gwrvsdb34g524rvqewwrv425gervqew...
+        responses:
+            200:
+                description: Se o endereço de e-mail for verificado com sucesso, retorna a string `"OK"`
+                content:
+                    "text/plain":
+                        schema:
+                            type: "string"
+                            value: OK
+                            example: OK
+                            description: A string `"OK"`
+            401:
+                description: Retorna `"401 Solicitação Inválida"` se o código enviado com a solicitação for inválido
+                content:
+                    "application/json":
+                        schema:
+                            $ref: "#/components/schemas/Error"
+                            example:
+                                code: invalid_code
+                                message: Token inválido
+            500:
+                description: Ocorreu um erro inesperado
+                content:
+                    "application/json":
+                        schema:
+                            $ref: "#/components/schemas/UnexpectedError"
