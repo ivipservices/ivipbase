@@ -102,7 +102,9 @@
 	},
 	"nodemonConfig": {
 		"restartable": "rs",
-		"ignore": [],
+		"ignore": [
+			"src/server/webmanager"
+		],
 		"watch": [
 			"src",
 			"test"

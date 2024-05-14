@@ -2,7 +2,7 @@ import { AbstractLocalServer, ServerSettings, ServerInitialSettings, ServerNotRe
 import type { Socket } from "socket.io";
 import type { Express, Request, Response } from "express";
 import * as express from "express";
-import { addMetadataRoutes, addDataRoutes, addAuthenticionRoutes } from "./routes";
+import { addMetadataRoutes, addDataRoutes, addAuthenticionRoutes, addWebManagerRoutes } from "./routes";
 import { Server, createServer } from "http";
 import { DbUserAccountDetails } from "./schema/user";
 import { add404Middleware, addCacheMiddleware, addCorsMiddleware } from "./middleware";
@@ -105,6 +105,8 @@ export class LocalServer extends AbstractLocalServer<LocalServer> {
 		}
 
 		addDataRoutes(this);
+
+		addWebManagerRoutes(this);
 
 		this.extend = (database: string, method: HttpMethod, ext_path: string, handler: (req: HttpRequest, res: HttpResponse) => any) => {
 			const route = `/ext/${database}/${ext_path}`;
