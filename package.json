@@ -24,7 +24,11 @@
 		"./dist/cjs/app/verifyStorage/index.js": "./dist/cjs/app/verifyStorage/browser.js",
 		"./dist/esm/app/verifyStorage/index.js": "./dist/esm/app/verifyStorage/browser.js",
 		"./dist/cjs/controller/storage/index.js": "./dist/cjs/controller/storage/browser.js",
-		"./dist/esm/controller/storage/index.js": "./dist/esm/controller/storage/browser.js"
+		"./dist/esm/controller/storage/index.js": "./dist/esm/controller/storage/browser.js",
+		"./dist/cjs/controller/request/index.js": "./dist/cjs/controller/request/browser.js",
+		"./dist/esm/controller/request/index.js": "./dist/esm/controller/request/browser.js",
+		"./dist/cjs/utils/base64/index.js": "./dist/cjs/utils/base64/browser.js",
+		"./dist/esm/utils/base64/index.js": "./dist/esm/utils/base64/browser.js"
 	},
 	"private": false,
 	"repository": "github:ivipservices/ivipbase",
@@ -70,6 +74,7 @@
 		"os-utils": "^0.0.14",
 		"proper-lockfile": "^4.1.2",
 		"socket.io": "^4.5.0",
+		"socket.io-client": "^4.7.5",
 		"swagger-jsdoc": "^6.1.0",
 		"systeminformation": "^5.22.8",
 		"unidecode": "^0.1.8"

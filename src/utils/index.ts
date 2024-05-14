@@ -1,5 +1,7 @@
 import { PathInfo } from "ivipbase-core";
 
+export * from "./base64";
+
 /**
  * Substituição para console.assert, lança um erro se a condição não for atendida.
  * @param condition Condição 'truthy'

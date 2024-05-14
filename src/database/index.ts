@@ -7,6 +7,7 @@ import { Subscriptions } from "./Subscriptions";
 export class DataBase extends DataBaseCore {
 	readonly subscriptions = new Subscriptions();
 	readonly debug: DebugLogger;
+	readonly storage: StorageDBServer | StorageDBClient;
 
 	constructor(readonly database: string, readonly app: IvipBaseApp, options?: Partial<DataBaseSettings>) {
 		super(database, options);
@@ -32,6 +33,20 @@ export class DataBase extends DataBaseCore {
 		app.storage.ready(() => {
 			this.emit("ready");
 		});
+	}
+
+	public connect(retry = true) {
+		if (this.storage instanceof StorageDBClient) {
+			return this.storage.connect(retry);
+		}
+		throw new Error("Method not implemented");
+	}
+
+	public disconnect() {
+		if (this.storage instanceof StorageDBClient) {
+			return this.storage.disconnect();
+		}
+		throw new Error("Method not implemented");
 	}
 }
 

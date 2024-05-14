@@ -75,6 +75,10 @@ export class IvipBaseApp extends SimpleEventEmitter {
 	get isReady() {
 		return this._ready;
 	}
+
+	get url(): string {
+		return `${this.settings.protocol}://${this.settings.host ?? "localhost"}${typeof this.settings.port === "number" ? `:${this.settings.port}` : ""}/`;
+	}
 }
 
 export function initializeApp(options: IvipBaseSettingsOptions): IvipBaseApp {

@@ -97,7 +97,7 @@ export class ServerEmailSettings {
 	}
 }
 
-const hostnameRegex = /^(?:(?:https?|ftp):\/\/)?(?:localhost|(?:[a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.[a-zA-Z]{2,}|(?:\d{1,3}\.){3}\d{1,3})$/;
+const hostnameRegex = /^((https?):\/\/)?(localhost|([\da-z\.-]+\.[a-z\.]{2,6}|[\d\.]+))(\:{1}(\d+))?$/;
 
 export class IvipBaseSettings {
 	readonly name: string = DEFAULT_ENTRY_NAME;
@@ -105,7 +105,8 @@ export class IvipBaseSettings {
 	readonly logLevel: "log" | "warn" | "error" = "log";
 	readonly storage: StorageSettings = new DataStorageSettings();
 
-	readonly host?: string;
+	readonly protocol: "http" | "https";
+	readonly host: string;
 	readonly port?: number;
 
 	readonly isServer: boolean = false;
@@ -129,13 +130,10 @@ export class IvipBaseSettings {
 			this.storage = options.storage;
 		}
 
-		if (typeof options.host === "string" && hostnameRegex.test(options.host)) {
-			this.host = options.host;
-			this.isValidClient = true;
-		}
+		const [_, _protocol, protocol, host, _host, _port, port] = (typeof options.host === "string" ? options.host : "").match(hostnameRegex) ?? [];
 
-		if (typeof options.port === "number") {
-			this.port = options.port;
-		}
+		this.protocol = ["https", "http"].includes(protocol) ? (protocol as any) : options.protocol === "https" ? "https" : "http";
+		this.host = host ?? "localhost";
+		this.port = port ? parseInt(port) : options.port;
 	}
 }
