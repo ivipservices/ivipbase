@@ -6,6 +6,7 @@ import { LocalServer } from "../server";
 import { CustomStorage, DataStorage, applySettings } from "./verifyStorage";
 import { IvipBaseSettings, IvipBaseSettingsOptions } from "./settings";
 import { DataBase } from "../database";
+import { Auth } from "../auth";
 
 export class IvipBaseApp extends SimpleEventEmitter {
 	protected _ready = false;
@@ -17,6 +18,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 	readonly isServer: boolean;
 	server?: LocalServer;
 	readonly databases: Map<string, DataBase> = new Map();
+	readonly auth: Map<string, Auth> = new Map();
 
 	constructor(options: Partial<IvipBaseApp>) {
 		super();
