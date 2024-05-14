@@ -56,8 +56,7 @@ export type RequestBody = {
 	settings: {
 		[name: string]: string | number | boolean;
 	};
-} & // Allow both spellings of display name. display_name is used in the db, displayName in public user detail server responses.
-// displayName is preferred and documented in the OpenAPI docs
+} & // displayName is preferred and documented in the OpenAPI docs // Allow both spellings of display name. display_name is used in the db, displayName in public user detail server responses.
 ({ displayName: string } | { display_name: string });
 
 export type ResponseBody = { access_token: string; user: iVipBaseUser } | { code: SignupError["code"]; message: string };
@@ -151,7 +150,7 @@ export const addRoutes = (env: LocalServer) => {
 				last_signin_ip: req.ip,
 				picture: details.picture ?? undefined,
 				settings: details.settings ?? {},
-				admin_level: "basic",
+				admin_level: 0,
 			};
 
 			const userRef = await env.authRef(dbName).push(user);

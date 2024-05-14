@@ -235,4 +235,28 @@ export class StorageDBServer extends Api {
 			}
 		}
 	}
+
+	setSchema(path: string, schema: Record<string, any> | string, warnOnly?: boolean) {
+		return new Promise<void>((resolve, reject) => {
+			resolve(this.db.app.storage.setSchema(this.db.database, path, schema, warnOnly));
+		});
+	}
+
+	getSchema(path: string) {
+		return new Promise<Types.SchemaInfo>((resolve, reject) => {
+			resolve(this.db.app.storage.getSchema(this.db.database, path));
+		});
+	}
+
+	async getSchemas() {
+		return new Promise<Types.SchemaInfo[]>((resolve, reject) => {
+			resolve(this.db.app.storage.getSchemas(this.db.database));
+		});
+	}
+
+	validateSchema(path: string, value: any, isUpdate: boolean) {
+		return new Promise<Types.ISchemaCheckResult>((resolve, reject) => {
+			resolve(this.db.app.storage.validateSchema(this.db.database, path, value, { updates: isUpdate }));
+		});
+	}
 }

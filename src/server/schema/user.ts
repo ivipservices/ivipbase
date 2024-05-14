@@ -77,7 +77,7 @@ export type DbUserAccountDetails = ({ username: "admin" } | { uid: string; usern
 	/** Additional settings for this user */
 	settings: UserSettings;
 	/** Nível do usuário como admin */
-	admin_level: "root" | "basic" | "denied";
+	admin_level: 0 | 1 | 2;
 };
 
 export const getPublicAccountDetails = (account: DbUserAccountDetails): iVipBaseUser => {

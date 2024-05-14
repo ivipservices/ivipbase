@@ -1,4 +1,4 @@
-import { DebugLogger, ID, PathInfo, SimpleEventEmitter, Utils } from "ivipbase-core";
+import { DebugLogger, ID, PathInfo, SchemaDefinition, SimpleEventEmitter, Types, Utils } from "ivipbase-core";
 import { CustomStorageNodeInfo, NodeAddress, NodesPending, StorageNode, StorageNodeInfo } from "./NodeInfo";
 import { NodeValueType, VALUE_TYPES, getTypeFromStoredValue, getValueType, nodeValueTypes, processReadNodeValue, promiseState } from "./utils";
 import prepareMergeNodes from "./prepareMergeNodes";
@@ -151,6 +151,8 @@ export default class MDE extends SimpleEventEmitter {
 	createTid() {
 		return DEBUG_MODE ? ++this._lastTid : ID.generate();
 	}
+
+	private schemas: { [dbName: string]: Array<{ path: string; schema: SchemaDefinition }> } = {};
 
 	constructor(options: Partial<MDESettings> = {}) {
 		super();
@@ -812,5 +814,173 @@ export default class MDE extends SimpleEventEmitter {
 			...this,
 			prefix: prefix,
 		};
+	}
+
+	/**
+	 * Adiciona, atualiza ou remove uma definição de esquema para validar os valores do nó antes que sejam armazenados no caminho especificado
+	 * @param database nome do banco de dados
+	 * @param path caminho de destino para impor o esquema, pode incluir curingas. Ex: 'users/*\/posts/*' ou 'users/$uid/posts/$postid'
+	 * @param schema definições de tipo de esquema. Quando um valor nulo é passado, um esquema previamente definido é removido.
+	 */
+	setSchema(database: string, path: string, schema: string | object, warnOnly = false) {
+		const schemas = this.schemas[database] ?? (this.schemas[database] = []);
+		if (typeof schema === "undefined") {
+			throw new TypeError("schema argument must be given");
+		}
+		if (schema === null) {
+			// Remove o esquema previamente definido no caminho
+			const i = schemas.findIndex((s) => s.path === path);
+			i >= 0 && schemas.splice(i, 1);
+			return;
+		}
+		// Analise o esquema, adicione ou atualize-o
+		const definition = new SchemaDefinition(schema, {
+			warnOnly,
+			warnCallback: (message: string) => this.debug.warn(message),
+		});
+		const item = schemas.find((s) => s.path === path);
+		if (item) {
+			item.schema = definition;
+		} else {
+			schemas.push({ path, schema: definition });
+			schemas.sort((a, b) => {
+				const ka = PathInfo.getPathKeys(a.path),
+					kb = PathInfo.getPathKeys(b.path);
+				if (ka.length === kb.length) {
+					return 0;
+				}
+				return ka.length < kb.length ? -1 : 1;
+			});
+		}
+		this.schemas[database] = schemas;
+	}
+
+	/**
+	 * Obtém a definição de esquema atualmente ativa para o caminho especificado
+	 */
+	getSchema(database: string, path: string): { path: string; schema: string | object; text: string } {
+		const schemas = this.schemas[database] ?? (this.schemas[database] = []);
+		const item = schemas.find((item) => item.path === path);
+		return item
+			? { path, schema: item.schema.source, text: item.schema.text }
+			: {
+					path: path,
+					schema: {},
+					text: "",
+			  };
+	}
+
+	/**
+	 * Obtém todas as definições de esquema atualmente ativas
+	 */
+	getSchemas(database: string) {
+		const schemas = this.schemas[database] ?? (this.schemas[database] = []);
+		return schemas.map((item) => ({ path: item.path, schema: item.schema.source, text: item.schema.text }));
+	}
+
+	/**
+	 * Valida os esquemas do nó que está sendo atualizado e de seus filhos
+	 * @param database nome do banco de dados
+	 * @param path caminho sendo gravado
+	 * @param value o novo valor, ou atualizações para o valor atual
+	 * @example
+	 * // defina o esquema para cada tag de cada post do usuário:
+	 * db.schema.set(
+	 *  'root',
+	 *  'users/$uid/posts/$postId/tags/$tagId',
+	 *  { name: 'string', 'link_id?': 'number' }
+	 * );
+	 *
+	 * // Inserção que falhará:
+	 * db.ref('users/352352/posts/572245').set({
+	 *  text: 'this is my post',
+	 *  tags: { sometag: 'negue isso' } // <-- sometag deve ser do tipo objeto
+	 * });
+	 *
+	 * // Inserção que falhará:
+	 * db.ref('users/352352/posts/572245').set({
+	 *  text: 'this is my post',
+	 *  tags: {
+	 *      tag1: { name: 'firstpost', link_id: 234 },
+	 *      tag2: { name: 'novato' },
+	 *      tag3: { title: 'Não permitido' } // <-- propriedade title não permitida
+	 *  }
+	 * });
+	 *
+	 * // Atualização que falha se o post não existir:
+	 * db.ref('users/352352/posts/572245/tags/tag1').update({
+	 *  name: 'firstpost'
+	 * }); // <-- o post está faltando a propriedade text
+	 */
+	validateSchema(
+		database: string,
+		path: string,
+		value: any,
+		options: {
+			/**
+			 * Se um nó existente está sendo atualizado (mesclado), isso só irá impor regras de esquema definidas nas propriedades que estão sendo atualizadas.
+			 */
+			updates: boolean;
+		} = { updates: false },
+	): Types.ISchemaCheckResult {
+		const schemas = this.schemas[database] ?? (this.schemas[database] = []);
+		let result: Types.ISchemaCheckResult = { ok: true };
+		const pathInfo = PathInfo.get(path);
+
+		schemas
+			.filter(
+				(s) => pathInfo.isOnTrailOf(s.path), //pathInfo.equals(s.path) || pathInfo.isAncestorOf(s.path)
+			)
+			.every((s) => {
+				if (pathInfo.isDescendantOf(s.path)) {
+					// Dado que o caminho de verificação é um descendente do caminho de definição de esquema
+					const ancestorPath = PathInfo.fillVariables(s.path, path);
+					const trailKeys = pathInfo.keys.slice(PathInfo.getPathKeys(s.path).length);
+					result = s.schema.check(ancestorPath, value, options.updates, trailKeys);
+					return result.ok;
+				}
+
+				// Dado que o caminho de verificação está no caminho de definição de esquema ou em um caminho superior
+				const trailKeys = PathInfo.getPathKeys(s.path).slice(pathInfo.keys.length);
+				if (options.updates === true && trailKeys.length > 0 && !(trailKeys[0] in value)) {
+					// Corrige #217: esta atualização em um caminho superior não afeta nenhum dado no caminho alvo do esquema
+					return result.ok;
+				}
+				const partial = options.updates === true && trailKeys.length === 0;
+				const check = (path: string, value: any, trailKeys: Array<string | number>): Types.ISchemaCheckResult => {
+					if (trailKeys.length === 0) {
+						// Check this node
+						return s.schema.check(path, value, partial);
+					} else if (value === null) {
+						return { ok: true }; // Não no final do caminho, mas não há mais nada para verificar
+					}
+					const key = trailKeys[0];
+					if (typeof key === "string" && (key === "*" || key[0] === "$")) {
+						// Curinga. Verifique cada chave em valor recursivamente
+						if (value === null || typeof value !== "object") {
+							// Não é possível verificar os filhos, porque não há nenhum. Isso é
+							// possível se outra regra permitir que o valor no caminho atual
+							// seja algo diferente de um objeto.
+							return { ok: true };
+						}
+						let result: any;
+						Object.keys(value).every((childKey) => {
+							const childPath = PathInfo.getChildPath(path, childKey);
+							const childValue = value[childKey];
+							result = check(childPath, childValue, trailKeys.slice(1));
+							return result.ok;
+						});
+						return result;
+					} else {
+						const childPath = PathInfo.getChildPath(path, key);
+						const childValue = value[key];
+						return check(childPath, childValue, trailKeys.slice(1));
+					}
+				};
+				result = check(path, value, trailKeys);
+				return result.ok;
+			});
+
+		return result;
 	}
 }

@@ -5,6 +5,7 @@ import { AppError, ERROR_FACTORY } from "../controller/erros";
 import { LocalServer } from "../server";
 import { CustomStorage, DataStorage, applySettings } from "./verifyStorage";
 import { IvipBaseSettings, IvipBaseSettingsOptions } from "./settings";
+import { DataBase } from "../database";
 
 export class IvipBaseApp extends SimpleEventEmitter {
 	protected _ready = false;
@@ -15,6 +16,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 	isDeleted: boolean = false;
 	readonly isServer: boolean;
 	server?: LocalServer;
+	readonly databases: Map<string, DataBase> = new Map();
 
 	constructor(options: Partial<IvipBaseApp>) {
 		super();

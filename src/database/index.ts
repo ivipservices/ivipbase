@@ -42,7 +42,8 @@ export function getDatabase(database: string): DataBase;
 export function getDatabase(database: string, app: string | IvipBaseApp | undefined): DataBase;
 export function getDatabase(database: string, app: string | IvipBaseApp | undefined, options: Partial<DataBaseSettings>): DataBase;
 export function getDatabase(...args: any[]) {
-	let app: IvipBaseApp = args.find((a) => a instanceof IvipBaseApp);
+	let app: IvipBaseApp = args.find((a) => a instanceof IvipBaseApp),
+		dbName: string | undefined;
 	const appNames = getAppsName();
 
 	if (!app) {
@@ -56,11 +57,20 @@ export function getDatabase(...args: any[]) {
 		database = app.settings.dbname;
 	}
 
-	return new DataBase(
+	dbName = (Array.isArray(database) ? database : [database])[0];
+
+	if (dbName && app.databases.has(dbName)) {
+		return app.databases.get(dbName);
+	}
+
+	const db = new DataBase(
 		(Array.isArray(database) ? database : [database])[0],
 		app,
 		args.find((s) => typeof s === "object" && !(s instanceof IvipBaseApp)),
 	);
+
+	app.databases.set(dbName, db);
+	return db;
 }
 
 export function getDatabasesNames(): string[] {
