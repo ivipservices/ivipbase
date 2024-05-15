@@ -6,20 +6,289 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title></title>
     <link id="style" rel="stylesheet" />
+    <style>
+        :root {
+            --primary-main: #f63a0f;
+            --background-main: #263238;
+            --background-light: #37474f;
+            --text-color-main: #eeeeee;
+        }
+
+        * {
+            -webkit-app-region: no-drag;
+            position: relative;
+            box-sizing: border-box;
+            scroll-behavior: smooth;
+            color: var(--text-color-main);
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100%;
+            max-height: 100%;
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+            background-color: var(--background-main);
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: contain !important;
+        }
+
+        body>#progress {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            max-width: 500px;
+            padding: 4px;
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 12px;
+            -webkit-box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25), 0 1px rgba(255, 255, 255, 0.08);
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25), 0 1px rgba(255, 255, 255, 0.08);
+        }
+
+        body>#progress::before {
+            content: attr(label);
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translate(-50%, -100%);
+            color: #eeeeee;
+            font-size: 14px;
+            text-align: center;
+            width: 100%;
+        }
+
+        body>#progress>.progress-bar {
+            min-width: 14px;
+            height: 14px;
+            border-radius: 14px;
+            background-image: -webkit-linear-gradient(top, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.05));
+            background-image: -moz-linear-gradient(top, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.05));
+            background-image: -o-linear-gradient(top, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.05));
+            background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.05));
+            -webkit-transition: 0.4s linear;
+            -moz-transition: 0.4s linear;
+            -o-transition: 0.4s linear;
+            transition: 0.4s linear;
+            -webkit-transition-property: width, background-color;
+            -moz-transition-property: width, background-color;
+            -o-transition-property: width, background-color;
+            transition-property: width, background-color;
+            -webkit-box-shadow: 0 0 1px 1px rgba(0, 0, 0, 0.25), inset 0 1px rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 1px 1px rgba(0, 0, 0, 0.25), inset 0 1px rgba(255, 255, 255, 0.1);
+        }
+
+        body>#root {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        a {
+            color: var(--primary-main);
+            text-decoration: none;
+        }
+
+        a:hover {
+            color: var(--primary-dark);
+            text-decoration: underline;
+        }
+
+        code {
+            font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6,
+        p {
+            margin: 0;
+            padding: 0;
+        }
+
+
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background-color: transparent;
+            border-radius: 0px;
+        }
+
+        ::-webkit-scrollbar-track:hover {
+            background-color: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        ::-webkit-scrollbar-corner {
+            background-color: transparent;
+        }
+    </style>
     <link rel="stylesheet" href="./src/styles/main.css" />
+    <script>
+        window.exports = {};
+
+        async function require(url) {
+            // Verifica se a URL é relativa ou absoluta
+            if (!url.startsWith('http') && !url.startsWith('/')) {
+                url = './' + url;
+            }
+
+            try {
+                // Faz a requisição do módulo
+                const response = await fetch(url);
+
+                // Verifica se a requisição foi bem-sucedida
+                if (!response.ok) {
+                    throw new Error(`Failed to load module script with URL ${url}`);
+                }
+
+                const scriptText = await response.text();
+
+                const exports = {};
+
+                eval(scriptText);
+
+                return exports;
+            } catch (error) {
+                console.error(`Error loading module from ${url}`, error);
+                throw error;
+            }
+        }
+    </script>
     <script src="./src/script/react.production.min.js" crossorigin></script>
     <script src="./src/script/react-dom.production.min.js" crossorigin></script>
     <script src="./src/script/babel.min.js"></script>
+    <script src="https://unpkg.com/@emotion/react@11.11.4/dist/emotion-react.umd.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@emotion/styled@11.11.5/dist/emotion-styled.umd.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@mui/material@5.15.17/umd/material-ui.production.min.js" crossorigin></script>
+
+    <script>
+        (async () => {
+            try {
+                window.mdi = await require('https://unpkg.com/@mdi/js@7.4.47/commonjs/mdi.js');
+            } catch (error) {
+                window.mdi = {};
+            }
+        })();
+    </script>
 </head>
 
 <body>
     <div id="root"></div>
+
+    <div id="progress">
+        <div class="progress-bar" style="width: 0%;"></div>
+    </div>
+
+    <script type="text/babel" src="./src/components/MountPage.jsx"></script>
+    <script type="text/babel" src="./src/components/ProjectCard.jsx"></script>
+    <script type="text/babel" src="./src/components/SvgIcon.jsx"></script>
     <script type="text/babel" src="./src/utils/multi-storager.js"></script>
+    <script type="text/babel" src="./src/pages/home.jsx"></script>
+    <script type="text/babel" src="./src/pages/login.jsx"></script>
     <script type="text/babel" src="./src/index.jsx"></script>
     <script type="text/babel" data-presets="env,react">
-        window.onload = () => {
+        var progressBarContent = document.querySelector('body > #progress');
+        var progressBar = progressBarContent.querySelector('.progress-bar');
+        var colors = ["#f63a0f", "#f27011", "#f2b01e", "#f2d31b", "#86e01e"];
+        var timer;
+        var start = 0;
+        var end = 99;
+
+        function animateValue(start, end, duration, onchange) {
+            clearInterval(timer);
+            var range = end - start, currentProgress = start;
+            var increment = end > start ? 1 : -1;
+            var stepTime = Math.abs(Math.floor(duration / range));
+
+            timer = setInterval(function () {
+                currentProgress += increment;
+                if (typeof onchange === "function") { onchange(Math.min(end, currentProgress)) }
+
+                var colorIndex = Math.round(currentProgress / (100 / colors.length - 1));
+
+                progressBar.style.width = currentProgress + '%';
+                progressBarContent.setAttribute("label", currentProgress + '%');
+                progressBar.style.backgroundColor = colors[colorIndex];
+
+                if (currentProgress == end) {
+                    clearInterval(timer);
+                }
+            }, stepTime);
+        }
+
+        var initialTimer = setInterval(function () {
+            if (start >= end) {
+                clearInterval(initialTimer);
+                return;
+            }
+
+            var perfData = window.performance.timing;
+            var EstimatedTime = -(perfData.loadEventEnd - Math.max(Date.now(), perfData.navigationStart));
+            var durataion = parseInt((EstimatedTime / 1000) % 60) * 100;
+
+            animateValue(start, end, durataion, function (current) {
+                start = current;
+            });
+        }, 100);
+
+        const initialize = () => {
+            clearInterval(timer);
+            clearInterval(initialTimer);
+            progressBar.style.width = '100%';
+            progressBar.style.backgroundColor = colors[colors.length - 1];
+            progressBarContent.setAttribute("label", "Conectando ao servidor...");
+
+            const progressElement = document.querySelector("body > #progress");
+            if (progressElement) {
+                progressElement.remove();
+            }
+
             ReactDOM.render(<App />, document.getElementById("root"));
         }
+
+        window.addEventListener('load', initialize);
+
+        window.addEventListener('beforeunload', function (e) {
+            e.preventDefault();
+        });
+
+        setTimeout(() => {
+            window.removeEventListener('load', initialize);
+            initialize();
+        }, 15000);
     </script>
 </body>
 

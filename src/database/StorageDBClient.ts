@@ -64,11 +64,11 @@ export class StorageDBClient extends Api {
 	}
 
 	get serverPingUrl() {
-		return `${this.url}/ping/${this.db.database}`;
+		return `/ping/${this.db.database}`;
 	}
 
 	private async _request(options: {
-		url: string;
+		route: string;
 		/**
 		 * @default 'GET'
 		 */
@@ -101,38 +101,22 @@ export class StorageDBClient extends Api {
 		includeContext?: boolean;
 	}): Promise<any | { context: any; data: any }> {
 		if (this.isConnected || options.ignoreConnectionState === true) {
-			const result = await (async () => {
-				try {
-					return await _request(options.method || "GET", options.url, {
-						data: options.data,
-						accessToken: this.accessToken,
-						dataReceivedCallback: options.dataReceivedCallback,
-						dataRequestCallback: options.dataRequestCallback,
-						context: options.context,
-					});
-				} catch (err: any) {
-					if (this.isConnected && err.isNetworkError) {
-						// This is a network error, but the websocket thinks we are still connected.
-						this.db.debug.warn(`A network error occurred loading ${options.url}`);
+			try {
+				return await this.db.app.request({
+					...options,
+					accessToken: this.accessToken,
+				});
+			} catch (err: any) {
+				if (this.isConnected && err.isNetworkError) {
+					// This is a network error, but the websocket thinks we are still connected.
+					this.db.debug.warn(`A network error occurred loading ${options.route}`);
 
-						// Start reconnection flow
-						// this._handleDetectedDisconnect(err);
-					}
+					// Start reconnection flow
+					// this._handleDetectedDisconnect(err);
+				}
 
-					// Rethrow the error
-					throw err;
-				}
-			})();
-			// if (result.context && result.context.acebase_cursor) {
-			//     this._updateCursor(result.context.acebase_cursor);
-			// }
-			if (options.includeContext === true) {
-				if (!result.context) {
-					result.context = {};
-				}
-				return result;
-			} else {
-				return result.data;
+				// Rethrow the error
+				throw err;
 			}
 		} else {
 			// We're not connected. We can wait for the connection to be established,
@@ -172,7 +156,7 @@ export class StorageDBClient extends Api {
 		bytesRead: number;
 		bytesWritten: number;
 	}> {
-		return this._request({ url: `${this.url}/stats/${this.db.database}` });
+		return this._request({ route: `/stats/${this.db.database}` });
 	}
 
 	async set(
@@ -187,7 +171,7 @@ export class StorageDBClient extends Api {
 		},
 	): Promise<{ cursor?: string }> {
 		const data = JSON.stringify(Transport.serialize(value));
-		const { context } = await this._request({ method: "PUT", url: `${this.url}/data/${this.db.database}/${path}`, data, context: options.context ?? {}, includeContext: true });
+		const { context } = await this._request({ method: "PUT", route: `/data/${this.db.database}/${path}`, data, context: options.context ?? {}, includeContext: true });
 		const cursor = context?.database_cursor as string | undefined;
 		return { cursor };
 	}
@@ -204,7 +188,7 @@ export class StorageDBClient extends Api {
 		},
 	): Promise<{ cursor?: string }> {
 		const data = JSON.stringify(Transport.serialize(updates));
-		const { context } = await this._request({ method: "POST", url: `${this.url}/data/${this.db.database}/${path}`, data, context: options.context, includeContext: true });
+		const { context } = await this._request({ method: "POST", route: `/data/${this.db.database}/${path}`, data, context: options.context, includeContext: true });
 		const cursor = context?.database_cursor as string | undefined;
 		return { cursor };
 	}
@@ -233,12 +217,12 @@ export class StorageDBClient extends Api {
 			child_objects?: boolean;
 		},
 	): Promise<{ value: any; context: any; cursor?: string }> {
-		const { value, context } = await this._request({ url: `${this.url}/data/${this.db.database}/${path}`, context: options, includeContext: true });
+		const { value, context } = await this._request({ route: `/data/${this.db.database}/${path}`, context: options, includeContext: true });
 		return { value: Transport.deserialize(value), context, cursor: context?.database_cursor as string | undefined };
 	}
 
 	exists(path: string): Promise<boolean> {
-		return this._request({ url: `${this.url}/exists/${this.db.database}/${path}` });
+		return this._request({ route: `/exists/${this.db.database}/${path}` });
 	}
 
 	async query(path: string, query: Types.Query, options: Types.QueryOptions = { snapshots: false }): ReturnType<Api["query"]> {
@@ -247,23 +231,23 @@ export class StorageDBClient extends Api {
 			options,
 		};
 		const reqData = JSON.stringify(Transport.serialize(request));
-		const { data, context } = await this._request({ method: "POST", url: `${this.url}/query/${this.db.database}/${path}`, data: reqData, includeContext: true });
+		const { data, context } = await this._request({ method: "POST", route: `/query/${this.db.database}/${path}`, data: reqData, includeContext: true });
 		const results = Transport.deserialize(data);
 		const stop = () => Promise.resolve();
 		return { results: results.list, context, stop };
 	}
 
 	reflect(path: string, type: "info" | "children", args: any) {
-		let url = `${this.url}/reflect/${this.db.database}/${path}?type=${type}`;
+		let route = `/reflect/${this.db.database}/${path}?type=${type}`;
 		if (typeof args === "object") {
 			const query = Object.keys(args).map((key) => {
 				return `${key}=${args[key]}`;
 			});
 			if (query.length > 0) {
-				url += `&${query.join("&")}`;
+				route += `&${query.join("&")}`;
 			}
 		}
-		return this._request({ url });
+		return this._request({ route });
 	}
 
 	export(
@@ -276,8 +260,8 @@ export class StorageDBClient extends Api {
 	): ReturnType<Api["export"]> {
 		options.format = "json";
 		options.type_safe = options.type_safe !== false;
-		const url = `${this.url}/export/${this.db.database}/${path}?format=${options.format}&type_safe=${options.type_safe ? 1 : 0}`;
-		return this._request({ url, dataReceivedCallback: (chunk) => write(chunk) }) as ReturnType<Api["export"]>;
+		const route = `/export/${this.db.database}/${path}?format=${options.format}&type_safe=${options.type_safe ? 1 : 0}`;
+		return this._request({ route, dataReceivedCallback: (chunk) => write(chunk) }) as ReturnType<Api["export"]>;
 	}
 
 	import(
@@ -291,12 +275,12 @@ export class StorageDBClient extends Api {
 	) {
 		options.format = "json";
 		options.suppress_events = options.suppress_events === true;
-		const url = `${this.url}/import/${this.db.database}/${path}?format=${options.format}&suppress_events=${options.suppress_events ? 1 : 0}`;
-		return this._request({ method: "POST", url, dataRequestCallback: (length) => read(length) });
+		const route = `/import/${this.db.database}/${path}?format=${options.format}&suppress_events=${options.suppress_events ? 1 : 0}`;
+		return this._request({ method: "POST", route, dataRequestCallback: (length) => read(length) });
 	}
 
 	async getServerInfo() {
-		const info = await this._request({ url: `${this.url}/info/${this.db.database}` }).catch((err) => {
+		const info = await this._request({ route: `/info/${this.db.database}` }).catch((err) => {
 			// Prior to acebase-server v0.9.37, info was at /info (no dbname attached)
 			if (!err.isNetworkError) {
 				this.db.debug.warn(`Could not get server info, update your acebase server version`);
@@ -312,15 +296,15 @@ export class StorageDBClient extends Api {
 			schema = new SchemaDefinition(schema).text;
 		}
 		const data = JSON.stringify({ action: "set", path, schema, warnOnly });
-		return this._request({ method: "POST", url: `${this.url}/schema/${this.db.database}`, data });
+		return this._request({ method: "POST", route: `/schema/${this.db.database}`, data });
 	}
 
 	getSchema(path: string) {
-		return this._request({ url: `${this.url}/schema/${this.db.database}/${path}` });
+		return this._request({ route: `/schema/${this.db.database}/${path}` });
 	}
 
 	getSchemas() {
-		return this._request({ url: `${this.url}/schema/${this.db.database}` });
+		return this._request({ route: `/schema/${this.db.database}` });
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars

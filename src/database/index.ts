@@ -5,12 +5,26 @@ import { StorageDBClient } from "./StorageDBClient";
 import { Subscriptions } from "./Subscriptions";
 
 export class DataBase extends DataBaseCore {
+	readonly name: string;
+	readonly description: string;
+
 	readonly subscriptions = new Subscriptions();
 	readonly debug: DebugLogger;
 	readonly storage: StorageDBServer | StorageDBClient;
 
 	constructor(readonly database: string, readonly app: IvipBaseApp, options?: Partial<DataBaseSettings>) {
 		super(database, options);
+
+		this.name = database;
+		this.description =
+			(
+				(Array.isArray(app.settings.database) ? app.settings.database : [app.settings.database]).find(({ name }) => {
+					return name === database;
+				}) ?? {
+					name: database,
+					description: app.settings.description ?? "iVipBase database",
+				}
+			).description ?? "iVipBase database";
 
 		this.storage = app.isServer || !app.settings.isValidClient ? new StorageDBServer(this) : new StorageDBClient(this);
 

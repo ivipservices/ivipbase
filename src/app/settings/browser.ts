@@ -102,6 +102,7 @@ const hostnameRegex = /^((https?):\/\/)?(localhost|([\da-z\.-]+\.[a-z\.]{2,6}|[\
 export class IvipBaseSettings {
 	readonly name: string = DEFAULT_ENTRY_NAME;
 	readonly dbname: string | string[] = "root";
+	readonly description: string;
 	readonly logLevel: "log" | "warn" | "error" = "log";
 	readonly storage: StorageSettings = new DataStorageSettings();
 
@@ -121,6 +122,8 @@ export class IvipBaseSettings {
 			this.dbname = (Array.isArray(options.dbname) ? options.dbname : [options.dbname]).filter((n) => typeof n === "string" && n.trim() !== "");
 			this.dbname = this.dbname.length > 0 ? this.dbname : "root";
 		}
+
+		this.description = options.description ?? `IvipBase database`;
 
 		if (typeof options.logLevel === "string" && ["log", "warn", "error"].includes(options.logLevel)) {
 			this.logLevel = options.logLevel;

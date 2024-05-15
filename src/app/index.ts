@@ -1,4 +1,4 @@
-import { SimpleEventEmitter, Utils } from "ivipbase-core";
+import { SimpleEventEmitter, Types, Utils } from "ivipbase-core";
 import { DEFAULT_ENTRY_NAME, _apps } from "./internal";
 import { AppError, ERROR_FACTORY } from "../controller/erros";
 
@@ -7,6 +7,7 @@ import { CustomStorage, DataStorage, applySettings } from "./verifyStorage";
 import { IvipBaseSettings, IvipBaseSettingsOptions } from "./settings";
 import { DataBase } from "../database";
 import { Auth } from "../auth";
+import _request from "../controller/request";
 
 export class IvipBaseApp extends SimpleEventEmitter {
 	protected _ready = false;
@@ -67,7 +68,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 	async ready(callback?: () => void) {
 		if (!this._ready) {
 			// Aguarda o evento ready
-			await new Promise((resolve) => this.on("ready", resolve));
+			await new Promise((resolve) => this.once("ready", resolve));
 		}
 		callback?.();
 	}
@@ -77,7 +78,85 @@ export class IvipBaseApp extends SimpleEventEmitter {
 	}
 
 	get url(): string {
-		return `${this.settings.protocol}://${this.settings.host ?? "localhost"}${typeof this.settings.port === "number" ? `:${this.settings.port}` : ""}/`;
+		return `${this.settings.protocol}://${this.settings.host ?? "localhost"}${typeof this.settings.port === "number" ? `:${this.settings.port}` : ""}`;
+	}
+
+	async request(options: {
+		route: string;
+		/**
+		 * @default 'GET'
+		 */
+		method?: "GET" | "PUT" | "POST" | "DELETE";
+		/**
+		 * Data to post when method is PUT or POST
+		 */
+		data?: any;
+		/**
+		 * Context to add to PUT or POST requests
+		 */
+		context?: any;
+		/**
+		 * A method that overrides the default data receiving handler. Override for streaming.
+		 */
+		dataReceivedCallback?: (chunk: string) => void;
+		/**
+		 * A method that overrides the default data send handler. Override for streaming.
+		 */
+		dataRequestCallback?: (length: number) => string | Types.TypedArrayLike | Promise<string | Types.TypedArrayLike>;
+		/**
+		 * Whether to try the request even if there is no connection
+		 * @default false
+		 */
+		ignoreConnectionState?: boolean;
+		/**
+		 * NEW Whether the returned object should contain an optionally returned context object.
+		 * @default false
+		 */
+		includeContext?: boolean;
+		/**
+		 * The access token to use for the request
+		 * @default undefined
+		 */
+		accessToken?: string;
+	}): Promise<any | { context: any; data: any }> {
+		const url = `${this.url}/${options.route.replace(/^\/+/, "")}`;
+
+		return new Promise(async (resolve, reject) => {
+			this.ready(async () => {
+				const result = await (async () => {
+					try {
+						return await _request(options.method || "GET", url, {
+							data: options.data,
+							accessToken: options.accessToken,
+							dataReceivedCallback: options.dataReceivedCallback,
+							dataRequestCallback: options.dataRequestCallback,
+							context: options.context,
+						});
+					} catch (err: any) {
+						// Rethrow the error
+						throw err;
+					}
+				})();
+				if (options.includeContext === true) {
+					if (!result.context) {
+						result.context = {};
+					}
+					return resolve(result);
+				} else {
+					return resolve(result.data);
+				}
+			});
+		});
+	}
+
+	async projects(): Promise<
+		{
+			name: string;
+			description: string;
+			type: string;
+		}[]
+	> {
+		return this.request({ route: "projects" });
 	}
 }
 

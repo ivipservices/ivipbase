@@ -89,7 +89,8 @@ interface AppServerSettings extends ServerInitialSettings<LocalServer> {
 }
 
 interface DatabaseSettings {
-	dbname: string;
+	name: string;
+	description?: string;
 }
 
 export type IvipBaseSettingsOptions = Partial<IvipBaseSettings & ServerInitialSettings<LocalServer> & AppServerSettings>;
@@ -100,7 +101,8 @@ export class IvipBaseSettings extends BrowserSettings {
 
 	readonly dbname: string | string[] = "root";
 	readonly database: DatabaseSettings | DatabaseSettings[] = {
-		dbname: "root",
+		name: "root",
+		description: "iVipBase database",
 	};
 
 	readonly server?: ServerSettings;
@@ -123,10 +125,10 @@ export class IvipBaseSettings extends BrowserSettings {
 
 			if (Array.isArray(options.database) || typeof options.database === "object") {
 				this.database = (Array.isArray(options.database) ? options.database : [options.database]).filter((o) => {
-					return typeof o === "object" && typeof o.dbname === "string" && o.dbname.trim() !== "";
+					return typeof o === "object" && typeof o.name === "string" && o.name.trim() !== "";
 				});
 
-				this.dbname = this.database.map(({ dbname }) => dbname);
+				this.dbname = this.database.map(({ name }) => name);
 				this.dbname = this.dbname.length > 0 ? this.dbname : "root";
 			}
 		}

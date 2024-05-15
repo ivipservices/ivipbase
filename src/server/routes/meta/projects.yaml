@@ -1,0 +1,35 @@
+/projects:
+    get:
+        tags:
+            - metadata
+        summary: Obtenha informações dos projetos do servidor
+        description: Retorna informações sobre os projetos do servidor, como nome, descrição, data de criação e atualização, e ID do projeto.
+        responses:
+            200:
+                description: Retorna informações dos projetos do servidor
+                content:
+                    "application/json":
+                        schema:
+                            type: array
+                            items:
+                                type: object
+                                properties:
+                                    name:
+                                        type: string
+                                        example: Projeto 1
+                                        summary: Nome do projeto
+                                    description:
+                                        type: string
+                                        example: Descrição do projeto 1
+                                        summary: Descrição do projeto
+                                    type:
+                                        type: string
+                                        example: database
+                                        summary: Tipo do projeto
+            500:
+                description: Retorna o erro do servidor
+                content:
+                    "text/plain":
+                        schema:
+                            type: string
+                            example: Alguma mensagem de erro

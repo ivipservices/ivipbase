@@ -1,30 +1,61 @@
-const Home = ({ goToPage }) => {
+const About = () => {
 	return (
-		<div>
-			<h1>Início</h1>
-			<button onClick={() => goToPage("about")}>Go to About</button>
-		</div>
+		<MountPage isCard>
+			<h1>About</h1>
+			<button onClick={() => window.goToPage("home")}>Go to Home</button>
+		</MountPage>
 	);
 };
 
-const About = ({ goToPage }) => {
-	return (
-		<div>
-			<h1>About</h1>
-			<button onClick={() => goToPage("home")}>Go to Home</button>
-		</div>
-	);
+window.goToPage = (page, state) => {
+	MultiStorager.DataStorager.set("page", { page: page ?? "home", state: state ?? {} });
+};
+
+window.pageState = () => {
+	const { state } = MultiStorager.DataStorager.get("page") ?? {};
+	return state ?? {};
 };
 
 const App = () => {
-	const [page, goToPage] = useDataStorager("page", "home");
+	const [page, setPage] = React.useState("home");
+
+	React.useEffect(() => {
+		let time;
+		const event = MultiStorager.DataStorager.addListener("page", ({ page }) => {
+			if (time) {
+				clearTimeout(time);
+			}
+
+			setPage("loading");
+
+			time = setTimeout(() => {
+				setPage(page);
+			}, 1000);
+		});
+
+		return () => {
+			event.stop();
+		};
+	}, []);
 
 	switch (page) {
 		case "home":
-			return <Home goToPage={goToPage} />;
-		case "about":
-			return <About goToPage={goToPage} />;
+			return <Home />;
+		case "login":
+			return <Login />;
+		case "loading":
+			return (
+				<MountPage>
+					<div className="loading">
+						<MaterialUI.CircularProgress />
+					</div>
+				</MountPage>
+			);
 		default:
-			return <div>404</div>;
+			return (
+				<MountPage>
+					<h1>404</h1>
+				</MountPage>
+			);
 	}
 };
