@@ -1,15 +1,8 @@
-import { Api, ID, SchemaDefinition, Transport, Types } from "ivipbase-core";
+import { Api, SchemaDefinition, Transport, Types } from "ivipbase-core";
 import type { DataBase } from ".";
-import { connect as connectSocket } from "socket.io-client";
 import _request from "../controller/request";
 import { NOT_CONNECTED_ERROR_MESSAGE } from "../controller/request/error";
-
-type IOWebSocket = ReturnType<typeof connectSocket>;
-
-const CONNECTION_STATE_DISCONNECTED = "disconnected";
-const CONNECTION_STATE_CONNECTING = "connecting";
-const CONNECTION_STATE_CONNECTED = "connected";
-const CONNECTION_STATE_DISCONNECTING = "disconnecting";
+import { IvipBaseApp } from "../app";
 
 class PromiseTimeoutError extends Error {}
 function promiseTimeout<T = any>(promise: Promise<T>, ms: number, comment?: string) {
@@ -26,41 +19,28 @@ function promiseTimeout<T = any>(promise: Promise<T>, ms: number, comment?: stri
 export class StorageDBClient extends Api {
 	public cache: { [path: string]: any } = {};
 	readonly url: string;
-
-	private _id = ID.generate();
-
-	private _connectionState:
-		| typeof CONNECTION_STATE_DISCONNECTED
-		| typeof CONNECTION_STATE_CONNECTING
-		| typeof CONNECTION_STATE_CONNECTED
-		| typeof CONNECTION_STATE_DISCONNECTING
-		| typeof CONNECTION_STATE_DISCONNECTED;
-
-	private _serverVersion = "unknown";
-
-	private socket: IOWebSocket | null = null;
+	private readonly app: IvipBaseApp;
 
 	constructor(readonly db: DataBase) {
 		super();
-		this.url = db.app.url.replace(/\/+$/, "");
-		this._id = ID.generate();
-		this._connectionState = CONNECTION_STATE_DISCONNECTED;
+		this.app = db.app;
+		this.url = this.app.url.replace(/\/+$/, "");
 		this.db.emit("ready");
 	}
 
 	get accessToken(): string | undefined {
-		const auth = this.db.app.auth.get(this.db.database);
+		const auth = this.app.auth.get(this.db.database);
 		return auth && auth.currentUser ? auth.currentUser.accessToken : undefined;
 	}
 
 	get isConnected() {
-		return this._connectionState === CONNECTION_STATE_CONNECTED;
+		return this.app.isConnected;
 	}
 	get isConnecting() {
-		return this._connectionState === CONNECTION_STATE_CONNECTING;
+		return this.app.isConnecting;
 	}
 	get connectionState() {
-		return this._connectionState;
+		return this.app.connectionState;
 	}
 
 	get serverPingUrl() {
@@ -131,7 +111,7 @@ export class StorageDBClient extends Api {
 				throw new Error(NOT_CONNECTED_ERROR_MESSAGE);
 			}
 
-			const connectPromise = new Promise<void>((resolve) => this.socket?.once("connect", resolve));
+			const connectPromise = new Promise<void>((resolve) => this.app.socket?.once("connect", resolve));
 			await promiseTimeout(connectPromise, 1000, "Waiting for connection").catch((err) => {
 				throw new Error(NOT_CONNECTED_ERROR_MESSAGE);
 			});
@@ -287,7 +267,6 @@ export class StorageDBClient extends Api {
 			}
 			return { version: "unknown", time: Date.now() };
 		});
-		this._serverVersion = info.version;
 		return info;
 	}
 

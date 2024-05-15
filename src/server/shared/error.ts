@@ -2,13 +2,13 @@ import { Response } from "../";
 
 export const sendNotAuthenticatedError = (res: Response, code: string, message: string) => {
 	res.statusCode = 401; // Não autenticado (not unauthenticated)
-	res.statusMessage = "Not Authenticated";
+	res.statusMessage = "auth/not-authenticated";
 	res.contentType("application/json").send({ code, message });
 };
 
 export const sendUnauthorizedError = (res: Response, code: string, message: string) => {
 	res.statusCode = 403; // Proibido
-	res.statusMessage = "Unauthorized";
+	res.statusMessage = "auth/unauthorized";
 	res.contentType("application/json").send({ code, message });
 };
 
@@ -28,9 +28,13 @@ export const sendError = (res: Response, err: ErrorLike) => {
 };
 
 export const sendBadRequestError = (res: Response, err: { code: string; message: string }) => {
-	res.status(400).contentType("application/json").send({ code: err.code, message: err.message });
+	res.statusCode = 400;
+	res.statusMessage = err.code;
+	res.contentType("application/json").send({ code: err.code, message: err.message });
 };
 
 export const sendUnexpectedError = (res: Response, err: Error) => {
-	res.status(500).contentType("application/json").send({ code: "unexpected", message: "server error", details: err.message });
+	res.statusCode = 500;
+	res.statusMessage = "app/system-error";
+	res.contentType("application/json").send({ code: "unexpected", message: "app/system-error", details: err.message });
 };

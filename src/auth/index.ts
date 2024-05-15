@@ -1,5 +1,21 @@
+import { signIn } from "./../server/shared/signin";
 import { IvipBaseApp, getApp, getAppsName, getFirstApp } from "../app";
 import { hasDatabase } from "../database";
+import { NOT_CONNECTED_ERROR_MESSAGE } from "../controller/request/error";
+import { SimpleEventEmitter } from "ivipbase-core";
+
+export interface AuthProviderSignInResult {
+	user: AuthUser;
+	accessToken: string;
+	provider?: AuthProviderTokens;
+}
+
+export interface AuthProviderTokens {
+	name: string;
+	access_token: string;
+	refresh_token: string;
+	expires_in: number;
+}
 
 export class AuthUser {
 	/**
@@ -82,7 +98,7 @@ export class AuthUser {
 	 */
 	private _accessToken: string | undefined;
 
-	constructor(user: Partial<AuthUser>) {
+	constructor(user: Partial<AuthUser>, access_token: string | undefined = undefined) {
 		Object.assign(this, user);
 		if (!user.uid) {
 			throw new Error("User details is missing required uid field");
@@ -91,6 +107,7 @@ export class AuthUser {
 		this.displayName = user.displayName ?? "unknown";
 		this.created = user.created ?? new Date(0).toISOString();
 		this.settings = user.settings ?? {};
+		this._accessToken = access_token;
 	}
 
 	get accessToken(): string | undefined {
@@ -202,15 +219,16 @@ export class AuthUser {
 	}
 }
 
-export class Auth {
+export class Auth extends SimpleEventEmitter {
 	readonly isValidAuth: boolean;
 
 	/**
 	 * Currently signed in user
 	 */
-	public user: AuthUser | null = null;
+	private user: AuthUser | null = null;
 
 	constructor(readonly database: string, readonly app: IvipBaseApp) {
+		super();
 		this.isValidAuth = app.isServer || !app.settings.isValidClient ? false : true;
 	}
 
@@ -233,16 +251,126 @@ export class Auth {
 	}
 
 	/**
+	 * Cria uma nova conta de usuário associada ao nome de usuário e senha especificados.
+	 * @param username O nome de usuário do usuário.
+	 * @param email O endereço de e-mail do usuário.
+	 * @param password A senha escolhida pelo usuário.
+	 * @returns Uma promise que é resolvida com as informações do novo usuário criado.
+	 * @throws auth/email-already-in-use Lançado se já existir uma conta com o endereço de e-mail fornecido.
+	 * @throws auth/invalid-email Lançado se o endereço de e-mail não for válido.
+	 * @throws auth/operation-not-allowed Lançado se contas de e-mail/senha não estiverem habilitadas. Habilite contas de e-mail/senha no Console do Firebase, na aba Auth.
+	 * @throws auth/weak-password Lançado se a senha não for forte o suficiente.
+	 * @throws auth/username-already-in-use Lançado se já existir uma conta com o nome de usuário fornecido.
+	 * @throws auth/invalid-username Lançado se o nome de usuário não for válido.
+	 * @throws auth/operation-not-allowed Lançado se contas de nome de usuário/senha não estiverem habilitadas. Habilite contas de nome de usuário/senha no Console do Firebase, na aba Auth.
+	 * @throws auth/weak-username Lançado se o nome de usuário não for forte o suficiente.
+	 * @throws auth/username-not-allowed Lançado se o nome de usuário não for permitido.
+	 * @throws auth/username-not-found Lançado se não houver usuário correspondente ao nome de usuário fornecido.
+	 * @throws auth/username-required Lançado se o nome de usuário não for fornecido.
+	 * @throws auth/email-required Lançado se o endereço de e-mail não for fornecido.
+	 * @throws auth/password-required Lançado se a senha não for fornecida.
+	 * @throws auth/username-email-mismatch Lançado se o nome de usuário e o endereço de e-mail não corresponderem.
+	 * @throws auth/username-email-already-in-use Lançado se já existir uma conta com o nome de usuário ou endereço de e-mail fornecido.
+	 * @throws auth/username-email-not-found Lançado se não houver usuário correspondente ao nome de usuário ou endereço de e-mail fornecido.
+	 * @throws auth/username-email-required Lançado se o nome de usuário e o endereço de e-mail não forem fornecidos.
+	 * @throws auth/username-email-require-recent-login Lançado se o último tempo de login do usuário não atender ao limite de segurança. Use reauthenticateWithCredential para resolver. Isso não se aplica se o usuário for anônimo.
+	 */
+	createUserWithUsernameAndPassword(username: string, email: string, password: string): Promise<AuthUser> {
+		throw new Error("Method not implemented.");
+	}
+
+	/**
 	 * Loga de forma assíncrona usando um email e senha.
 	 * @param email O endereço de e-mail do usuário.
 	 * @param password A senha do usuário.
 	 * @returns Uma promise que é resolvida com as informações do usuário recém-criado.
+	 * @throws auth/desconnect Lançado se o servidor não estiver conectado.
+	 * @throws auth/system-error Lançado se ocorrer um erro interno no servidor.
 	 * @throws auth/invalid-email Lançado se o endereço de e-mail não for válido.
 	 * @throws auth/user-disabled Lançado se o usuário correspondente ao e-mail fornecido foi desativado.
 	 * @throws auth/user-not-found Lançado se não houver usuário correspondente ao e-mail fornecido.
 	 * @throws auth/wrong-password Lançado se a senha for inválida para o e-mail fornecido, ou se a conta correspondente ao e-mail não tiver uma senha definida.
 	 */
-	signInWithEmailAndPassword(email: string, password: string): Promise<AuthUser> {
+	async signInWithEmailAndPassword(email: string, password: string): Promise<AuthUser> {
+		try {
+			if (!this.app.isConnected) {
+				throw new Error("auth/desconnect");
+			}
+			const result = await this.app
+				.request({
+					method: "POST",
+					route: `/auth/${this.database}/signin`,
+					data: { method: "email", email, password, client_id: this.app.socket && this.app.socket.id },
+				})
+				.catch((e) => {});
+
+			if (!result || !result.user || !result.access_token) {
+				throw new Error("auth/user-not-found");
+			}
+
+			const user = new AuthUser(result.user, result.access_token);
+			this.user = user;
+
+			const details: AuthProviderSignInResult = { user: user, accessToken: result.access_token, provider: result.provider };
+			this.app.socket?.emit("signin", details.accessToken);
+			this.emit("signin", details);
+
+			return this.user;
+		} catch (error) {
+			this.user = null;
+			throw error;
+		}
+	}
+
+	/**
+	 * Loga de forma assíncrona usando um nome de usuário e senha.
+	 * @param username O nome de usuário do usuário.
+	 * @param password A senha do usuário.
+	 * @returns Uma promise que é resolvida com as informações do usuário recém-criado.
+	 * @throws auth/invalid-username Lançado se o nome de usuário não for válido.
+	 * @throws auth/user-disabled Lançado se o usuário correspondente ao nome de usuário fornecido foi desativado.
+	 * @throws auth/user-not-found Lançado se não houver usuário correspondente ao nome de usuário fornecido.
+	 * @throws auth/wrong-password Lançado se a senha for inválida para o nome de usuário fornecido, ou se a conta correspondente ao nome de usuário não tiver uma senha definida.
+	 */
+	async signInWithUsernameAndPassword(username: string, password: string): Promise<AuthUser> {
+		try {
+			if (!this.app.isConnected) {
+				throw new Error(NOT_CONNECTED_ERROR_MESSAGE);
+			}
+			const result = await this.app.request({
+				method: "POST",
+				route: `/auth/${this.database}/signin`,
+				data: { method: "account", username, password, client_id: this.app.socket && this.app.socket.id },
+			});
+
+			if (!result || !result.user || !result.access_token) {
+				throw new Error("User not found");
+			}
+
+			const user = new AuthUser(result.user, result.access_token);
+			this.user = user;
+
+			const details: AuthProviderSignInResult = { user: user, accessToken: result.access_token, provider: result.provider };
+			this.app.socket?.emit("signin", details.accessToken);
+			this.emit("signin", details);
+
+			return this.user;
+		} catch (error) {
+			this.user = null;
+			throw error;
+		}
+	}
+
+	/**
+	 * Loga de forma assíncrona usando um token de acesso.
+	 * @param token O token de acesso do usuário.
+	 * @returns Uma promise que é resolvida com as informações do usuário recém-criado.
+	 * @throws auth/invalid-token Lançado se o token de acesso não for válido.
+	 * @throws auth/user-disabled Lançado se o usuário correspondente ao token de acesso fornecido foi desativado.
+	 * @throws auth/user-not-found Lançado se não houver usuário correspondente ao token de acesso fornecido.
+	 * @throws auth/wrong-token Lançado se o token de acesso for inválido para o usuário fornecido.
+	 */
+	signInWithToken(token: string): Promise<AuthUser> {
 		throw new Error("Method not implemented.");
 	}
 

@@ -30,7 +30,7 @@ export const signIn = async (credentials: SignInCredentials, env: LocalServer, r
 
 	try {
 		if (!env.tokenSalt) {
-			throw new SignInError("not_ready", "Token salt not ready");
+			throw new SignInError("auth/system-error", "Token salt not ready");
 		}
 
 		const query = env.authRef(credentials.database).query();
@@ -39,68 +39,68 @@ export const signIn = async (credentials: SignInCredentials, env: LocalServer, r
 		switch (credentials.method) {
 			case "token": {
 				if (typeof credentials.access_token !== "string") {
-					throw new SignInError("invalid_details", "sign in request has invalid arguments");
+					throw new SignInError("auth/invalid-details", "sign in request has invalid arguments");
 				}
 				try {
 					tokenDetails = decodePublicAccessToken(credentials.access_token, env.tokenSalt);
 					query.filter("access_token", "==", tokenDetails.access_token);
 				} catch (err) {
-					throw new SignInError("invalid_token", (err as any).message);
+					throw new SignInError("auth/invalid-token", (err as any).message);
 				}
 				break;
 			}
 			case "internal": {
 				// Method used internally: uses the access token extracted from a public access token (see tokenDetails.access_token in above 'token' case)
 				if (typeof credentials.access_token !== "string") {
-					throw new SignInError("invalid_details", "sign in request has invalid arguments");
+					throw new SignInError("auth/invalid-details", "sign in request has invalid arguments");
 				}
 				query.filter("access_token", "==", credentials.access_token);
 				break;
 			}
 			case "email": {
 				if (typeof credentials.email !== "string" || typeof credentials.password !== "string") {
-					throw new SignInError("invalid_details", "sign in request has invalid arguments");
+					throw new SignInError("auth/invalid-details", "sign in request has invalid arguments");
 				}
 				query.filter("email", "==", credentials.email);
 				break;
 			}
 			case "account": {
 				if (typeof credentials.username !== "string" || typeof credentials.password !== "string") {
-					throw new SignInError("invalid_details", "sign in request has invalid arguments");
+					throw new SignInError("auth/invalid-details", "sign in request has invalid arguments");
 				}
 				query.filter("username", "==", credentials.username);
 				break;
 			}
 			default: {
-				throw new SignInError("invalid_method", `Unsupported sign in method ${(credentials as any).method}`);
+				throw new SignInError("auth/invalid-method", `Unsupported sign in method ${(credentials as any).method}`);
 			}
 		}
 
 		const snaps = await query.get();
 		if (snaps.length === 0) {
-			throw new SignInError("not_found", `account not found`);
+			throw new SignInError("auth/user-not-found", `account not found`);
 		} else if (snaps.length > 1) {
-			throw new SignInError("duplicate", `${snaps.length} users found with the same ${credentials.method}. Contact your database administrator`, { count: snaps.length });
+			throw new SignInError("auth/user-duplicate", `${snaps.length} users found with the same ${credentials.method}. Contact your database administrator`, { count: snaps.length });
 		}
 
 		const snap = snaps[0];
 		const user: DbUserAccountDetails | null = snap.val();
 
 		if (!user) {
-			throw new SignInError("not_found", `account not found`);
+			throw new SignInError("auth/user-not-found", `account not found`);
 		}
 
 		user.uid = snap.key as string;
 
 		if (user.is_disabled === true) {
-			throw new SignInError("account_disabled", "Your account has been disabled. Contact your database administrator");
+			throw new SignInError("auth/user-disabled", "Your account has been disabled. Contact your database administrator");
 		}
 
 		if (credentials.method === "token") {
 			if (!tokenDetails) {
-				throw new SignInError("invalid_token", "Token details not found");
+				throw new SignInError("auth/invalid-token", "Token details not found");
 			} else if (tokenDetails.uid !== user.uid) {
-				throw new SignInError("token_mismatch", "Sign in again");
+				throw new SignInError("auth/token-mismatch", "Sign in again");
 			}
 		}
 
@@ -108,7 +108,7 @@ export const signIn = async (credentials: SignInCredentials, env: LocalServer, r
 			// Check password
 			const hash = user.password_salt ? getPasswordHash(credentials.password, user.password_salt) : getOldPasswordHash(credentials.password);
 			if (user.password !== hash) {
-				throw new SignInError("wrong_password", "Incorrect password");
+				throw new SignInError("auth/wrong-password", "Incorrect password");
 			}
 		}
 

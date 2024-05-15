@@ -26,14 +26,14 @@ export const addRoutes = (env: LocalServer) => {
 
 		if (!env.hasDatabase(dbName)) {
 			return sendError(res, {
-				code: "not_found",
+				code: "auth/system-error",
 				message: `Database '${dbName}' not found`,
 			});
 		}
 
 		if (!env.tokenSalt) {
 			return sendError(res, {
-				code: "not_ready",
+				code: "auth/system-error",
 				message: "Token salt not ready",
 			});
 		}

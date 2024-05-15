@@ -8,6 +8,14 @@ import { IvipBaseSettings, IvipBaseSettingsOptions } from "./settings";
 import { DataBase } from "../database";
 import { Auth } from "../auth";
 import _request from "../controller/request";
+import { connect as connectSocket } from "socket.io-client";
+
+type IOWebSocket = ReturnType<typeof connectSocket>;
+
+const CONNECTION_STATE_DISCONNECTED = "disconnected";
+const CONNECTION_STATE_CONNECTING = "connecting";
+const CONNECTION_STATE_CONNECTED = "connected";
+const CONNECTION_STATE_DISCONNECTING = "disconnecting";
 
 export class IvipBaseApp extends SimpleEventEmitter {
 	protected _ready = false;
@@ -21,8 +29,20 @@ export class IvipBaseApp extends SimpleEventEmitter {
 	readonly databases: Map<string, DataBase> = new Map();
 	readonly auth: Map<string, Auth> = new Map();
 
+	private _connectionState:
+		| typeof CONNECTION_STATE_DISCONNECTED
+		| typeof CONNECTION_STATE_CONNECTING
+		| typeof CONNECTION_STATE_CONNECTED
+		| typeof CONNECTION_STATE_DISCONNECTING
+		| typeof CONNECTION_STATE_DISCONNECTED;
+
+	private _socket: IOWebSocket | null = null;
+
 	constructor(options: Partial<IvipBaseApp>) {
 		super();
+
+		// this._connectionState = CONNECTION_STATE_DISCONNECTED;
+		this._connectionState = CONNECTION_STATE_CONNECTED;
 
 		if (typeof options.name === "string") {
 			this.name = options.name;
@@ -71,6 +91,20 @@ export class IvipBaseApp extends SimpleEventEmitter {
 			await new Promise((resolve) => this.once("ready", resolve));
 		}
 		callback?.();
+	}
+
+	get isConnected() {
+		return this._connectionState === CONNECTION_STATE_CONNECTED;
+	}
+	get isConnecting() {
+		return this._connectionState === CONNECTION_STATE_CONNECTING;
+	}
+	get connectionState() {
+		return this._connectionState;
+	}
+
+	get socket() {
+		return this._socket;
 	}
 
 	get isReady() {
