@@ -15,7 +15,7 @@ export const isValidNewUsername = async (authRef: DataReference, username): Prom
 };
 
 export const isValidUsername = (username: string): boolean => {
-	return username !== "admin" && typeof username === "string" && username.length >= 5 && /^[a-z0-9]+$/.test(username);
+	return username !== "admin" && typeof username === "string" && username.length >= 5 && /^[a-zA-Z0-9_\.]+$/.test(username);
 };
 
 export const isValidDisplayName = (displayName: any): boolean => {
@@ -27,8 +27,8 @@ export const isValidPassword = (password: string): boolean => {
 	return typeof password === "string" && password.length >= 8 && password.indexOf(" ") < 0; // Let client application set their own password rules. Keep minimum length of 8 and no spaces requirement.
 };
 
-export const isValidPicture = (picture: any): boolean => {
-	return picture === null || (typeof picture === "object" && typeof picture.url === "string" && typeof picture.width === "number" && typeof picture.height === "number");
+export const isValidPhotoURL = (photoURL: any): boolean => {
+	return photoURL === null || (typeof photoURL === "string" && /^https?:\/\//.test(photoURL));
 };
 
 export const isValidSettings = (settings: any): boolean => {
@@ -49,7 +49,7 @@ export type ValidationError<Code> = { code: Code; message: string };
 export const invalidEmailError: ValidationError<"invalid_email"> = { code: "invalid_email", message: "Invalid email address" };
 export const invalidUsernameError: ValidationError<"invalid_username"> = {
 	code: "invalid_username",
-	message: "Invalid username, must be at least 5 characters and can only contain lowercase characters a-z and 0-9",
+	message: "Invalid username, must be at least 5 characters and can only contain lowercase characters a-z, A-Z and 0-9",
 };
 export const emailExistsError: ValidationError<"email_conflict"> = { code: "email_conflict", message: "Account with email address exists already" };
 export const usernameExistsError: ValidationError<"username_conflict"> = { code: "username_conflict", message: "Account with username exists already" };

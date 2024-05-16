@@ -4,6 +4,7 @@ import { hasDatabase } from "../database";
 import { NOT_CONNECTED_ERROR_MESSAGE } from "../controller/request/error";
 import { SimpleEventEmitter } from "ivipbase-core";
 import localStorage from "../utils/localStorage";
+import { sanitizeEmailPrefix } from "../utils";
 
 export interface AuthProviderSignInResult {
 	user: AuthUser;
@@ -42,7 +43,7 @@ export class AuthUser {
 	/**
 	 * User profile picture
 	 */
-	picture?: { width: number; height: number; url: string };
+	photoURL?: string;
 
 	/**
 	 * Whether the user's email address has been verified
@@ -98,6 +99,7 @@ export class AuthUser {
 	 * Access token of currently signed in user
 	 */
 	private _accessToken: string | undefined;
+	private _lastAccessTokenRefresh: number = 0;
 
 	constructor(private readonly auth: Auth, user: Partial<AuthUser>, access_token: string | undefined = undefined) {
 		Object.assign(this, user);
@@ -109,6 +111,7 @@ export class AuthUser {
 		this.created = user.created ?? new Date(0).toISOString();
 		this.settings = user.settings ?? {};
 		this._accessToken = access_token;
+		this._lastAccessTokenRefresh = typeof access_token === "string" ? Date.now() : 0;
 	}
 
 	get accessToken(): string | undefined {
@@ -126,8 +129,9 @@ export class AuthUser {
 	 * @throws auth/invalid-display-name Lançado se o nome de exibição for inválido.
 	 * @throws auth/invalid-photo-url Lançado se a URL da foto for inválida.
 	 */
-	updateProfile(profile: { displayName?: string; photoURL?: string }): Promise<void> {
-		throw new Error("Method not implemented.");
+	async updateProfile(profile: { displayName?: string; photoURL?: string }): Promise<void> {
+		const result = await this.auth.app.request({ method: "POST", route: `/auth/${this.auth.database}/update`, data: profile });
+		Object.assign(this, result.user ?? {});
 	}
 
 	/**
@@ -138,19 +142,58 @@ export class AuthUser {
 	 * @throws auth/invalid-email Lançado se o e-mail não for válido.
 	 * @throws auth/requires-recent-login Lançado se o último tempo de login do usuário não atender ao limite de segurança. Use reauthenticateWithCredential para resolver. Isso não se aplica se o usuário for anônimo.
 	 */
-	updateEmail(email: string): Promise<void> {
-		throw new Error("Method not implemented.");
+	async updateEmail(email: string): Promise<void> {
+		const result = await this.auth.app.request({
+			method: "POST",
+			route: `/auth/${this.auth.database}/update`,
+			data: {
+				email,
+			},
+		});
+		Object.assign(this, result.user ?? {});
+	}
+
+	/**
+	 * Atualiza o nome de usuário do usuário.
+	 * @param username O novo nome de usuário do usuário.
+	 * @returns Uma promise que é resolvida se o novo nome de usuário for válido e atualizado com sucesso no banco de dados do usuário.
+	 * @throws auth/username-already-in-use Lançado se o nome de usuário já estiver em uso por outro usuário.
+	 * @throws auth/invalid-username Lançado se o nome de usuário não for válido.
+	 * @throws auth/requires-recent-login Lançado se o último tempo de login do usuário não atender ao limite de segurança. Use reauthenticateWithCredential para resolver. Isso não se aplica se o usuário for anônimo.
+	 */
+	async updateUsername(username: string): Promise<void> {
+		const result = await this.auth.app.request({
+			method: "POST",
+			route: `/auth/${this.auth.database}/update`,
+			data: {
+				username,
+			},
+		});
+		Object.assign(this, result.user ?? {});
 	}
 
 	/**
 	 * Atualiza a senha do usuário.
-	 * @param password A nova senha do usuário.
+	 * @param currentPassword A senha atual do usuário.
+	 * @param newPassword A nova senha do usuário.
 	 * @returns Uma promise que é resolvida se a nova senha for válida e atualizada com sucesso no banco de dados do usuário.
 	 * @throws auth/weak-password Lançado se a senha não for forte o suficiente.
 	 * @throws auth/requires-recent-login Lançado se o último tempo de login do usuário não atender ao limite de segurança. Use reauthenticateWithCredential para resolver. Isso não se aplica se o usuário for anônimo.
 	 */
-	updatePassword(password: string): Promise<void> {
-		throw new Error("Method not implemented.");
+	async updatePassword(currentPassword: string, newPassword: string): Promise<void> {
+		if (!this.accessToken) {
+			throw new Error(`auth/requires-recent-login`);
+		}
+
+		const result = await this.auth.app.request({
+			method: "POST",
+			route: `/auth/${this.auth.database}/change_password`,
+			data: { uid: this.uid, password: currentPassword, new_password: newPassword },
+		});
+
+		this._accessToken = result.access_token;
+		this._lastAccessTokenRefresh = Date.now();
+		this.auth.emit("signin", this);
 	}
 
 	/**
@@ -162,8 +205,16 @@ export class AuthUser {
 	 * @throws auth/invalid-continue-uri Lançado se a URL de continuação for inválida.
 	 * @throws auth/unauthorized-continue-uri Lançado se o domínio da URL de continuação não estiver na lista de permissões. Coloque o domínio na lista de permissões no console do Firebase.
 	 */
-	sendEmailVerification(): Promise<void> {
-		throw new Error("Method not implemented.");
+	async sendEmailVerification(): Promise<void> {
+		if (!this.accessToken) {
+			throw new Error(`auth/requires-recent-login`);
+		}
+
+		const result = await this.auth.app.request({
+			method: "POST",
+			route: `/auth/${this.auth.database}/send_email_verification`,
+			data: { username: this.username, email: this.email },
+		});
 	}
 
 	/**
@@ -171,8 +222,14 @@ export class AuthUser {
 	 * @returns Uma promise que é resolvida quando a conta do usuário for excluída
 	 * @throws auth/requires-recent-login Lançado se o último tempo de login do usuário não atender ao limite de segurança. Use reauthenticateWithCredential para resolver. Isso não se aplica se o usuário for anônimo.
 	 */
-	delete(): Promise<void> {
-		throw new Error("Method not implemented.");
+	async delete(): Promise<void> {
+		const result = await this.auth.app.request({ method: "POST", route: `/auth/${this.auth.database}/delete`, data: { uid: this.uid } });
+		if (result) {
+			this.auth.app.socket && this.auth.app.socket.emit("signout", this.accessToken);
+			this._accessToken = undefined;
+			this._lastAccessTokenRefresh = 0;
+			this.auth.emit("signout");
+		}
 	}
 
 	/**
@@ -180,7 +237,22 @@ export class AuthUser {
 	 * @param forceRefresh Indica se deve ou não forçar a atualização do token
 	 * @returns Uma promise que é resolvida com o token atual se não tiver expirado. Caso contrário, será null.
 	 */
-	getIdToken(forceRefresh?: boolean): Promise<string> {
+	async getIdToken(forceRefresh?: boolean): Promise<string> {
+		const now = Date.now();
+		forceRefresh = forceRefresh || now - this._lastAccessTokenRefresh > 1000 * 60 * 15; // 15 minutes
+		if (this._accessToken && forceRefresh) {
+			try {
+				const result = await this.auth.app.request({
+					method: "POST",
+					route: `/auth/${this.auth.database}/signin`,
+					data: { method: "token", access_token: this._accessToken, client_id: this.auth.app.socket && this.auth.app.socket.id },
+				});
+				Object.assign(this, result.user ?? {});
+				this._accessToken = result.access_token;
+				this._lastAccessTokenRefresh = Date.now();
+				this.auth.emit("signin", this);
+			} catch {}
+		}
 		return Promise.resolve(this._accessToken ?? "");
 	}
 
@@ -201,7 +273,7 @@ export class AuthUser {
 		if (!this._accessToken) {
 			throw new Error(NOT_CONNECTED_ERROR_MESSAGE);
 		}
-		await this.auth.signInWithToken(this._accessToken, false);
+		await this.getIdToken(true);
 	}
 
 	/**
@@ -213,7 +285,7 @@ export class AuthUser {
 		username?: string;
 		email?: string;
 		displayName: string;
-		picture?: { width: number; height: number; url: string };
+		photoURL?: string;
 		emailVerified: boolean;
 		created: string;
 		prevSignin?: string;
@@ -232,7 +304,7 @@ export class AuthUser {
 			username: this.username,
 			email: this.email,
 			displayName: this.displayName,
-			picture: this.picture,
+			photoURL: this.photoURL,
 			emailVerified: this.emailVerified,
 			created: this.created,
 			prevSignin: this.prevSignin,
@@ -261,7 +333,7 @@ export class AuthUser {
 			username?: string;
 			email?: string;
 			displayName: string;
-			picture?: { width: number; height: number; url: string };
+			photoURL?: string;
 			emailVerified: boolean;
 			created: string;
 			prevSignin?: string;
@@ -276,8 +348,10 @@ export class AuthUser {
 			providerData: Array<{ providerId: string; uid: string; displayName: string; email: string; photoURL: string }>;
 		},
 	): AuthUser {
-		const { accessToken, providerData, ...user } = json;
-		return new AuthUser(auth, user, accessToken);
+		const { accessToken, providerData, ...userInfo } = json;
+		const user = new AuthUser(auth, userInfo, accessToken);
+		user.reload();
+		return user;
 	}
 }
 
@@ -319,49 +393,6 @@ export class Auth extends SimpleEventEmitter {
 		return this.user;
 	}
 
-	/**
-	 * Cria uma nova conta de usuário associada ao endereço de e-mail e senha especificados.
-	 * @param email O endereço de e-mail do usuário.
-	 * @param password A senha escolhida pelo usuário.
-	 * @returns Uma promise que é resolvida com as informações do novo usuário criado.
-	 * @throws auth/email-already-in-use Lançado se já existir uma conta com o endereço de e-mail fornecido.
-	 * @throws auth/invalid-email Lançado se o endereço de e-mail não for válido.
-	 * @throws auth/operation-not-allowed Lançado se contas de e-mail/senha não estiverem habilitadas. Habilite contas de e-mail/senha no Console do Firebase, na aba Auth.
-	 * @throws auth/weak-password Lançado se a senha não for forte o suficiente.
-	 */
-	createUserWithEmailAndPassword(email: string, password: string): Promise<AuthUser> {
-		throw new Error("Method not implemented.");
-	}
-
-	/**
-	 * Cria uma nova conta de usuário associada ao nome de usuário e senha especificados.
-	 * @param username O nome de usuário do usuário.
-	 * @param email O endereço de e-mail do usuário.
-	 * @param password A senha escolhida pelo usuário.
-	 * @returns Uma promise que é resolvida com as informações do novo usuário criado.
-	 * @throws auth/email-already-in-use Lançado se já existir uma conta com o endereço de e-mail fornecido.
-	 * @throws auth/invalid-email Lançado se o endereço de e-mail não for válido.
-	 * @throws auth/operation-not-allowed Lançado se contas de e-mail/senha não estiverem habilitadas. Habilite contas de e-mail/senha no Console do Firebase, na aba Auth.
-	 * @throws auth/weak-password Lançado se a senha não for forte o suficiente.
-	 * @throws auth/username-already-in-use Lançado se já existir uma conta com o nome de usuário fornecido.
-	 * @throws auth/invalid-username Lançado se o nome de usuário não for válido.
-	 * @throws auth/operation-not-allowed Lançado se contas de nome de usuário/senha não estiverem habilitadas. Habilite contas de nome de usuário/senha no Console do Firebase, na aba Auth.
-	 * @throws auth/weak-username Lançado se o nome de usuário não for forte o suficiente.
-	 * @throws auth/username-not-allowed Lançado se o nome de usuário não for permitido.
-	 * @throws auth/username-not-found Lançado se não houver usuário correspondente ao nome de usuário fornecido.
-	 * @throws auth/username-required Lançado se o nome de usuário não for fornecido.
-	 * @throws auth/email-required Lançado se o endereço de e-mail não for fornecido.
-	 * @throws auth/password-required Lançado se a senha não for fornecida.
-	 * @throws auth/username-email-mismatch Lançado se o nome de usuário e o endereço de e-mail não corresponderem.
-	 * @throws auth/username-email-already-in-use Lançado se já existir uma conta com o nome de usuário ou endereço de e-mail fornecido.
-	 * @throws auth/username-email-not-found Lançado se não houver usuário correspondente ao nome de usuário ou endereço de e-mail fornecido.
-	 * @throws auth/username-email-required Lançado se o nome de usuário e o endereço de e-mail não forem fornecidos.
-	 * @throws auth/username-email-require-recent-login Lançado se o último tempo de login do usuário não atender ao limite de segurança. Use reauthenticateWithCredential para resolver. Isso não se aplica se o usuário for anônimo.
-	 */
-	createUserWithUsernameAndPassword(username: string, email: string, password: string): Promise<AuthUser> {
-		throw new Error("Method not implemented.");
-	}
-
 	private handleSignInResult(
 		result: {
 			user: AuthUser;
@@ -384,9 +415,84 @@ export class Auth extends SimpleEventEmitter {
 
 		const details: AuthProviderSignInResult = { user: user, accessToken: result.access_token, provider: result.provider };
 		this.app.socket?.emit("signin", details.accessToken);
-		emitEvent && this.emit("signin", details);
+		emitEvent && this.emit("signin", details.user);
 
 		return this.user;
+	}
+
+	/**
+	 * Cria uma nova conta de usuário associada ao endereço de e-mail e senha especificados.
+	 * @param email O endereço de e-mail do usuário.
+	 * @param password A senha escolhida pelo usuário.
+	 * @param signIn Se deve ou não fazer login após a criação do usuário
+	 * @returns Uma promise que é resolvida com as informações do novo usuário criado.
+	 * @throws auth/email-already-in-use Lançado se já existir uma conta com o endereço de e-mail fornecido.
+	 * @throws auth/invalid-email Lançado se o endereço de e-mail não for válido.
+	 * @throws auth/operation-not-allowed Lançado se contas de e-mail/senha não estiverem habilitadas. Habilite contas de e-mail/senha no Console do Firebase, na aba Auth.
+	 * @throws auth/weak-password Lançado se a senha não for forte o suficiente.
+	 */
+	async createUserWithEmailAndPassword(email: string, password: string, signIn = true): Promise<AuthUser> {
+		const result = await this.app.request({
+			method: "POST",
+			route: `/auth/${this.database}/signup`,
+			data: {
+				username: sanitizeEmailPrefix(email),
+				email,
+				password,
+				displayName: email,
+				display_name: email,
+				settings: {},
+			},
+		});
+		if (signIn) {
+			return this.handleSignInResult(result);
+		}
+		return new AuthUser(this, result.user, result.access_token);
+	}
+
+	/**
+	 * Cria uma nova conta de usuário associada ao nome de usuário e senha especificados.
+	 * @param username O nome de usuário do usuário.
+	 * @param email O endereço de e-mail do usuário.
+	 * @param password A senha escolhida pelo usuário.
+	 * @param signIn Se deve ou não fazer login após a criação do usuário
+	 * @returns Uma promise que é resolvida com as informações do novo usuário criado.
+	 * @throws auth/email-already-in-use Lançado se já existir uma conta com o endereço de e-mail fornecido.
+	 * @throws auth/invalid-email Lançado se o endereço de e-mail não for válido.
+	 * @throws auth/operation-not-allowed Lançado se contas de e-mail/senha não estiverem habilitadas. Habilite contas de e-mail/senha no Console do Firebase, na aba Auth.
+	 * @throws auth/weak-password Lançado se a senha não for forte o suficiente.
+	 * @throws auth/username-already-in-use Lançado se já existir uma conta com o nome de usuário fornecido.
+	 * @throws auth/invalid-username Lançado se o nome de usuário não for válido.
+	 * @throws auth/operation-not-allowed Lançado se contas de nome de usuário/senha não estiverem habilitadas. Habilite contas de nome de usuário/senha no Console do Firebase, na aba Auth.
+	 * @throws auth/weak-username Lançado se o nome de usuário não for forte o suficiente.
+	 * @throws auth/username-not-allowed Lançado se o nome de usuário não for permitido.
+	 * @throws auth/username-not-found Lançado se não houver usuário correspondente ao nome de usuário fornecido.
+	 * @throws auth/username-required Lançado se o nome de usuário não for fornecido.
+	 * @throws auth/email-required Lançado se o endereço de e-mail não for fornecido.
+	 * @throws auth/password-required Lançado se a senha não for fornecida.
+	 * @throws auth/username-email-mismatch Lançado se o nome de usuário e o endereço de e-mail não corresponderem.
+	 * @throws auth/username-email-already-in-use Lançado se já existir uma conta com o nome de usuário ou endereço de e-mail fornecido.
+	 * @throws auth/username-email-not-found Lançado se não houver usuário correspondente ao nome de usuário ou endereço de e-mail fornecido.
+	 * @throws auth/username-email-required Lançado se o nome de usuário e o endereço de e-mail não forem fornecidos.
+	 * @throws auth/username-email-require-recent-login Lançado se o último tempo de login do usuário não atender ao limite de segurança. Use reauthenticateWithCredential para resolver. Isso não se aplica se o usuário for anônimo.
+	 */
+	async createUserWithUsernameAndPassword(username: string, email: string, password: string, signIn = true): Promise<AuthUser> {
+		const result = await this.app.request({
+			method: "POST",
+			route: `/auth/${this.database}/signup`,
+			data: {
+				username,
+				email,
+				password,
+				displayName: email,
+				display_name: email,
+				settings: {},
+			},
+		});
+		if (signIn) {
+			return this.handleSignInResult(result);
+		}
+		return new AuthUser(this, result.user, result.access_token);
 	}
 
 	/**
@@ -488,14 +594,58 @@ export class Auth extends SimpleEventEmitter {
 	 * @param callback Uma função observadora do usuário. Esta função recebe o usuário atual como parâmetro. Se o usuário estiver conectado, o parâmetro é as informações do usuário; caso contrário, é null.
 	 * @returns Uma função que remove o observador.
 	 */
-	onAuthStateChanged(callback: (user: AuthUser | null) => void): void {}
+	onAuthStateChanged(callback: (user: AuthUser | null) => void): {
+		stop: () => void;
+	} {
+		this.on("signin", callback);
+		this.on("signout", callback);
+
+		const stop = () => {
+			this.off("signin", callback);
+			this.off("signout", callback);
+		};
+
+		return {
+			stop,
+		};
+	}
 
 	/**
 	 * Adiciona um observador para mudanças no token de ID do usuário conectado, que inclui eventos de login, logout e atualização de token.
 	 * @param callback Uma função observadora do usuário. Esta função recebe o usuário atual como parâmetro. Se o usuário estiver conectado, o parâmetro é as informações do usuário; caso contrário, é null.
 	 * @returns Uma função que remove o observador.
 	 */
-	onIdTokenChanged(callback: (user: AuthUser | null) => void): void {}
+	onIdTokenChanged(callback: (token: string | null) => void): {
+		stop: () => void;
+	} {
+		const byCallback = (user: AuthUser | null) => {
+			callback(user?.accessToken ?? null);
+		};
+		this.on("signin", byCallback);
+		this.on("signout", byCallback);
+
+		const stop = () => {
+			this.off("signin", byCallback);
+			this.off("signout", byCallback);
+		};
+
+		return {
+			stop,
+		};
+	}
+
+	/**
+	 * Define de forma assíncrona o usuário fornecido como currentUser na instância de Auth atual. Será feita uma cópia da instância do usuário fornecido e definida como currentUser.
+	 * @param user Um usuário a ser definido como currentUser na instância de Auth atual.
+	 * @returns Uma promise que é resolvida quando o usuário é definido como currentUser na instância de Auth atual.
+	 * @throws auth/invalid-user-token Lançado se o token do usuário fornecido for inválido.
+	 * @throws auth/user-token-expired Lançado se o token do usuário fornecido estiver expirado.
+	 * @throws auth/null-user Lançado se o usuário fornecido for nulo.
+	 * @throws auth/tenant-id-mismatch Lançado se o ID do locatário do usuário fornecido não corresponder ao ID do locatário da instância de Auth.
+	 */
+	updateCurrentUser(user: AuthUser): void {
+		this.user = user;
+	}
 
 	/**
 	 * Envia um e-mail de redefinição de senha para o endereço de e-mail fornecido.
@@ -509,21 +659,8 @@ export class Auth extends SimpleEventEmitter {
 	 * @throws auth/unauthorized-continue-uri Lançado se o domínio da URL de continuação não estiver na lista de permissões. Coloque o domínio na lista de permissões no console do Firebase.
 	 * @throws auth/user-not-found Lançado se não houver usuário correspondente ao endereço de e-mail.
 	 */
-	sendPasswordResetEmail(email: string): Promise<void> {
-		throw new Error("Method not implemented.");
-	}
-
-	/**
-	 * Define de forma assíncrona o usuário fornecido como currentUser na instância de Auth atual. Será feita uma cópia da instância do usuário fornecido e definida como currentUser.
-	 * @param user Um usuário a ser definido como currentUser na instância de Auth atual.
-	 * @returns Uma promise que é resolvida quando o usuário é definido como currentUser na instância de Auth atual.
-	 * @throws auth/invalid-user-token Lançado se o token do usuário fornecido for inválido.
-	 * @throws auth/user-token-expired Lançado se o token do usuário fornecido estiver expirado.
-	 * @throws auth/null-user Lançado se o usuário fornecido for nulo.
-	 * @throws auth/tenant-id-mismatch Lançado se o ID do locatário do usuário fornecido não corresponder ao ID do locatário da instância de Auth.
-	 */
-	updateCurrentUser(user: AuthUser): void {
-		throw new Error("Method not implemented.");
+	async sendPasswordResetEmail(email: string): Promise<void> {
+		const result = await this.app.request({ method: "POST", route: `/auth/${this.database}/forgot_password`, data: { email } });
 	}
 
 	/**
@@ -535,8 +672,9 @@ export class Auth extends SimpleEventEmitter {
 	 * @throws auth/user-disabled Lançado se o usuário correspondente ao código de ação estiver desativado.
 	 * @throws auth/user-not-found Lançado se o usuário correspondente ao código de ação não for encontrado.
 	 */
-	applyActionCode(code: string): Promise<string> {
-		throw new Error("Method not implemented.");
+	async applyActionCode(code: string): Promise<string> {
+		const result = await this.app.request({ method: "POST", route: `/auth/${this.database}/verify_email`, data: { code } });
+		return result.email;
 	}
 
 	/**
@@ -562,8 +700,8 @@ export class Auth extends SimpleEventEmitter {
 	 * @throws auth/user-not-found Lançado se o usuário correspondente ao código de ação não for encontrado.
 	 * @throws auth/weak-password Lançado se o novo e-mail for inválido.
 	 */
-	confirmPasswordReset(code: string, newPassword: string): Promise<void> {
-		throw new Error("Method not implemented.");
+	async confirmPasswordReset(code: string, newPassword: string): Promise<void> {
+		const result = await this.app.request({ method: "POST", route: `/auth/${this.database}/reset_password`, data: { code, password: newPassword } });
 	}
 
 	/**

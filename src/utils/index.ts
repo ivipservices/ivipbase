@@ -57,3 +57,19 @@ export function replaceUndefined(obj: any) {
 	}
 	return result;
 }
+
+export function sanitizeEmailPrefix(email: string): string {
+	// Divide a string de email em duas partes: antes e depois do @
+	const [prefix, domain] = email.split("@");
+
+	// Define o regex para os caracteres permitidos
+	const allowedCharacters = /^[a-zA-Z0-9_.]+$/;
+
+	// Filtra os caracteres da parte antes do @ que correspondem ao regex
+	const sanitizedPrefix = prefix
+		.split("")
+		.filter((char) => allowedCharacters.test(char))
+		.join("");
+
+	return sanitizedPrefix;
+}

@@ -1,17 +1,13 @@
-export interface UserProfilePicture {
-	width?: number;
-	height?: number;
-	url: string;
-}
-
 export interface UserSettings {
 	[key: string]: string | number | boolean;
 }
 
 export type iVipBaseUser = ({ username: "admin" } | { uid: string; username: string } | { uid: string; email: string }) & {
 	uid?: string;
+	username?: string;
+	email?: string;
 	displayName?: string;
-	picture?: UserProfilePicture;
+	photoURL?: string;
 	emailVerified: boolean;
 	/** ISO date string */
 	created: string;
@@ -41,7 +37,7 @@ export type DbUserAccountDetails = ({ username: "admin" } | { uid: string; usern
 	/** User's (public) display name */
 	display_name?: string;
 	/** Optional profile picture */
-	picture?: UserProfilePicture;
+	photoURL?: string;
 	/** Password hash */
 	password: string;
 	/** Random password salt (base64 encoded) used to generate the password hash */
@@ -86,7 +82,7 @@ export const getPublicAccountDetails = (account: DbUserAccountDetails): iVipBase
 		username: account.username,
 		email: account.email ?? "",
 		displayName: account.display_name,
-		picture: account.picture,
+		photoURL: account.photoURL,
 		emailVerified: account.email_verified ?? false,
 		created: account.created?.toISOString(),
 		prevSignin: (account.prev_signin ?? new Date(0)).toISOString(),

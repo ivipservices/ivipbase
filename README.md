@@ -54,6 +54,34 @@ O iVipBase é fácil de configurar e pode ser executado em qualquer lugar: na nu
     - [Resultados da consulta de streaming](#resultados-da-consulta-de-streaming)
     - [Consultas em tempo real](#consultas-em-tempo-real)
 - [`getAuth` - API de autenticação](#getauth---api-de-autenticação)
+  - [`createUserWithEmailAndPassword` - Criar usuário com e-mail e senha](#createuserwithemailandpassword---criar-usuário-com-e-mail-e-senha)
+  - [`createUserWithUsernameAndPassword` - Criar usuário com nome de usuário e senha](#createuserwithusernameandpassword---criar-usuário-com-nome-de-usuário-e-senha)
+  - [`signInWithEmailAndPassword` - Login com e-mail e senha](#signinwithemailandpassword---login-com-e-mail-e-senha)
+  - [`signInWithUsernameAndPassword` - Login com nome de usuário e senha](#signinwithusernameandpassword---login-com-nome-de-usuário-e-senha)
+  - [`signInWithToken` - Login com token](#signinwithtoken---login-com-token)
+  - [`signOut` - Logout](#signout---logout)
+  - [`onAuthStateChanged` - Observar mudanças de autenticação](#onauthstatechanged---observar-mudanças-de-autenticação)
+  - [`onIdTokenChanged` - Observar mudanças de token](#onidtokenchanged---observar-mudanças-de-token)
+  - [`updateCurrentUser` - Atualizar usuário atual](#updatecurrentuser---atualizar-usuário-atual)
+  - [`sendPasswordResetEmail` - Enviar e-mail de redefinição de senha](#sendpasswordresetemail---enviar-e-mail-de-redefinição-de-senha)
+  - [`applyActionCode` - Aplicar código de ação](#applyactioncode---aplicar-código-de-ação)
+  - [`checkActionCode` - Verificar código de ação](#checkactioncode---verificar-código-de-ação)
+  - [`confirmPasswordReset` - Confirmar redefinição de senha](#confirmpasswordreset---confirmar-redefinição-de-senha)
+  - [`verifyPasswordResetCode` - Verificar código de redefinição de senha](#verifypasswordresetcode---verificar-código-de-redefinição-de-senha)
+  - [`User` - Informações do usuário autenticado](#user---informações-do-usuário-autenticado)
+  - [`User.accessToken` - Token de acesso](#useraccesstoken---token-de-acesso)
+  - [`User.providerData` - Dados do provedor](#userproviderdata---dados-do-provedor)
+  - [`User.updateProfile` - Atualizar perfil](#userupdateprofile---atualizar-perfil)
+  - [`User.updateEmail` - Atualizar e-mail](#userupdateemail---atualizar-e-mail)
+  - [`User.updatePassword` - Atualizar senha](#userupdatepassword---atualizar-senha)
+  - [`User.updateUsername` - Atualizar nome de usuário](#userupdateusername---atualizar-nome-de-usuário)
+  - [`User.sendEmailVerification` - Enviar verificação de e-mail](#usersendemailverification---enviar-verificação-de-e-mail)
+  - [`User.delete` - Deletar usuário](#userdelete---deletar-usuário)
+  - [`User.getIdToken` - Obter token de ID](#usergetidtoken---obter-token-de-id)
+  - [`User.getIdTokenResult` - Obter resultado do token de ID](#usergetidtokenresult---obter-resultado-do-token-de-id)
+  - [`User.reload` - Recarregar usuário](#userreload---recarregar-usuário)
+  - [`User.toJSON` - Converter para JSON](#usertojson---converter-para-json)
+  - [`User.fromJSON` - Converter de JSON](#userfromjson---converter-de-json)
 - [`getStorage` - API de armazenamento em nuvem](#getstorage---api-de-armazenamento-em-nuvem)
 - [`getFunctions` - API para funções de nuvem](#getfunctions---api-para-funções-de-nuvem)
 - [`getExtensions` - API para extensões de nuvem](#getextensions---api-para-extensões-de-nuvem)
@@ -1110,6 +1138,623 @@ db.query("livros").filtro("classificação", "==", 5).on("add", coincidenciaAdic
 NOTA: O uso de `take` e `skip` atualmente não é levado em consideração. Eventos podem ser acionados para resultados que não estão no intervalo solicitado
 
 # `getAuth` - API de autenticação
+
+A API é semelhante à do Auth do Firebase. Para utilizá-la, será necessário empregar a função `getAuth`. Essa função é responsável por configurar a API de consumo com as predefinições no `initializeApp`. Requer um parâmetro, no qual você pode inserir a instância obtida por meio da função `initializeApp`, criando uma instância da classe `IvipBaseApp` ou uma string do nome da aplicação específica. Caso o parâmetro não seja fornecido, o `getAuth` considerará a primeira aplicação criada ou a aplicação padrão, se houver. Abaixo, seguem dois exemplos de uso do `getAuth`:
+
+```typescript
+import { initializeApp, getAuth } from "ivipbase";
+
+const app = initializeApp({
+    dbname: "mydb", // Cria ou abre um banco de dados com o nome "mydb"
+    logLevel: "log",
+    // ... outras opções
+});
+
+const auth = getAuth(app);
+const user = auth.currentUser; // Obtém o usuário atualmente autenticado
+```
+
+Neste exemplo, o `getDatabase` considera a aplicação padrão ou a primeira aplicação criada com um nome definido.
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth(app);
+const user = auth.currentUser; // Obtém o usuário atualmente autenticado
+```
+
+## `createUserWithEmailAndPassword` - Criar usuário com e-mail e senha
+
+Para criar um usuário com e-mail e senha, você pode usar a função `createUserWithEmailAndPassword`. Ela requer dois parâmetros: um e-mail e uma senha. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+auth.createUserWithEmailAndPassword("user@example.com", "password")
+    .then((user) => {
+        console.log("Usuário criado com sucesso:", user);
+    })
+    .catch((error) => {
+        console.error("Erro ao criar usuário:", error);
+    });
+```
+
+Essa função, após a criação do usuário com sucesso, como padrão, é feito o login do usuário. Caso você não queira que isso aconteça, você pode passar um terceiro parâmetro `false` para a função `createUserWithEmailAndPassword`:
+
+```typescript
+auth.createUserWithEmailAndPassword("user@example.com", "password", false)
+    .then((user) => {
+        console.log("Usuário criado com sucesso:", user);
+    })
+    .catch((error) => {
+        console.error("Erro ao criar usuário:", error);
+    });
+```
+
+## `createUserWithUsernameAndPassword` - Criar usuário com nome de usuário e senha
+
+Para criar um usuário com nome de usuário e senha, você pode usar a função `createUserWithUsernameAndPassword`. Ela requer dois parâmetros: um nome de usuário e uma senha. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+auth.createUserWithUsernameAndPassword("user", "user@example.com", "password")
+    .then((user) => {
+        console.log("Usuário criado com sucesso:", user);
+    })
+    .catch((error) => {
+        console.error("Erro ao criar usuário:", error);
+    });
+```
+
+Essa função, após a criação do usuário com sucesso, como padrão, é feito o login do usuário. Caso você não queira que isso aconteça, você pode passar um quarto parâmetro `false` para a função `createUserWithUsernameAndPassword`:
+
+```typescript
+auth.createUserWithUsernameAndPassword("user", "user@example.com", "password", false)
+    .then((user) => {
+        console.log("Usuário criado com sucesso:", user);
+    })
+    .catch((error) => {
+        console.error("Erro ao criar usuário:", error);
+    });
+```
+
+## `signInWithEmailAndPassword` - Login com e-mail e senha
+
+Para fazer login com e-mail e senha, você pode usar a função `signInWithEmailAndPassword`. Ela requer dois parâmetros: um e-mail e uma senha. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+auth.signInWithEmailAndPassword("user@example.com", "password")
+    .then((user) => {
+        console.log("Usuário logado com sucesso:", user);
+    })
+    .catch((error) => {
+        console.error("Erro ao fazer login:", error);
+    });
+```
+
+Você também pode adicionar um evento de retorno de chamada para ser acionado quando o usuário for autenticado:
+
+```typescript
+auth.on("signin", (user) => {
+    console.log("Usuário logado com sucesso:", user);
+});
+```
+
+## `signInWithUsernameAndPassword` - Login com nome de usuário e senha
+
+Para fazer login com nome de usuário e senha, você pode usar a função `signInWithUsernameAndPassword`. Ela requer dois parâmetros: um nome de usuário e uma senha. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+auth.signInWithUsernameAndPassword("user", "password")
+    .then((user) => {
+        console.log("Usuário logado com sucesso:", user);
+    })
+    .catch((error) => {
+        console.error("Erro ao fazer login:", error);
+    });
+```
+
+Você também pode adicionar um evento de retorno de chamada para ser acionado quando o usuário for autenticado:
+
+```typescript
+auth.on("signin", (user) => {
+    console.log("Usuário logado com sucesso:", user);
+});
+```
+
+## `signInWithToken` - Login com token
+
+Para fazer login com um token, você pode usar a função `signInWithToken`. Ela requer um parâmetro: um token. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+auth.signInWithToken("token")
+    .then((user) => {
+        console.log("Usuário logado com sucesso:", user);
+    })
+    .catch((error) => {
+        console.error("Erro ao fazer login:", error);
+    });
+```
+
+Você também pode adicionar um evento de retorno de chamada para ser acionado quando o usuário for autenticado:
+
+```typescript
+auth.on("signin", (user) => {
+    console.log("Usuário logado com sucesso:", user);
+});
+```
+
+## `signOut` - Logout
+
+Para fazer logout, você pode usar a função `signOut`. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+auth.signOut()
+    .then(() => {
+        console.log("Usuário deslogado com sucesso");
+    })
+    .catch((error) => {
+        console.error("Erro ao fazer logout:", error);
+    });
+```
+
+Você também pode adicionar um evento de retorno de chamada para ser acionado quando o usuário for deslogado:
+
+```typescript
+auth.on("signout", () => {
+    console.log("Usuário deslogado com sucesso");
+});
+```
+
+## `onAuthStateChanged` - Observar mudanças de autenticação
+
+Para observar mudanças de autenticação, você pode usar a função `onAuthStateChanged`. Ela requer um parâmetro: uma função de retorno de chamada que será acionada quando houver mudanças de autenticação. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        console.log("Usuário logado:", user);
+    } else {
+        console.log("Usuário deslogado");
+    }
+});
+```
+
+## `onIdTokenChanged` - Observar mudanças de token
+
+Para observar mudanças de token, você pode usar a função `onIdTokenChanged`. Ela requer um parâmetro: uma função de retorno de chamada que será acionada quando houver mudanças de token. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+auth.onIdTokenChanged((token) => {
+    console.log("Token alterado:", token);
+});
+```
+
+## `updateCurrentUser` - Atualizar usuário atual
+
+Para atualizar o usuário atual, você pode usar a função `updateCurrentUser`. Ela requer um parâmetro: um usuário. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+let user = auth.currentUser;
+
+auth.updateCurrentUser(user)
+    .then(() => {
+        console.log("Usuário atualizado com sucesso");
+    })
+    .catch((error) => {
+        console.error("Erro ao atualizar usuário:", error);
+    });
+```
+
+## `sendPasswordResetEmail` - Enviar e-mail de redefinição de senha
+
+Para enviar um e-mail de redefinição de senha, você pode usar a função `sendPasswordResetEmail`. Ela requer um parâmetro: um e-mail. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+auth.sendPasswordResetEmail("user@example.com")
+    .then(() => {
+        console.log("E-mail de redefinição de senha enviado com sucesso");
+    })
+    .catch((error) => {
+        console.error("Erro ao enviar e-mail de redefinição de senha:", error);
+    });
+```
+
+## `applyActionCode` - Aplicar código de ação
+
+Para aplicar um código de ação, você pode usar a função `applyActionCode`. Ela requer um parâmetro: um código de ação. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+auth.applyActionCode("code")
+    .then(() => {
+        console.log("Código de ação aplicado com sucesso");
+    })
+    .catch((error) => {
+        console.error("Erro ao aplicar código de ação:", error);
+    });
+```
+
+## `checkActionCode` - Verificar código de ação
+
+Para verificar um código de ação, você pode usar a função `checkActionCode`. Ela requer um parâmetro: um código de ação. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+auth.checkActionCode("code")
+    .then((info) => {
+        console.log("Código de ação verificado com sucesso:", info);
+    })
+    .catch((error) => {
+        console.error("Erro ao verificar código de ação:", error);
+    });
+```
+
+## `confirmPasswordReset` - Confirmar redefinição de senha
+
+Para confirmar a redefinição de senha, você pode usar a função `confirmPasswordReset`. Ela requer dois parâmetros: um código de ação e uma nova senha. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+auth.confirmPasswordReset("code", "newPassword")
+    .then(() => {
+        console.log("Redefinição de senha confirmada com sucesso");
+    })
+    .catch((error) => {
+        console.error("Erro ao confirmar redefinição de senha:", error);
+    });
+```
+
+## `verifyPasswordResetCode` - Verificar código de redefinição de senha
+
+Para verificar um código de redefinição de senha, você pode usar a função `verifyPasswordResetCode`. Ela requer um parâmetro: um código de redefinição de senha. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+auth.verifyPasswordResetCode("code")
+    .then((email) => {
+        console.log("Código de redefinição de senha verificado com sucesso:", email);
+    })
+    .catch((error) => {
+        console.error("Erro ao verificar código de redefinição de senha:", error);
+    });
+```
+
+## `User` - Informações do usuário autenticado
+
+Para obter informações do usuário autenticado, você pode usar a propriedade `currentUser`. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+let user = auth.currentUser;
+
+// ID do usuário
+console.log(user.uid);
+
+// Nome do usuário
+console.log(user.username);
+
+// E-mail do usuário
+console.log(user.email);
+
+// Nome do usuário
+console.log(user.displayName);
+
+// Foto do usuário
+console.log(user.photoURL);
+
+// E-mail verificado
+console.log(user.emailVerified);
+
+// Data de criação
+console.log(user.created);
+
+// Data do ultimo login
+console.log(user.lastSignin);
+
+// Endereço IP do ultimo login
+console.log(user.lastSigninIp);
+
+// Data do login anterior
+console.log(user.previousSignin);
+
+// Endereço IP do login anterior
+console.log(user.previousSigninIp);
+
+// Verificar se o usuário precisa alterar a senha
+console.log(user.changePassword);
+
+// Se `changePassword` for verdadeiro, data/hora em que a alteração da senha foi solicitada (string de data ISO)
+console.log(user.changePasswordRequested);
+
+// Se `changePassword` for verdadeiro, data/hora em que a senha deve ter sido alterada (string de data ISO)
+console.log(user.changePasswordBefore);
+
+// Configurações adicionais do usuário
+console.log(user.settings);
+```
+
+## `User.accessToken` - Token de acesso
+
+Para obter o token de acesso de um usuário, você pode usar a propriedade `accessToken`. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+let user = auth.currentUser;
+let token = user.accessToken;
+```
+
+## `User.providerData` - Dados do provedor
+
+Para obter os dados do provedor de um usuário, você pode usar a propriedade `providerData`. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+let user = auth.currentUser;
+let providerData = user.providerData;
+```
+
+## `User.updateProfile` - Atualizar perfil
+
+Para atualizar o perfil de um usuário, você pode usar a função `updateProfile`. Ela requer um parâmetro: um objeto com as propriedades a serem atualizadas. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+let user = auth.currentUser;
+user.updateProfile({
+    displayName: "User",
+    photoURL: "https://example.com/user.jpg"
+})
+    .then(() => {
+        console.log("Perfil atualizado com sucesso");
+    })
+    .catch((error) => {
+        console.error("Erro ao atualizar perfil:", error);
+    });
+```
+
+## `User.updateEmail` - Atualizar e-mail
+
+Para atualizar o e-mail de um usuário, você pode usar a função `updateEmail`. Ela requer um parâmetro: um e-mail. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+let user = auth.currentUser;
+user.updateEmail("user123@example.com")
+    .then(() => {
+        console.log("E-mail atualizado com sucesso");
+    })
+    .catch((error) => {
+        console.error("Erro ao atualizar e-mail:", error);
+    });
+```
+
+## `User.updatePassword` - Atualizar senha
+
+Para atualizar a senha de um usuário, você pode usar a função `updatePassword`. Ela requer um parâmetro: uma senha. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+let user = auth.currentUser;
+user.updatePassword("currentPassword", "newPassword")
+    .then(() => {
+        console.log("Senha atualizada com sucesso");
+    })
+    .catch((error) => {
+        console.error("Erro ao atualizar senha:", error);
+    });
+```
+
+## `User.updateUsername` - Atualizar nome de usuário
+
+Para atualizar o nome de usuário de um usuário, você pode usar a função `updateUsername`. Ela requer um parâmetro: um nome de usuário. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+let user = auth.currentUser;
+user.updateUsername("newUser")
+    .then(() => {
+        console.log("Nome de usuário atualizado com sucesso");
+    })
+    .catch((error) => {
+        console.error("Erro ao atualizar nome de usuário:", error);
+    });
+```
+
+## `User.sendEmailVerification` - Enviar verificação de e-mail
+
+Para enviar uma verificação de e-mail para um usuário, você pode usar a função `sendEmailVerification`. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+let user = auth.currentUser;
+user.sendEmailVerification()
+    .then(() => {
+        console.log("Verificação de e-mail enviada com sucesso");
+    })
+    .catch((error) => {
+        console.error("Erro ao enviar verificação de e-mail:", error);
+    });
+```
+
+## `User.delete` - Deletar usuário
+
+Para deletar um usuário, você pode usar a função `delete`. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+let user = auth.currentUser;
+user.delete()
+    .then(() => {
+        console.log("Usuário deletado com sucesso");
+    })
+    .catch((error) => {
+        console.error("Erro ao deletar usuário:", error);
+    });
+```
+
+## `User.getIdToken` - Obter token de ID
+
+Para obter o token de ID de um usuário, você pode usar a função `getIdToken`. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+let user = auth.currentUser;
+user.getIdToken()
+    .then((token) => {
+        console.log("Token de ID obtido com sucesso:", token);
+    })
+    .catch((error) => {
+        console.error("Erro ao obter token de ID:", error);
+    });
+```
+
+## `User.getIdTokenResult` - Obter resultado do token de ID
+
+Para obter o resultado do token de ID de um usuário, você pode usar a função `getIdTokenResult`. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+let user = auth.currentUser;
+user.getIdTokenResult()
+    .then((result) => {
+        console.log("Resultado do token de ID obtido com sucesso:", result);
+    })
+    .catch((error) => {
+        console.error("Erro ao obter resultado do token de ID:", error);
+    });
+```
+
+## `User.reload` - Recarregar usuário
+
+Para recarregar um usuário, você pode usar a função `reload`. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+let user = auth.currentUser;
+user.reload()
+    .then(() => {
+        console.log("Usuário recarregado com sucesso");
+    })
+    .catch((error) => {
+        console.error("Erro ao recarregar usuário:", error);
+    });
+```
+
+## `User.toJSON` - Converter para JSON
+
+Para converter um usuário para JSON, você pode usar a função `toJSON`. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+let user = auth.currentUser;
+let json = user.toJSON();
+```
+
+## `User.fromJSON` - Converter de JSON
+
+Para converter um usuário de JSON, você pode usar a função `fromJSON`. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+let json = {
+    uid: "uid",
+    // ...
+};
+
+let user = auth.currentUser;
+user.fromJSON(json);
+```
 
 # `getStorage` - API de armazenamento em nuvem
 

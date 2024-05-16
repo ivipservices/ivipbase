@@ -1,6 +1,6 @@
 import { ID } from "ivipbase-core";
 import type { LocalServer, RouteRequest } from "../../";
-import { DbUserAccountDetails, UserProfilePicture, getPublicAccountDetails, iVipBaseUser } from "../../schema/user";
+import { DbUserAccountDetails, getPublicAccountDetails, iVipBaseUser } from "../../schema/user";
 import { sendError, sendUnauthorizedError, sendUnexpectedError } from "../../shared/error";
 import { createPasswordHash } from "../../shared/password";
 import {
@@ -17,7 +17,7 @@ import {
 	isValidNewEmailAddress,
 	isValidNewUsername,
 	isValidPassword,
-	isValidPicture,
+	isValidPhotoURL,
 	isValidSettings,
 	isValidUsername,
 	usernameExistsError,
@@ -52,12 +52,11 @@ export type RequestBody = {
 	password: string;
 	displayName?: string;
 	display_name?: string;
-	picture?: UserProfilePicture;
+	photoURL?: string;
 	settings: {
 		[name: string]: string | number | boolean;
 	};
-} & // displayName is preferred and documented in the OpenAPI docs // Allow both spellings of display name. display_name is used in the db, displayName in public user detail server responses.
-({ displayName: string } | { display_name: string });
+} & ({ displayName: string } | { display_name: string }); // displayName is preferred and documented in the OpenAPI docs // Allow both spellings of display name. display_name is used in the db, displayName in public user detail server responses.
 
 export type ResponseBody = { access_token: string; user: iVipBaseUser } | { code: SignupError["code"]; message: string };
 export type Request = RouteRequest<RequestQuery, RequestBody, ResponseBody>;
@@ -116,7 +115,7 @@ export const addRoutes = (env: LocalServer) => {
 			err = invalidPasswordError;
 		} else if (!isValidSettings(details.settings)) {
 			err = invalidSettingsError;
-		} else if (details.picture && !isValidPicture(details.picture)) {
+		} else if (details.photoURL && !isValidPhotoURL(details.photoURL)) {
 			err = invalidPictureError;
 		}
 
@@ -148,7 +147,7 @@ export const addRoutes = (env: LocalServer) => {
 				access_token_created: new Date(),
 				last_signin: new Date(),
 				last_signin_ip: req.ip,
-				picture: details.picture ?? undefined,
+				photoURL: details.photoURL ?? undefined,
 				settings: details.settings ?? {},
 				admin_level: 0,
 			};
@@ -175,7 +174,7 @@ export const addRoutes = (env: LocalServer) => {
 				},
 				date: user.created,
 				ip: user.created_ip ?? req.ip,
-				provider: "acebase",
+				provider: "ivipbase",
 				activationCode: createSignedPublicToken({ uid: user.uid }, env.tokenSalt),
 				emailVerified: false,
 			};

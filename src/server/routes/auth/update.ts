@@ -1,5 +1,5 @@
 import type { LocalServer, RouteRequest } from "../../";
-import { DbUserAccountDetails, UserProfilePicture, getPublicAccountDetails, iVipBaseUser } from "../../schema/user";
+import { DbUserAccountDetails, getPublicAccountDetails, iVipBaseUser } from "../../schema/user";
 import { sendError, sendNotAuthenticatedError, sendUnauthorizedError, sendUnexpectedError } from "../../shared/error";
 import {
 	emailExistsError,
@@ -12,7 +12,7 @@ import {
 	isValidEmail,
 	isValidNewEmailAddress,
 	isValidNewUsername,
-	isValidPicture,
+	isValidPhotoURL,
 	isValidSettings,
 	isValidUsername,
 	usernameExistsError,
@@ -47,12 +47,11 @@ export type RequestBody = {
 	username?: string;
 	displayName?: string;
 	display_name?: string;
-	picture?: UserProfilePicture;
+	photoURL?: string;
 	settings?: {
 		[name: string]: string | number | boolean;
 	};
-} & // Allow both spellings of display name. display_name is used in the db, displayName in public user detail server responses.
-// displayName is preferred and documented in the OpenAPI docs
+} & // displayName is preferred and documented in the OpenAPI docs // Allow both spellings of display name. display_name is used in the db, displayName in public user detail server responses.
 ({ displayName: string } | { display_name: string });
 
 export type ResponseBody = { user: iVipBaseUser } | { code: UpdateError["code"]; message: string };
@@ -102,7 +101,7 @@ export const addRoutes = (env: LocalServer) => {
 			err = usernameExistsError;
 		} else if (details.display_name && !isValidDisplayName(details.display_name)) {
 			err = invalidDisplayNameError;
-		} else if (details.picture && !isValidPicture(details.picture)) {
+		} else if (details.photoURL && !isValidPhotoURL(details.photoURL)) {
 			err = invalidPictureError;
 		} else if (!isValidSettings(details.settings)) {
 			err = invalidSettingsError;
@@ -135,8 +134,8 @@ export const addRoutes = (env: LocalServer) => {
 					if (details.display_name) {
 						user.display_name = details.display_name;
 					}
-					if (details.picture) {
-						user.picture = details.picture;
+					if (details.photoURL) {
+						user.photoURL = details.photoURL;
 					}
 					if (details.settings) {
 						if (typeof user.settings !== "object") {

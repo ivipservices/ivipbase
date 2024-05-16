@@ -10,6 +10,7 @@ import addChangePasswordRoute from "./change-password";
 import addSignUpRoute from "./signup";
 import addUpdateRoute from "./update";
 import addDeleteRoute from "./delete";
+import addSendEmailVerificationRoute from "./send-email-verification";
 
 export const addAuthenticionRoutes = (env: LocalServer) => {
 	if (!env.settings.auth.enabled) {
@@ -33,6 +34,9 @@ export const addAuthenticionRoutes = (env: LocalServer) => {
 
 	// forgot password endpoint (issue password reset)
 	addForgotPasswordRoute(env);
+
+	// send email verification endpoint
+	addSendEmailVerificationRoute(env);
 
 	// reset password endpoint (finish password reset)
 	const resetPassword = addResetPasswordRoute(env);

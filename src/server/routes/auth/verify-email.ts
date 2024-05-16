@@ -11,13 +11,13 @@ export class VerifyEmailError extends Error {
 
 export type RequestQuery = null;
 export type RequestBody = { code: string };
-export type ResponseBody = "OK" | { code: string; message: string };
+export type ResponseBody = { email: string } | { code: string; message: string };
 export type Request = RouteRequest<RequestQuery, RequestBody, ResponseBody>;
 
 export const addRoutes = (env: LocalServer) => {
 	const LOG_ACTION = "auth.verify_email";
 
-	const verifyEmailAddress = async (dbName: string, clientIp: string, code: string) => {
+	const verifyEmailAddress = async (dbName: string, clientIp: string, code: string): Promise<string> => {
 		const LOG_DETAILS = { ip: clientIp, uid: null };
 
 		const verification = (() => {
@@ -40,11 +40,16 @@ export const addRoutes = (env: LocalServer) => {
 		const user: DbUserAccountDetails = snap.val();
 		user.uid = snap.key as string;
 
+		if (!user.email) {
+			throw new VerifyEmailError("unknown_user", "Unknown user");
+		}
+
 		// No need to do further checks, code was signed by us so we can trust the contents
 		// Mark account as verified
 		await snap.ref.update({ email_verified: true });
 
 		// env.log.event(LOG_ACTION, LOG_DETAILS);
+		return user.email;
 	};
 
 	env.router.post(`/auth/:dbName/verify_email`, async (req: Request, res) => {
@@ -60,8 +65,10 @@ export const addRoutes = (env: LocalServer) => {
 		const details = req.body;
 
 		try {
-			await verifyEmailAddress(dbName, req.ip, details.code);
-			res.send("OK");
+			const email = await verifyEmailAddress(dbName, req.ip, details.code);
+			res.send({
+				email,
+			});
 		} catch (err) {
 			if ((err as any).code) {
 				sendBadRequestError(res, err as any);

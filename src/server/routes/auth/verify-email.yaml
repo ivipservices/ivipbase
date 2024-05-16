@@ -28,14 +28,17 @@
                             code: ewrg235235g23gwrvsdb34g524rvqewwrv425gervqew...
         responses:
             200:
-                description: Se o endereço de e-mail for verificado com sucesso, retorna a string `"OK"`
+                description: Se o endereço de e-mail for verificado com sucesso
                 content:
                     "text/plain":
                         schema:
-                            type: "string"
-                            value: OK
-                            example: OK
-                            description: A string `"OK"`
+                            type: object
+                            properties:
+                                email:
+                                    type: string
+                                    description: O endereço de e-mail verificado
+                            example: '{"email": "user@example.com"}'
+                            description: O endereço de e-mail foi verificado com sucesso
             401:
                 description: Retorna `"401 Solicitação Inválida"` se o código enviado com a solicitação for inválido
                 content:
