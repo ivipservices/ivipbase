@@ -86,12 +86,16 @@ export class IvipBaseApp extends SimpleEventEmitter {
 				const dbList: string[] = Array.isArray(this.settings.dbname) ? this.settings.dbname : [this.settings.dbname];
 				for (const dbName of dbList) {
 					promises.push(
-						new Promise<void>((resolve, reject) => {
+						new Promise<void>(async (resolve, reject) => {
+							const db = new DataBase(dbName, this);
+							await db.ready();
+							this.databases.set(dbName, db);
+
 							const user = new Auth(dbName, this);
-							user.ready(() => {
-								resolve();
-							});
+							await user.ready();
 							this.auth.set(dbName, user);
+
+							resolve();
 						}),
 					);
 				}

@@ -29,6 +29,15 @@ export class StorageDBClient extends Api {
 		super();
 		this.app = db.app;
 		this.url = this.app.url.replace(/\/+$/, "");
+		this.initialize();
+	}
+
+	get serverPingUrl() {
+		return `/ping/${this.db.database}`;
+	}
+
+	private async initialize() {
+		await this.db.app.request({ route: this.serverPingUrl });
 		this.db.emit("ready");
 	}
 
@@ -40,10 +49,6 @@ export class StorageDBClient extends Api {
 	}
 	get connectionState() {
 		return this.app.connectionState;
-	}
-
-	get serverPingUrl() {
-		return `/ping/${this.db.database}`;
 	}
 
 	private async _request(options: {

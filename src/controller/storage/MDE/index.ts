@@ -158,7 +158,7 @@ export default class MDE extends SimpleEventEmitter {
 		super();
 		this.settings = new MDESettings(options);
 		this._lastTid = 0;
-		this.once("ready", () => {
+		this.on("ready", () => {
 			this._ready = true;
 		});
 		this.init();
@@ -182,7 +182,7 @@ export default class MDE extends SimpleEventEmitter {
 	async ready(callback?: () => void) {
 		if (!this._ready) {
 			// Aguarda o evento ready
-			await new Promise((resolve) => this.on("ready", resolve));
+			await new Promise((resolve) => this.once("ready", resolve));
 		}
 		callback?.();
 	}
