@@ -76,6 +76,11 @@ export class IvipBaseApp extends SimpleEventEmitter {
 				this.storage.ready(() => {
 					this.emitOnce("ready");
 				});
+
+				const dbList: string[] = Array.isArray(this.settings.dbname) ? this.settings.dbname : [this.settings.dbname];
+				for (const dbName of dbList) {
+					this.auth.set(dbName, new Auth(dbName, this));
+				}
 			}
 		}
 	}

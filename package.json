@@ -28,7 +28,9 @@
 		"./dist/cjs/controller/request/index.js": "./dist/cjs/controller/request/browser.js",
 		"./dist/esm/controller/request/index.js": "./dist/esm/controller/request/browser.js",
 		"./dist/cjs/utils/base64/index.js": "./dist/cjs/utils/base64/browser.js",
-		"./dist/esm/utils/base64/index.js": "./dist/esm/utils/base64/browser.js"
+		"./dist/esm/utils/base64/index.js": "./dist/esm/utils/base64/browser.js",
+		"./dist/cjs/utils/localStorage/index.js": "./dist/cjs/utils/localStorage/browser.js",
+		"./dist/esm/utils/localStorage/index.js": "./dist/esm/utils/localStorage/browser.js"
 	},
 	"private": false,
 	"repository": "github:ivipservices/ivipbase",

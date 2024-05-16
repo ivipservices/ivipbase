@@ -3,6 +3,7 @@ import { IvipBaseApp, getApp, getAppsName, getFirstApp } from "../app";
 import { hasDatabase } from "../database";
 import { NOT_CONNECTED_ERROR_MESSAGE } from "../controller/request/error";
 import { SimpleEventEmitter } from "ivipbase-core";
+import localStorage from "../utils/localStorage";
 
 export interface AuthProviderSignInResult {
 	user: AuthUser;
@@ -98,7 +99,7 @@ export class AuthUser {
 	 */
 	private _accessToken: string | undefined;
 
-	constructor(user: Partial<AuthUser>, access_token: string | undefined = undefined) {
+	constructor(private readonly auth: Auth, user: Partial<AuthUser>, access_token: string | undefined = undefined) {
 		Object.assign(this, user);
 		if (!user.uid) {
 			throw new Error("User details is missing required uid field");
@@ -196,8 +197,11 @@ export class AuthUser {
 	 * Atualiza o usuário atual, se estiver conectado.
 	 * @returns Uma promise que é resolvida com o usuário atual após uma possível atualização do token.
 	 */
-	reload(): Promise<void> {
-		throw new Error("Method not implemented.");
+	async reload(): Promise<void> {
+		if (!this._accessToken) {
+			throw new Error(NOT_CONNECTED_ERROR_MESSAGE);
+		}
+		await this.auth.signInWithToken(this._accessToken, false);
 	}
 
 	/**
@@ -206,16 +210,74 @@ export class AuthUser {
 	 */
 	toJSON(): {
 		uid: string;
+		username?: string;
+		email?: string;
 		displayName: string;
-		email: string;
+		picture?: { width: number; height: number; url: string };
 		emailVerified: boolean;
-		photoURL: string;
-		phoneNumber: string;
-		isAnonymous: boolean;
-		tenantId: string;
-		providerData: { providerId: string; uid: string; displayName: string; email: string; photoURL: string };
+		created: string;
+		prevSignin?: string;
+		prevSigninIp?: string;
+		lastSignin?: string;
+		lastSigninIp?: string;
+		changePassword: boolean;
+		changePasswordRequested?: string;
+		changePasswordBefore?: string;
+		settings: { [key: string]: string | number | boolean };
+		accessToken?: string;
+		providerData: Array<{ providerId: string; uid: string; displayName: string; email: string; photoURL: string }>;
 	} {
-		throw new Error("Method not implemented.");
+		return {
+			uid: this.uid,
+			username: this.username,
+			email: this.email,
+			displayName: this.displayName,
+			picture: this.picture,
+			emailVerified: this.emailVerified,
+			created: this.created,
+			prevSignin: this.prevSignin,
+			prevSigninIp: this.prevSigninIp,
+			lastSignin: this.lastSignin,
+			lastSigninIp: this.lastSigninIp,
+			changePassword: this.changePassword,
+			changePasswordRequested: this.changePasswordRequested,
+			changePasswordBefore: this.changePasswordBefore,
+			settings: this.settings,
+			accessToken: this.accessToken,
+			providerData: this.providerData ?? [],
+		};
+	}
+
+	/**
+	 * Cria uma instância de AuthUser a partir de um objeto JSON.
+	 * @param auth Uma instância de Auth.
+	 * @param json Um objeto JSON representando um usuário.
+	 * @returns Uma instância de AuthUser criada a partir do objeto JSON.
+	 */
+	static fromJSON(
+		auth: Auth,
+		json: {
+			uid: string;
+			username?: string;
+			email?: string;
+			displayName: string;
+			picture?: { width: number; height: number; url: string };
+			emailVerified: boolean;
+			created: string;
+			prevSignin?: string;
+			prevSigninIp?: string;
+			lastSignin?: string;
+			lastSigninIp?: string;
+			changePassword: boolean;
+			changePasswordRequested?: string;
+			changePasswordBefore?: string;
+			settings: { [key: string]: string | number | boolean };
+			accessToken?: string;
+			providerData: Array<{ providerId: string; uid: string; displayName: string; email: string; photoURL: string }>;
+		},
+	): AuthUser {
+		const { accessToken, providerData, ...user } = json;
+		return new AuthUser(auth, user, accessToken);
 	}
 }
 
@@ -225,11 +287,32 @@ export class Auth extends SimpleEventEmitter {
 	/**
 	 * Currently signed in user
 	 */
-	private user: AuthUser | null = null;
+	private _user: AuthUser | null = null;
 
 	constructor(readonly database: string, readonly app: IvipBaseApp) {
 		super();
 		this.isValidAuth = app.isServer || !app.settings.isValidClient ? false : true;
+
+		if (!this._user) {
+			const user = localStorage.getItem(`[${this.database}][auth_user]`);
+			if (user) {
+				this._user = AuthUser.fromJSON(this, JSON.parse(user));
+				this._user.reload();
+			}
+		}
+	}
+
+	private get user(): AuthUser | null {
+		return this._user;
+	}
+
+	private set user(value: AuthUser | null) {
+		if (value) {
+			localStorage.setItem(`[${this.database}][auth_user]`, JSON.stringify(value.toJSON()));
+		} else {
+			localStorage.removeItem(`[${this.database}][auth_user]`);
+		}
+		this._user = value;
 	}
 
 	get currentUser(): AuthUser | null {
@@ -279,6 +362,33 @@ export class Auth extends SimpleEventEmitter {
 		throw new Error("Method not implemented.");
 	}
 
+	private handleSignInResult(
+		result: {
+			user: AuthUser;
+			access_token: string;
+			provider?: {
+				name: string;
+				access_token: string;
+				refresh_token: string;
+				expires_in: number;
+			};
+		},
+		emitEvent = true,
+	) {
+		if (!result || !result.user || !result.access_token) {
+			throw new Error("auth/user-not-found");
+		}
+
+		const user = new AuthUser(this, result.user, result.access_token);
+		this.user = user;
+
+		const details: AuthProviderSignInResult = { user: user, accessToken: result.access_token, provider: result.provider };
+		this.app.socket?.emit("signin", details.accessToken);
+		emitEvent && this.emit("signin", details);
+
+		return this.user;
+	}
+
 	/**
 	 * Loga de forma assíncrona usando um email e senha.
 	 * @param email O endereço de e-mail do usuário.
@@ -293,9 +403,6 @@ export class Auth extends SimpleEventEmitter {
 	 */
 	async signInWithEmailAndPassword(email: string, password: string): Promise<AuthUser> {
 		try {
-			if (!this.app.isConnected) {
-				throw new Error("auth/desconnect");
-			}
 			const result = await this.app
 				.request({
 					method: "POST",
@@ -303,19 +410,7 @@ export class Auth extends SimpleEventEmitter {
 					data: { method: "email", email, password, client_id: this.app.socket && this.app.socket.id },
 				})
 				.catch((e) => {});
-
-			if (!result || !result.user || !result.access_token) {
-				throw new Error("auth/user-not-found");
-			}
-
-			const user = new AuthUser(result.user, result.access_token);
-			this.user = user;
-
-			const details: AuthProviderSignInResult = { user: user, accessToken: result.access_token, provider: result.provider };
-			this.app.socket?.emit("signin", details.accessToken);
-			this.emit("signin", details);
-
-			return this.user;
+			return this.handleSignInResult(result);
 		} catch (error) {
 			this.user = null;
 			throw error;
@@ -334,27 +429,12 @@ export class Auth extends SimpleEventEmitter {
 	 */
 	async signInWithUsernameAndPassword(username: string, password: string): Promise<AuthUser> {
 		try {
-			if (!this.app.isConnected) {
-				throw new Error(NOT_CONNECTED_ERROR_MESSAGE);
-			}
 			const result = await this.app.request({
 				method: "POST",
 				route: `/auth/${this.database}/signin`,
 				data: { method: "account", username, password, client_id: this.app.socket && this.app.socket.id },
 			});
-
-			if (!result || !result.user || !result.access_token) {
-				throw new Error("User not found");
-			}
-
-			const user = new AuthUser(result.user, result.access_token);
-			this.user = user;
-
-			const details: AuthProviderSignInResult = { user: user, accessToken: result.access_token, provider: result.provider };
-			this.app.socket?.emit("signin", details.accessToken);
-			this.emit("signin", details);
-
-			return this.user;
+			return this.handleSignInResult(result);
 		} catch (error) {
 			this.user = null;
 			throw error;
@@ -364,22 +444,43 @@ export class Auth extends SimpleEventEmitter {
 	/**
 	 * Loga de forma assíncrona usando um token de acesso.
 	 * @param token O token de acesso do usuário.
+	 * @param emitEvent Se deve ou não emitir o evento de login
 	 * @returns Uma promise que é resolvida com as informações do usuário recém-criado.
 	 * @throws auth/invalid-token Lançado se o token de acesso não for válido.
 	 * @throws auth/user-disabled Lançado se o usuário correspondente ao token de acesso fornecido foi desativado.
 	 * @throws auth/user-not-found Lançado se não houver usuário correspondente ao token de acesso fornecido.
 	 * @throws auth/wrong-token Lançado se o token de acesso for inválido para o usuário fornecido.
 	 */
-	signInWithToken(token: string): Promise<AuthUser> {
-		throw new Error("Method not implemented.");
+	async signInWithToken(token: string, emitEvent = true): Promise<AuthUser> {
+		try {
+			const result = await this.app.request({
+				method: "POST",
+				route: `/auth/${this.database}/signin`,
+				data: { method: "token", access_token: token, client_id: this.app.socket && this.app.socket.id },
+			});
+			return this.handleSignInResult(result, emitEvent);
+		} catch (error) {
+			this.user = null;
+			throw error;
+		}
 	}
 
 	/**
 	 * Desconecta o usuário atual.
 	 * @returns Uma promise que é resolvida quando a operação de desconexão for concluída.
 	 */
-	signOut(): Promise<void> {
-		throw new Error("Method not implemented.");
+	async signOut(): Promise<void> {
+		if (!this.user || !this.user.accessToken) {
+			return Promise.resolve();
+		}
+
+		const result = await this.app.request({ method: "POST", route: `/auth/${this.database}/signout`, data: { client_id: this.app.socket && this.app.socket.id } });
+
+		this.app.socket && this.app.socket.emit("signout", this.user.accessToken); // Make sure the connected websocket server knows we signed out as well.
+		this.user = null;
+		localStorage.removeItem(`[${this.database}][auth_user]`);
+
+		this.emit("signout");
 	}
 
 	/**
