@@ -54,6 +54,7 @@ O iVipBase é fácil de configurar e pode ser executado em qualquer lugar: na nu
     - [Resultados da consulta de streaming](#resultados-da-consulta-de-streaming)
     - [Consultas em tempo real](#consultas-em-tempo-real)
 - [`getAuth` - API de autenticação](#getauth---api-de-autenticação)
+  - [`ready` - Evento de inicialização](#ready---evento-de-inicialização)
   - [`createUserWithEmailAndPassword` - Criar usuário com e-mail e senha](#createuserwithemailandpassword---criar-usuário-com-e-mail-e-senha)
   - [`createUserWithUsernameAndPassword` - Criar usuário com nome de usuário e senha](#createuserwithusernameandpassword---criar-usuário-com-nome-de-usuário-e-senha)
   - [`signInWithEmailAndPassword` - Login com e-mail e senha](#signinwithemailandpassword---login-com-e-mail-e-senha)
@@ -1161,6 +1162,20 @@ import { getAuth } from "ivipbase";
 
 const auth = getAuth(app);
 const user = auth.currentUser; // Obtém o usuário atualmente autenticado
+```
+
+## `ready` - Evento de inicialização
+
+O evento `ready` é acionado quando a API de autenticação está pronta para uso. Abaixo, segue um exemplo de uso:
+
+```typescript
+import { getAuth } from "ivipbase";
+
+const auth = getAuth();
+
+auth.ready((user) => {
+    console.log("API de autenticação pronta para uso");
+});
 ```
 
 ## `createUserWithEmailAndPassword` - Criar usuário com e-mail e senha

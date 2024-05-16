@@ -60,7 +60,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 
 		this.isServer = typeof this.settings.server === "object";
 
-		this.once("ready", () => {
+		this.on("ready", () => {
 			this._ready = true;
 		});
 	}
@@ -73,14 +73,32 @@ export class IvipBaseApp extends SimpleEventEmitter {
 					this.emitOnce("ready");
 				});
 			} else {
-				this.storage.ready(() => {
-					this.emitOnce("ready");
-				});
+				const promises: Array<Promise<any>> = [];
+
+				promises.push(
+					new Promise<void>((resolve, reject) => {
+						this.storage.ready(() => {
+							resolve();
+						});
+					}),
+				);
 
 				const dbList: string[] = Array.isArray(this.settings.dbname) ? this.settings.dbname : [this.settings.dbname];
 				for (const dbName of dbList) {
-					this.auth.set(dbName, new Auth(dbName, this));
+					promises.push(
+						new Promise<void>((resolve, reject) => {
+							const user = new Auth(dbName, this);
+							user.ready(() => {
+								resolve();
+							});
+							this.auth.set(dbName, user);
+						}),
+					);
 				}
+
+				Promise.all(promises).then(() => {
+					this.emitOnce("ready");
+				});
 			}
 		}
 	}

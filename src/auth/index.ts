@@ -356,6 +356,7 @@ export class AuthUser {
 }
 
 export class Auth extends SimpleEventEmitter {
+	private _ready = false;
 	readonly isValidAuth: boolean;
 
 	/**
@@ -366,14 +367,35 @@ export class Auth extends SimpleEventEmitter {
 	constructor(readonly database: string, readonly app: IvipBaseApp) {
 		super();
 		this.isValidAuth = app.isServer || !app.settings.isValidClient ? false : true;
+		this.on("ready", () => {
+			this._ready = true;
+		});
+		this.initialize();
+	}
 
+	private async initialize() {
 		if (!this._user) {
 			const user = localStorage.getItem(`[${this.database}][auth_user]`);
 			if (user) {
 				this._user = AuthUser.fromJSON(this, JSON.parse(user));
-				this._user.reload();
+				await this._user.reload();
 			}
 		}
+
+		this.emitOnce("ready");
+	}
+
+	/**
+	 * Aguarda até que o módulo Auth esteja pronto.
+	 * @param callback Uma função de retorno de chamada que será chamada quando o módulo Auth estiver pronto.
+	 * @returns Uma promise que é resolvida quando o módulo Auth estiver pronto.
+	 */
+	async ready(callback?: (user: AuthUser | null) => void) {
+		if (!this._ready) {
+			// Aguarda o evento ready
+			await new Promise((resolve) => this.once("ready", resolve));
+		}
+		callback?.(this._user);
 	}
 
 	private get user(): AuthUser | null {
