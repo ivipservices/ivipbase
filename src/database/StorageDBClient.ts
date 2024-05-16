@@ -3,6 +3,7 @@ import type { DataBase } from ".";
 import _request from "../controller/request";
 import { NOT_CONNECTED_ERROR_MESSAGE } from "../controller/request/error";
 import { IvipBaseApp } from "../app";
+import { getAuth } from "../auth";
 
 class PromiseTimeoutError extends Error {}
 function promiseTimeout<T = any>(promise: Promise<T>, ms: number, comment?: string) {
@@ -20,17 +21,15 @@ export class StorageDBClient extends Api {
 	public cache: { [path: string]: any } = {};
 	readonly url: string;
 	private readonly app: IvipBaseApp;
+	private readonly auth: () => ReturnType<typeof getAuth> = () => {
+		return getAuth(this.db.database);
+	};
 
 	constructor(readonly db: DataBase) {
 		super();
 		this.app = db.app;
 		this.url = this.app.url.replace(/\/+$/, "");
 		this.db.emit("ready");
-	}
-
-	get accessToken(): string | undefined {
-		const auth = this.app.auth.get(this.db.database);
-		return auth && auth.currentUser ? auth.currentUser.accessToken : undefined;
 	}
 
 	get isConnected() {
@@ -82,9 +81,11 @@ export class StorageDBClient extends Api {
 	}): Promise<any | { context: any; data: any }> {
 		if (this.isConnected || options.ignoreConnectionState === true) {
 			try {
+				const user = this.auth().currentUser;
+				const accessToken = user ? await user.getIdToken(true) : undefined;
 				return await this.db.app.request({
 					...options,
-					accessToken: this.accessToken,
+					accessToken,
 				});
 			} catch (err: any) {
 				if (this.isConnected && err.isNetworkError) {
