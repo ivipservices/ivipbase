@@ -68,12 +68,25 @@ export class IvipBaseApp extends SimpleEventEmitter {
 	initialize() {
 		if (!this._ready) {
 			const promises: Array<Promise<any>> = [];
+			const dbList: string[] = Array.isArray(this.settings.dbname) ? this.settings.dbname : [this.settings.dbname];
+
 			promises.push(
 				new Promise<void>(async (resolve, reject) => {
 					await this.storage.ready();
 					resolve();
 				}),
 			);
+
+			for (const dbName of dbList) {
+				promises.push(
+					new Promise<void>(async (resolve, reject) => {
+						const db = new DataBase(dbName, this);
+						await db.ready();
+						this.databases.set(dbName, db);
+						resolve();
+					}),
+				);
+			}
 
 			if (this.isServer) {
 				promises.push(
@@ -85,18 +98,12 @@ export class IvipBaseApp extends SimpleEventEmitter {
 					}),
 				);
 			} else {
-				const dbList: string[] = Array.isArray(this.settings.dbname) ? this.settings.dbname : [this.settings.dbname];
 				for (const dbName of dbList) {
 					promises.push(
 						new Promise<void>(async (resolve, reject) => {
-							const db = new DataBase(dbName, this);
-							await db.ready();
-							this.databases.set(dbName, db);
-
 							const user = new Auth(dbName, this);
 							await user.ready();
 							this.auth.set(dbName, user);
-
 							resolve();
 						}),
 					);
