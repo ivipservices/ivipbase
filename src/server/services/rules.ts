@@ -168,16 +168,26 @@ export class PathBasedRules {
 		// Process rules, find out if signed in user is allowed to read/write
 		// Defaults to false unless a rule is found that tells us otherwise
 
+		let typeOperation = "";
+
+		if (["get", "exists", "query", "reflect", "export", "transact"].includes(operation)) {
+			typeOperation += "r";
+		}
+
+		if (["update", "set", "delete", "import", "transact"].includes(operation)) {
+			typeOperation += "w";
+		}
+
 		const isPreFlight = typeof data === "undefined";
 		const allow: HasAccessResult = { allow: true };
 		if (!this.authEnabled) {
 			// Authentication is disabled, anyone can do anything. Not really a smart thing to do!
 			return allow;
-		} else if (user?.uid === "admin") {
+		} else if (user?.uid === "admin" || user?.permission_level >= 2) {
 			// Always allow admin access
 			// TODO: implement user.is_admin, so the default admin account can be disabled
 			return allow;
-		} else if (path.startsWith("__") && user?.permission_level < 2) {
+		} else if (path.startsWith("__") && !(user?.permission_level >= 1 && typeOperation === "r")) {
 			// NEW: with the auth database now integrated into the main database,
 			// deny access to private resources starting with '__' for non-admins
 			return { allow: false, code: "private", message: `Access to private resource "${path}" not allowed` };
