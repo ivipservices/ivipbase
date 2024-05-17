@@ -46,13 +46,13 @@ O iVipBase é fácil de configurar e pode ser executado em qualquer lugar: na nu
     - [`context` - Obtenha o contexto desencadeador dos eventos](#context---obtenha-o-contexto-desencadeador-dos-eventos)
     - [`mutated`, `mutations` - Rastreamento de alterações de dados](#mutated-mutations---rastreamento-de-alterações-de-dados)
   - [`observe` - Observe alterações de valor em tempo real](#observe---observe-alterações-de-valor-em-tempo-real)
-  - [`query` - Consultando dados](#query---consultando-dados)
-    - [`query.find` - Limitando dados de resultados de consulta](#queryfind---limitando-dados-de-resultados-de-consulta)
-    - [`query.remove` - Removendo dados com uma consulta](#queryremove---removendo-dados-com-uma-consulta)
-    - [`query.count` - Contando resultados da consulta](#querycount---contando-resultados-da-consulta)
-    - [`query.exists` - Verificando a existência do resultado da consulta](#queryexists---verificando-a-existência-do-resultado-da-consulta)
-    - [`query.forEach` - Resultados da consulta de streaming](#queryforeach---resultados-da-consulta-de-streaming)
-    - [`query.on` - Consultas em tempo real](#queryon---consultas-em-tempo-real)
+  - [`Query` - Consultando dados](#query---consultando-dados)
+    - [`Query.find` - Limitando dados de resultados de consulta](#queryfind---limitando-dados-de-resultados-de-consulta)
+    - [`Query.remove` - Removendo dados com uma consulta](#queryremove---removendo-dados-com-uma-consulta)
+    - [`Query.count` - Contando resultados da consulta](#querycount---contando-resultados-da-consulta)
+    - [`Query.exists` - Verificando a existência do resultado da consulta](#queryexists---verificando-a-existência-do-resultado-da-consulta)
+    - [`Query.forEach` - Resultados da consulta de streaming](#queryforeach---resultados-da-consulta-de-streaming)
+    - [`Query.on` - Consultas em tempo real](#queryon---consultas-em-tempo-real)
 - [`getAuth` - API de autenticação](#getauth---api-de-autenticação)
   - [`ready` - Evento de inicialização](#ready---evento-de-inicialização)
   - [`createUserWithEmailAndPassword` - Criar usuário com e-mail e senha](#createuserwithemailandpassword---criar-usuário-com-e-mail-e-senha)
@@ -70,19 +70,19 @@ O iVipBase é fácil de configurar e pode ser executado em qualquer lugar: na nu
   - [`confirmPasswordReset` - Confirmar redefinição de senha](#confirmpasswordreset---confirmar-redefinição-de-senha)
   - [`verifyPasswordResetCode` - Verificar código de redefinição de senha](#verifypasswordresetcode---verificar-código-de-redefinição-de-senha)
   - [`User` - Informações do usuário autenticado](#user---informações-do-usuário-autenticado)
-  - [`User.accessToken` - Token de acesso](#useraccesstoken---token-de-acesso)
-  - [`User.providerData` - Dados do provedor](#userproviderdata---dados-do-provedor)
-  - [`User.updateProfile` - Atualizar perfil](#userupdateprofile---atualizar-perfil)
-  - [`User.updateEmail` - Atualizar e-mail](#userupdateemail---atualizar-e-mail)
-  - [`User.updatePassword` - Atualizar senha](#userupdatepassword---atualizar-senha)
-  - [`User.updateUsername` - Atualizar nome de usuário](#userupdateusername---atualizar-nome-de-usuário)
-  - [`User.sendEmailVerification` - Enviar verificação de e-mail](#usersendemailverification---enviar-verificação-de-e-mail)
-  - [`User.delete` - Deletar usuário](#userdelete---deletar-usuário)
-  - [`User.getIdToken` - Obter token de ID](#usergetidtoken---obter-token-de-id)
-  - [`User.getIdTokenResult` - Obter resultado do token de ID](#usergetidtokenresult---obter-resultado-do-token-de-id)
-  - [`User.reload` - Recarregar usuário](#userreload---recarregar-usuário)
-  - [`User.toJSON` - Converter para JSON](#usertojson---converter-para-json)
-  - [`User.fromJSON` - Converter de JSON](#userfromjson---converter-de-json)
+    - [`User.accessToken` - Token de acesso](#useraccesstoken---token-de-acesso)
+    - [`User.providerData` - Dados do provedor](#userproviderdata---dados-do-provedor)
+    - [`User.updateProfile` - Atualizar perfil](#userupdateprofile---atualizar-perfil)
+    - [`User.updateEmail` - Atualizar e-mail](#userupdateemail---atualizar-e-mail)
+    - [`User.updatePassword` - Atualizar senha](#userupdatepassword---atualizar-senha)
+    - [`User.updateUsername` - Atualizar nome de usuário](#userupdateusername---atualizar-nome-de-usuário)
+    - [`User.sendEmailVerification` - Enviar verificação de e-mail](#usersendemailverification---enviar-verificação-de-e-mail)
+    - [`User.delete` - Deletar usuário](#userdelete---deletar-usuário)
+    - [`User.getIdToken` - Obter token de ID](#usergetidtoken---obter-token-de-id)
+    - [`User.getIdTokenResult` - Obter resultado do token de ID](#usergetidtokenresult---obter-resultado-do-token-de-id)
+    - [`User.reload` - Recarregar usuário](#userreload---recarregar-usuário)
+    - [`User.toJSON` - Converter para JSON](#usertojson---converter-para-json)
+    - [`User.fromJSON` - Converter de JSON](#userfromjson---converter-de-json)
 - [`getStorage` - API de armazenamento em nuvem](#getstorage---api-de-armazenamento-em-nuvem)
 - [`getFunctions` - API para funções de nuvem](#getfunctions---api-para-funções-de-nuvem)
 - [`getExtensions` - API para extensões de nuvem](#getextensions---api-para-extensões-de-nuvem)
@@ -939,7 +939,7 @@ ngOnDestroy() {
 
 NOTA: os objetos retornados no observável são atualizados apenas no downstream - quaisquer alterações feitas localmente não serão atualizadas no banco de dados.
 
-## `query` - Consultando dados
+## `Query` - Consultando dados
 
 Ao executar uma consulta, todos os nós filhos do caminho referenciado serão comparados com os critérios definidos e retornados em qualquer ordem `sort` solicitada. A paginação de resultados também é suportada, portanto você pode `skip` e `take` qualquer número de resultados.
 
@@ -1010,7 +1010,7 @@ Isso também permite usar ES6 `async / await:`
 const snapshots = await db.query("songs").filter("year", ">=", fromYear).get();
 ```
 
-### `query.find` - Limitando dados de resultados de consulta
+### `Query.find` - Limitando dados de resultados de consulta
 
 Por padrão, as consultas retornarão instantâneos dos nós correspondentes, mas você também pode obter referências apenas passando a opção `{ snapshots: false }` ou usando a nova `.find()` método.
 
@@ -1038,7 +1038,7 @@ const snapshots = await db
 
 Os instantâneos no exemplo acima conterão apenas o título e de cada música correspondente campos artista. Consulte [Limitar carregamento de dados aninhados](#limitar-o-carregamento-de-dados-aninhados-include-exclude) para obter mais informações sobre filtros `include e exclude`.
 
-### `query.remove` - Removendo dados com uma consulta
+### `Query.remove` - Removendo dados com uma consulta
 
 Para remover todos os nós que correspondem a uma consulta, basta chamar `remove` em vez de `get`:
 
@@ -1053,7 +1053,7 @@ db.query("songs")
 await db.query("músicas").filter("ano", "<", 1950).remove();
 ```
 
-### `query.count` - Contando resultados da consulta
+### `Query.count` - Contando resultados da consulta
 
 Para obter uma contagem rápida dos resultados da consulta, você pode usar `.count()`:
 
@@ -1071,7 +1071,7 @@ const nextPageSongsCount = await db.query("songs")
     .count(); // 10: full page, <10: last page.
 ```
 
-### `query.exists` - Verificando a existência do resultado da consulta
+### `Query.exists` - Verificando a existência do resultado da consulta
 
 Para determinar rapidamente se uma consulta tem alguma correspondência, você pode usar `.exists()`:
 
@@ -1081,7 +1081,7 @@ const exists = await db.query("users").filter("email", "==", "me@ivipcoin.com").
 
 Assim como count(), você também pode combinar isso com skip e limit.
 
-### `query.forEach` - Resultados da consulta de streaming
+### `Query.forEach` - Resultados da consulta de streaming
 
 Para iterar pelos resultados de uma consulta sem carregar todos os dados na memória de uma só vez, você pode usar `forEach` que transmite cada filho e executa uma função de retorno de chamada com um instantâneo de seus dados. Se a função de retorno de chamada retornar `false`, a iteração será interrompida. Se o retorno de chamada retornar um `Promise`, a iteração aguardará a resolução antes de carregar o próximo filho.
 
@@ -1113,7 +1113,7 @@ await db
 
 Veja também [Iteração (streaming) de filhos](#iterando-filhos-foreach)
 
-### `query.on` - Consultas em tempo real
+### `Query.on` - Consultas em tempo real
 
 IvipBase agora suporta consultas em tempo real (ao vivo) e é capaz de enviar notificações quando há alterações nos resultados iniciais da consulta
 
@@ -1485,7 +1485,7 @@ console.log(user.changePasswordBefore);
 console.log(user.settings);
 ```
 
-## `User.accessToken` - Token de acesso
+### `User.accessToken` - Token de acesso
 
 Para obter o token de acesso de um usuário, você pode usar a propriedade `accessToken`. Abaixo, segue um exemplo de uso:
 
@@ -1494,7 +1494,7 @@ let user = auth.currentUser;
 console.log("Token de acesso:", user.accessToken);
 ```
 
-## `User.providerData` - Dados do provedor
+### `User.providerData` - Dados do provedor
 
 Para obter os dados do provedor de um usuário, você pode usar a propriedade `providerData`. Abaixo, segue um exemplo de uso:
 
@@ -1503,7 +1503,7 @@ let user = auth.currentUser;
 console.log("Dados do provedor:", user.providerData);
 ```
 
-## `User.updateProfile` - Atualizar perfil
+### `User.updateProfile` - Atualizar perfil
 
 Para atualizar o perfil de um usuário, você pode usar a função `updateProfile`. Ela requer um parâmetro: um objeto com as propriedades a serem atualizadas. Abaixo, segue um exemplo de uso:
 
@@ -1521,7 +1521,7 @@ user.updateProfile({
     });
 ```
 
-## `User.updateEmail` - Atualizar e-mail
+### `User.updateEmail` - Atualizar e-mail
 
 Para atualizar o e-mail de um usuário, você pode usar a função `updateEmail`. Ela requer um parâmetro: um e-mail. Abaixo, segue um exemplo de uso:
 
@@ -1536,7 +1536,7 @@ user.updateEmail("user123@example.com")
     });
 ```
 
-## `User.updatePassword` - Atualizar senha
+### `User.updatePassword` - Atualizar senha
 
 Para atualizar a senha de um usuário, você pode usar a função `updatePassword`. Ela requer um parâmetro: uma senha. Abaixo, segue um exemplo de uso:
 
@@ -1551,7 +1551,7 @@ user.updatePassword("currentPassword", "newPassword")
     });
 ```
 
-## `User.updateUsername` - Atualizar nome de usuário
+### `User.updateUsername` - Atualizar nome de usuário
 
 Para atualizar o nome de usuário de um usuário, você pode usar a função `updateUsername`. Ela requer um parâmetro: um nome de usuário. Abaixo, segue um exemplo de uso:
 
@@ -1566,7 +1566,7 @@ user.updateUsername("newUser")
     });
 ```
 
-## `User.sendEmailVerification` - Enviar verificação de e-mail
+### `User.sendEmailVerification` - Enviar verificação de e-mail
 
 Para enviar uma verificação de e-mail para um usuário, você pode usar a função `sendEmailVerification`. Abaixo, segue um exemplo de uso:
 
@@ -1581,7 +1581,7 @@ user.sendEmailVerification()
     });
 ```
 
-## `User.delete` - Deletar usuário
+### `User.delete` - Deletar usuário
 
 Para deletar um usuário, você pode usar a função `delete`. Abaixo, segue um exemplo de uso:
 
@@ -1596,7 +1596,7 @@ user.delete()
     });
 ```
 
-## `User.getIdToken` - Obter token de ID
+### `User.getIdToken` - Obter token de ID
 
 Para obter o token de ID de um usuário, você pode usar a função `getIdToken`. Abaixo, segue um exemplo de uso:
 
@@ -1611,7 +1611,7 @@ user.getIdToken()
     });
 ```
 
-## `User.getIdTokenResult` - Obter resultado do token de ID
+### `User.getIdTokenResult` - Obter resultado do token de ID
 
 Para obter o resultado do token de ID de um usuário, você pode usar a função `getIdTokenResult`. Abaixo, segue um exemplo de uso:
 
@@ -1626,7 +1626,7 @@ user.getIdTokenResult()
     });
 ```
 
-## `User.reload` - Recarregar usuário
+### `User.reload` - Recarregar usuário
 
 Para recarregar um usuário, você pode usar a função `reload`. Abaixo, segue um exemplo de uso:
 
@@ -1641,7 +1641,7 @@ user.reload()
     });
 ```
 
-## `User.toJSON` - Converter para JSON
+### `User.toJSON` - Converter para JSON
 
 Para converter um usuário para JSON, você pode usar a função `toJSON`. Abaixo, segue um exemplo de uso:
 
@@ -1650,7 +1650,7 @@ let user = auth.currentUser;
 let json = user.toJSON();
 ```
 
-## `User.fromJSON` - Converter de JSON
+### `User.fromJSON` - Converter de JSON
 
 Para converter um usuário de JSON, você pode usar a função `fromJSON`. Abaixo, segue um exemplo de uso:
 
