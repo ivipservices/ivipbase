@@ -2,6 +2,7 @@ import { DataBase, DebugLogger, PathInfo } from "ivipbase-core";
 import { DbUserAccountDetails } from "../schema/user";
 import { AUTH_ACCESS_DEFAULT, AuthAccessDefault } from "../browser";
 import { executeSandboxed } from "./sandbox";
+import { joinObjects } from "../../utils";
 
 type PathRuleFunctionEnvironment = {
 	now: number;
@@ -32,7 +33,9 @@ type PathRuleFunctionEnvironment = {
 export type PathRuleReturnValue = boolean | undefined | "allow" | "deny" | "cascade";
 export type PathRuleFunction = (env: PathRuleFunctionEnvironment) => PathRuleReturnValue | Promise<PathRuleReturnValue>; //((env: any) => boolean) & { getText(): string };
 type PathRule = boolean | string | PathRuleFunction;
-type PathRules = object & {
+type PathRules = {
+	[path: string]: PathRules | PathRule | object | undefined;
+
 	// schema definitions
 	".schema"?: string | object;
 
@@ -56,7 +59,7 @@ type PathRules = object & {
 	// custom validation code on data being written to the target path
 	".validate"?: string | PathRuleFunction;
 };
-type RulesData = {
+export type RulesData = {
 	rules: PathRules;
 };
 export type RuleValidationFailCode = "rule" | "no_rule" | "private" | "exception";
@@ -83,7 +86,15 @@ export class PathBasedRules {
 		throw new Error("not started yet");
 	}
 
-	constructor(defaultAccess: AuthAccessDefault, env: { debug: DebugLogger; db: DataBase; authEnabled: boolean }) {
+	constructor(
+		defaultAccess: AuthAccessDefault,
+		env: {
+			debug: DebugLogger;
+			db: DataBase;
+			authEnabled: boolean;
+			rules?: RulesData;
+		},
+	) {
 		this.db = env.db;
 		this.debug = env.debug;
 
@@ -112,7 +123,7 @@ export class PathBasedRules {
 			},
 		};
 
-		let accessRules = defaultRules;
+		const accessRules = joinObjects(defaultRules, env.rules ?? {});
 
 		// Converta regras de string em funções que podem ser executadas
 		const processRules = (path: string, parent: any, variables: string[]) => {
@@ -153,7 +164,7 @@ export class PathBasedRules {
 		this.accessRules = accessRules;
 	}
 
-	async isOperationAllowed(user: Pick<DbUserAccountDetails, "uid">, path: string, operation: AccessCheckOperation, data?: Record<string, any>): Promise<HasAccessResult> {
+	async isOperationAllowed(user: Pick<DbUserAccountDetails, "uid" | "permission_level">, path: string, operation: AccessCheckOperation, data?: Record<string, any>): Promise<HasAccessResult> {
 		// Process rules, find out if signed in user is allowed to read/write
 		// Defaults to false unless a rule is found that tells us otherwise
 
@@ -166,7 +177,7 @@ export class PathBasedRules {
 			// Always allow admin access
 			// TODO: implement user.is_admin, so the default admin account can be disabled
 			return allow;
-		} else if (path.startsWith("__")) {
+		} else if (path.startsWith("__") && user?.permission_level < 2) {
 			// NEW: with the auth database now integrated into the main database,
 			// deny access to private resources starting with '__' for non-admins
 			return { allow: false, code: "private", message: `Access to private resource "${path}" not allowed` };
@@ -223,7 +234,7 @@ export class PathBasedRules {
 			}
 			if (`.${operation}` in rule && !isPreFlight) {
 				// If there is a dedicated rule (eg ".update" or ".reflect") for this operation, use it.
-				applyRule(rule[`.${operation}`]);
+				applyRule(rule[`.${operation}`] as any);
 			}
 			const rulePath = PathInfo.get(rulePathKeys).path;
 			for (const rule of checkRules) {
@@ -279,13 +290,13 @@ export class PathBasedRules {
 				nextKey = wildcardKey as any;
 			}
 			nextKey && rulePathKeys.push(nextKey);
-			rule = rule[nextKey];
+			rule = rule[nextKey] as any;
 		}
 
 		// Now dig deeper to check nested .validate rules
 		if (isAllowed && ["set", "update"].includes(operation) && !isPreFlight) {
 			// validate rules start at current path being written to
-			const startRule = pathInfo.keys.reduce((rule, key) => {
+			const startRule = pathInfo.keys.reduce((rule: any, key) => {
 				if (typeof rule !== "object" || rule === null) {
 					return null;
 				}
@@ -311,7 +322,7 @@ export class PathBasedRules {
 						arr.push({ target, validate: rule[key] as string });
 					}
 					if (!key.startsWith(".")) {
-						const nested = getNestedRules([...target, key], rule[key]);
+						const nested = getNestedRules([...target, key], rule[key] as any);
 						arr.push(...nested);
 					}
 					return arr;
@@ -403,7 +414,7 @@ export class PathBasedRules {
 				if (!(key in target)) {
 					target[key] = {};
 				}
-				target = target[key];
+				target = target[key] as any;
 				if (typeof target !== "object" || target === null) {
 					throw new Error(`Cannot add rule because value of key "${key}" is not an object`);
 				}

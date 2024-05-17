@@ -4,6 +4,8 @@ import type { IvipBaseApp } from "../app";
 import { PathBasedRules } from "./services/rules";
 import { DbUserAccountDetails } from "./schema/user";
 import { EmailRequest } from "../app/settings/browser";
+import type { RulesData } from "./services/rules";
+import { joinObjects } from "../utils";
 
 export class ServerNotReadyError extends Error {
 	constructor() {
@@ -177,6 +179,8 @@ export type ServerInitialSettings<LocalServer = any> = Partial<{
 	 * Configurações de registro de transações. Aviso: estágio BETA, NÃO use em produção ainda
 	 */
 	transactions: Partial<DataBaseServerTransactionSettings>;
+
+	rulesData: RulesData;
 }>;
 
 export class ServerSettings<LocalServer = any> {
@@ -191,6 +195,7 @@ export class ServerSettings<LocalServer = any> {
 	readonly init?: (server: LocalServer) => Promise<void>;
 	readonly serverVersion: string = "1.0.0";
 	readonly transactions: DataBaseServerTransactionSettings;
+	readonly rulesData?: RulesData;
 
 	constructor(options: ServerInitialSettings<LocalServer> = {}) {
 		if (typeof options.logLevel === "string" && ["verbose", "log", "warn", "error"].includes(options.logLevel)) {
@@ -228,6 +233,10 @@ export class ServerSettings<LocalServer = any> {
 		}
 
 		this.transactions = new DataBaseServerTransactionSettings(options.transactions ?? {});
+
+		if (typeof options.rulesData === "object") {
+			this.rulesData = options.rulesData;
+		}
 	}
 }
 
@@ -282,10 +291,16 @@ export abstract class AbstractLocalServer<LocalServer = any> extends SimpleEvent
 
 			const db = this.db(dbName);
 
+			const dbInfo = (Array.isArray(this.localApp.settings.database) ? this.localApp.settings.database : [this.localApp.settings.database]).find((d) => d.name === dbName);
+
+			const mainRules: RulesData = this.settings.rulesData ?? { rules: {} };
+			const dbRules: RulesData = dbInfo?.rulesData ?? { rules: {} };
+
 			const rules = new PathBasedRules(this.settings.auth.defaultAccessRule, {
 				debug: this.debug,
 				db,
 				authEnabled: this.settings.auth.enabled,
+				rules: joinObjects({ rules: {} }, mainRules.rules, dbRules.rules),
 			});
 
 			this.rules_db.set(dbName, rules);

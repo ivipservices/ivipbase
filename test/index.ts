@@ -14,6 +14,16 @@ const app = initializeApp({
 		enabled: true,
 		defaultAdminPassword: "admin",
 	},
+	rulesData: {
+		rules: {
+			users: {
+				$uid: {
+					".read": "auth.uid === $uid",
+					".write": "auth.uid === $uid",
+				},
+			},
+		},
+	},
 });
 
 app.ready(async () => {

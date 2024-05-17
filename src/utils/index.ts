@@ -43,6 +43,25 @@ export function removeNulls(obj: any) {
 	return result;
 }
 
+export function joinObjects(obj1: any, ...objs: any[]) {
+	const merge = (obj1: any, obj2: any) => {
+		if (!obj1 || !obj2) {
+			return obj2 ?? obj1;
+		}
+		if (typeof obj1 !== "object" || typeof obj2 !== "object") {
+			return obj2;
+		}
+		const result = Array.isArray(obj1) ? [] : {};
+		const keys = [...Object.keys(obj1), ...Object.keys(obj2)].filter((v, i, a) => a.indexOf(v) === i);
+		for (let prop of keys) {
+			result[prop] = merge(obj1[prop], obj2[prop]);
+		}
+		return result;
+	};
+
+	return objs.reduce((acc, obj) => merge(acc, obj), obj1);
+}
+
 export function replaceUndefined(obj: any) {
 	if (!obj || obj === null || typeof obj !== "object") {
 		return obj ?? null;
