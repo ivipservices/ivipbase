@@ -368,20 +368,38 @@ export class Auth extends SimpleEventEmitter {
 	constructor(readonly database: string, readonly app: IvipBaseApp) {
 		super();
 		this.isValidAuth = app.isServer || !app.settings.isValidClient ? false : true;
+
 		this.on("ready", () => {
 			this._ready = true;
 		});
+
+		this.on("signin", (user) => {
+			try {
+				if (user) {
+					localStorage.setItem(`[${this.database}][auth_user]`, Base64.encode(JSON.stringify(user.toJSON())));
+				} else {
+					localStorage.removeItem(`[${this.database}][auth_user]`);
+				}
+			} catch {}
+		});
+
+		this.on("signout", () => {
+			localStorage.removeItem(`[${this.database}][auth_user]`);
+		});
+
 		this.initialize();
 	}
 
 	private async initialize() {
-		if (!this._user) {
-			const user = localStorage.getItem(`[${this.database}][auth_user]`);
-			if (user) {
-				this._user = AuthUser.fromJSON(this, JSON.parse(Base64.decode(user)));
-				await this._user.reload();
+		try {
+			if (!this._user) {
+				const user = localStorage.getItem(`[${this.database}][auth_user]`);
+				if (user) {
+					this._user = AuthUser.fromJSON(this, JSON.parse(Base64.decode(user)));
+					await this._user.reload();
+				}
 			}
-		}
+		} catch {}
 
 		this.emit("ready");
 	}
@@ -404,11 +422,13 @@ export class Auth extends SimpleEventEmitter {
 	}
 
 	private set user(value: AuthUser | null) {
-		if (value) {
-			localStorage.setItem(`[${this.database}][auth_user]`, Base64.encode(JSON.stringify(value.toJSON())));
-		} else {
-			localStorage.removeItem(`[${this.database}][auth_user]`);
-		}
+		try {
+			if (value) {
+				localStorage.setItem(`[${this.database}][auth_user]`, Base64.encode(JSON.stringify(value.toJSON())));
+			} else {
+				localStorage.removeItem(`[${this.database}][auth_user]`);
+			}
+		} catch {}
 		this._user = value;
 	}
 
