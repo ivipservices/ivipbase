@@ -1,8 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.LocalServer = exports.AbstractLocalServer = exports.isPossiblyServer = exports.ServerSettings = exports.ServerAuthenticationSettings = exports.AUTH_ACCESS_DEFAULT = exports.ExternalServerError = exports.ServerNotReadyError = void 0;
+exports.LocalServer = exports.AbstractLocalServer = exports.isPossiblyServer = exports.ServerSettings = exports.ServerAuthenticationSettings = exports.DataBaseServerTransactionSettings = exports.AUTH_ACCESS_DEFAULT = exports.ExternalServerError = exports.ServerNotReadyError = void 0;
 const ivipbase_core_1 = require("ivipbase-core");
 const database_1 = require("../database");
+const rules_1 = require("./services/rules");
+const utils_1 = require("../utils");
 class ServerNotReadyError extends Error {
     constructor() {
         super("O servidor ainda não está pronto");
@@ -20,6 +22,35 @@ exports.AUTH_ACCESS_DEFAULT = {
     ALLOW_ALL: "allow",
     ALLOW_AUTHENTICATED: "auth",
 };
+class DataBaseServerTransactionSettings {
+    constructor(settings) {
+        /**
+         * Se deve ativar o log de transações
+         */
+        this.log = false;
+        /**
+         * Idade máxima em dias para manter as transações no arquivo de log
+         */
+        this.maxAge = 30;
+        /**
+         * Se as operações de gravação do banco de dados não devem esperar até que a transação seja registrada
+         */
+        this.noWait = false;
+        if (typeof settings !== "object") {
+            return;
+        }
+        if (typeof settings.log === "boolean") {
+            this.log = settings.log;
+        }
+        if (typeof settings.maxAge === "number") {
+            this.maxAge = settings.maxAge;
+        }
+        if (typeof settings.noWait === "boolean") {
+            this.noWait = settings.noWait;
+        }
+    }
+}
+exports.DataBaseServerTransactionSettings = DataBaseServerTransactionSettings;
 class ServerAuthenticationSettings {
     constructor(settings = {}) {
         /**
@@ -78,6 +109,7 @@ class ServerAuthenticationSettings {
 exports.ServerAuthenticationSettings = ServerAuthenticationSettings;
 class ServerSettings {
     constructor(options = {}) {
+        var _a, _b, _c;
         this.logLevel = "log";
         this.host = "localhost";
         this.port = 3000;
@@ -85,6 +117,7 @@ class ServerSettings {
         this.maxPayloadSize = "10mb";
         this.allowOrigin = "*";
         this.trustProxy = true;
+        this.serverVersion = "1.0.0";
         if (typeof options.logLevel === "string" && ["verbose", "log", "warn", "error"].includes(options.logLevel)) {
             this.logLevel = options.logLevel;
         }
@@ -103,23 +136,74 @@ class ServerSettings {
         if (typeof options.trustProxy === "boolean") {
             this.trustProxy = options.trustProxy;
         }
-        this.auth = new ServerAuthenticationSettings(options.authentication);
+        this.auth = new ServerAuthenticationSettings((_b = (_a = options.authentication) !== null && _a !== void 0 ? _a : options.auth) !== null && _b !== void 0 ? _b : {});
         if (typeof options.init === "function") {
             this.init = options.init;
+        }
+        if (typeof options.serverVersion === "string") {
+            this.serverVersion = options.serverVersion;
+        }
+        this.transactions = new DataBaseServerTransactionSettings((_c = options.transactions) !== null && _c !== void 0 ? _c : {});
+        if (typeof options.rulesData === "object") {
+            this.rulesData = options.rulesData;
         }
     }
 }
 exports.ServerSettings = ServerSettings;
 exports.isPossiblyServer = false;
 class AbstractLocalServer extends ivipbase_core_1.SimpleEventEmitter {
-    constructor(appName, settings = {}) {
+    constructor(localApp, settings = {}) {
         super();
-        this.appName = appName;
+        this.localApp = localApp;
         this._ready = false;
+        this.rules_db = new Map();
+        this.securityRef = (dbName) => {
+            return this.db(dbName).ref("__auth__/security");
+        };
+        this.authRef = (dbName) => {
+            return this.db(dbName).ref("__auth__/accounts");
+        };
+        this.send_email = (dbName, request) => {
+            return new Promise((resolve, reject) => {
+                try {
+                    if (!this.hasDatabase(dbName)) {
+                        throw new Error(`Database '${dbName}' not found`);
+                    }
+                    const send_email = this.db(dbName).app.settings.email;
+                    if (!send_email || !send_email.send) {
+                        throw new Error("Email not configured");
+                    }
+                    send_email.send(request).then(resolve);
+                }
+                catch (e) {
+                    reject(e);
+                }
+            });
+        };
         this.settings = new ServerSettings(settings);
-        this.db = (0, database_1.getDatabase)(appName);
-        this.debug = new ivipbase_core_1.DebugLogger(this.settings.logLevel, `[${this.db.name}]`);
-        this.once("ready", () => {
+        this.db = (dbName) => (0, database_1.getDatabase)(dbName, localApp);
+        this.hasDatabase = (dbName) => (0, database_1.hasDatabase)(dbName);
+        this.rules = (dbName) => {
+            var _a, _b;
+            if (this.rules_db.has(dbName)) {
+                return this.rules_db.get(dbName);
+            }
+            const db = this.db(dbName);
+            const dbInfo = (Array.isArray(this.localApp.settings.database) ? this.localApp.settings.database : [this.localApp.settings.database]).find((d) => d.name === dbName);
+            const mainRules = (_a = this.settings.rulesData) !== null && _a !== void 0 ? _a : { rules: {} };
+            const dbRules = (_b = dbInfo === null || dbInfo === void 0 ? void 0 : dbInfo.rulesData) !== null && _b !== void 0 ? _b : { rules: {} };
+            const rules = new rules_1.PathBasedRules(this.settings.auth.defaultAccessRule, {
+                debug: this.debug,
+                db,
+                authEnabled: this.settings.auth.enabled,
+                rules: (0, utils_1.joinObjects)({ rules: {} }, mainRules.rules, dbRules.rules),
+            });
+            this.rules_db.set(dbName, rules);
+            return rules;
+        };
+        this.debug = new ivipbase_core_1.DebugLogger(this.settings.logLevel, `[SERVER]`);
+        this.log = this.debug;
+        this.on("ready", () => {
             this._ready = true;
         });
     }
@@ -131,7 +215,7 @@ class AbstractLocalServer extends ivipbase_core_1.SimpleEventEmitter {
     async ready(callback) {
         if (!this._ready) {
             // Aguarda o evento ready
-            await new Promise((resolve) => this.on("ready", resolve));
+            await new Promise((resolve) => this.once("ready", resolve));
         }
         callback === null || callback === void 0 ? void 0 : callback();
     }
@@ -139,23 +223,42 @@ class AbstractLocalServer extends ivipbase_core_1.SimpleEventEmitter {
         return this._ready;
     }
     /**
-     * Gets the url the server is running at
+     * Obtém a URL na qual o servidor está sendo executado
      */
     get url() {
         //return `http${this.settings.https.enabled ? 's' : ''}://${this.settings.host}:${this.settings.port}/${this.settings.rootPath}`;
-        return `http://${this.settings.host}:${this.settings.port}/${this.settings.rootPath}`;
+        return `http://${this.settings.host}:${this.settings.port}/${this.settings.rootPath}`.replace(/\/+$/gi, "");
+    }
+    get dbNames() {
+        return (0, database_1.getDatabasesNames)();
+    }
+    /**
+     * Redefine a senha do usuário. Isso também pode ser feito usando o ponto de extremidade da API auth/reset_password
+     * @param clientIp endereço IP do usuário
+     * @param code código de redefinição que foi enviado para o endereço de e-mail do usuário
+     * @param newPassword nova senha escolhida pelo usuário
+     */
+    resetPassword(dbName, clientIp, code, newPassword) {
+        throw new ServerNotReadyError();
+    }
+    /**
+     * Marca o endereço de e-mail da conta do usuário como validado. Isso também pode ser feito usando o ponto de extremidade da API auth/verify_email
+     * @param clientIp endereço IP do usuário
+     * @param code código de verificação enviado para o endereço de e-mail do usuário
+     */
+    verifyEmailAddress(dbName, clientIp, code) {
+        throw new ServerNotReadyError();
     }
 }
 exports.AbstractLocalServer = AbstractLocalServer;
 class LocalServer extends AbstractLocalServer {
-    constructor(appName, settings = {}) {
-        super(appName, settings);
-        this.appName = appName;
+    constructor(localApp, settings = {}) {
+        super(localApp, settings);
         this.isServer = false;
         this.init();
     }
     init() {
-        this.emitOnce("ready");
+        this.emit("ready");
     }
 }
 exports.LocalServer = LocalServer;

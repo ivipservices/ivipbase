@@ -18,7 +18,7 @@ const error_1 = require("../shared/error");
  */
 const adminOnly = (env, errorMessage = "somente administradores podem realizar esta operação") => {
     return (req, res, next) => {
-        if (env.settings.auth.enabled && (!req.user || req.user.uid !== "admin")) {
+        if (env.settings.auth.enabled && (!req.user || req.user.permission_level < 2)) {
             return (0, error_1.sendUnauthorizedError)(res, "admin_only", errorMessage);
         }
         next();

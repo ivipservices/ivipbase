@@ -8,7 +8,7 @@ class MongodbSettings {
     constructor(options = {}) {
         this.host = "localhost";
         this.port = 27017;
-        this.database = "root";
+        this.database = ["root"];
         this.collection = "main-database";
         this.mdeOptions = {};
         if (typeof options.host === "string") {
@@ -35,20 +35,22 @@ exports.MongodbSettings = MongodbSettings;
 class MongodbStorage extends CustomStorage_1.CustomStorage {
     constructor(database, options) {
         super(options.mdeOptions);
+        this.isConnected = false;
+        this.database = {};
         this.options = new MongodbSettings(options);
-        this.options.database = database;
+        this.options.database = (Array.isArray(database) ? database : [database]).filter((name) => typeof name === "string" && name.trim() !== "");
         this.dbName = "MongoDB";
-        this.ready = false;
         this.client = new mongodb_1.MongoClient(this.mongoUri, {});
         this.client.on("connected", () => {
-            this.ready = true;
+            this.emit("ready");
+            this.isConnected = true;
         });
         this.client.on("error", (err) => {
-            this.ready = false;
+            this.isConnected = false;
             throw erros_1.ERROR_FACTORY.create("db-connection-error" /* AppError.DB_CONNECTION_ERROR */, { error: String(err) });
         });
         this.client.on("disconnected", () => {
-            this.ready = false;
+            this.isConnected = false;
             setTimeout(() => {
                 this.connect();
             }, 10000);
@@ -58,25 +60,27 @@ class MongodbStorage extends CustomStorage_1.CustomStorage {
     async connect() {
         try {
             await this.client.connect();
-            this.ready = true;
-            this.db = this.client.db(this.options.database);
-            this.collection = await this.getCollectionBy(this.options.collection);
+            this.isConnected = true;
+            for (let name of this.options.database) {
+                this.database[name].db = this.client.db(name);
+                this.database[name].collection = await this.getCollectionBy(name, this.options.collection);
+            }
         }
         catch (err) {
-            this.ready = false;
+            this.isConnected = false;
             throw erros_1.ERROR_FACTORY.create("db-connection-error" /* AppError.DB_CONNECTION_ERROR */, { error: String(err) });
         }
     }
-    async getCollectionBy(collectionName) {
-        if (!this.ready || !this.db) {
-            throw erros_1.ERROR_FACTORY.create("db-disconnected" /* AppError.DB_DISCONNECTED */, { dbName: this.dbName });
+    async getCollectionBy(name, collectionName) {
+        if (!this.isConnected || !this.database[name] || !this.database[name].db) {
+            throw erros_1.ERROR_FACTORY.create("db-disconnected" /* AppError.DB_DISCONNECTED */, { dbName: name });
         }
-        const collectionNames = await this.db.listCollections().toArray();
+        const collectionNames = await this.database[name].db.listCollections().toArray();
         const collectionExists = collectionNames.some((col) => col.name === collectionName);
         if (!collectionExists) {
-            await this.db.createCollection(collectionName);
+            await this.database[name].db.createCollection(collectionName);
         }
-        return this.db.collection(collectionName);
+        return this.database[name].db.collection(collectionName);
     }
     get mongoUri() {
         const { host, port, database, username, password, options } = this.options;
@@ -92,29 +96,29 @@ class MongodbStorage extends CustomStorage_1.CustomStorage {
         }
         return uri;
     }
-    async getMultiple(expression) {
-        if (!this.ready || !this.collection) {
-            throw erros_1.ERROR_FACTORY.create("db-disconnected" /* AppError.DB_DISCONNECTED */, { dbName: this.dbName });
+    async getMultiple(database, expression) {
+        if (!this.isConnected || !this.database[database] || !this.database[database].collection) {
+            throw erros_1.ERROR_FACTORY.create("db-not-found" /* AppError.DB_NOT_FOUND */, { dbName: database });
         }
         const query = {
             path: {
                 $regex: expression,
             },
         };
-        return await this.collection.find(query).toArray();
+        return await this.database[database].collection.find(query).toArray();
     }
-    async setNode(path, content, node) {
-        if (!this.ready || !this.collection) {
-            throw erros_1.ERROR_FACTORY.create("db-disconnected" /* AppError.DB_DISCONNECTED */, { dbName: this.dbName });
+    async setNode(database, path, content, node) {
+        if (!this.isConnected || !this.database[database] || !this.database[database].collection) {
+            throw erros_1.ERROR_FACTORY.create("db-not-found" /* AppError.DB_NOT_FOUND */, { dbName: database });
         }
-        await this.collection.updateOne({ path: path }, { $set: JSON.parse(JSON.stringify(node)) }, { upsert: true });
-        //await this.collection.replaceOne({ path: path }, JSON.parse(JSON.stringify(node)));
+        await this.database[database].collection.updateOne({ path: path }, { $set: JSON.parse(JSON.stringify(node)) }, { upsert: true });
+        //await this.database[database].collection.replaceOne({ path: path }, JSON.parse(JSON.stringify(node)));
     }
-    async removeNode(path, content, node) {
-        if (!this.ready || !this.collection) {
-            throw erros_1.ERROR_FACTORY.create("db-disconnected" /* AppError.DB_DISCONNECTED */, { dbName: this.dbName });
+    async removeNode(database, path, content, node) {
+        if (!this.isConnected || !this.database[database] || !this.database[database].collection) {
+            throw erros_1.ERROR_FACTORY.create("db-not-found" /* AppError.DB_NOT_FOUND */, { dbName: database });
         }
-        await this.collection.deleteOne({ path: path });
+        await this.database[database].collection.deleteOne({ path: path });
     }
 }
 exports.MongodbStorage = MongodbStorage;

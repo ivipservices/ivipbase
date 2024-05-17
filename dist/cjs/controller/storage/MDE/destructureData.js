@@ -30,12 +30,15 @@ function destructureData(type, path, data, options = {}) {
     options.include_checks = false;
     let value = data;
     let valueType = (0, utils_1.getValueType)(value);
-    if (typeof value === "object") {
+    if (typeof value === "object" && value !== null) {
         value = {};
         valueType = Array.isArray(data) ? utils_1.VALUE_TYPES.ARRAY : utils_1.VALUE_TYPES.OBJECT;
         for (let key in data) {
             if (valueType === utils_1.VALUE_TYPES.OBJECT && (0, utils_1.valueFitsInline)(data[key], this.settings)) {
                 value[key] = (0, utils_1.getTypedChildValue)(data[key]);
+                if (value[key] === null) {
+                    result = destructureData.apply(this, [type, ivipbase_core_1.PathInfo.get([path, valueType === utils_1.VALUE_TYPES.OBJECT ? key : parseInt(key)]).path, null, Object.assign(Object.assign({}, options), { previous_result: result })]);
+                }
                 continue;
             }
             result = destructureData.apply(this, [type, ivipbase_core_1.PathInfo.get([path, valueType === utils_1.VALUE_TYPES.OBJECT ? key : parseInt(key)]).path, data[key], Object.assign(Object.assign({}, options), { previous_result: result })]);

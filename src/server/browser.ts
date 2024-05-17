@@ -62,37 +62,37 @@ export class ServerAuthenticationSettings {
 	/**
 	 * Se autorização deve ser habilitada. Sem autorização, o banco de dados inteiro pode ser lido e gravado por qualquer pessoa (não recomendado 🤷🏼‍♂️)
 	 */
-	readonly enabled: boolean = true;
+	public enabled: boolean = true;
 
 	/**
 	 * Se a criação de novos usuários é permitida para qualquer pessoa ou apenas para o administrador
 	 */
-	readonly allowUserSignup: boolean = false;
+	public allowUserSignup: boolean = false;
 
 	/**
 	 * Quantos novos usuários podem se inscrever por hora por endereço IP. Não implementado ainda
 	 */
-	readonly newUserRateLimit: number = 0;
+	public newUserRateLimit: number = 0;
 
 	/**
 	 * Quantos minutos antes dos tokens de acesso expirarem. 0 para sem expiração.
 	 */
-	readonly tokensExpire: number = 0;
+	public tokensExpire: number = 0;
 
 	/**
 	 * Quando o servidor é executado pela primeira vez, quais padrões usar para gerar o arquivo rules.json. Opções são: 'auth' (acesso apenas autenticado ao banco de dados, padrão), 'deny' (negar acesso a qualquer pessoa, exceto o usuário administrador), 'allow' (permitir acesso a qualquer pessoa)
 	 */
-	readonly defaultAccessRule: AuthAccessDefault = AUTH_ACCESS_DEFAULT.ALLOW_AUTHENTICATED;
+	public defaultAccessRule: AuthAccessDefault = AUTH_ACCESS_DEFAULT.ALLOW_AUTHENTICATED;
 
 	/**
 	 * Quando o servidor é executado pela primeira vez, qual senha usar para o usuário administrador. Se não fornecida, uma senha gerada será usada e mostrada UMA VEZ na saída do console.
 	 */
-	readonly defaultAdminPassword?: string;
+	public defaultAdminPassword?: string;
 
 	/**
 	 * Se deve usar um banco de dados separado para autenticação e logs. 'v2' armazenará dados em auth.db, o que AINDA NÃO FOI TESTADO!
 	 */
-	readonly separateDb: boolean | "v2" = false;
+	public separateDb: boolean | "v2" = false;
 
 	constructor(settings: Partial<ServerAuthenticationSettings> = {}) {
 		if (typeof settings !== "object") {
@@ -184,18 +184,18 @@ export type ServerInitialSettings<LocalServer = any> = Partial<{
 }>;
 
 export class ServerSettings<LocalServer = any> {
-	readonly logLevel: "verbose" | "log" | "warn" | "error" = "log";
-	readonly host: string = "localhost";
-	readonly port: number = 3000;
-	readonly rootPath: string = "";
-	readonly maxPayloadSize: string = "10mb";
-	readonly allowOrigin: string = "*";
-	readonly trustProxy: boolean = true;
-	readonly auth: ServerAuthenticationSettings;
-	readonly init?: (server: LocalServer) => Promise<void>;
-	readonly serverVersion: string = "1.0.0";
-	readonly transactions: DataBaseServerTransactionSettings;
-	readonly rulesData?: RulesData;
+	public logLevel: "verbose" | "log" | "warn" | "error" = "log";
+	public host: string = "localhost";
+	public port: number = 3000;
+	public rootPath: string = "";
+	public maxPayloadSize: string = "10mb";
+	public allowOrigin: string = "*";
+	public trustProxy: boolean = true;
+	public auth: ServerAuthenticationSettings;
+	public init?: (server: LocalServer) => Promise<void>;
+	public serverVersion: string = "1.0.0";
+	public transactions: DataBaseServerTransactionSettings;
+	public rulesData?: RulesData;
 
 	constructor(options: ServerInitialSettings<LocalServer> = {}) {
 		if (typeof options.logLevel === "string" && ["verbose", "log", "warn", "error"].includes(options.logLevel)) {
@@ -222,7 +222,7 @@ export class ServerSettings<LocalServer = any> {
 			this.trustProxy = options.trustProxy;
 		}
 
-		this.auth = new ServerAuthenticationSettings(options.authentication);
+		this.auth = new ServerAuthenticationSettings(options.authentication ?? (options as any).auth ?? {});
 
 		if (typeof options.init === "function") {
 			this.init = options.init;

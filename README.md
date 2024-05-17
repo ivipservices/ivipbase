@@ -53,6 +53,9 @@ O iVipBase é fácil de configurar e pode ser executado em qualquer lugar: na nu
     - [`Query.exists` - Verificando a existência do resultado da consulta](#queryexists---verificando-a-existência-do-resultado-da-consulta)
     - [`Query.forEach` - Resultados da consulta de streaming](#queryforeach---resultados-da-consulta-de-streaming)
     - [`Query.on` - Consultas em tempo real](#queryon---consultas-em-tempo-real)
+  - [`reflect` - API de reflexão](#reflect---api-de-reflexão)
+    - [`info` - Obtenha informações sobre um nó](#info---obtenha-informações-sobre-um-nó)
+    - [`children` - Obtenha filhos de um nó](#children---obtenha-filhos-de-um-nó)
 - [`getAuth` - API de autenticação](#getauth---api-de-autenticação)
   - [`ready` - Evento de inicialização](#ready---evento-de-inicialização)
   - [`createUserWithEmailAndPassword` - Criar usuário com e-mail e senha](#createuserwithemailandpassword---criar-usuário-com-e-mail-e-senha)
@@ -1147,6 +1150,83 @@ db.query("livros")
 ```
 
 NOTA: O uso de `take` e `skip` atualmente não é levado em consideração. Eventos podem ser acionados para resultados que não estão no intervalo solicitado
+
+## `reflect` - API de reflexão
+
+O **iVipBase** possui uma API de reflexão integrada que permite navegar no conteúdo do banco de dados sem recuperar nenhum dado (aninhado). Esta API está disponível para bancos de dados locais e bancos de dados remotos quando conectado como usuário administrador ou em caminhos aos quais o usuário autenticado tem acesso.
+
+A API `reflect` também é usada internamente: o `webmanager` do servidor **iVipBase** a utiliza para permitir a exploração do banco de dados, e a classe `DataReference` a utiliza para entregar resultados para `count()` e retornos de chamada de eventos `notify_child_added` iniciais.
+
+### `info` - Obtenha informações sobre um nó
+
+Para obter informações sobre um nó e seus filhos, use uma consulta `info`:
+
+```typescript
+// Obtenha informações sobre o nó raiz e um máximo de 200 filhos:
+db.root.reflect('info', { child_limit: 200, child_skip: 0 })
+.then(info => { /* ... */ });
+```
+
+O exemplo acima retornará um objeto info com a seguinte estrutura:
+
+```typescript
+{ 
+    "key": "",
+    "exists": true, 
+    "type": "object",
+    "children": { 
+        "more": false, 
+        "list": [
+            { "key": "appName", "type": "string", "value": "My social app" },
+            { "key": "appVersion", "type": "number", "value": 1 },
+            { "key": "posts", "type": "object" }
+        ] 
+    } 
+}
+```
+
+Para obter o número de filhos de um nó (em vez de enumerá-los), passe `{ child_count: true }` com a solicitação de reflexão de informações:
+
+```typescript
+const info = await db.ref('chats/somechat/messages')
+    .reflect('info', { child_count: true });
+```
+
+Isso retornará um objeto info com a seguinte estrutura:
+
+```typescript
+{ 
+    "key": "messages",
+    "exists": true, 
+    "type": "object",
+    "children": { 
+        "count": 879
+    }
+}
+```
+
+### `children` - Obtenha filhos de um nó
+
+Para obter informações sobre os filhos de um nó, use a consulta de reflexão `children`:
+
+```typescript
+const children = await db.ref('chats/somechat/messages')
+    .reflect('children', { limit: 10, skip: 0 });
+```
+
+O objeto `children` retornado no exemplo acima terá a seguinte estrutura:
+
+```typescript
+{
+    "more": true,
+    "list": {
+        "message1": { "type": "object" },
+        "message2": { "type": "object" },
+        // ...
+        "message10": { "type": "object" }
+    }
+}
+```
 
 # `getAuth` - API de autenticação
 

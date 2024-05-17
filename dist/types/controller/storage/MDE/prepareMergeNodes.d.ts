@@ -1,4 +1,4 @@
-import { NodesPending, StorageNodeInfo } from "./NodeInfo";
+import { NodesPending, StorageNode, StorageNodeInfo } from "./NodeInfo";
 import type MDE from ".";
 /**
  * Responsável pela mesclagem de nodes soltos, apropriado para evitar conflitos de dados.
@@ -13,10 +13,12 @@ import type MDE from ".";
  *   removed: StorageNodeInfo[];
  * }} Retorna uma lista de informações sobre os nodes de acordo com seu estado.
  */
-export default function prepareMergeNodes(this: MDE, nodes: StorageNodeInfo[] | NodesPending[], comparison?: StorageNodeInfo[] | NodesPending[] | undefined): {
+export default function prepareMergeNodes(this: MDE, nodes: NodesPending[], comparison?: NodesPending[] | undefined): {
     result: StorageNodeInfo[];
     added: StorageNodeInfo[];
-    modified: StorageNodeInfo[];
+    modified: (StorageNodeInfo & {
+        previous_content?: StorageNode;
+    })[];
     removed: StorageNodeInfo[];
 };
 //# sourceMappingURL=prepareMergeNodes.d.ts.map

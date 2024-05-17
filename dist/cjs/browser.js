@@ -20,4 +20,5 @@ Object.defineProperty(exports, "CustomStorage", { enumerable: true, get: functio
 Object.defineProperty(exports, "DataStorageSettings", { enumerable: true, get: function () { return storage_1.DataStorageSettings; } });
 __exportStar(require("./app"), exports);
 __exportStar(require("./database"), exports);
+__exportStar(require("./auth"), exports);
 //# sourceMappingURL=browser.js.map

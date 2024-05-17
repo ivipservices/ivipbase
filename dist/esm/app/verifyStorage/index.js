@@ -4,18 +4,18 @@ export function validSettings(options) {
 }
 export function applySettings(dbname, options) {
     if (options instanceof DataStorageSettings) {
-        return new DataStorage(options);
+        return new DataStorage(dbname, options);
     }
     else if (options instanceof MongodbSettings) {
         return new MongodbStorage(dbname, options);
     }
     else if (options instanceof JsonFileStorageSettings) {
-        return new JsonFileStorage(options);
+        return new JsonFileStorage(dbname, options);
     }
     else if (options instanceof CustomStorage) {
         return options;
     }
-    return new DataStorage();
+    return new DataStorage(dbname);
 }
 export { CustomStorage, DataStorage, DataStorageSettings };
 //# sourceMappingURL=index.js.map

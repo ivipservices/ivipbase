@@ -30,7 +30,7 @@ export declare const VALUE_TYPES: Record<"EMPTY" | "OBJECT" | "ARRAY" | "NUMBER"
  * const typeName = getValueTypeName(99);
  * // Retorna: "dedicated_record"
  */
-export declare function getValueTypeName(valueType: number): "array" | "binary" | "boolean" | "date" | "number" | "object" | "reference" | "string" | "bigint" | "dedicated_record" | undefined;
+export declare function getValueTypeName(valueType: number): "array" | "binary" | "boolean" | "date" | "number" | "object" | "reference" | "string" | "bigint" | "dedicated_record" | "unknown";
 /**
  * Retorna um valor padrão para um tipo de valor com base no código do tipo.
  *
@@ -94,7 +94,7 @@ export declare function valueFitsInline(value: any, settings: MDESettings): bool
 export declare function getTypedChildValue(val: any): string | number | boolean | {
     type: (typeof nodeValueTypes)[keyof Pick<typeof nodeValueTypes, "DATETIME" | "REFERENCE" | "BINARY">];
     value: string | number | boolean;
-} | undefined;
+} | null;
 /**
  * Processa o valor de um nó de armazenamento durante a leitura, convertendo valores tipados de volta ao formato original.
  * @param node - O nó de armazenamento a ser processado.
@@ -102,4 +102,8 @@ export declare function getTypedChildValue(val: any): string | number | boolean 
  * @throws {Error} Lança um erro se o tipo de registro autônomo for inválido.
  */
 export declare function processReadNodeValue(node: StorageNode): StorageNode;
+export declare const getTypeFromStoredValue: (val: unknown) => {
+    type: NodeValueType;
+    value: unknown;
+};
 //# sourceMappingURL=utils.d.ts.map

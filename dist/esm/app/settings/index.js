@@ -64,10 +64,12 @@ export class IvipBaseSettings extends BrowserSettings {
         this.isServer = false;
         this.isValidClient = false;
         if (options.isServer && isPossiblyServer) {
+            this.isServer = true;
             this.server = new ServerSettings(options);
             if (typeof options.email === "object") {
                 this.email = new ServerEmailSettings(options.email);
             }
+            this.isValidClient = false;
         }
     }
 }

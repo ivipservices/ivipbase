@@ -71,10 +71,12 @@ class IvipBaseSettings extends browser_1.IvipBaseSettings {
         this.isServer = false;
         this.isValidClient = false;
         if (options.isServer && server_1.isPossiblyServer) {
+            this.isServer = true;
             this.server = new server_1.ServerSettings(options);
             if (typeof options.email === "object") {
                 this.email = new ServerEmailSettings(options.email);
             }
+            this.isValidClient = false;
         }
     }
 }

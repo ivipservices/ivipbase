@@ -3,13 +3,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendUnexpectedError = exports.sendBadRequestError = exports.sendError = exports.sendUnauthorizedError = exports.sendNotAuthenticatedError = void 0;
 const sendNotAuthenticatedError = (res, code, message) => {
     res.statusCode = 401; // Não autenticado (not unauthenticated)
-    res.statusMessage = "Not Authenticated";
+    res.statusMessage = "auth/not-authenticated";
     res.contentType("application/json").send({ code, message });
 };
 exports.sendNotAuthenticatedError = sendNotAuthenticatedError;
 const sendUnauthorizedError = (res, code, message) => {
     res.statusCode = 403; // Proibido
-    res.statusMessage = "Unauthorized";
+    res.statusMessage = "auth/unauthorized";
     res.contentType("application/json").send({ code, message });
 };
 exports.sendUnauthorizedError = sendUnauthorizedError;
@@ -24,11 +24,15 @@ const sendError = (res, err) => {
 };
 exports.sendError = sendError;
 const sendBadRequestError = (res, err) => {
-    res.status(400).contentType("application/json").send({ code: err.code, message: err.message });
+    res.statusCode = 400;
+    res.statusMessage = err.code;
+    res.contentType("application/json").send({ code: err.code, message: err.message });
 };
 exports.sendBadRequestError = sendBadRequestError;
 const sendUnexpectedError = (res, err) => {
-    res.status(500).contentType("application/json").send({ code: "unexpected", message: "server error", details: err.message });
+    res.statusCode = 500;
+    res.statusMessage = "app/system-error";
+    res.contentType("application/json").send({ code: "unexpected", message: "app/system-error", details: err.message });
 };
 exports.sendUnexpectedError = sendUnexpectedError;
 //# sourceMappingURL=error.js.map

@@ -1,7 +1,7 @@
 import { IvipBaseApp } from "../app";
 import { ID, PathInfo, Types } from "ivipbase-core";
 import { processReadNodeValue } from "./storage/MDE/utils";
-import { isDate } from "util/types";
+import { isDate } from "ivip-utils";
 
 const noop = () => {};
 
@@ -66,14 +66,14 @@ export async function executeQuery(
 
 		const node_path = PathInfo.get(node.path);
 		const params = Object.fromEntries(Object.entries(PathInfo.extractVariables(path, node_path.path)).filter(([key]) => vars.includes(key)));
-		const node_val = { ...params, ...value };
+		const node_val: any = { ...params, ...value };
 
 		const filters = queryFilters.filter((f) =>
 			["<", "<=", "==", "!=", ">=", ">", "like", "!like", "in", "!in", "exists", "!exists", "between", "!between", "matches", "!matches", "has", "!has", "contains", "!contains"].includes(f.op),
 		);
 
 		const isFiltersValid = filters.every((f) => {
-			const val = isDate(node_val[f.key]) ? new Date(node_val[f.key]).getTime() : node_val[f.key];
+			const val = isDate(node_val[f.key] as any) ? new Date(node_val[f.key] as any).getTime() : (node_val[f.key] as any);
 			const op = f.op;
 			const compare = isDate(f.compare) ? new Date(f.compare).getTime() : f.compare;
 

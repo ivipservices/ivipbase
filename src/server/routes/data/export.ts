@@ -28,7 +28,7 @@ export const addRoutes = (env: LocalServer) => {
 		const format = req.query.format || "json";
 		const type_safe = req.query.type_safe !== "0";
 
-		const write = async (chunk) => {
+		const write = async (chunk: any) => {
 			const ok = res.write(chunk);
 			if (!ok) {
 				await new Promise((resolve) => res.once("drain", resolve));

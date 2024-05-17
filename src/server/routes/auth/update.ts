@@ -51,8 +51,7 @@ export type RequestBody = {
 	settings?: {
 		[name: string]: string | number | boolean;
 	};
-} & // displayName is preferred and documented in the OpenAPI docs // Allow both spellings of display name. display_name is used in the db, displayName in public user detail server responses.
-({ displayName: string } | { display_name: string });
+} & ({ displayName: string } | { display_name: string }); // displayName is preferred and documented in the OpenAPI docs // Allow both spellings of display name. display_name is used in the db, displayName in public user detail server responses.
 
 export type ResponseBody = { user: iVipBaseUser } | { code: UpdateError["code"]; message: string };
 export type Request = RouteRequest<RequestQuery, RequestBody, ResponseBody>;
@@ -119,7 +118,7 @@ export const addRoutes = (env: LocalServer) => {
 			await env
 				.authRef(dbName)
 				.child(uid)
-				.transaction((snap) => {
+				.transaction((snap: any) => {
 					if (!snap.exists()) {
 						throw new UpdateError("user_not_found", `No user found with uid ${uid}`);
 					}

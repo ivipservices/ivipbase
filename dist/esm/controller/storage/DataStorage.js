@@ -1,3 +1,5 @@
+import { Utils } from "ivipbase-core";
+import { ERROR_FACTORY } from "../erros/index.js";
 import { CustomStorage, CustomStorageSettings } from "./CustomStorage.js";
 export class DataStorageSettings extends CustomStorageSettings {
     constructor(options = {}) {
@@ -5,28 +7,42 @@ export class DataStorageSettings extends CustomStorageSettings {
     }
 }
 export class DataStorage extends CustomStorage {
-    constructor(options = {}) {
+    constructor(database, options = {}) {
         super(options);
-        this.data = new Map();
+        this.data = {};
         this.dbName = "TempStorage";
-        this.ready = true;
+        (Array.isArray(database) ? database : [database])
+            .filter((name) => typeof name === "string" && name.trim() !== "")
+            .forEach((name) => {
+            this.data[name] = new Map();
+        });
+        this.emit("ready");
     }
-    async getMultiple(expression) {
+    async getMultiple(database, expression) {
+        if (!this.data[database]) {
+            throw ERROR_FACTORY.create("db-not-found" /* AppError.DB_NOT_FOUND */, { dbName: database });
+        }
         const list = [];
-        this.data.forEach((content, path) => {
+        this.data[database].forEach((content, path) => {
             if (expression.test(path)) {
                 if (content) {
-                    list.push({ path, content });
+                    list.push(Utils.cloneObject({ path, content }));
                 }
             }
         });
         return list;
     }
-    async setNode(path, content) {
-        this.data.set(path, content);
+    async setNode(database, path, content) {
+        if (!this.data[database]) {
+            throw ERROR_FACTORY.create("db-not-found" /* AppError.DB_NOT_FOUND */, { dbName: database });
+        }
+        this.data[database].set(path, content);
     }
-    async removeNode(path) {
-        this.data.delete(path);
+    async removeNode(database, path) {
+        if (!this.data[database]) {
+            throw ERROR_FACTORY.create("db-not-found" /* AppError.DB_NOT_FOUND */, { dbName: database });
+        }
+        this.data[database].delete(path);
     }
 }
 //# sourceMappingURL=DataStorage.js.map

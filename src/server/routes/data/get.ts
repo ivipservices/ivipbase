@@ -1,6 +1,7 @@
 import type { LocalServer, RouteRequest } from "../../";
 import { Transport, type DataBase, type DataReference, type Types } from "ivipbase-core";
 import { sendError, sendUnauthorizedError } from "../../shared/error";
+import { DbUserAccountDetails } from "../../schema/user";
 
 export type RequestQuery = { include?: string; exclude?: string; child_objects?: "true" | "false" };
 export type RequestBody = null;
@@ -20,9 +21,10 @@ export const addRoutes = (env: LocalServer) => {
 
 		// Solicitar dados
 		const path = req.params["0"];
+		const user: DbUserAccountDetails = req.user ?? ({} as any);
 
 		// Pré-verifique o acesso de leitura
-		let access = await env.rules(dbName).isOperationAllowed(req.user ?? ({} as any), path, "get");
+		let access = await env.rules(dbName).isOperationAllowed(user, path, "get");
 		if (!access.allow) {
 			return sendUnauthorizedError(res, access.code, access.message);
 		}
@@ -39,7 +41,7 @@ export const addRoutes = (env: LocalServer) => {
 			options.child_objects = req.query.child_objects === "true";
 		}
 
-		if (path === "") {
+		if (path === "" && (!user || !user.permission_level || user.permission_level < 1)) {
 			// Se o usuário tiver acesso à raiz do banco de dados (NÃO recomendado para outros além do admin...)
 			// Não retorna dados do servidor privado. Se o usuário administrador desejar acesso, ele deverá usar
 			// direciona solicitações nesses caminhos (GET /data/dbname/__auth__) ou usa reflexão

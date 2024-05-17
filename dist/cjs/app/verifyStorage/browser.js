@@ -11,12 +11,12 @@ function validSettings(options) {
 exports.validSettings = validSettings;
 function applySettings(dbname, options) {
     if (options instanceof storage_1.DataStorageSettings) {
-        return new storage_1.DataStorage(options);
+        return new storage_1.DataStorage(dbname, options);
     }
     else if (options instanceof storage_1.CustomStorage) {
         return options;
     }
-    return new storage_1.DataStorage();
+    return new storage_1.DataStorage(dbname, options);
 }
 exports.applySettings = applySettings;
 //# sourceMappingURL=browser.js.map

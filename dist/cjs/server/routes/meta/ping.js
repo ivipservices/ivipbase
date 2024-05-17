@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.addRoute = void 0;
 const addRoute = (env) => {
-    env.router.get(`/ping/${env.db.name}`, (req, res) => {
+    env.router.get(`/ping/:dbName`, (req, res) => {
         // For simple connectivity check
         res.send("pong");
     });

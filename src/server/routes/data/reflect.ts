@@ -32,7 +32,7 @@ export const addRoutes = (env: LocalServer) => {
 			});
 		}
 
-		const path = req.params["0"];
+		const path = "/" + req.params["0"];
 		const access = await env.rules(dbName).isOperationAllowed(req.user ?? ({} as any), path, "reflect", { context: req.context, type: req.query.type });
 		if (!access.allow) {
 			return sendUnauthorizedError(res, access.code, access.message);
@@ -88,11 +88,11 @@ export const addRoutes = (env: LocalServer) => {
 		}
 
 		const type = req.query.type ?? "info";
-		const args = {};
+		const args: any = {};
 
 		Object.keys(req.query).forEach((key) => {
 			if (!["type", "impersonate"].includes(key)) {
-				let val = req.query[key];
+				let val = (req as any).query[key] as any;
 				if (/^(?:true|false|[0-9]+)$/.test(val)) {
 					val = JSON.parse(val);
 				}

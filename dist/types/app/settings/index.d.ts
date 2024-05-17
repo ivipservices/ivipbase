@@ -12,18 +12,19 @@ declare class ServerEmailSettings extends BrowserEmailSettings {
     /** Função a ser chamada quando um e-mail precisa ser enviado */
     send(request: EmailRequest): Promise<void>;
 }
-interface AppServerSettings {
+interface AppServerSettings extends ServerInitialSettings<LocalServer> {
     email: InitialServerEmailSettings;
 }
+export type IvipBaseSettingsOptions = Partial<IvipBaseSettings & ServerInitialSettings<LocalServer> & AppServerSettings>;
 export declare class IvipBaseSettings extends BrowserSettings {
-    readonly isServer: boolean;
-    readonly isValidClient: boolean;
+    isServer: boolean;
+    isValidClient: boolean;
     readonly server?: ServerSettings;
     /**
      * Configurações de e-mail que habilitam o iVipServer a enviar e-mails, por exemplo, para dar as boas-vindas a novos usuários, redefinir senhas, notificar sobre novos logins, etc.
      */
     readonly email?: ServerEmailSettings;
-    constructor(options?: Partial<IvipBaseSettings & ServerInitialSettings<LocalServer> & AppServerSettings>);
+    constructor(options?: IvipBaseSettingsOptions);
 }
 export {};
 //# sourceMappingURL=index.d.ts.map

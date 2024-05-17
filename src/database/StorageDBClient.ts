@@ -88,7 +88,7 @@ export class StorageDBClient extends Api {
 		if (this.isConnected || options.ignoreConnectionState === true) {
 			try {
 				const user = this.auth().currentUser;
-				const accessToken = user ? await user.getIdToken(true) : undefined;
+				const accessToken = user ? await user.getIdToken() : undefined;
 				return await this.db.app.request({
 					...options,
 					accessToken,
@@ -204,8 +204,8 @@ export class StorageDBClient extends Api {
 			child_objects?: boolean;
 		},
 	): Promise<{ value: any; context: any; cursor?: string }> {
-		const { value, context } = await this._request({ route: `/data/${this.db.database}/${path}`, context: options, includeContext: true });
-		return { value: Transport.deserialize(value), context, cursor: context?.database_cursor as string | undefined };
+		const { data, context } = await this._request({ route: `/data/${this.db.database}/${path}`, context: options, includeContext: true });
+		return { value: Transport.deserialize(data), context, cursor: context?.database_cursor as string | undefined };
 	}
 
 	exists(path: string): Promise<boolean> {

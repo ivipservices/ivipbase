@@ -1,0 +1,1 @@
+{"version":3,"file":"error.d.ts","sourceRoot":"","sources":["../../../../src/controller/request/error.ts"],"names":[],"mappings":"AAAA,qBAAa,YAAa,SAAQ,KAAK;IAInB,OAAO,EAAE,GAAG;IAAS,QAAQ,EAAE,GAAG;IAAS,IAAI,CAAC;IAA0B,OAAO,EAAE,MAAM;IAH5G,IAAI,cAAc,YAEjB;gBACkB,OAAO,EAAE,GAAG,EAAS,QAAQ,EAAE,GAAG,EAAS,IAAI,CAAC,6BAAiB,EAAS,OAAO,GAAE,MAAwB;CAG9H;AACD,eAAO,MAAM,2BAA2B,qCAAqC,CAAC"}

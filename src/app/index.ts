@@ -21,8 +21,8 @@ export class IvipBaseApp extends SimpleEventEmitter {
 	protected _ready = false;
 
 	readonly name: string = DEFAULT_ENTRY_NAME;
-	readonly settings: IvipBaseSettings = new IvipBaseSettings();
-	readonly storage: CustomStorage = new DataStorage(this.settings.dbname);
+	readonly settings: IvipBaseSettings;
+	readonly storage: CustomStorage;
 	isDeleted: boolean = false;
 	readonly isServer: boolean;
 	server?: LocalServer;
@@ -48,9 +48,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 			this.name = options.name;
 		}
 
-		if (options.settings instanceof IvipBaseSettings) {
-			this.settings = options.settings;
-		}
+		this.settings = options.settings instanceof IvipBaseSettings ? options.settings : new IvipBaseSettings();
 
 		if (typeof options.isDeleted === "boolean") {
 			this.isDeleted = options.isDeleted;
@@ -65,54 +63,24 @@ export class IvipBaseApp extends SimpleEventEmitter {
 		});
 	}
 
-	initialize() {
+	async initialize() {
 		if (!this._ready) {
-			const promises: Array<Promise<any>> = [];
 			const dbList: string[] = Array.isArray(this.settings.dbname) ? this.settings.dbname : [this.settings.dbname];
 
-			promises.push(
-				new Promise<void>(async (resolve, reject) => {
-					await this.storage.ready();
-					resolve();
-				}),
-			);
-
-			for (const dbName of dbList) {
-				promises.push(
-					new Promise<void>(async (resolve, reject) => {
-						const db = new DataBase(dbName, this);
-						await db.ready();
-						this.databases.set(dbName, db);
-						resolve();
-					}),
-				);
-			}
+			await this.storage.ready();
 
 			if (this.isServer) {
-				promises.push(
-					new Promise<void>(async (resolve, reject) => {
-						const server = new LocalServer(this, this.settings.server);
-						await server.ready();
-						this.server = server;
-						resolve();
-					}),
-				);
-			} else {
-				for (const dbName of dbList) {
-					promises.push(
-						new Promise<void>(async (resolve, reject) => {
-							const user = new Auth(dbName, this);
-							await user.ready();
-							this.auth.set(dbName, user);
-							resolve();
-						}),
-					);
-				}
+				this.server = new LocalServer(this, this.settings.server);
+				await this.server.ready();
 			}
 
-			Promise.all(promises).then(() => {
-				this.emit("ready");
-			});
+			for (const dbName of dbList) {
+				const db = new DataBase(dbName, this);
+				await db.ready();
+				this.databases.set(dbName, db);
+			}
+
+			this.emit("ready");
 		}
 	}
 
@@ -192,30 +160,28 @@ export class IvipBaseApp extends SimpleEventEmitter {
 		const url = `${this.url}/${options.route.replace(/^\/+/, "")}`;
 
 		return new Promise(async (resolve, reject) => {
-			this.ready(async () => {
-				const result = await (async () => {
-					try {
-						return await _request(options.method || "GET", url, {
-							data: options.data,
-							accessToken: options.accessToken,
-							dataReceivedCallback: options.dataReceivedCallback,
-							dataRequestCallback: options.dataRequestCallback,
-							context: options.context,
-						});
-					} catch (err: any) {
-						// Rethrow the error
-						throw err;
-					}
-				})();
-				if (options.includeContext === true) {
-					if (!result.context) {
-						result.context = {};
-					}
-					return resolve(result);
-				} else {
-					return resolve(result.data);
+			const result = await (async () => {
+				try {
+					return await _request(options.method || "GET", url, {
+						data: options.data,
+						accessToken: options.accessToken,
+						dataReceivedCallback: options.dataReceivedCallback,
+						dataRequestCallback: options.dataRequestCallback,
+						context: options.context,
+					});
+				} catch (err: any) {
+					// Rethrow the error
+					throw err;
 				}
-			});
+			})();
+			if (options.includeContext === true) {
+				if (!result.context) {
+					result.context = {};
+				}
+				return resolve(result);
+			} else {
+				return resolve(result.data);
+			}
 		});
 	}
 

@@ -1,8 +1,7 @@
 import { LocalServer, ServerInitialSettings, ServerSettings, isPossiblyServer } from "../../server";
-import { IvipBaseSettings as BrowserSettings, InitialServerEmailSettings, ServerEmailSettings as BrowserEmailSettings, EmailRequest } from "./browser";
+import { IvipBaseSettings as BrowserSettings, InitialServerEmailSettings, ServerEmailSettings as BrowserEmailSettings, EmailRequest, DatabaseSettings } from "./browser";
 import NodeMailer from "nodemailer";
 import juice from "juice";
-import type { RulesData } from "../../server/services/rules";
 
 type TemplateMailerActionsValue = string | number | boolean | TemplateMailerActions | (() => string | number | boolean);
 
@@ -89,23 +88,11 @@ interface AppServerSettings extends ServerInitialSettings<LocalServer> {
 	email: InitialServerEmailSettings;
 }
 
-interface DatabaseSettings {
-	name: string;
-	description?: string;
-	rulesData?: RulesData;
-}
-
 export type IvipBaseSettingsOptions = Partial<IvipBaseSettings & ServerInitialSettings<LocalServer> & AppServerSettings>;
 
 export class IvipBaseSettings extends BrowserSettings {
-	readonly isServer: boolean = false;
-	readonly isValidClient: boolean = false;
-
-	readonly dbname: string | string[] = "root";
-	readonly database: DatabaseSettings | DatabaseSettings[] = {
-		name: "root",
-		description: "iVipBase database",
-	};
+	public isServer: boolean = false;
+	public isValidClient: boolean = false;
 
 	readonly server?: ServerSettings;
 
@@ -125,14 +112,7 @@ export class IvipBaseSettings extends BrowserSettings {
 				this.email = new ServerEmailSettings(options.email);
 			}
 
-			if (Array.isArray(options.database) || typeof options.database === "object") {
-				this.database = (Array.isArray(options.database) ? options.database : [options.database]).filter((o) => {
-					return typeof o === "object" && typeof o.name === "string" && o.name.trim() !== "";
-				});
-
-				this.dbname = this.database.map(({ name }) => name);
-				this.dbname = this.dbname.length > 0 ? this.dbname : "root";
-			}
+			this.isValidClient = false;
 		}
 	}
 }

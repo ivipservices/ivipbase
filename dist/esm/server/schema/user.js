@@ -4,7 +4,7 @@ export const getPublicAccountDetails = (account) => {
         username: account.username,
         email: account.email ?? "",
         displayName: account.display_name,
-        picture: account.picture,
+        photoURL: account.photoURL,
         emailVerified: account.email_verified ?? false,
         created: account.created?.toISOString(),
         prevSignin: (account.prev_signin ?? new Date(0)).toISOString(),

@@ -14,7 +14,7 @@ export const setupAuthentication = async (env: LocalServer) => {
 			await env
 				.securityRef(dbName)
 				.child("token_salt")
-				.transaction((snap) => {
+				.transaction((snap: any) => {
 					env.tokenSalt = snap.val();
 					if (!env.tokenSalt) {
 						const length = 256;
@@ -29,7 +29,7 @@ export const setupAuthentication = async (env: LocalServer) => {
 			await env
 				.authRef(dbName)
 				.child("admin")
-				.transaction((snap) => {
+				.transaction((snap: any) => {
 					let adminAccount: DbUserAccountDetails | null = snap.val();
 					if (adminAccount === null) {
 						// Use provided default password, or generate one:
@@ -69,16 +69,13 @@ export const setupAuthentication = async (env: LocalServer) => {
 						} else {
 							passwordHash = getPasswordHash(env.settings.auth.defaultAdminPassword, adminAccount.password_salt);
 						}
-						if (adminAccount.password === passwordHash) {
-							env.debug.warn(`WARNING: default password for admin user was not changed!`);
 
-							if (!adminAccount.password_salt) {
-								// Create new password hash
-								const pwd = createPasswordHash(env.settings.auth.defaultAdminPassword);
-								adminAccount.password = pwd.hash;
-								adminAccount.password_salt = pwd.salt;
-								return adminAccount; // Save it
-							}
+						if (adminAccount.password !== passwordHash) {
+							env.debug.warn(`WARNING: default password for admin user was not changed!`);
+							const pwd = createPasswordHash(env.settings.auth.defaultAdminPassword);
+							adminAccount.password = pwd.hash;
+							adminAccount.password_salt = pwd.salt;
+							return adminAccount; // Save it
 						}
 					}
 				});

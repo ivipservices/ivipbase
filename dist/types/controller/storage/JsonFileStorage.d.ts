@@ -6,11 +6,12 @@ export declare class JsonFileStorageSettings {
 }
 export declare class JsonFileStorage extends CustomStorage {
     readonly options: JsonFileStorageSettings;
-    data: Map<string, StorageNode>;
-    constructor(options?: Partial<JsonFileStorageSettings>);
-    getMultiple(expression: RegExp): Promise<StorageNodeInfo[]>;
-    setNode(path: string, content: StorageNode, node: StorageNodeInfo): Promise<void>;
-    removeNode(path: string, content: StorageNode, node: StorageNodeInfo): Promise<void>;
-    saveFile(): Promise<void>;
+    private data;
+    private timeForSaveFile?;
+    constructor(database: string | string[], options?: Partial<JsonFileStorageSettings>);
+    getMultiple(database: string, expression: RegExp): Promise<StorageNodeInfo[]>;
+    setNode(database: string, path: string, content: StorageNode, node: StorageNodeInfo): Promise<void>;
+    removeNode(database: string, path: string, content: StorageNode, node: StorageNodeInfo): Promise<void>;
+    saveFile(): void;
 }
 //# sourceMappingURL=JsonFileStorage.d.ts.map

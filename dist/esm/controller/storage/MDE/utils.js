@@ -55,7 +55,7 @@ export function getValueTypeName(valueType) {
         case VALUE_TYPES.DEDICATED_RECORD:
             return "dedicated_record";
         default:
-            "unknown";
+            return "unknown";
     }
 }
 /**
@@ -166,7 +166,7 @@ export function getValueType(value) {
     else if (typeof value === "string") {
         return VALUE_TYPES.STRING;
     }
-    else if (typeof value === "object") {
+    else if (typeof value === "object" && value !== null) {
         return VALUE_TYPES.OBJECT;
     }
     else if (typeof value === "number") {
@@ -192,6 +192,7 @@ export const promiseState = (p) => {
  * @throws {TypeError} Lança um erro se o tipo do valor não for suportado.
  */
 export function valueFitsInline(value, settings) {
+    value = value == undefined ? null : value;
     if (typeof value === "number" || typeof value === "boolean" || isDate(value)) {
         return true;
     }
@@ -218,7 +219,7 @@ export function valueFitsInline(value, settings) {
         return value.length === 0;
     }
     else if (typeof value === "object") {
-        return Object.keys(value).length === 0;
+        return value === null || Object.keys(value).length === 0;
     }
     else {
         throw new TypeError("What else is there?");
@@ -231,8 +232,9 @@ export function valueFitsInline(value, settings) {
  * @throws {Error} Lança um erro se o valor não for suportado ou se for nulo.
  */
 export function getTypedChildValue(val) {
-    if (val === null) {
-        throw new Error(`Not allowed to store null values. remove the property`);
+    if (val === null || val === undefined) {
+        return null;
+        //throw new Error(`Not allowed to store null values. remove the property`);
     }
     else if (isDate(val)) {
         return { type: VALUE_TYPES.DATETIME, value: new Date(val).getTime() };
@@ -250,6 +252,7 @@ export function getTypedChildValue(val) {
         assert(Object.keys(val).length === 0 || ("type" in val && val.type === VALUE_TYPES.DEDICATED_RECORD), "child object stored in parent can only be empty");
         return val;
     }
+    return val;
 }
 /**
  * Processa o valor de um nó de armazenamento durante a leitura, convertendo valores tipados de volta ao formato original.
@@ -281,17 +284,22 @@ export function processReadNodeValue(node) {
     };
     node = JSON.parse(JSON.stringify(node));
     switch (node.type) {
-        case VALUE_TYPES.ARRAY:
+        case VALUE_TYPES.ARRAY: {
+            node.value = [];
+            break;
+        }
         case VALUE_TYPES.OBJECT: {
             // Verifica se algum valor precisa ser convertido
             // NOTA: Arrays são armazenados com propriedades numéricas
             const obj = node.value;
-            Object.keys(obj).forEach((key) => {
-                const item = obj[key];
-                if (typeof item === "object" && "type" in item) {
-                    obj[key] = getTypedChildValue(item);
-                }
-            });
+            if (obj !== null) {
+                Object.keys(obj).forEach((key) => {
+                    const item = obj[key];
+                    if (item !== null && typeof item === "object" && "type" in item) {
+                        obj[key] = getTypedChildValue(item);
+                    }
+                });
+            }
             node.value = obj;
             break;
         }
@@ -313,4 +321,39 @@ export function processReadNodeValue(node) {
     }
     return node;
 }
+export const getTypeFromStoredValue = (val) => {
+    let type;
+    if (typeof val === "string") {
+        type = VALUE_TYPES.STRING;
+    }
+    else if (typeof val === "number") {
+        type = VALUE_TYPES.NUMBER;
+    }
+    else if (typeof val === "boolean") {
+        type = VALUE_TYPES.BOOLEAN;
+    }
+    else if (val instanceof Array) {
+        type = VALUE_TYPES.ARRAY;
+    }
+    else if (typeof val === "object") {
+        if (val && "type" in val) {
+            const serialized = val;
+            type = serialized.type;
+            val = serialized.value;
+            if (type === VALUE_TYPES.DATETIME) {
+                val = new Date(val);
+            }
+            else if (type === VALUE_TYPES.REFERENCE) {
+                val = new PathReference(val);
+            }
+        }
+        else {
+            type = VALUE_TYPES.OBJECT;
+        }
+    }
+    else {
+        throw new Error(`Unknown value type`);
+    }
+    return { type, value: val };
+};
 //# sourceMappingURL=utils.js.map

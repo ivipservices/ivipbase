@@ -9,7 +9,7 @@ export const isValidNewEmailAddress = async (authRef: DataReference, email: stri
 	return !exists;
 };
 
-export const isValidNewUsername = async (authRef: DataReference, username): Promise<boolean> => {
+export const isValidNewUsername = async (authRef: DataReference, username: string): Promise<boolean> => {
 	const exists = await authRef.query().filter("username", "==", username).exists();
 	return !exists;
 };

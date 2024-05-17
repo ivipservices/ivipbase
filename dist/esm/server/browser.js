@@ -1,5 +1,7 @@
 import { DebugLogger, SimpleEventEmitter } from "ivipbase-core";
-import { getDatabase } from "../database/index.js";
+import { getDatabase, getDatabasesNames, hasDatabase } from "../database/index.js";
+import { PathBasedRules } from "./services/rules.js";
+import { joinObjects } from "../utils/index.js";
 export class ServerNotReadyError extends Error {
     constructor() {
         super("O servidor ainda não está pronto");
@@ -15,6 +17,34 @@ export const AUTH_ACCESS_DEFAULT = {
     ALLOW_ALL: "allow",
     ALLOW_AUTHENTICATED: "auth",
 };
+export class DataBaseServerTransactionSettings {
+    constructor(settings) {
+        /**
+         * Se deve ativar o log de transações
+         */
+        this.log = false;
+        /**
+         * Idade máxima em dias para manter as transações no arquivo de log
+         */
+        this.maxAge = 30;
+        /**
+         * Se as operações de gravação do banco de dados não devem esperar até que a transação seja registrada
+         */
+        this.noWait = false;
+        if (typeof settings !== "object") {
+            return;
+        }
+        if (typeof settings.log === "boolean") {
+            this.log = settings.log;
+        }
+        if (typeof settings.maxAge === "number") {
+            this.maxAge = settings.maxAge;
+        }
+        if (typeof settings.noWait === "boolean") {
+            this.noWait = settings.noWait;
+        }
+    }
+}
 export class ServerAuthenticationSettings {
     constructor(settings = {}) {
         /**
@@ -79,6 +109,7 @@ export class ServerSettings {
         this.maxPayloadSize = "10mb";
         this.allowOrigin = "*";
         this.trustProxy = true;
+        this.serverVersion = "1.0.0";
         if (typeof options.logLevel === "string" && ["verbose", "log", "warn", "error"].includes(options.logLevel)) {
             this.logLevel = options.logLevel;
         }
@@ -97,22 +128,72 @@ export class ServerSettings {
         if (typeof options.trustProxy === "boolean") {
             this.trustProxy = options.trustProxy;
         }
-        this.auth = new ServerAuthenticationSettings(options.authentication);
+        this.auth = new ServerAuthenticationSettings(options.authentication ?? options.auth ?? {});
         if (typeof options.init === "function") {
             this.init = options.init;
+        }
+        if (typeof options.serverVersion === "string") {
+            this.serverVersion = options.serverVersion;
+        }
+        this.transactions = new DataBaseServerTransactionSettings(options.transactions ?? {});
+        if (typeof options.rulesData === "object") {
+            this.rulesData = options.rulesData;
         }
     }
 }
 export const isPossiblyServer = false;
 export class AbstractLocalServer extends SimpleEventEmitter {
-    constructor(appName, settings = {}) {
+    constructor(localApp, settings = {}) {
         super();
-        this.appName = appName;
+        this.localApp = localApp;
         this._ready = false;
+        this.rules_db = new Map();
+        this.securityRef = (dbName) => {
+            return this.db(dbName).ref("__auth__/security");
+        };
+        this.authRef = (dbName) => {
+            return this.db(dbName).ref("__auth__/accounts");
+        };
+        this.send_email = (dbName, request) => {
+            return new Promise((resolve, reject) => {
+                try {
+                    if (!this.hasDatabase(dbName)) {
+                        throw new Error(`Database '${dbName}' not found`);
+                    }
+                    const send_email = this.db(dbName).app.settings.email;
+                    if (!send_email || !send_email.send) {
+                        throw new Error("Email not configured");
+                    }
+                    send_email.send(request).then(resolve);
+                }
+                catch (e) {
+                    reject(e);
+                }
+            });
+        };
         this.settings = new ServerSettings(settings);
-        this.db = getDatabase(appName);
-        this.debug = new DebugLogger(this.settings.logLevel, `[${this.db.name}]`);
-        this.once("ready", () => {
+        this.db = (dbName) => getDatabase(dbName, localApp);
+        this.hasDatabase = (dbName) => hasDatabase(dbName);
+        this.rules = (dbName) => {
+            if (this.rules_db.has(dbName)) {
+                return this.rules_db.get(dbName);
+            }
+            const db = this.db(dbName);
+            const dbInfo = (Array.isArray(this.localApp.settings.database) ? this.localApp.settings.database : [this.localApp.settings.database]).find((d) => d.name === dbName);
+            const mainRules = this.settings.rulesData ?? { rules: {} };
+            const dbRules = dbInfo?.rulesData ?? { rules: {} };
+            const rules = new PathBasedRules(this.settings.auth.defaultAccessRule, {
+                debug: this.debug,
+                db,
+                authEnabled: this.settings.auth.enabled,
+                rules: joinObjects({ rules: {} }, mainRules.rules, dbRules.rules),
+            });
+            this.rules_db.set(dbName, rules);
+            return rules;
+        };
+        this.debug = new DebugLogger(this.settings.logLevel, `[SERVER]`);
+        this.log = this.debug;
+        this.on("ready", () => {
             this._ready = true;
         });
     }
@@ -124,7 +205,7 @@ export class AbstractLocalServer extends SimpleEventEmitter {
     async ready(callback) {
         if (!this._ready) {
             // Aguarda o evento ready
-            await new Promise((resolve) => this.on("ready", resolve));
+            await new Promise((resolve) => this.once("ready", resolve));
         }
         callback?.();
     }
@@ -132,22 +213,41 @@ export class AbstractLocalServer extends SimpleEventEmitter {
         return this._ready;
     }
     /**
-     * Gets the url the server is running at
+     * Obtém a URL na qual o servidor está sendo executado
      */
     get url() {
         //return `http${this.settings.https.enabled ? 's' : ''}://${this.settings.host}:${this.settings.port}/${this.settings.rootPath}`;
-        return `http://${this.settings.host}:${this.settings.port}/${this.settings.rootPath}`;
+        return `http://${this.settings.host}:${this.settings.port}/${this.settings.rootPath}`.replace(/\/+$/gi, "");
+    }
+    get dbNames() {
+        return getDatabasesNames();
+    }
+    /**
+     * Redefine a senha do usuário. Isso também pode ser feito usando o ponto de extremidade da API auth/reset_password
+     * @param clientIp endereço IP do usuário
+     * @param code código de redefinição que foi enviado para o endereço de e-mail do usuário
+     * @param newPassword nova senha escolhida pelo usuário
+     */
+    resetPassword(dbName, clientIp, code, newPassword) {
+        throw new ServerNotReadyError();
+    }
+    /**
+     * Marca o endereço de e-mail da conta do usuário como validado. Isso também pode ser feito usando o ponto de extremidade da API auth/verify_email
+     * @param clientIp endereço IP do usuário
+     * @param code código de verificação enviado para o endereço de e-mail do usuário
+     */
+    verifyEmailAddress(dbName, clientIp, code) {
+        throw new ServerNotReadyError();
     }
 }
 export class LocalServer extends AbstractLocalServer {
-    constructor(appName, settings = {}) {
-        super(appName, settings);
-        this.appName = appName;
+    constructor(localApp, settings = {}) {
+        super(localApp, settings);
         this.isServer = false;
         this.init();
     }
     init() {
-        this.emitOnce("ready");
+        this.emit("ready");
     }
 }
 //# sourceMappingURL=browser.js.map

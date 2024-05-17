@@ -33,8 +33,8 @@ const createSwaggerDocs = (_a = swaggerJsdoc.default) !== null && _a !== void 0 
 const rootpath_1 = require("../../shared/rootpath");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
-const yamlPath = path_1.default.join(rootpath_1.packageRootPath, "/server/routes/*/*.yaml");
 const addRoute = (env) => {
+    const yamlPath = path_1.default.join(rootpath_1.packageRootPath, "/server/routes/*/*.yaml");
     // Generate docs from all yaml files
     const options = {
         definition: {
@@ -42,7 +42,7 @@ const addRoute = (env) => {
             info: {
                 title: "iVipBase",
                 description: "Documentação de endpoint e ambiente de teste da API iVipBase. Esta documentação está disponível no servidor porque está sendo executada em modo de desenvolvimento. Para desabilitar isso, defina sua variável de ambiente NODE_ENV para produção. Muitos endpoints exigem que você se autentique usando a autenticação Bearer. Use o endpoint _/auth/{dbname}/signin_ para obter um token de acesso, clique no botão _Authorize_ e cole seu token no campo de entrada. Para obter mais informações sobre iVipBase, consulte GitHub",
-                version: "%SERVER_VERSION%",
+                version: env.settings.serverVersion,
                 contact: {
                     name: "iVipBase API Support",
                     email: "desenvolvimento@ivipcoin.com",
@@ -147,22 +147,19 @@ const addRoute = (env) => {
                         type: "object",
                         properties: {
                             val: {
-                                description: "Any value (serialized for transport)",
                                 oneOf: [{ type: "string" }, { type: "number" }, { type: "integer" }, { type: "boolean" }, { type: "object" }, { type: "array" }],
+                                description: "Any value (serialized for transport)",
                                 example: "2022-04-07T16:36:21Z",
-                                required: true,
                             },
                             map: {
-                                description: 'If the value has been serialized for transport, contains a string defining `val`s data type (eg `"date"` or `"binary"`), or an object with deep property mappings for an object value in `val`',
                                 oneOf: [
                                     { type: "string", example: "date" },
                                     { type: "object", example: { "stats/created": "date" } },
                                 ],
+                                description: 'If the value has been serialized for transport, contains a string defining `val`s data type (eg `"date"` or `"binary"`), or an object with deep property mappings for an object value in `val`',
                                 example: "date",
-                                required: false,
                             },
                         },
-                        required: ["val"],
                         example: {
                             val: { name: "My todo list", stats: { size: 216, created: "2022-04-07T15:11:42Z", modified: "2022-03-08T12:24:05Z" } },
                             map: { "stats/created": "date", "stats/modified": "date" },
@@ -170,7 +167,6 @@ const addRoute = (env) => {
                     },
                     ReflectionNodeInfo: {
                         type: "object",
-                        required: ["key", "exists", "type"],
                         properties: {
                             key: {
                                 description: "Key or index of the node",
@@ -206,7 +202,6 @@ const addRoute = (env) => {
                             address: {
                                 type: "object",
                                 description: "The physical location of the node in the database",
-                                required: ["pageNr", "recordNr"],
                                 properties: {
                                     pageNr: { type: "integer" },
                                     recordNr: { type: "integer" },
@@ -215,7 +210,6 @@ const addRoute = (env) => {
                             children: {
                                 type: "object",
                                 description: `Information about the node's children (if requested)`,
-                                required: ["more", "list"],
                                 properties: {
                                     count: {
                                         type: "integer",

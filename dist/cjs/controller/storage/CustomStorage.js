@@ -22,8 +22,20 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CustomStorage = exports.CustomStorageSettings = void 0;
+const ivipbase_core_1 = require("ivipbase-core");
 const erros_1 = require("../erros");
 const MDE_1 = __importStar(require("./MDE"));
 class CustomStorageSettings extends MDE_1.MDESettings {
@@ -34,24 +46,37 @@ class CustomStorageSettings extends MDE_1.MDESettings {
 exports.CustomStorageSettings = CustomStorageSettings;
 class CustomStorage extends MDE_1.default {
     constructor(options = {}) {
-        super(Object.assign(Object.assign({}, options), { getMultiple: (e) => {
+        const { logLevel } = options, _options = __rest(options, ["logLevel"]);
+        super(Object.assign(Object.assign({}, _options), { getMultiple: (database, e) => {
                 if (!this.ready) {
                     throw erros_1.ERROR_FACTORY.create("db-disconnected" /* AppError.DB_DISCONNECTED */, { dbName: this.dbName });
                 }
-                return this.getMultiple(e);
-            }, setNode: (path, content, node) => {
+                return this.getMultiple(database, e);
+            }, setNode: (database, path, content, node) => {
                 if (!this.ready) {
                     throw erros_1.ERROR_FACTORY.create("db-disconnected" /* AppError.DB_DISCONNECTED */, { dbName: this.dbName });
                 }
-                return this.setNode(path, content, node);
-            }, removeNode: (path, content, node) => {
+                return this.setNode(database, path, content, node);
+            }, removeNode: (database, path, content, node) => {
                 if (!this.ready) {
                     throw erros_1.ERROR_FACTORY.create("db-disconnected" /* AppError.DB_DISCONNECTED */, { dbName: this.dbName });
                 }
-                return this.removeNode(path, content, node);
+                return this.removeNode(database, path, content, node);
             } }));
-        this.dbName = "CustomStorage";
-        this.ready = false;
+        this._dbName = "CustomStorage";
+        this.logLevel = "log";
+        this.logLevel = logLevel || "log";
+        this._debug = new ivipbase_core_1.DebugLogger(this.logLevel, `[${this.dbName}]`);
+    }
+    get dbName() {
+        return this._dbName;
+    }
+    set dbName(value) {
+        this._dbName = value;
+        this._debug = new ivipbase_core_1.DebugLogger(this.logLevel, `[${this._dbName}]`);
+    }
+    get debug() {
+        return this._debug;
     }
 }
 exports.CustomStorage = CustomStorage;

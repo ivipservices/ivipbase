@@ -44,7 +44,7 @@ export const addRoutes = (env: LocalServer) => {
 				await env
 					.authRef(dbName)
 					.child(req.user.uid)
-					.transaction((snap) => {
+					.transaction((snap: any) => {
 						if (!snap.exists()) {
 							return;
 						}

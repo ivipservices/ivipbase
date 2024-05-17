@@ -1,21 +1,26 @@
 import { AbstractLocalServer, ServerSettings, ServerNotReadyError } from "./browser.js";
 import * as express from "express";
-import { addMetadataRoutes } from "./routes/index.js";
+import { addMetadataRoutes, addDataRoutes, addAuthenticionRoutes, addWebManagerRoutes } from "./routes/index.js";
 import { createServer } from "http";
 import { add404Middleware, addCacheMiddleware, addCorsMiddleware } from "./middleware/index.js";
+import { setupAuthentication } from "./services/auth.js";
+import { SimpleCache } from "ivipbase-core";
 const createExpress = express.default ?? express;
 export { ServerSettings };
 export const isPossiblyServer = true;
 export class LocalServer extends AbstractLocalServer {
-    constructor(appName, settings = {}) {
-        super(appName, settings);
-        this.appName = appName;
+    constructor(localApp, settings = {}) {
+        super(localApp, settings);
         // Setup pause and resume methods
         this.paused = false;
         this.isServer = true;
         this.app = createExpress();
         this.router = this.createRouter();
         this.server = createServer(this.app);
+        this.clients = new Map();
+        this.authCache = new SimpleCache({ expirySeconds: 300, cloneValues: false, maxEntries: 1000 });
+        this.metaInfoCache = new SimpleCache({ expirySeconds: 300, cloneValues: false, maxEntries: 1000 });
+        this.tokenSalt = null;
         this.init();
     }
     async init() {
@@ -28,6 +33,15 @@ export class LocalServer extends AbstractLocalServer {
         addCorsMiddleware(this);
         // Adiciona middleware de cache
         addCacheMiddleware(this);
+        if (this.settings.auth.enabled) {
+            // Setup auth database
+            await setupAuthentication(this);
+            // Add auth endpoints
+            const { resetPassword, verifyEmailAddress } = addAuthenticionRoutes(this);
+            this.resetPassword = resetPassword;
+            this.verifyEmailAddress = verifyEmailAddress;
+        }
+        // Add metadata endpoints
         addMetadataRoutes(this);
         // If environment is development, add API docs
         if (process.env.NODE_ENV && process.env.NODE_ENV.trim() === "development") {
@@ -35,8 +49,10 @@ export class LocalServer extends AbstractLocalServer {
             (await import("./routes/docs/index.js")).addRoute(this);
             (await import("./middleware/swagger.js")).addMiddleware(this);
         }
-        this.extend = (method, ext_path, handler) => {
-            const route = `/ext/${this.db.name}/${ext_path}`;
+        addDataRoutes(this);
+        addWebManagerRoutes(this);
+        this.extend = (database, method, ext_path, handler) => {
+            const route = `/ext/${database}/${ext_path}`;
             this.debug.log(`Extending server: `, method, route);
             this.router[method.toLowerCase()](route, handler);
         };
@@ -46,8 +62,10 @@ export class LocalServer extends AbstractLocalServer {
         // Iniciar escuta
         this.server.listen(this.settings.port, this.settings.host, () => {
             // Ready!!
-            this.debug.log(`"${this.db.name}" server running at ${this.url}`);
-            this.emitOnce(`ready`);
+            this.debug.log(`Server running at ${this.url}`);
+            this.localApp.storage.ready(() => {
+                this.emit(`ready`);
+            });
         });
     }
     /**
@@ -65,7 +83,7 @@ export class LocalServer extends AbstractLocalServer {
             throw new Error("O servidor já está pausado");
         }
         this.server.close();
-        this.debug.warn(`Paused "${this.db.name}" server at ${this.url}`);
+        this.debug.warn(`Paused server at ${this.url}`);
         this.emit("pause");
         this.paused = true;
     }
@@ -78,7 +96,7 @@ export class LocalServer extends AbstractLocalServer {
         }
         return new Promise((resolve) => {
             this.server.listen(this.settings.port, this.settings.host, () => {
-                this.debug.warn(`Resumed "${this.db.name}" server at ${this.url}`);
+                this.debug.warn(`Resumed server at ${this.url}`);
                 this.emit("resume");
                 this.paused = false;
                 resolve();
@@ -104,7 +122,7 @@ export class LocalServer extends AbstractLocalServer {
      * @param ext_path Caminho para associar (anexado a /ext/)
      * @param handler Seu callback de manipulador de solicitação do Express
      */
-    extend(method, ext_path, handler) {
+    extend(database, method, ext_path, handler) {
         throw new ServerNotReadyError();
     }
 }

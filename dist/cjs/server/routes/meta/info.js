@@ -22,19 +22,69 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.addRoute = void 0;
 const os = __importStar(require("os"));
-const SERVER_VERSION = "%SERVER_VERSION%"; // Loaded from package.json by npm scripts
+const systeminformation_1 = __importDefault(require("systeminformation"));
+let time;
+const getCpuUsage = () => {
+    return new Promise((resolve, reject) => {
+        try {
+            require("os-utils").cpuUsage((percent) => {
+                resolve(parseFloat(((percent !== null && percent !== void 0 ? percent : 0) * 100).toFixed(2))); // Convertendo para porcentagem
+            });
+        }
+        catch (_a) {
+            resolve(0);
+        }
+    });
+};
+const getInfoMoment = async () => {
+    const d = new Date();
+    d.setMilliseconds(0);
+    d.setSeconds(0);
+    const cpuUsage = await getCpuUsage();
+    const mem = await systeminformation_1.default.mem();
+    const netStats = await systeminformation_1.default.networkStats();
+    return {
+        cpuUsage: cpuUsage,
+        networkStats: netStats.reduce((c, stats) => {
+            c.sent += stats.tx_bytes;
+            c.received += stats.rx_bytes;
+            return c;
+        }, {
+            sent: 0,
+            received: 0,
+        }),
+        memoryUsage: {
+            total: mem.total,
+            free: mem.free,
+            used: mem.used,
+        },
+        time: d.getTime(),
+    };
+};
 const addRoute = (env) => {
+    clearInterval(time);
+    time = setInterval(async () => {
+        const d = await getInfoMoment();
+        env.metaInfoCache.set(d.time, d);
+    }, 1000 * 60);
+    getInfoMoment().then((d) => {
+        env.metaInfoCache.set(d.time, d);
+    });
     // Add info endpoint
-    env.router.get(`/info/${env.db.name}`, (req, res) => {
-        const info = {
-            version: SERVER_VERSION,
+    env.router.get(`/info/:dbName`, async (req, res) => {
+        var _a;
+        let info = {
+            version: env.settings.serverVersion,
             time: Date.now(),
             process: process.pid,
         };
-        if (req.user && req.user.uid === "admin") {
+        if (req.user && req.user.permission_level >= 2) {
             const numberToByteSize = (number) => {
                 return Math.round((number / 1024 / 1024) * 100) / 100 + "MB";
             };
@@ -53,7 +103,7 @@ const addRoute = (env) => {
             };
             const mem = process.memoryUsage();
             const adminInfo = {
-                dbname: env.db.name,
+                dbname: req.params["dbName"],
                 platform: os.platform(),
                 arch: os.arch(),
                 release: os.release(),
@@ -73,8 +123,36 @@ const addRoute = (env) => {
                 },
                 cpus: os.cpus(),
                 network: os.networkInterfaces(),
+                data: [],
             };
-            Object.assign(info, adminInfo);
+            for (let i = 0; i < 100; i++) {
+                const d = new Date();
+                d.setMilliseconds(0);
+                d.setSeconds(0);
+                d.setMinutes(d.getMinutes() - i);
+                if (i === 0 && !env.metaInfoCache.has(d.getTime())) {
+                    getInfoMoment().then((d) => {
+                        env.metaInfoCache.set(d.time, d);
+                    });
+                }
+                adminInfo.data.push((_a = env.metaInfoCache.get(d.getTime())) !== null && _a !== void 0 ? _a : {
+                    cpuUsage: 0,
+                    networkStats: {
+                        sent: 0,
+                        received: 0,
+                    },
+                    memoryUsage: {
+                        total: 0,
+                        free: 0,
+                        used: 0,
+                    },
+                    time: d.getTime(),
+                });
+            }
+            adminInfo.data.sort((a, b) => {
+                return a.time - b.time;
+            });
+            info = Object.assign(Object.assign({}, info), adminInfo);
         }
         // for (let i = 0; i < 1000000000; i++) {
         //     let j = Math.pow(i, 2);

@@ -27,12 +27,15 @@ export default function destructureData(type, path, data, options = {}) {
     options.include_checks = false;
     let value = data;
     let valueType = getValueType(value);
-    if (typeof value === "object") {
+    if (typeof value === "object" && value !== null) {
         value = {};
         valueType = Array.isArray(data) ? VALUE_TYPES.ARRAY : VALUE_TYPES.OBJECT;
         for (let key in data) {
             if (valueType === VALUE_TYPES.OBJECT && valueFitsInline(data[key], this.settings)) {
                 value[key] = getTypedChildValue(data[key]);
+                if (value[key] === null) {
+                    result = destructureData.apply(this, [type, PathInfo.get([path, valueType === VALUE_TYPES.OBJECT ? key : parseInt(key)]).path, null, { ...options, previous_result: result }]);
+                }
                 continue;
             }
             result = destructureData.apply(this, [type, PathInfo.get([path, valueType === VALUE_TYPES.OBJECT ? key : parseInt(key)]).path, data[key], { ...options, previous_result: result }]);

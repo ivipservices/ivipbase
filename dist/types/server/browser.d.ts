@@ -1,4 +1,10 @@
-import { DataBase, DebugLogger, SimpleEventEmitter } from "ivipbase-core";
+import { DebugLogger, SimpleEventEmitter } from "ivipbase-core";
+import { DataBase } from "../database";
+import type { IvipBaseApp } from "../app";
+import { PathBasedRules } from "./services/rules";
+import { DbUserAccountDetails } from "./schema/user";
+import { EmailRequest } from "../app/settings/browser";
+import type { RulesData } from "./services/rules";
 export declare class ServerNotReadyError extends Error {
     constructor();
 }
@@ -9,35 +15,50 @@ export type AuthAccessDefault = "deny" | "allow" | "auth";
 export declare const AUTH_ACCESS_DEFAULT: {
     [key: string]: AuthAccessDefault;
 };
+export declare class DataBaseServerTransactionSettings {
+    /**
+     * Se deve ativar o log de transações
+     */
+    log: boolean;
+    /**
+     * Idade máxima em dias para manter as transações no arquivo de log
+     */
+    maxAge: number;
+    /**
+     * Se as operações de gravação do banco de dados não devem esperar até que a transação seja registrada
+     */
+    noWait: boolean;
+    constructor(settings: Partial<DataBaseServerTransactionSettings>);
+}
 export declare class ServerAuthenticationSettings {
     /**
      * Se autorização deve ser habilitada. Sem autorização, o banco de dados inteiro pode ser lido e gravado por qualquer pessoa (não recomendado 🤷🏼‍♂️)
      */
-    readonly enabled: boolean;
+    enabled: boolean;
     /**
      * Se a criação de novos usuários é permitida para qualquer pessoa ou apenas para o administrador
      */
-    readonly allowUserSignup: boolean;
+    allowUserSignup: boolean;
     /**
      * Quantos novos usuários podem se inscrever por hora por endereço IP. Não implementado ainda
      */
-    readonly newUserRateLimit: number;
+    newUserRateLimit: number;
     /**
      * Quantos minutos antes dos tokens de acesso expirarem. 0 para sem expiração.
      */
-    readonly tokensExpire: number;
+    tokensExpire: number;
     /**
      * Quando o servidor é executado pela primeira vez, quais padrões usar para gerar o arquivo rules.json. Opções são: 'auth' (acesso apenas autenticado ao banco de dados, padrão), 'deny' (negar acesso a qualquer pessoa, exceto o usuário administrador), 'allow' (permitir acesso a qualquer pessoa)
      */
-    readonly defaultAccessRule: AuthAccessDefault;
+    defaultAccessRule: AuthAccessDefault;
     /**
      * Quando o servidor é executado pela primeira vez, qual senha usar para o usuário administrador. Se não fornecida, uma senha gerada será usada e mostrada UMA VEZ na saída do console.
      */
-    readonly defaultAdminPassword?: string;
+    defaultAdminPassword?: string;
     /**
      * Se deve usar um banco de dados separado para autenticação e logs. 'v2' armazenará dados em auth.db, o que AINDA NÃO FOI TESTADO!
      */
-    readonly separateDb: boolean | "v2";
+    separateDb: boolean | "v2";
     constructor(settings?: Partial<ServerAuthenticationSettings>);
 }
 export type ServerInitialSettings<LocalServer = any> = Partial<{
@@ -79,27 +100,43 @@ export type ServerInitialSettings<LocalServer = any> = Partial<{
      * @param server Instância do `iVipBaseServer`
      */
     init?: (server: LocalServer) => Promise<void>;
+    serverVersion: string;
+    /**
+     * Configurações de registro de transações. Aviso: estágio BETA, NÃO use em produção ainda
+     */
+    transactions: Partial<DataBaseServerTransactionSettings>;
+    rulesData: RulesData;
 }>;
 export declare class ServerSettings<LocalServer = any> {
-    readonly logLevel: "verbose" | "log" | "warn" | "error";
-    readonly host: string;
-    readonly port: number;
-    readonly rootPath: string;
-    readonly maxPayloadSize: string;
-    readonly allowOrigin: string;
-    readonly trustProxy: boolean;
-    readonly auth: ServerAuthenticationSettings;
-    readonly init?: (server: LocalServer) => Promise<void>;
+    logLevel: "verbose" | "log" | "warn" | "error";
+    host: string;
+    port: number;
+    rootPath: string;
+    maxPayloadSize: string;
+    allowOrigin: string;
+    trustProxy: boolean;
+    auth: ServerAuthenticationSettings;
+    init?: (server: LocalServer) => Promise<void>;
+    serverVersion: string;
+    transactions: DataBaseServerTransactionSettings;
+    rulesData?: RulesData;
     constructor(options?: ServerInitialSettings<LocalServer>);
 }
 export declare const isPossiblyServer = false;
 export declare abstract class AbstractLocalServer<LocalServer = any> extends SimpleEventEmitter {
-    readonly appName: string;
+    readonly localApp: IvipBaseApp;
     protected _ready: boolean;
     readonly settings: ServerSettings<LocalServer>;
+    readonly log: DebugLogger;
     readonly debug: DebugLogger;
-    readonly db: DataBase;
-    constructor(appName: string, settings?: Partial<ServerSettings>);
+    readonly db: (dbName: string) => DataBase;
+    readonly hasDatabase: (dbName: string) => boolean;
+    readonly rules: (dbName: string) => PathBasedRules;
+    private rules_db;
+    readonly securityRef: (dbName: string) => any;
+    readonly authRef: (dbName: string) => any;
+    readonly send_email: (dbName: string, request: EmailRequest) => Promise<unknown>;
+    constructor(localApp: IvipBaseApp, settings?: Partial<ServerSettings>);
     abstract init(): void;
     /**
      * Aguarda o servidor estar pronto antes de executar o seu callback.
@@ -109,14 +146,27 @@ export declare abstract class AbstractLocalServer<LocalServer = any> extends Sim
     ready(callback?: () => void): Promise<void>;
     get isReady(): boolean;
     /**
-     * Gets the url the server is running at
+     * Obtém a URL na qual o servidor está sendo executado
      */
     get url(): string;
+    get dbNames(): string[];
+    /**
+     * Redefine a senha do usuário. Isso também pode ser feito usando o ponto de extremidade da API auth/reset_password
+     * @param clientIp endereço IP do usuário
+     * @param code código de redefinição que foi enviado para o endereço de e-mail do usuário
+     * @param newPassword nova senha escolhida pelo usuário
+     */
+    resetPassword(dbName: string, clientIp: string, code: string, newPassword: string): Promise<DbUserAccountDetails>;
+    /**
+     * Marca o endereço de e-mail da conta do usuário como validado. Isso também pode ser feito usando o ponto de extremidade da API auth/verify_email
+     * @param clientIp endereço IP do usuário
+     * @param code código de verificação enviado para o endereço de e-mail do usuário
+     */
+    verifyEmailAddress(dbName: string, clientIp: string, code: string): Promise<string>;
 }
 export declare class LocalServer extends AbstractLocalServer<LocalServer> {
-    readonly appName: string;
     readonly isServer: boolean;
-    constructor(appName: string, settings?: Partial<ServerSettings>);
+    constructor(localApp: IvipBaseApp, settings?: Partial<ServerSettings>);
     init(): void;
 }
 //# sourceMappingURL=browser.d.ts.map

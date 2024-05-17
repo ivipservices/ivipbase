@@ -11,18 +11,18 @@ function validSettings(options) {
 exports.validSettings = validSettings;
 function applySettings(dbname, options) {
     if (options instanceof storage_1.DataStorageSettings) {
-        return new storage_1.DataStorage(options);
+        return new storage_1.DataStorage(dbname, options);
     }
     else if (options instanceof storage_1.MongodbSettings) {
         return new storage_1.MongodbStorage(dbname, options);
     }
     else if (options instanceof storage_1.JsonFileStorageSettings) {
-        return new storage_1.JsonFileStorage(options);
+        return new storage_1.JsonFileStorage(dbname, options);
     }
     else if (options instanceof storage_1.CustomStorage) {
         return options;
     }
-    return new storage_1.DataStorage();
+    return new storage_1.DataStorage(dbname);
 }
 exports.applySettings = applySettings;
 //# sourceMappingURL=index.js.map

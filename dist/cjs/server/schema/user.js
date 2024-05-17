@@ -8,7 +8,7 @@ const getPublicAccountDetails = (account) => {
         username: account.username,
         email: (_a = account.email) !== null && _a !== void 0 ? _a : "",
         displayName: account.display_name,
-        picture: account.picture,
+        photoURL: account.photoURL,
         emailVerified: (_b = account.email_verified) !== null && _b !== void 0 ? _b : false,
         created: (_c = account.created) === null || _c === void 0 ? void 0 : _c.toISOString(),
         prevSignin: ((_d = account.prev_signin) !== null && _d !== void 0 ? _d : new Date(0)).toISOString(),

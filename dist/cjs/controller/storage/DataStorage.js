@@ -1,6 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DataStorage = exports.DataStorageSettings = void 0;
+const ivipbase_core_1 = require("ivipbase-core");
+const erros_1 = require("../erros");
 const CustomStorage_1 = require("./CustomStorage");
 class DataStorageSettings extends CustomStorage_1.CustomStorageSettings {
     constructor(options = {}) {
@@ -9,28 +11,42 @@ class DataStorageSettings extends CustomStorage_1.CustomStorageSettings {
 }
 exports.DataStorageSettings = DataStorageSettings;
 class DataStorage extends CustomStorage_1.CustomStorage {
-    constructor(options = {}) {
+    constructor(database, options = {}) {
         super(options);
-        this.data = new Map();
+        this.data = {};
         this.dbName = "TempStorage";
-        this.ready = true;
+        (Array.isArray(database) ? database : [database])
+            .filter((name) => typeof name === "string" && name.trim() !== "")
+            .forEach((name) => {
+            this.data[name] = new Map();
+        });
+        this.emit("ready");
     }
-    async getMultiple(expression) {
+    async getMultiple(database, expression) {
+        if (!this.data[database]) {
+            throw erros_1.ERROR_FACTORY.create("db-not-found" /* AppError.DB_NOT_FOUND */, { dbName: database });
+        }
         const list = [];
-        this.data.forEach((content, path) => {
+        this.data[database].forEach((content, path) => {
             if (expression.test(path)) {
                 if (content) {
-                    list.push({ path, content });
+                    list.push(ivipbase_core_1.Utils.cloneObject({ path, content }));
                 }
             }
         });
         return list;
     }
-    async setNode(path, content) {
-        this.data.set(path, content);
+    async setNode(database, path, content) {
+        if (!this.data[database]) {
+            throw erros_1.ERROR_FACTORY.create("db-not-found" /* AppError.DB_NOT_FOUND */, { dbName: database });
+        }
+        this.data[database].set(path, content);
     }
-    async removeNode(path) {
-        this.data.delete(path);
+    async removeNode(database, path) {
+        if (!this.data[database]) {
+            throw erros_1.ERROR_FACTORY.create("db-not-found" /* AppError.DB_NOT_FOUND */, { dbName: database });
+        }
+        this.data[database].delete(path);
     }
 }
 exports.DataStorage = DataStorage;

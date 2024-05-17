@@ -71,7 +71,7 @@ export const addRoutes = (env: LocalServer) => {
 			const client = env.clients.get(clientId);
 			if (client) client.realtimeQueries[queryId] = { path, query, options };
 
-			const sendEvent = async (event) => {
+			const sendEvent = async (event: any) => {
 				try {
 					const client = env.clients.get(clientId);
 					if (!client) {
@@ -95,7 +95,7 @@ export const addRoutes = (env: LocalServer) => {
 		try {
 			const { results, context, stop } = await env.db(dbName).storage.query(path, query, options);
 			cancelSubscription = stop;
-			if (!env.settings.transactions?.log) {
+			if (!env.settings.transactions?.log && context && context.database_cursor) {
 				delete context.database_cursor;
 			}
 			const response = {

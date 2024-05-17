@@ -1,4 +1,3 @@
-import { signIn } from "./../server/shared/signin";
 import { IvipBaseApp, getApp, getAppsName, getFirstApp } from "../app";
 import { hasDatabase } from "../database";
 import { NOT_CONNECTED_ERROR_MESSAGE } from "../controller/request/error";
@@ -350,9 +349,7 @@ export class AuthUser {
 		},
 	): AuthUser {
 		const { accessToken, providerData, ...userInfo } = json;
-		const user = new AuthUser(auth, userInfo, accessToken);
-		user.reload();
-		return user;
+		return new AuthUser(auth, userInfo, accessToken);
 	}
 }
 

@@ -1,231 +1,246 @@
 {
-	"root": [
-		{
-			"path": "root",
-			"content": {
-				"type": 1,
-				"value": {},
-				"revision": "lvvlv7tb0001xwhxgza791w7",
-				"revision_nr": 1,
-				"created": 1715038878287,
-				"modified": 1715038878287
-			}
-		},
-		{
-			"path": "root/test",
-			"content": {
-				"type": 1,
-				"value": {
-					"type": "deposit",
-					"payment_method": "bolbradesco",
-					"original_amount": 603,
-					"id": 1311772470,
-					"operation_type": "regular_payment",
-					"payment_type": "ticket",
-					"status_detail": "pending_waiting_payment",
-					"currency_id": "BRL",
-					"history_id": "1677138262468"
-				},
-				"revision": "lvvm4jwr000194hxhory4wro",
-				"revision_nr": 5,
-				"created": 1715039313847,
-				"modified": 1715039313869
-			}
-		},
-		{
-			"path": "root/test/status",
-			"content": {
-				"type": 1,
-				"value": {
-					"original_amount": 603,
-					"total_amount": 606.49,
-					"operation_type": "regular_payment",
-					"payment_type": "ticket",
-					"currency_id": "BRL",
-					"history_id": "1677138262468"
-				},
-				"revision": "lvvm4jwr000194hxhory4wro",
-				"revision_nr": 15,
-				"created": 1715038878288,
-				"modified": 1715039313868
-			}
-		},
-		{
-			"path": "root/test/status/id",
-			"content": {
-				"type": 2,
-				"value": {},
-				"revision": "lvvm4jwr000194hxhory4wro",
-				"revision_nr": 15,
-				"created": 1715038878288,
-				"modified": 1715039313868
-			}
-		},
-		{
-			"path": "root/test/status/id[0]",
-			"content": {
-				"type": 1,
-				"value": {
-					"title": "Taxa de serviço",
-					"label": "Taxa de R$ 3,49",
-					"amount": 3.49
-				},
-				"revision": "lvvm4jwr000194hxhory4wro",
-				"revision_nr": 15,
-				"created": 1715038878288,
-				"modified": 1715039313868
-			}
-		},
-		{
-			"path": "root/test/status/id[1]",
-			"content": {
-				"type": 1,
-				"value": {
-					"title": "Taxa de serviço",
-					"label": "Taxa de R$ 4,00",
-					"amount": 4
-				},
-				"revision": "lvvm4jwr000194hxhory4wro",
-				"revision_nr": 15,
-				"created": 1715038878288,
-				"modified": 1715039313868
-			}
-		},
-		{
-			"path": "root/test/status/striue50",
-			"content": {
-				"type": 5,
-				"value": "Valor da string maior Valor Valor da string maior Valor da string maior que 50 caracteres Valor da que 50 caracteres Valor da string maior que 50 caracteres... da string maior que 50 caracteres Valor da que 50 caracteres Valor da string maior que 50 caracteres...",
-				"revision": "lvvm4jwr000194hxhory4wro",
-				"revision_nr": 1,
-				"created": 1715039313868,
-				"modified": 1715039313868
-			}
-		},
-		{
-			"path": "root/test/wallet_type",
-			"content": {
-				"type": 5,
-				"value": "Valor da string maior Valor da string maior que 50 caracteres Valor da que 50 caracteres Valor da string maior que 50 caracteres.Valor da string maior Valor da string maior que 50 caracteres Valor da que 50 caracteres Valor da string maior que 50 caracteres.....",
-				"revision": "lvvm4jwr000194hxhory4wro",
-				"revision_nr": 1,
-				"created": 1715039313868,
-				"modified": 1715039313868
-			}
-		},
-		{
-			"path": "root/test/total_amount",
-			"content": {
-				"type": 2,
-				"value": {},
-				"revision": "lvvm4jwr000194hxhory4wro",
-				"revision_nr": 15,
-				"created": 1715038878288,
-				"modified": 1715039313868
-			}
-		},
-		{
-			"path": "root/test/total_amount[0]",
-			"content": {
-				"type": 1,
-				"value": {
-					"title": "Taxa de serviço",
-					"label": "Taxa de R$ 3,49",
-					"amount": 3.49
-				},
-				"revision": "lvvm4jwr000194hxhory4wro",
-				"revision_nr": 15,
-				"created": 1715038878288,
-				"modified": 1715039313868
-			}
-		},
-		{
-			"path": "root/test/status/payment_method",
-			"content": {
-				"type": 5,
-				"value": "Valor da string maior Valor da string maior que 50 caracteres Valor da que 50 caracteres Valor da string maior que 50 caracteres.Valor da string maior Valor da string maior que 50 caracteres Valor da que 50 caracteres Valor da string maior que 50 caracteres.....",
-				"revision": "lvvm4jwr000194hxhory4wro",
-				"revision_nr": 1,
-				"created": 1715039313868,
-				"modified": 1715039313868
-			}
-		},
-		{
-			"path": "root/__auth__",
-			"content": {
-				"type": 1,
-				"value": {},
-				"revision": "lvzqq1cq0001c0hxge090i2f",
-				"revision_nr": 1,
-				"created": 1715288899422,
-				"modified": 1715288899422
-			}
-		},
-		{
-			"path": "root/__auth__/security",
-			"content": {
-				"type": 1,
-				"value": {},
-				"revision": "lvzqq1cq0001c0hxge090i2f",
-				"revision_nr": 1,
-				"created": 1715288899422,
-				"modified": 1715288899422
-			}
-		},
-		{
-			"path": "root/__auth__/security/token_salt",
-			"content": {
-				"type": 5,
-				"value": "ebcc1c67480abc9c54b6de37e47ad97440eb072b6bda2ff0eb2fa8baaeba743cbcb6a4f1fc15abd5157b5f30527b7415a8583705876fd29b4305f280cdfc0035ed3d3b4889135854fcd6bce1993bc49da046f1aa7aaa57dbc0e42c55d8b73405ece2a3681e3d21953a82288fa5b9fd2ec7a2ad755d65628698a3e564b16c805e",
-				"revision": "lvzqq1cq0001c0hxge090i2f",
-				"revision_nr": 1,
-				"created": 1715288899422,
-				"modified": 1715288899422
-			}
-		},
-		{
-			"path": "root/__auth__/accounts",
-			"content": {
-				"type": 1,
-				"value": {},
-				"revision": "lvzr13lo000228hx06aa5tz2",
-				"revision_nr": 1,
-				"created": 1715289415560,
-				"modified": 1715289415560
-			}
-		},
-		{
-			"path": "root/__auth__/accounts/admin",
-			"content": {
-				"type": 1,
-				"value": {
-					"username": "admin",
-					"display_name": "[root] IvipBase admin",
-					"password_salt": "11459491091e4a01",
-					"change_password": true,
-					"created": {
-						"type": 6,
-						"value": 1715294044588
-					},
-					"settings": {},
-					"permission_level": "root"
-				},
-				"revision": "lvztsbe300028ohx6azpgq12",
-				"revision_nr": 1,
-				"created": 1715294044608,
-				"modified": 1715294044608
-			}
-		},
-		{
-			"path": "root/__auth__/accounts/admin/password",
-			"content": {
-				"type": 5,
-				"value": "23d43138ec7000482d7b9ea7d34d9ff8790ba4fbd6e63edbcde24b7e668dc42e99921ec931bb9d8dab9ad9046aa73162e291158040cca739f15cf952dab3f125",
-				"revision": "lvztsbe300028ohx6azpgq12",
-				"revision_nr": 1,
-				"created": 1715294044599,
-				"modified": 1715294044599
-			}
-		}
-	]
+    "root": [
+        {
+            "path": "root",
+            "content": {
+                "type": 1,
+                "value": {},
+                "revision": "lvvlv7tb0001xwhxgza791w7",
+                "revision_nr": 1,
+                "created": 1715038878287,
+                "modified": 1715038878287
+            }
+        },
+        {
+            "path": "root/test",
+            "content": {
+                "type": 1,
+                "value": {
+                    "type": "deposit",
+                    "payment_method": "bolbradesco",
+                    "original_amount": 603,
+                    "id": 1311772470,
+                    "operation_type": "regular_payment",
+                    "payment_type": "ticket",
+                    "status_detail": "pending_waiting_payment",
+                    "currency_id": "BRL",
+                    "history_id": "1677138262468"
+                },
+                "revision": "lvvm4jwr000194hxhory4wro",
+                "revision_nr": 5,
+                "created": 1715039313847,
+                "modified": 1715039313869
+            }
+        },
+        {
+            "path": "root/test/status",
+            "content": {
+                "type": 1,
+                "value": {
+                    "original_amount": 603,
+                    "total_amount": 606.49,
+                    "operation_type": "regular_payment",
+                    "payment_type": "ticket",
+                    "currency_id": "BRL",
+                    "history_id": "1677138262468"
+                },
+                "revision": "lvvm4jwr000194hxhory4wro",
+                "revision_nr": 15,
+                "created": 1715038878288,
+                "modified": 1715039313868
+            }
+        },
+        {
+            "path": "root/test/status/id",
+            "content": {
+                "type": 2,
+                "value": {},
+                "revision": "lvvm4jwr000194hxhory4wro",
+                "revision_nr": 15,
+                "created": 1715038878288,
+                "modified": 1715039313868
+            }
+        },
+        {
+            "path": "root/test/status/id[0]",
+            "content": {
+                "type": 1,
+                "value": {
+                    "title": "Taxa de serviço",
+                    "label": "Taxa de R$ 3,49",
+                    "amount": 3.49
+                },
+                "revision": "lvvm4jwr000194hxhory4wro",
+                "revision_nr": 15,
+                "created": 1715038878288,
+                "modified": 1715039313868
+            }
+        },
+        {
+            "path": "root/test/status/id[1]",
+            "content": {
+                "type": 1,
+                "value": {
+                    "title": "Taxa de serviço",
+                    "label": "Taxa de R$ 4,00",
+                    "amount": 4
+                },
+                "revision": "lvvm4jwr000194hxhory4wro",
+                "revision_nr": 15,
+                "created": 1715038878288,
+                "modified": 1715039313868
+            }
+        },
+        {
+            "path": "root/test/status/striue50",
+            "content": {
+                "type": 5,
+                "value": "Valor da string maior Valor Valor da string maior Valor da string maior que 50 caracteres Valor da que 50 caracteres Valor da string maior que 50 caracteres... da string maior que 50 caracteres Valor da que 50 caracteres Valor da string maior que 50 caracteres...",
+                "revision": "lvvm4jwr000194hxhory4wro",
+                "revision_nr": 1,
+                "created": 1715039313868,
+                "modified": 1715039313868
+            }
+        },
+        {
+            "path": "root/test/wallet_type",
+            "content": {
+                "type": 5,
+                "value": "Valor da string maior Valor da string maior que 50 caracteres Valor da que 50 caracteres Valor da string maior que 50 caracteres.Valor da string maior Valor da string maior que 50 caracteres Valor da que 50 caracteres Valor da string maior que 50 caracteres.....",
+                "revision": "lvvm4jwr000194hxhory4wro",
+                "revision_nr": 1,
+                "created": 1715039313868,
+                "modified": 1715039313868
+            }
+        },
+        {
+            "path": "root/test/total_amount",
+            "content": {
+                "type": 2,
+                "value": {},
+                "revision": "lvvm4jwr000194hxhory4wro",
+                "revision_nr": 15,
+                "created": 1715038878288,
+                "modified": 1715039313868
+            }
+        },
+        {
+            "path": "root/test/total_amount[0]",
+            "content": {
+                "type": 1,
+                "value": {
+                    "title": "Taxa de serviço",
+                    "label": "Taxa de R$ 3,49",
+                    "amount": 3.49
+                },
+                "revision": "lvvm4jwr000194hxhory4wro",
+                "revision_nr": 15,
+                "created": 1715038878288,
+                "modified": 1715039313868
+            }
+        },
+        {
+            "path": "root/test/status/payment_method",
+            "content": {
+                "type": 5,
+                "value": "Valor da string maior Valor da string maior que 50 caracteres Valor da que 50 caracteres Valor da string maior que 50 caracteres.Valor da string maior Valor da string maior que 50 caracteres Valor da que 50 caracteres Valor da string maior que 50 caracteres.....",
+                "revision": "lvvm4jwr000194hxhory4wro",
+                "revision_nr": 1,
+                "created": 1715039313868,
+                "modified": 1715039313868
+            }
+        },
+        {
+            "path": "root/__auth__",
+            "content": {
+                "type": 1,
+                "value": {},
+                "revision": "lvzqq1cq0001c0hxge090i2f",
+                "revision_nr": 1,
+                "created": 1715288899422,
+                "modified": 1715288899422
+            }
+        },
+        {
+            "path": "root/__auth__/security",
+            "content": {
+                "type": 1,
+                "value": {},
+                "revision": "lvzqq1cq0001c0hxge090i2f",
+                "revision_nr": 1,
+                "created": 1715288899422,
+                "modified": 1715288899422
+            }
+        },
+        {
+            "path": "root/__auth__/security/token_salt",
+            "content": {
+                "type": 5,
+                "value": "ebcc1c67480abc9c54b6de37e47ad97440eb072b6bda2ff0eb2fa8baaeba743cbcb6a4f1fc15abd5157b5f30527b7415a8583705876fd29b4305f280cdfc0035ed3d3b4889135854fcd6bce1993bc49da046f1aa7aaa57dbc0e42c55d8b73405ece2a3681e3d21953a82288fa5b9fd2ec7a2ad755d65628698a3e564b16c805e",
+                "revision": "lvzqq1cq0001c0hxge090i2f",
+                "revision_nr": 1,
+                "created": 1715288899422,
+                "modified": 1715288899422
+            }
+        },
+        {
+            "path": "root/__auth__/accounts",
+            "content": {
+                "type": 1,
+                "value": {},
+                "revision": "lvzr13lo000228hx06aa5tz2",
+                "revision_nr": 1,
+                "created": 1715289415560,
+                "modified": 1715289415560
+            }
+        },
+        {
+            "path": "root/__auth__/accounts/admin",
+            "content": {
+                "type": 1,
+                "value": {
+                    "username": "admin",
+                    "display_name": "[root] IvipBase admin",
+                    "password_salt": "511ac48591270221",
+                    "change_password": true,
+                    "created": {
+                        "type": 6,
+                        "value": 1715294044588
+                    },
+                    "settings": {},
+                    "permission_level": "root",
+                    "last_signin": {
+                        "type": 6,
+                        "value": 1715948207798
+                    },
+                    "last_signin_ip": "127.0.0.1",
+                    "access_token": "lwajmoqr0003rghx1pjo56lo",
+                    "access_token_created": {
+                        "type": 6,
+                        "value": 1715942113731
+                    },
+                    "prev_signin": {
+                        "type": 6,
+                        "value": 1715948153928
+                    },
+                    "prev_signin_ip": "127.0.0.1"
+                },
+                "revision": "lwan9ayg0003sghx6ede00ig",
+                "revision_nr": 55,
+                "created": 1715294044608,
+                "modified": 1715948207802
+            }
+        },
+        {
+            "path": "root/__auth__/accounts/admin/password",
+            "content": {
+                "type": 5,
+                "value": "cbed41d7280a11a6ea9e24cf43a55ed0f918b8675877a864d257610ddaa1df42f92e157d1dbbd0ef6f2fa35d6a5be14d526b50a182488871e539d5a6b958733a",
+                "revision": "lvztsbe300028ohx6azpgq12",
+                "revision_nr": 1,
+                "created": 1715942104373,
+                "modified": 1715942104373
+            }
+        }
+    ]
 }

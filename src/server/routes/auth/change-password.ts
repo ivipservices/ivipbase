@@ -55,7 +55,7 @@ export const addRoutes = (env: LocalServer) => {
 			await env
 				.authRef(dbName)
 				.child(details.uid)
-				.transaction((snap) => {
+				.transaction((snap: any) => {
 					if (!env.tokenSalt) {
 						throw new Error("Token salt not set yet, try again later");
 					}

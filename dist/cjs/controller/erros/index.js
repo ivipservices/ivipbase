@@ -9,6 +9,7 @@ const ERRORS = {
     ["app-deleted" /* AppError.APP_DELETED */]: "Aplicativo iVipBase chamado '{$appName}' já excluído",
     ["db-disconnected" /* AppError.DB_DISCONNECTED */]: "Banco de dados '{$dbName}' desconectado",
     ["db-connection-error" /* AppError.DB_CONNECTION_ERROR */]: "Database connection error: {$error}",
+    ["db-not-found" /* AppError.DB_NOT_FOUND */]: "Banco de dados '{$dbName}' não encontrado",
 };
 exports.ERROR_FACTORY = new util_1.ErrorFactory("app", "Firebase", ERRORS);
 //# sourceMappingURL=index.js.map

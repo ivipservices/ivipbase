@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.processReadNodeValue = exports.getTypedChildValue = exports.valueFitsInline = exports.promiseState = exports.getValueType = exports.getNodeValueType = exports.getValueTypeDefault = exports.getValueTypeName = exports.VALUE_TYPES = exports.nodeValueTypes = void 0;
+exports.getTypeFromStoredValue = exports.processReadNodeValue = exports.getTypedChildValue = exports.valueFitsInline = exports.promiseState = exports.getValueType = exports.getNodeValueType = exports.getValueTypeDefault = exports.getValueTypeName = exports.VALUE_TYPES = exports.nodeValueTypes = void 0;
 const ivipbase_core_1 = require("ivipbase-core");
 const ivip_utils_1 = require("ivip-utils");
 const { assert } = ivipbase_core_1.Lib;
@@ -58,7 +58,7 @@ function getValueTypeName(valueType) {
         case exports.VALUE_TYPES.DEDICATED_RECORD:
             return "dedicated_record";
         default:
-            "unknown";
+            return "unknown";
     }
 }
 exports.getValueTypeName = getValueTypeName;
@@ -172,7 +172,7 @@ function getValueType(value) {
     else if (typeof value === "string") {
         return exports.VALUE_TYPES.STRING;
     }
-    else if (typeof value === "object") {
+    else if (typeof value === "object" && value !== null) {
         return exports.VALUE_TYPES.OBJECT;
     }
     else if (typeof value === "number") {
@@ -200,6 +200,7 @@ exports.promiseState = promiseState;
  * @throws {TypeError} Lança um erro se o tipo do valor não for suportado.
  */
 function valueFitsInline(value, settings) {
+    value = value == undefined ? null : value;
     if (typeof value === "number" || typeof value === "boolean" || (0, ivip_utils_1.isDate)(value)) {
         return true;
     }
@@ -226,7 +227,7 @@ function valueFitsInline(value, settings) {
         return value.length === 0;
     }
     else if (typeof value === "object") {
-        return Object.keys(value).length === 0;
+        return value === null || Object.keys(value).length === 0;
     }
     else {
         throw new TypeError("What else is there?");
@@ -240,8 +241,9 @@ exports.valueFitsInline = valueFitsInline;
  * @throws {Error} Lança um erro se o valor não for suportado ou se for nulo.
  */
 function getTypedChildValue(val) {
-    if (val === null) {
-        throw new Error(`Not allowed to store null values. remove the property`);
+    if (val === null || val === undefined) {
+        return null;
+        //throw new Error(`Not allowed to store null values. remove the property`);
     }
     else if ((0, ivip_utils_1.isDate)(val)) {
         return { type: exports.VALUE_TYPES.DATETIME, value: new Date(val).getTime() };
@@ -259,6 +261,7 @@ function getTypedChildValue(val) {
         assert(Object.keys(val).length === 0 || ("type" in val && val.type === exports.VALUE_TYPES.DEDICATED_RECORD), "child object stored in parent can only be empty");
         return val;
     }
+    return val;
 }
 exports.getTypedChildValue = getTypedChildValue;
 /**
@@ -291,17 +294,22 @@ function processReadNodeValue(node) {
     };
     node = JSON.parse(JSON.stringify(node));
     switch (node.type) {
-        case exports.VALUE_TYPES.ARRAY:
+        case exports.VALUE_TYPES.ARRAY: {
+            node.value = [];
+            break;
+        }
         case exports.VALUE_TYPES.OBJECT: {
             // Verifica se algum valor precisa ser convertido
             // NOTA: Arrays são armazenados com propriedades numéricas
             const obj = node.value;
-            Object.keys(obj).forEach((key) => {
-                const item = obj[key];
-                if (typeof item === "object" && "type" in item) {
-                    obj[key] = getTypedChildValue(item);
-                }
-            });
+            if (obj !== null) {
+                Object.keys(obj).forEach((key) => {
+                    const item = obj[key];
+                    if (item !== null && typeof item === "object" && "type" in item) {
+                        obj[key] = getTypedChildValue(item);
+                    }
+                });
+            }
             node.value = obj;
             break;
         }
@@ -324,4 +332,40 @@ function processReadNodeValue(node) {
     return node;
 }
 exports.processReadNodeValue = processReadNodeValue;
+const getTypeFromStoredValue = (val) => {
+    let type;
+    if (typeof val === "string") {
+        type = exports.VALUE_TYPES.STRING;
+    }
+    else if (typeof val === "number") {
+        type = exports.VALUE_TYPES.NUMBER;
+    }
+    else if (typeof val === "boolean") {
+        type = exports.VALUE_TYPES.BOOLEAN;
+    }
+    else if (val instanceof Array) {
+        type = exports.VALUE_TYPES.ARRAY;
+    }
+    else if (typeof val === "object") {
+        if (val && "type" in val) {
+            const serialized = val;
+            type = serialized.type;
+            val = serialized.value;
+            if (type === exports.VALUE_TYPES.DATETIME) {
+                val = new Date(val);
+            }
+            else if (type === exports.VALUE_TYPES.REFERENCE) {
+                val = new ivipbase_core_1.PathReference(val);
+            }
+        }
+        else {
+            type = exports.VALUE_TYPES.OBJECT;
+        }
+    }
+    else {
+        throw new Error(`Unknown value type`);
+    }
+    return { type, value: val };
+};
+exports.getTypeFromStoredValue = getTypeFromStoredValue;
 //# sourceMappingURL=utils.js.map

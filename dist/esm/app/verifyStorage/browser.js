@@ -4,12 +4,12 @@ export function validSettings(options) {
 }
 export function applySettings(dbname, options) {
     if (options instanceof DataStorageSettings) {
-        return new DataStorage(options);
+        return new DataStorage(dbname, options);
     }
     else if (options instanceof CustomStorage) {
         return options;
     }
-    return new DataStorage();
+    return new DataStorage(dbname, options);
 }
 export { CustomStorage, DataStorage, DataStorageSettings };
 //# sourceMappingURL=browser.js.map

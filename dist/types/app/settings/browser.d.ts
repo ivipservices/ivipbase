@@ -1,3 +1,4 @@
+import type { RulesData } from "../../server/services/rules";
 import { StorageSettings } from "../verifyStorage";
 export interface EmailRequestType {
     /** email request type */
@@ -69,15 +70,23 @@ export declare class ServerEmailSettings {
     /** Função a ser chamada quando um e-mail precisa ser enviado */
     send(request: EmailRequest): Promise<void>;
 }
+export interface DatabaseSettings {
+    name: string;
+    description?: string;
+    rulesData?: RulesData;
+}
 export declare class IvipBaseSettings {
-    readonly name: string;
-    readonly dbname: string;
+    name: string;
+    dbname: string | string[];
+    database: DatabaseSettings | DatabaseSettings[];
+    readonly description: string;
     readonly logLevel: "log" | "warn" | "error";
-    readonly storage: StorageSettings;
-    readonly host?: string;
+    storage: StorageSettings;
+    readonly protocol: "http" | "https";
+    readonly host: string;
     readonly port?: number;
-    readonly isServer: boolean;
-    readonly isValidClient: boolean;
+    isServer: boolean;
+    isValidClient: boolean;
     constructor(options?: Partial<Omit<IvipBaseSettings, "isServer" | "isValidClient">>);
 }
 //# sourceMappingURL=browser.d.ts.map

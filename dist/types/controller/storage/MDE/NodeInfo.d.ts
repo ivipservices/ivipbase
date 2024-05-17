@@ -15,16 +15,16 @@ export declare class NodeInfo {
     key?: string;
     exists?: boolean;
     /** TODO: Move this to BinaryNodeInfo */
-    address?: NodeAddress;
+    address?: NodeAddress | null;
     value?: any;
     childCount?: number;
     constructor(info: Partial<NodeInfo>);
-    get valueType(): NodeValueType | undefined;
-    get valueTypeName(): "array" | "binary" | "boolean" | "date" | "number" | "object" | "reference" | "string" | "bigint" | "dedicated_record" | undefined;
+    get valueType(): NodeValueType | -1;
+    get valueTypeName(): "array" | "binary" | "boolean" | "date" | "number" | "object" | "reference" | "string" | "bigint" | "dedicated_record" | "unknown";
     toString(): string;
 }
 export declare class CustomStorageNodeInfo extends NodeInfo {
-    address?: NodeAddress;
+    address?: NodeAddress | null;
     revision: string;
     revision_nr: number;
     created: Date;

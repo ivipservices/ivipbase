@@ -1,19 +1,20 @@
-export interface UserProfilePicture {
-    width?: number;
-    height?: number;
-    url: string;
-}
 export interface UserSettings {
     [key: string]: string | number | boolean;
 }
 export type iVipBaseUser = ({
+    username: "admin";
+} | {
+    uid: string;
     username: string;
 } | {
+    uid: string;
     email: string;
 }) & {
-    uid: string;
+    uid?: string;
+    username?: string;
+    email?: string;
     displayName?: string;
-    picture?: UserProfilePicture;
+    photoURL?: string;
     emailVerified: boolean;
     /** ISO date string */
     created: string;
@@ -31,12 +32,16 @@ export type iVipBaseUser = ({
     settings: UserSettings;
 };
 export type DbUserAccountDetails = ({
+    username: "admin";
+} | {
+    uid: string;
     username: string;
 } | {
+    uid: string;
     email: string;
 }) & {
     /** uid, not stored in the database object (uid is the node's key) */
-    uid: string;
+    uid?: string;
     username?: string;
     email?: string;
     /** If the supplied email address has been verified */
@@ -46,7 +51,7 @@ export type DbUserAccountDetails = ({
     /** User's (public) display name */
     display_name?: string;
     /** Optional profile picture */
-    picture?: UserProfilePicture;
+    photoURL?: string;
     /** Password hash */
     password: string;
     /** Random password salt (base64 encoded) used to generate the password hash */
@@ -81,6 +86,8 @@ export type DbUserAccountDetails = ({
     access_token_created?: Date;
     /** Additional settings for this user */
     settings: UserSettings;
+    /** Nível de premissão do usuário */
+    permission_level: 0 | 1 | 2;
 };
 export declare const getPublicAccountDetails: (account: DbUserAccountDetails) => iVipBaseUser;
 //# sourceMappingURL=user.d.ts.map

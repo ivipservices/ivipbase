@@ -1,10 +1,13 @@
-import { PathInfo, SimpleEventEmitter } from "ivipbase-core";
+import { DebugLogger, ID, PathInfo, SchemaDefinition, SimpleEventEmitter } from "ivipbase-core";
 import { CustomStorageNodeInfo, NodeAddress } from "./NodeInfo.js";
-import { VALUE_TYPES, getValueType, nodeValueTypes, processReadNodeValue, promiseState } from "./utils.js";
+import { VALUE_TYPES, getTypeFromStoredValue, getValueType, nodeValueTypes, processReadNodeValue } from "./utils.js";
 import prepareMergeNodes from "./prepareMergeNodes.js";
 import structureNodes from "./structureNodes.js";
 import destructureData from "./destructureData.js";
+import { removeNulls } from "../../../utils/index.js";
 export { VALUE_TYPES };
+const DEBUG_MODE = false;
+const NOOP = () => { };
 /**
  * Representa as configurações de um MDE.
  */
@@ -81,20 +84,22 @@ export class MDESettings {
         if (typeof options.rollback === "function") {
             this.rollback = options.rollback;
         }
-        this.getMultiple = async (reg) => {
+        this.getMultiple = async (database, reg) => {
             if (typeof options.getMultiple === "function") {
-                return await Promise.race([options.getMultiple(reg)]);
+                return await Promise.race([options.getMultiple(database, reg)]).then((response) => {
+                    return Promise.resolve(response ?? []);
+                });
             }
             return [];
         };
-        this.setNode = async (path, content, node) => {
+        this.setNode = async (database, path, content, node) => {
             if (typeof options.setNode === "function") {
-                await Promise.race([options.setNode(path, content, node)]);
+                await Promise.race([options.setNode(database, path, removeNulls(content), removeNulls(node))]);
             }
         };
-        this.removeNode = async (path, content, node) => {
+        this.removeNode = async (database, path, content, node) => {
             if (typeof options.removeNode === "function") {
-                await Promise.race([options.removeNode(path, content, node)]);
+                await Promise.race([options.removeNode(database, path, removeNulls(content), removeNulls(node))]);
             }
         };
         if (typeof options.init === "function") {
@@ -103,23 +108,45 @@ export class MDESettings {
     }
 }
 export default class MDE extends SimpleEventEmitter {
+    createTid() {
+        return DEBUG_MODE ? ++this._lastTid : ID.generate();
+    }
     constructor(options = {}) {
         super();
+        this._ready = false;
         /**
          * Uma lista de informações sobre nodes, mantido em cache até que as modificações sejam processadas no BD com êxito.
          *
          * @type {NodesPending[]}
          */
-        this.nodes = [];
-        this.batch = [];
-        this.sendingNodes = Promise.resolve();
+        this.nodes = {};
+        this.schemas = {};
         this.settings = new MDESettings(options);
+        this._lastTid = 0;
+        this.on("ready", () => {
+            this._ready = true;
+        });
         this.init();
+    }
+    get debug() {
+        return new DebugLogger(undefined, "MDE");
     }
     init() {
         if (typeof this.settings.init === "function") {
             this.settings.init.apply(this, []);
         }
+    }
+    /**
+     * Aguarda o serviço estar pronto antes de executar o seu callback.
+     * @param callback (opcional) função de retorno chamada quando o serviço estiver pronto para ser usado. Você também pode usar a promise retornada.
+     * @returns retorna uma promise que resolve quando estiver pronto
+     */
+    async ready(callback) {
+        if (!this._ready) {
+            // Aguarda o evento ready
+            await new Promise((resolve) => this.once("ready", resolve));
+        }
+        callback?.();
     }
     /**
      * Converte um caminho em uma expressão regular.
@@ -152,16 +179,18 @@ export default class MDE extends SimpleEventEmitter {
         // Obtém o caminho pai e adiciona a expressão regular correspondente ao array.
         pathsRegex.push(replasePathToRegex(PathInfo.get(path).parentPath));
         // Cria a expressão regular completa combinando as expressões individuais no array.
-        const fullRegex = new RegExp(`^(${pathsRegex.join("$)|(")}$)`);
+        const fullRegex = new RegExp(`^(${pathsRegex.map((e) => e.replace(/\/$/gi, "/?")).join("$)|(")}$)`);
         return fullRegex;
     }
     /**
      * Verifica se um caminho específico existe no nó.
+     * @param {string} database - Nome do banco de dados.
      * @param path - O caminho a ser verificado.
      * @returns {Promise<boolean>} `true` se o caminho existir no nó, `false` caso contrário.
      */
-    async isPathExists(path) {
-        const nodeList = await this.getNodesBy(path, false, false).then((nodes) => {
+    async isPathExists(database, path) {
+        path = PathInfo.get([this.settings.prefix, path]).path;
+        const nodeList = await this.getNodesBy(database, path, false, false).then((nodes) => {
             return Promise.resolve(nodes
                 .sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
                 return aM > bM ? -1 : aM < bM ? 1 : 0;
@@ -184,20 +213,33 @@ export default class MDE extends SimpleEventEmitter {
     /**
      * Obtém uma lista de nodes com base em um caminho e opções adicionais.
      *
+     * @param {string} database - Nome do banco de dados.
      * @param {string} path - O caminho a ser usado para filtrar os nodes.
      * @param {boolean} [onlyChildren=false] - Se verdadeiro, exporta apenas os filhos do node especificado.
      * @param {boolean} [allHeirs=false] - Se verdadeiro, exporta todos os descendentes em relação ao path especificado.
      * @returns {Promise<StorageNodeInfo[]>} - Uma Promise que resolve para uma lista de informações sobre os nodes.
      * @throws {Error} - Lança um erro se ocorrer algum problema durante a busca assíncrona.
      */
-    async getNodesBy(path, onlyChildren = false, allHeirs = false) {
+    async getNodesBy(database, path, onlyChildren = false, allHeirs = false) {
         const reg = this.pathToRegex(path, onlyChildren, allHeirs);
-        let nodeList = this.nodes.concat(this.batch).filter(({ path }) => reg.test(path));
+        let nodeList = (this.nodes[database] ?? [])
+            .filter(({ path }) => reg.test(path))
+            .sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
+            return aM > bM ? -1 : aM < bM ? 1 : 0;
+        })
+            .filter(({ path }, i, list) => {
+            return list.findIndex(({ path: p }) => PathInfo.get(p).equals(path)) === i;
+        })
+            .sort(({ path: a }, { path: b }) => {
+            return PathInfo.get(a).isAncestorOf(b) ? 1 : PathInfo.get(a).isDescendantOf(b) ? -1 : 0;
+        });
+        // console.log("getNodesBy::1::", JSON.stringify(nodeList, null, 4));
         let byNodes = [];
         try {
-            byNodes = await this.settings.getMultiple(reg);
+            byNodes = await this.settings.getMultiple(database, reg);
         }
         catch { }
+        // console.log("getNodesBy::2::", JSON.stringify(byNodes, null, 4));
         const { result } = prepareMergeNodes.apply(this, [byNodes, nodeList]);
         let nodes = result.filter(({ path: p }) => PathInfo.get(path).equals(p));
         if (nodes.length <= 0) {
@@ -213,12 +255,13 @@ export default class MDE extends SimpleEventEmitter {
     }
     /**
      * Obtém o node pai de um caminho específico.
+     * @param {string} database - Nome do banco de dados.
      * @param path - O caminho para o qual o node pai deve ser obtido.
      * @returns {Promise<StorageNodeInfo | undefined>} O node pai correspondente ao caminho ou `undefined` se não for encontrado.
      */
-    async getNodeParentBy(path) {
+    async getNodeParentBy(database, path) {
         const pathInfo = PathInfo.get(path);
-        const nodes = await this.getNodesBy(path, false);
+        const nodes = await this.getNodesBy(database, path, false);
         return nodes
             .filter((node) => {
             const nodePath = PathInfo.get(node.path);
@@ -231,95 +274,99 @@ export default class MDE extends SimpleEventEmitter {
         })
             .shift();
     }
-    async sendNodes() {
-        const status = await promiseState(this.sendingNodes);
-        if (status === "pending") {
-            return;
-        }
-        this.sendingNodes = new Promise(async (resolve) => {
-            this.batch = this.nodes
-                .splice(0)
-                .sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
-                return aM > bM ? 1 : aM < bM ? -1 : 0;
+    async sendNodes(database) {
+        const batch = this.nodes[database].splice(0).sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
+            return aM > bM ? -1 : aM < bM ? 1 : 0;
+        });
+        const batchError = [];
+        try {
+            // const forAsync = prepareMergeNodes.apply(this, [batch]);
+            let byNodes = [];
+            const paths = batch
+                .filter((node, i, self) => {
+                return self.findIndex(({ path }) => path === node.path) === i;
             })
-                .filter(({ path }, i, list) => {
-                return list.findIndex(({ path: p }) => PathInfo.get(p).equals(path)) === i;
-            })
-                .sort(({ path: a }, { path: b }) => {
-                return PathInfo.get(a).isAncestorOf(b) ? 1 : PathInfo.get(a).isDescendantOf(b) ? -1 : 0;
+                .map(({ path }) => path);
+            for (const path of paths) {
+                const reg = this.pathToRegex(path, false, false);
+                const by = await this.settings.getMultiple(database, reg);
+                byNodes = byNodes.concat(by);
+            }
+            byNodes = byNodes.filter((node, i, self) => {
+                return self.findIndex(({ path }) => path === node.path) === i;
             });
-            let listBatchRemoved = [];
-            try {
-                for (let node of this.batch) {
-                    const reg = this.pathToRegex(node.path, false, false);
-                    const byNodes = await this.settings.getMultiple(reg);
-                    const { added, modified, removed } = prepareMergeNodes.apply(this, [byNodes, [node]]);
-                    listBatchRemoved = listBatchRemoved.concat(removed);
-                    for (let node of modified) {
-                        await this.settings.setNode(node.path, node.content, node);
-                        this.batch = this.batch.filter(({ path }) => PathInfo.get(path).equals(node.path) !== true);
-                        this.emit("change", {
-                            name: "change",
-                            path: node.path,
-                            value: node.content.value,
-                        });
-                    }
-                    for (let node of added) {
-                        await this.settings.setNode(node.path, node.content, node);
-                        this.batch = this.batch.filter(({ path }) => PathInfo.get(path).equals(node.path) !== true);
-                        this.emit("add", {
-                            name: "add",
-                            path: node.path,
-                            value: node.content.value,
-                        });
-                    }
-                }
-                for (let node of listBatchRemoved) {
-                    const reg = this.pathToRegex(node.path, false, true);
-                    const byNodes = await this.settings.getMultiple(reg);
-                    for (let r of byNodes) {
-                        await this.settings.removeNode(r.path, r.content, r);
-                        this.batch = this.batch.filter(({ path }) => PathInfo.get(path).equals(r.path) !== true);
-                        this.emit("remove", {
-                            name: "remove",
+            const { added, modified, removed, result } = prepareMergeNodes.apply(this, [byNodes, batch]);
+            // console.log("added: ", JSON.stringify(added, null, 4));
+            // console.log("modified: ", JSON.stringify(modified, null, 4));
+            // console.log("removed: ", JSON.stringify(removed, null, 4));
+            // console.log("result: ", JSON.stringify(result, null, 4));
+            for (let node of modified) {
+                await Promise.race([this.settings.setNode(database, node.path, removeNulls(node.content), removeNulls(node))]).catch(() => {
+                    batchError.push(node);
+                });
+            }
+            for (let node of added) {
+                await Promise.race([this.settings.setNode(database, node.path, removeNulls(node.content), removeNulls(node))]).catch(() => {
+                    batchError.push(node);
+                });
+            }
+            for (let node of removed) {
+                const reg = this.pathToRegex(node.path, false, true);
+                const byNodes = await this.settings.getMultiple(database, reg);
+                for (let r of byNodes) {
+                    await Promise.race([this.settings.removeNode(database, r.path, r.content, r)]).catch(() => {
+                        batchError.push({
                             path: r.path,
-                            value: r.content.value,
+                            content: {
+                                ...r.content,
+                                type: 0,
+                                value: null,
+                            },
                         });
-                    }
+                    });
                 }
             }
-            catch { }
-            this.nodes = this.nodes.concat(this.batch);
-            resolve();
-        });
+        }
+        catch { }
+        const next = Object.keys(this.nodes).find((n) => this.nodes[n].length > 0);
+        if (next) {
+            this.sendNodes(next);
+        }
     }
     /**
      * Adiciona um ou mais nodes a matriz de nodes atual e aplica evento de alteração.
+     * @param {string} database - Nome do banco de dados.
      * @param nodes - Um ou mais nós a serem adicionados.
      * @returns {MDE} O nó atual após a adição dos nós.
      */
-    pushNode(...nodes) {
+    pushNode(database, ...nodes) {
         const forNodes = Array.prototype.concat
             .apply([], nodes.map((node) => (Array.isArray(node) ? node : [node])))
             .filter((node = {}) => node && typeof node.path === "string" && "content" in node) ?? [];
-        for (let node of forNodes) {
-            this.nodes.push(node);
+        if (!Array.isArray(this.nodes[database])) {
+            this.nodes[database] = [];
         }
-        this.sendNodes();
+        for (let node of forNodes) {
+            this.nodes[database].push(node);
+        }
+        this.sendNodes(database);
         return this;
     }
     /**
      * Obtém informações personalizadas sobre um node com base no caminho especificado.
      *
+     * @param {string} database - Nome do banco de dados.
      * @param {string} path - O caminho do node para o qual as informações devem ser obtidas.
      * @returns {CustomStorageNodeInfo} - Informações personalizadas sobre o node especificado.
      */
-    async getInfoBy(path, options = {}) {
-        const pathInfo = PathInfo.get(path);
-        const nodes = await this.getNodesBy(path, options.include_child_count, false);
-        const mainNode = nodes.find(({ path: p }) => PathInfo.get(p).equals(path) || PathInfo.get(p).isParentOf(path));
+    async getInfoBy(database, path, options = {}) {
+        const { include_child_count = true, include_prefix = true, cache_nodes } = options;
+        const pathInfo = include_prefix ? PathInfo.get([this.settings.prefix, path]) : PathInfo.get(path);
+        const mainPath = include_prefix ? pathInfo.path.replace(this.settings.prefix + "/", "") : pathInfo.path;
+        const nodes = await this.getNodesBy(database, pathInfo.path, true, false);
+        const mainNode = nodes.find(({ path: p }) => PathInfo.get(p).equals(pathInfo.path) || PathInfo.get(p).isParentOf(pathInfo.path));
         const defaultNode = new CustomStorageNodeInfo({
-            path: pathInfo.path,
+            path: mainPath,
             key: typeof pathInfo.key === "string" ? pathInfo.key : undefined,
             index: typeof pathInfo.key === "number" ? pathInfo.key : undefined,
             type: 0,
@@ -330,12 +377,12 @@ export default class MDE extends SimpleEventEmitter {
             revision: "",
             revision_nr: 0,
         });
-        if (!mainNode || !pathInfo.key) {
+        if (!mainNode) {
             return defaultNode;
         }
         const content = processReadNodeValue(mainNode.content);
         let value = content.value;
-        if (pathInfo.isChildOf(mainNode.path)) {
+        if (pathInfo.isChildOf(mainNode.path) && pathInfo.key) {
             if ([nodeValueTypes.OBJECT, nodeValueTypes.ARRAY].includes(mainNode.content.type)) {
                 if (Object.keys(value).includes(pathInfo.key)) {
                     value = value[pathInfo.key];
@@ -351,36 +398,90 @@ export default class MDE extends SimpleEventEmitter {
         const containsChild = nodes.findIndex(({ path: p }) => pathInfo.isParentOf(p)) >= 0;
         const isArrayChild = !containsChild && mainNode.content.type === nodeValueTypes.ARRAY;
         const info = new CustomStorageNodeInfo({
-            path: pathInfo.path,
-            key: typeof pathInfo.key === "string" ? pathInfo.key : undefined,
+            path: mainPath,
+            key: typeof pathInfo.key === "string" ? pathInfo.key : typeof pathInfo.key !== "number" ? "" : undefined,
             index: typeof pathInfo.key === "number" ? pathInfo.key : undefined,
             type: value !== null ? getValueType(value) : containsChild ? (isArrayChild ? VALUE_TYPES.ARRAY : VALUE_TYPES.OBJECT) : 0,
             exists: value !== null || containsChild,
-            address: new NodeAddress(mainNode.path),
+            address: new NodeAddress(mainPath),
             created: new Date(content.created) ?? new Date(),
             modified: new Date(content.modified) ?? new Date(),
             revision: content.revision ?? "",
             revision_nr: content.revision_nr ?? 0,
         });
         info.value = value ? value : null;
-        if (options.include_child_count && (containsChild || isArrayChild)) {
+        // if (!PathInfo.get(mainNode.path).equals(pathInfo.path)) {
+        // 	info.value = (typeof info.key === "string" ? info.value[info.key] : typeof info.index === "number" ? info.value[info.index] : null) ?? null;
+        // }
+        if (include_child_count && (containsChild || isArrayChild)) {
             info.childCount = nodes.reduce((c, { path: p }) => c + (pathInfo.isParentOf(p) ? 1 : 0), Object.keys(info.value).length);
         }
         return info;
     }
-    getChildren(path) {
-        const pathInfo = PathInfo.get(path);
+    getChildren(database, path, options = {}) {
+        const pathInfo = PathInfo.get([this.settings.prefix, path]);
         const next = async (callback) => {
-            const nodes = await this.getNodesBy(path, true, false);
+            const nodes = await this.getNodesBy(database, pathInfo.path, true, false);
+            const mainNode = nodes.find(({ path: p }) => PathInfo.get(p).equals(pathInfo.path));
             let isContinue = true;
+            if (!mainNode || ![VALUE_TYPES.OBJECT, VALUE_TYPES.ARRAY].includes(mainNode.content.type ?? -1)) {
+                return;
+            }
+            const isArray = mainNode.content.type === VALUE_TYPES.ARRAY;
+            const value = mainNode.content.value;
+            let keys = Object.keys(value).map((key) => (isArray ? parseInt(key) : key));
+            if (options.keyFilter) {
+                keys = keys.filter((key) => options.keyFilter.includes(key));
+            }
+            keys.length > 0 &&
+                keys.every((key) => {
+                    const child = getTypeFromStoredValue(value[key]);
+                    const info = new CustomStorageNodeInfo({
+                        path: pathInfo.childPath(key).replace(this.settings.prefix + "/", ""),
+                        key: isArray ? undefined : key,
+                        index: isArray ? key : undefined,
+                        type: child.type,
+                        address: null,
+                        exists: true,
+                        value: child.value,
+                        revision: mainNode.content.revision,
+                        revision_nr: mainNode.content.revision_nr,
+                        created: new Date(mainNode.content.created),
+                        modified: new Date(mainNode.content.modified),
+                    });
+                    isContinue = callback(info) ?? true;
+                    return isContinue; // stop .every loop if canceled
+                });
+            if (!isContinue) {
+                return;
+            }
             for (let node of nodes) {
                 if (!isContinue) {
                     break;
                 }
-                if (pathInfo.equals(node.path) && pathInfo.isDescendantOf(node.path)) {
+                if (pathInfo.equals(node.path) || !pathInfo.isParentOf(node.path)) {
                     continue;
                 }
-                const info = await this.getInfoBy(node.path, { include_child_count: false });
+                if (options.keyFilter) {
+                    const key = PathInfo.get(node.path).key;
+                    if (options.keyFilter.includes(key ?? "")) {
+                        continue;
+                    }
+                }
+                const key = PathInfo.get(node.path).key;
+                const info = new CustomStorageNodeInfo({
+                    path: node.path.replace(this.settings.prefix + "/", ""),
+                    type: node.content.type,
+                    key: isArray ? undefined : key ?? "",
+                    index: isArray ? key : undefined,
+                    address: new NodeAddress(node.path),
+                    exists: true,
+                    value: null,
+                    revision: node.content.revision,
+                    revision_nr: node.content.revision_nr,
+                    created: new Date(node.content.created),
+                    modified: new Date(node.content.modified),
+                });
                 isContinue = callback(info) ?? true;
             }
         };
@@ -388,37 +489,270 @@ export default class MDE extends SimpleEventEmitter {
             next,
         };
     }
-    /**
-     * Obtém valor referente ao path específico.
-     *
-     * @template T - Tipo genérico para o retorno da função.
-     * @param {string} path - Caminho de um node raiz.
-     * @param {boolean} [onlyChildren=true] - Se verdadeiro, exporta apenas os filhos do node especificado.
-     * @return {Promise<T | undefined>} - Retorna valor referente ao path ou undefined se nenhum node for encontrado.
-     */
-    async get(path, options) {
+    async get(database, path, options) {
+        const { include_info_node, onlyChildren, ..._options } = options ?? {};
         path = PathInfo.get([this.settings.prefix, path]).path;
-        const nodes = await this.getNodesBy(path, options?.onlyChildren, true);
-        return structureNodes(path, nodes, options);
+        const nodes = await this.getNodesBy(database, path, onlyChildren, true);
+        const main_node = nodes.find(({ path: p }) => PathInfo.get(p).equals(path));
+        if (!main_node) {
+            return undefined;
+        }
+        // console.log(JSON.stringify(nodes, null, 4));
+        const value = removeNulls(structureNodes(path, nodes, _options)) ?? null;
+        return !include_info_node ? value : { ...main_node.content, value };
     }
     /**
      * Define um valor no armazenamento com o caminho especificado.
      *
+     * @param {string} database - Nome do banco de dados.
      * @param {string} path - O caminho do node a ser definido.
      * @param {any} value - O valor a ser armazenado em nodes.
      * @param {Object} [options] - Opções adicionais para controlar o comportamento da definição.
      * @param {string} [options.assert_revision] - Uma string que representa a revisão associada ao node, se necessário.
      * @returns {Promise<void>}
      */
-    async set(path, value, options = {}) {
+    async set(database, path, value, options = {}, type = "SET") {
         path = PathInfo.get([this.settings.prefix, path]).path;
-        const nodes = destructureData.apply(this, ["SET", path, value, options]);
-        this.pushNode(nodes);
+        const nodes = destructureData.apply(this, [type, path, value, options]);
+        //console.log("now", JSON.stringify(nodes.find((node) => node.path === "root/test") ?? {}, null, 4));
+        const byNodes = await this.getNodesBy(database, path, false, true);
+        //console.log("olt", JSON.stringify(byNodes.find((node) => node.path === "root/test") ?? {}, null, 4));
+        const { added, modified, removed } = prepareMergeNodes.apply(this, [byNodes, nodes]);
+        // console.log("set", JSON.stringify(nodes, null, 4));
+        // console.log("set-added", JSON.stringify(added, null, 4));
+        // console.log("set-modified", JSON.stringify(modified, null, 4));
+        // console.log("set-removed", JSON.stringify(removed, null, 4));
+        for (let node of modified) {
+            this.emit("change", {
+                name: "change",
+                path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
+                value: removeNulls(node.content.value),
+                previous: removeNulls(node.previous_content?.value),
+            });
+        }
+        for (let node of added) {
+            this.emit("add", {
+                name: "add",
+                path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
+                value: removeNulls(node.content.value),
+            });
+        }
+        for (let node of removed) {
+            const reg = this.pathToRegex(node.path, false, true);
+            Promise.race([this.settings.getMultiple(database, reg)]).then((byNodes) => {
+                for (let r of byNodes) {
+                    this.emit("remove", {
+                        name: "remove",
+                        path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
+                        value: removeNulls(r.content.value),
+                    });
+                }
+            });
+        }
+        this.pushNode(database, nodes);
     }
-    async update(path, value, options = {}) {
-        path = PathInfo.get([this.settings.prefix, path]).path;
-        const nodes = destructureData.apply(this, ["UPDATE", path, value, options]);
-        this.pushNode(nodes);
+    async update(database, path, value, options = {}) {
+        this.set(database, path, value, options, "UPDATE");
+    }
+    /**
+     * Atualiza um nó obtendo seu valor, executando uma função de retorno de chamada que transforma
+     * o valor atual e retorna o novo valor a ser armazenado. Garante que o valor lido
+     * não mude enquanto a função de retorno de chamada é executada, ou executa a função de retorno de chamada novamente se isso acontecer.
+     * @param database nome do banco de dados
+     * @param path caminho
+     * @param callback função que transforma o valor atual e retorna o novo valor a ser armazenado. Pode retornar uma Promise
+     * @param options opções opcionais usadas pela implementação para chamadas recursivas
+     * @returns Retorna um novo cursor se o registro de transação estiver habilitado
+     */
+    async transact(database, path, callback, options = { no_lock: false, suppress_events: false, context: undefined }) {
+        const useFakeLock = options && options.no_lock === true;
+        const tid = this.createTid();
+        // const lock = useFakeLock
+        //     ? { tid, release: NOOP } // Trava falsa, vamos usar verificação de revisão e tentativas novamente em vez disso
+        //     : await this.nodeLocker.lock(path, tid, true, 'transactNode');
+        const lock = { tid, release: NOOP };
+        try {
+            const node = await this.get(database, path, { include_info_node: true });
+            const checkRevision = node?.revision ?? ID.generate();
+            let newValue;
+            try {
+                newValue = await Promise.race([callback(node?.value ?? null)]).catch((err) => {
+                    this.debug.error(`Error in transaction callback: ${err.message}`);
+                });
+            }
+            catch (err) {
+                this.debug.error(`Error in transaction callback: ${err.message}`);
+            }
+            if (typeof newValue === "undefined") {
+                // Callback did not return value. Cancel transaction
+                return;
+            }
+            const cursor = await this.update(database, path, newValue, { assert_revision: checkRevision, tid: lock.tid, suppress_events: options.suppress_events, context: options.context });
+            return cursor;
+        }
+        catch (err) {
+            throw err;
+        }
+        finally {
+            lock.release();
+        }
+    }
+    byPrefix(prefix) {
+        return {
+            ...this,
+            prefix: prefix,
+        };
+    }
+    /**
+     * Adiciona, atualiza ou remove uma definição de esquema para validar os valores do nó antes que sejam armazenados no caminho especificado
+     * @param database nome do banco de dados
+     * @param path caminho de destino para impor o esquema, pode incluir curingas. Ex: 'users/*\/posts/*' ou 'users/$uid/posts/$postid'
+     * @param schema definições de tipo de esquema. Quando um valor nulo é passado, um esquema previamente definido é removido.
+     */
+    setSchema(database, path, schema, warnOnly = false) {
+        const schemas = this.schemas[database] ?? (this.schemas[database] = []);
+        if (typeof schema === "undefined") {
+            throw new TypeError("schema argument must be given");
+        }
+        if (schema === null) {
+            // Remove o esquema previamente definido no caminho
+            const i = schemas.findIndex((s) => s.path === path);
+            i >= 0 && schemas.splice(i, 1);
+            return;
+        }
+        // Analise o esquema, adicione ou atualize-o
+        const definition = new SchemaDefinition(schema, {
+            warnOnly,
+            warnCallback: (message) => this.debug.warn(message),
+        });
+        const item = schemas.find((s) => s.path === path);
+        if (item) {
+            item.schema = definition;
+        }
+        else {
+            schemas.push({ path, schema: definition });
+            schemas.sort((a, b) => {
+                const ka = PathInfo.getPathKeys(a.path), kb = PathInfo.getPathKeys(b.path);
+                if (ka.length === kb.length) {
+                    return 0;
+                }
+                return ka.length < kb.length ? -1 : 1;
+            });
+        }
+        this.schemas[database] = schemas;
+    }
+    /**
+     * Obtém a definição de esquema atualmente ativa para o caminho especificado
+     */
+    getSchema(database, path) {
+        const schemas = this.schemas[database] ?? (this.schemas[database] = []);
+        const item = schemas.find((item) => item.path === path);
+        return item
+            ? { path, schema: item.schema.source, text: item.schema.text }
+            : {
+                path: path,
+                schema: {},
+                text: "",
+            };
+    }
+    /**
+     * Obtém todas as definições de esquema atualmente ativas
+     */
+    getSchemas(database) {
+        const schemas = this.schemas[database] ?? (this.schemas[database] = []);
+        return schemas.map((item) => ({ path: item.path, schema: item.schema.source, text: item.schema.text }));
+    }
+    /**
+     * Valida os esquemas do nó que está sendo atualizado e de seus filhos
+     * @param database nome do banco de dados
+     * @param path caminho sendo gravado
+     * @param value o novo valor, ou atualizações para o valor atual
+     * @example
+     * // defina o esquema para cada tag de cada post do usuário:
+     * db.schema.set(
+     *  'root',
+     *  'users/$uid/posts/$postId/tags/$tagId',
+     *  { name: 'string', 'link_id?': 'number' }
+     * );
+     *
+     * // Inserção que falhará:
+     * db.ref('users/352352/posts/572245').set({
+     *  text: 'this is my post',
+     *  tags: { sometag: 'negue isso' } // <-- sometag deve ser do tipo objeto
+     * });
+     *
+     * // Inserção que falhará:
+     * db.ref('users/352352/posts/572245').set({
+     *  text: 'this is my post',
+     *  tags: {
+     *      tag1: { name: 'firstpost', link_id: 234 },
+     *      tag2: { name: 'novato' },
+     *      tag3: { title: 'Não permitido' } // <-- propriedade title não permitida
+     *  }
+     * });
+     *
+     * // Atualização que falha se o post não existir:
+     * db.ref('users/352352/posts/572245/tags/tag1').update({
+     *  name: 'firstpost'
+     * }); // <-- o post está faltando a propriedade text
+     */
+    validateSchema(database, path, value, options = { updates: false }) {
+        const schemas = this.schemas[database] ?? (this.schemas[database] = []);
+        let result = { ok: true };
+        const pathInfo = PathInfo.get(path);
+        schemas
+            .filter((s) => pathInfo.isOnTrailOf(s.path))
+            .every((s) => {
+            if (pathInfo.isDescendantOf(s.path)) {
+                // Dado que o caminho de verificação é um descendente do caminho de definição de esquema
+                const ancestorPath = PathInfo.fillVariables(s.path, path);
+                const trailKeys = pathInfo.keys.slice(PathInfo.getPathKeys(s.path).length);
+                result = s.schema.check(ancestorPath, value, options.updates, trailKeys);
+                return result.ok;
+            }
+            // Dado que o caminho de verificação está no caminho de definição de esquema ou em um caminho superior
+            const trailKeys = PathInfo.getPathKeys(s.path).slice(pathInfo.keys.length);
+            if (options.updates === true && trailKeys.length > 0 && !(trailKeys[0] in value)) {
+                // Corrige #217: esta atualização em um caminho superior não afeta nenhum dado no caminho alvo do esquema
+                return result.ok;
+            }
+            const partial = options.updates === true && trailKeys.length === 0;
+            const check = (path, value, trailKeys) => {
+                if (trailKeys.length === 0) {
+                    // Check this node
+                    return s.schema.check(path, value, partial);
+                }
+                else if (value === null) {
+                    return { ok: true }; // Não no final do caminho, mas não há mais nada para verificar
+                }
+                const key = trailKeys[0];
+                if (typeof key === "string" && (key === "*" || key[0] === "$")) {
+                    // Curinga. Verifique cada chave em valor recursivamente
+                    if (value === null || typeof value !== "object") {
+                        // Não é possível verificar os filhos, porque não há nenhum. Isso é
+                        // possível se outra regra permitir que o valor no caminho atual
+                        // seja algo diferente de um objeto.
+                        return { ok: true };
+                    }
+                    let result;
+                    Object.keys(value).every((childKey) => {
+                        const childPath = PathInfo.getChildPath(path, childKey);
+                        const childValue = value[childKey];
+                        result = check(childPath, childValue, trailKeys.slice(1));
+                        return result.ok;
+                    });
+                    return result;
+                }
+                else {
+                    const childPath = PathInfo.getChildPath(path, key);
+                    const childValue = value[key];
+                    return check(childPath, childValue, trailKeys.slice(1));
+                }
+            };
+            result = check(path, value, trailKeys);
+            return result.ok;
+        });
+        return result;
     }
 }
 //# sourceMappingURL=index.js.map

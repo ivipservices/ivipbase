@@ -42,7 +42,8 @@ class NodeInfo {
         }
     }
     get valueType() {
-        return this.type;
+        var _a;
+        return (_a = this.type) !== null && _a !== void 0 ? _a : -1;
     }
     get valueTypeName() {
         return (0, utils_1.getValueTypeName)(this.valueType);

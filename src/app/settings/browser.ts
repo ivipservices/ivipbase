@@ -1,3 +1,4 @@
+import type { RulesData } from "../../server/services/rules";
 import { DEFAULT_ENTRY_NAME } from "../internal";
 import { DataStorageSettings, StorageSettings, validSettings } from "../verifyStorage";
 
@@ -99,19 +100,31 @@ export class ServerEmailSettings {
 
 const hostnameRegex = /^((https?):\/\/)?(localhost|([\da-z\.-]+\.[a-z\.]{2,6}|[\d\.]+))(\:{1}(\d+))?$/;
 
+export interface DatabaseSettings {
+	name: string;
+	description?: string;
+	rulesData?: RulesData;
+}
+
 export class IvipBaseSettings {
-	readonly name: string = DEFAULT_ENTRY_NAME;
-	readonly dbname: string | string[] = "root";
+	public name: string = DEFAULT_ENTRY_NAME;
+
+	public dbname: string | string[] = "root";
+	public database: DatabaseSettings | DatabaseSettings[] = {
+		name: "root",
+		description: "iVipBase database",
+	};
+
 	readonly description: string;
 	readonly logLevel: "log" | "warn" | "error" = "log";
-	readonly storage: StorageSettings = new DataStorageSettings();
+	public storage: StorageSettings = new DataStorageSettings();
 
 	readonly protocol: "http" | "https";
 	readonly host: string;
 	readonly port?: number;
 
-	readonly isServer: boolean = false;
-	readonly isValidClient: boolean = false;
+	public isServer: boolean = false;
+	public isValidClient: boolean = true;
 
 	constructor(options: Partial<Omit<IvipBaseSettings, "isServer" | "isValidClient">> = {}) {
 		if (typeof options.name === "string") {
@@ -122,6 +135,27 @@ export class IvipBaseSettings {
 			this.dbname = (Array.isArray(options.dbname) ? options.dbname : [options.dbname]).filter((n) => typeof n === "string" && n.trim() !== "");
 			this.dbname = this.dbname.length > 0 ? this.dbname : "root";
 		}
+
+		if (Array.isArray(options.database) || typeof options.database === "object") {
+			this.database = (Array.isArray(options.database) ? options.database : [options.database]).filter((o) => {
+				return typeof o === "object" && typeof o.name === "string" && o.name.trim() !== "";
+			});
+
+			this.dbname = Array.isArray(this.dbname) ? this.dbname : typeof this.dbname === "string" ? [this.dbname] : [];
+			this.dbname = this.dbname.concat(this.database.map(({ name }) => name));
+			this.dbname = this.dbname.length > 0 ? this.dbname : "root";
+		}
+
+		const databases = Array.isArray(this.dbname) ? this.dbname : [this.dbname];
+
+		this.database = Array.isArray(this.database) ? this.database : [this.database];
+
+		databases.forEach((name) => {
+			const index = (this.database as DatabaseSettings[]).findIndex((db) => db.name === name);
+			if (index === -1) {
+				(this.database as DatabaseSettings[]).push({ name, description: `IvipBase database` });
+			}
+		});
 
 		this.description = options.description ?? `IvipBase database`;
 

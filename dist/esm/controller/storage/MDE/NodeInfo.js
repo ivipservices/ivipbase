@@ -38,7 +38,7 @@ export class NodeInfo {
         }
     }
     get valueType() {
-        return this.type;
+        return this.type ?? -1;
     }
     get valueTypeName() {
         return getValueTypeName(this.valueType);

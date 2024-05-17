@@ -5,6 +5,9 @@ import type { Express, Request, Response } from "express";
 import * as express from "express";
 import { Server } from "http";
 import { DbUserAccountDetails } from "./schema/user";
+import type { IvipBaseApp } from "../app";
+import { ConnectedClient } from "./shared/clients";
+import { SimpleCache } from "ivipbase-core";
 export { ServerSettings, ServerInitialSettings };
 export declare const isPossiblyServer = true;
 export type HttpApp = express.Express;
@@ -25,13 +28,28 @@ export interface RouteRequestEnvironment {
 }
 export type RouteRequest<ReqQuery = any, ReqBody = any, ResBody = any> = Request<any, ResBody, ReqBody, ReqQuery> & Partial<RouteRequestEnvironment>;
 export declare class LocalServer extends AbstractLocalServer<LocalServer> {
-    readonly appName: string;
     protected paused: boolean;
     readonly isServer: boolean;
     readonly app: HttpApp;
     readonly router: HttpRouter;
     readonly server: Server;
-    constructor(appName: string, settings?: Partial<ServerSettings>);
+    readonly clients: Map<string, ConnectedClient>;
+    authCache: SimpleCache<string, DbUserAccountDetails>;
+    readonly metaInfoCache: SimpleCache<number, {
+        cpuUsage: number;
+        networkStats: {
+            sent: number;
+            received: number;
+        };
+        memoryUsage: {
+            total: number;
+            free: number;
+            used: number;
+        };
+        time: number;
+    }>;
+    tokenSalt: string | null;
+    constructor(localApp: IvipBaseApp, settings?: Partial<ServerSettings>);
     init(): Promise<void>;
     /**
      * Cria um roteador Express
@@ -65,6 +83,6 @@ export declare class LocalServer extends AbstractLocalServer<LocalServer> {
      * @param ext_path Caminho para associar (anexado a /ext/)
      * @param handler Seu callback de manipulador de solicitação do Express
      */
-    extend(method: HttpMethod, ext_path: string, handler: (req: HttpRequest, res: HttpResponse) => void): void;
+    extend(database: string, method: HttpMethod, ext_path: string, handler: (req: HttpRequest, res: HttpResponse) => void): void;
 }
 //# sourceMappingURL=index.d.ts.map

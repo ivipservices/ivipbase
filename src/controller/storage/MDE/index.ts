@@ -222,7 +222,7 @@ export default class MDE extends SimpleEventEmitter {
 		pathsRegex.push(replasePathToRegex(PathInfo.get(path).parentPath as any));
 
 		// Cria a expressão regular completa combinando as expressões individuais no array.
-		const fullRegex: RegExp = new RegExp(`^(${pathsRegex.join("$)|(")}$)`);
+		const fullRegex: RegExp = new RegExp(`^(${pathsRegex.map((e) => e.replace(/\/$/gi, "/?")).join("$)|(")}$)`);
 
 		return fullRegex;
 	}
@@ -452,7 +452,7 @@ export default class MDE extends SimpleEventEmitter {
 
 		const pathInfo = include_prefix ? PathInfo.get([this.settings.prefix, path]) : PathInfo.get(path);
 		const mainPath = include_prefix ? pathInfo.path.replace(this.settings.prefix + "/", "") : pathInfo.path;
-		const nodes = await this.getNodesBy(database, pathInfo.path, include_child_count, false);
+		const nodes = await this.getNodesBy(database, pathInfo.path, true, false);
 		const mainNode = nodes.find(({ path: p }) => PathInfo.get(p).equals(pathInfo.path) || PathInfo.get(p).isParentOf(pathInfo.path));
 
 		const defaultNode = new CustomStorageNodeInfo({
@@ -468,14 +468,14 @@ export default class MDE extends SimpleEventEmitter {
 			revision_nr: 0,
 		});
 
-		if (!mainNode || !pathInfo.key) {
+		if (!mainNode) {
 			return defaultNode;
 		}
 
 		const content = processReadNodeValue(mainNode.content);
 		let value = content.value;
 
-		if (pathInfo.isChildOf(mainNode.path)) {
+		if (pathInfo.isChildOf(mainNode.path) && pathInfo.key) {
 			if ([nodeValueTypes.OBJECT, nodeValueTypes.ARRAY].includes(mainNode.content.type as any)) {
 				if ((Object.keys(value as any) as Array<string | number>).includes(pathInfo.key)) {
 					value = (value as any)[pathInfo.key];
@@ -492,7 +492,7 @@ export default class MDE extends SimpleEventEmitter {
 
 		const info = new CustomStorageNodeInfo({
 			path: mainPath,
-			key: typeof pathInfo.key === "string" ? pathInfo.key : undefined,
+			key: typeof pathInfo.key === "string" ? pathInfo.key : typeof pathInfo.key !== "number" ? "" : undefined,
 			index: typeof pathInfo.key === "number" ? pathInfo.key : undefined,
 			type: value !== null ? getValueType(value) : containsChild ? (isArrayChild ? VALUE_TYPES.ARRAY : VALUE_TYPES.OBJECT) : (0 as NodeValueType),
 			exists: value !== null || containsChild,
@@ -530,7 +530,7 @@ export default class MDE extends SimpleEventEmitter {
 			}
 
 			const isArray = mainNode.content.type === VALUE_TYPES.ARRAY;
-			const value = mainNode.content.value as object;
+			const value = mainNode.content.value as any;
 			let keys = Object.keys(value).map((key) => (isArray ? parseInt(key) : key));
 
 			if (options.keyFilter) {
@@ -539,7 +539,7 @@ export default class MDE extends SimpleEventEmitter {
 
 			keys.length > 0 &&
 				keys.every((key) => {
-					const child = getTypeFromStoredValue(value[key]);
+					const child = getTypeFromStoredValue(value[key] as any);
 
 					const info = new CustomStorageNodeInfo({
 						path: pathInfo.childPath(key).replace(this.settings.prefix + "/", ""),
@@ -584,7 +584,7 @@ export default class MDE extends SimpleEventEmitter {
 				const info = new CustomStorageNodeInfo({
 					path: node.path.replace(this.settings.prefix + "/", ""),
 					type: node.content.type,
-					key: isArray ? undefined : (key as string),
+					key: isArray ? undefined : (key as string) ?? "",
 					index: isArray ? (key as number) : undefined,
 					address: new NodeAddress(node.path),
 					exists: true,

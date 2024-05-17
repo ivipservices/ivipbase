@@ -772,6 +772,8 @@ class Node extends ivipbase_core_1.SimpleEventEmitter {
         else if (path === "" && (typeof value !== "object" || value instanceof Array)) {
             throw new Error(`Invalid root node value. Must be an object`);
         }
+        /*
+         */
         const pathChanges = {
             changed: [],
             added: [],
@@ -780,6 +782,7 @@ class Node extends ivipbase_core_1.SimpleEventEmitter {
         const joinChanges = (...c) => {
             c.forEach((n) => {
                 Object.entries(n).forEach(([change, keys]) => {
+                    // Verifica se 'change' é uma das propriedades esperadas
                     if (["changed", "added", "removed"].includes(change)) {
                         pathChanges[change] = pathChanges[change].concat(keys).filter((p, i, l) => l.indexOf(p) === i);
                     }

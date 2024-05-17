@@ -213,7 +213,7 @@ export class PathBasedRules {
 			});
 			return targetPathInfo.path;
 		};
-		const env = {
+		const env: any = {
 			now: Date.now(),
 			auth: user || null,
 			operation,
