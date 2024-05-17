@@ -70,6 +70,12 @@ class IvipBaseSettings extends browser_1.IvipBaseSettings {
         super(options);
         this.isServer = false;
         this.isValidClient = false;
+        this.reset(options, false);
+    }
+    reset(options = {}, forceSuper = true) {
+        if (forceSuper) {
+            super.reset(options);
+        }
         if (options.isServer && server_1.isPossiblyServer) {
             this.isServer = true;
             this.server = new server_1.ServerSettings(options);

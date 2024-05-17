@@ -5,19 +5,19 @@ import { IvipBaseSettings, IvipBaseSettingsOptions } from "./settings";
 import { DataBase } from "../database";
 import { Auth } from "../auth";
 export declare class IvipBaseApp extends SimpleEventEmitter {
-    protected _ready: boolean;
+    _ready: boolean;
     readonly name: string;
     readonly settings: IvipBaseSettings;
-    readonly storage: CustomStorage;
+    storage: CustomStorage;
     isDeleted: boolean;
-    readonly isServer: boolean;
+    isServer: boolean;
     server?: LocalServer;
     readonly databases: Map<string, DataBase>;
     readonly auth: Map<string, Auth>;
     private _connectionState;
     private _socket;
     constructor(options: Partial<IvipBaseApp>);
-    initialize(): void;
+    initialize(): Promise<void>;
     /**
      * Aguarda o serviço estar pronto antes de executar o seu callback.
      * @param callback (opcional) função de retorno chamada quando o serviço estiver pronto para ser usado. Você também pode usar a promise retornada.
@@ -26,7 +26,7 @@ export declare class IvipBaseApp extends SimpleEventEmitter {
     ready(callback?: () => void): Promise<void>;
     get isConnected(): boolean;
     get isConnecting(): boolean;
-    get connectionState(): "connected" | "disconnected" | "connecting" | "disconnecting";
+    get connectionState(): string;
     get socket(): import("socket.io-client").Socket<import("@socket.io/component-emitter").DefaultEventsMap, import("@socket.io/component-emitter").DefaultEventsMap> | null;
     get isReady(): boolean;
     get url(): string;
@@ -76,6 +76,11 @@ export declare class IvipBaseApp extends SimpleEventEmitter {
         description: string;
         type: string;
     }[]>;
+    connect(): Promise<void>;
+    disconnect(): Promise<void>;
+    reconnect(): Promise<void>;
+    destroy(): Promise<void>;
+    reset(options: Partial<IvipBaseApp>): Promise<void>;
 }
 export declare function initializeApp(options: IvipBaseSettingsOptions): IvipBaseApp;
 export declare function appExists(name?: string): boolean;

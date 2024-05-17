@@ -28,10 +28,17 @@ export class IvipBaseSettings {
             name: "root",
             description: "iVipBase database",
         };
+        this.description = "";
         this.logLevel = "log";
         this.storage = new DataStorageSettings();
+        this.protocol = "http";
+        this.host = "localhost";
         this.isServer = false;
         this.isValidClient = true;
+        this.bootable = true;
+        this.reset(options);
+    }
+    reset(options = {}) {
         if (typeof options.name === "string") {
             this.name = options.name;
         }
@@ -66,6 +73,7 @@ export class IvipBaseSettings {
         this.protocol = ["https", "http"].includes(protocol) ? protocol : options.protocol === "https" ? "https" : "http";
         this.host = host ?? "localhost";
         this.port = port ? parseInt(port) : options.port;
+        this.bootable = options.bootable ?? true;
     }
 }
 //# sourceMappingURL=browser.js.map

@@ -35,11 +35,27 @@
 	padding: 20px;
 }
 
+.page > .header > .content > h1 {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+
+.page > .header > .content > h1 > svg {
+	cursor: pointer;
+	width: 30px;
+	height: 30px;
+	margin-right: 15px;
+}
+
+.page > .header > .content > h1 > svg:hover {
+	opacity: 0.6;
+}
+
 .page > .body {
 	width: 90%;
 	max-width: 1200px;
-	min-height: 300px;
-	margin-bottom: 40px;
+	padding-bottom: 100px;
 }
 
 .page > .body > .loading {
@@ -49,7 +65,7 @@
 	min-height: 300px;
 }
 
-.page > .body.card {
+.card {
 	background-color: var(--background-light);
 	border-radius: 10px;
 	box-shadow: var(--box-shadow);
@@ -64,12 +80,19 @@
 	border-radius: 10px;
 	box-shadow: var(--box-shadow);
 	padding: 20px;
-	cursor: pointer;
 	border: solid 2px transparent;
 	transition: all 0.2s ease-in-out;
 }
 
-.project-card:hover {
+.project-card.disabled {
+	background-color: var(--background-dark);
+}
+
+.project-card:not(.disabled) {
+	cursor: pointer;
+}
+
+.project-card:not(.disabled):hover {
 	border-color: rgba(33, 150, 243, 1);
 	background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05));
 }

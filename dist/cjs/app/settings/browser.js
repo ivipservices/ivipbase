@@ -26,17 +26,24 @@ exports.ServerEmailSettings = ServerEmailSettings;
 const hostnameRegex = /^((https?):\/\/)?(localhost|([\da-z\.-]+\.[a-z\.]{2,6}|[\d\.]+))(\:{1}(\d+))?$/;
 class IvipBaseSettings {
     constructor(options = {}) {
-        var _a, _b;
         this.name = internal_1.DEFAULT_ENTRY_NAME;
         this.dbname = "root";
         this.database = {
             name: "root",
             description: "iVipBase database",
         };
+        this.description = "";
         this.logLevel = "log";
         this.storage = new verifyStorage_1.DataStorageSettings();
+        this.protocol = "http";
+        this.host = "localhost";
         this.isServer = false;
         this.isValidClient = true;
+        this.bootable = true;
+        this.reset(options);
+    }
+    reset(options = {}) {
+        var _a, _b, _c;
         if (typeof options.name === "string") {
             this.name = options.name;
         }
@@ -71,6 +78,7 @@ class IvipBaseSettings {
         this.protocol = ["https", "http"].includes(protocol) ? protocol : options.protocol === "https" ? "https" : "http";
         this.host = host !== null && host !== void 0 ? host : "localhost";
         this.port = port ? parseInt(port) : options.port;
+        this.bootable = (_c = options.bootable) !== null && _c !== void 0 ? _c : true;
     }
 }
 exports.IvipBaseSettings = IvipBaseSettings;

@@ -4,13 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title></title>
+    <title>Painel de Banco de Dados</title>
     <link id="style" rel="stylesheet" />
     <style>
         :root {
             --primary-main: #f63a0f;
             --background-main: #263238;
             --background-light: #37474f;
+            --background-dark: #1a2428;
             --text-color-main: #eeeeee;
         }
 
@@ -42,7 +43,7 @@
             flex-direction: column;
             overflow: hidden;
             user-select: none;
-            background-color: var(--background-main);
+            background-color: var(--background-main) !important;
             background-repeat: no-repeat;
             background-position: center;
             background-size: contain !important;
@@ -256,19 +257,32 @@
             });
         }, 100);
 
+        let time;
+
         const initialize = () => {
-            clearInterval(timer);
-            clearInterval(initialTimer);
-            progressBar.style.width = '100%';
-            progressBar.style.backgroundColor = colors[colors.length - 1];
-            progressBarContent.setAttribute("label", "Conectando ao servidor...");
+            clearTimeout(time);
 
-            const progressElement = document.querySelector("body > #progress");
-            if (progressElement) {
-                progressElement.remove();
-            }
+            const app = ivipbase.initializeApp({
+                host: "localhost",
+                port: 8080,
+                dbname: "",
+                bootable: false
+            });
 
-            ReactDOM.render(<App />, document.getElementById("root"));
+            app.ready(() => {
+                clearInterval(timer);
+                clearInterval(initialTimer);
+                progressBar.style.width = '100%';
+                progressBar.style.backgroundColor = colors[colors.length - 1];
+                progressBarContent.setAttribute("label", "Conectando ao servidor...");
+
+                const progressElement = document.querySelector("body > #progress");
+                if (progressElement) {
+                    progressElement.remove();
+                }
+
+                ReactDOM.render(<App />, document.getElementById("root"));
+            });
         }
 
         window.addEventListener('load', initialize);
@@ -277,7 +291,7 @@
             e.preventDefault();
         });
 
-        setTimeout(() => {
+        time = setTimeout(() => {
             window.removeEventListener('load', initialize);
             initialize();
         }, 15000);

@@ -94,15 +94,22 @@ export class IvipBaseSettings extends BrowserSettings {
 	public isServer: boolean = false;
 	public isValidClient: boolean = false;
 
-	readonly server?: ServerSettings;
+	public server?: ServerSettings;
 
 	/**
 	 * Configurações de e-mail que habilitam o iVipServer a enviar e-mails, por exemplo, para dar as boas-vindas a novos usuários, redefinir senhas, notificar sobre novos logins, etc.
 	 */
-	readonly email?: ServerEmailSettings;
+	public email?: ServerEmailSettings;
 
 	constructor(options: IvipBaseSettingsOptions = {}) {
 		super(options);
+		this.reset(options, false);
+	}
+
+	reset(options: IvipBaseSettingsOptions = {}, forceSuper: boolean = true) {
+		if (forceSuper) {
+			super.reset(options);
+		}
 
 		if (options.isServer && isPossiblyServer) {
 			this.isServer = true;

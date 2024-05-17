@@ -16,46 +16,51 @@ window.pageState = () => {
 	return state ?? {};
 };
 
-const App = () => {
-	const [page, setPage] = React.useState("home");
+const App = (() => {
+	const { useState, useEffect } = React;
+	const { CircularProgress } = MaterialUI;
 
-	React.useEffect(() => {
-		let time;
-		const event = MultiStorager.DataStorager.addListener("page", ({ page }) => {
-			if (time) {
-				clearTimeout(time);
-			}
+	return () => {
+		const [page, setPage] = useState("home");
 
-			setPage("loading");
+		useEffect(() => {
+			let time;
+			const event = MultiStorager.DataStorager.addListener("page", ({ page }) => {
+				if (time) {
+					clearTimeout(time);
+				}
 
-			time = setTimeout(() => {
-				setPage(page);
-			}, 1000);
-		});
+				setPage("loading");
 
-		return () => {
-			event.stop();
-		};
-	}, []);
+				time = setTimeout(() => {
+					setPage(page);
+				}, 1000);
+			});
 
-	switch (page) {
-		case "home":
-			return <Home />;
-		case "login":
-			return <Login />;
-		case "loading":
-			return (
-				<MountPage>
-					<div className="loading">
-						<MaterialUI.CircularProgress />
-					</div>
-				</MountPage>
-			);
-		default:
-			return (
-				<MountPage>
-					<h1>404</h1>
-				</MountPage>
-			);
-	}
-};
+			return () => {
+				event.stop();
+			};
+		}, []);
+
+		switch (page) {
+			case "home":
+				return <Home />;
+			case "login":
+				return <Login />;
+			case "loading":
+				return (
+					<MountPage>
+						<div className="loading">
+							<CircularProgress />
+						</div>
+					</MountPage>
+				);
+			default:
+				return (
+					<MountPage>
+						<h1>404</h1>
+					</MountPage>
+				);
+		}
+	};
+})();

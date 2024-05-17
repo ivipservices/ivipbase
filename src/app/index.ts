@@ -18,13 +18,13 @@ const CONNECTION_STATE_CONNECTED = "connected";
 const CONNECTION_STATE_DISCONNECTING = "disconnecting";
 
 export class IvipBaseApp extends SimpleEventEmitter {
-	protected _ready = false;
+	public _ready = false;
 
 	readonly name: string = DEFAULT_ENTRY_NAME;
 	readonly settings: IvipBaseSettings;
-	readonly storage: CustomStorage;
+	public storage: CustomStorage;
 	isDeleted: boolean = false;
-	readonly isServer: boolean;
+	public isServer: boolean;
 	server?: LocalServer;
 	readonly databases: Map<string, DataBase> = new Map();
 	readonly auth: Map<string, Auth> = new Map();
@@ -41,8 +41,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 	constructor(options: Partial<IvipBaseApp>) {
 		super();
 
-		// this._connectionState = CONNECTION_STATE_DISCONNECTED;
-		this._connectionState = CONNECTION_STATE_CONNECTED;
+		this._connectionState = CONNECTION_STATE_DISCONNECTED;
 
 		if (typeof options.name === "string") {
 			this.name = options.name;
@@ -65,19 +64,21 @@ export class IvipBaseApp extends SimpleEventEmitter {
 
 	async initialize() {
 		if (!this._ready) {
-			const dbList: string[] = Array.isArray(this.settings.dbname) ? this.settings.dbname : [this.settings.dbname];
+			if (this.settings.bootable) {
+				const dbList: string[] = Array.isArray(this.settings.dbname) ? this.settings.dbname : [this.settings.dbname];
 
-			await this.storage.ready();
+				await this.storage.ready();
 
-			if (this.isServer) {
-				this.server = new LocalServer(this, this.settings.server);
-				await this.server.ready();
-			}
+				if (this.isServer) {
+					this.server = new LocalServer(this, this.settings.server);
+					await this.server.ready();
+				}
 
-			for (const dbName of dbList) {
-				const db = new DataBase(dbName, this);
-				await db.ready();
-				this.databases.set(dbName, db);
+				for (const dbName of dbList) {
+					const db = new DataBase(dbName, this);
+					await db.ready();
+					this.databases.set(dbName, db);
+				}
 			}
 
 			this.emit("ready");
@@ -98,13 +99,15 @@ export class IvipBaseApp extends SimpleEventEmitter {
 	}
 
 	get isConnected() {
-		return this._connectionState === CONNECTION_STATE_CONNECTED;
+		return true;
+		//return this._connectionState === CONNECTION_STATE_CONNECTED;
 	}
 	get isConnecting() {
 		return this._connectionState === CONNECTION_STATE_CONNECTING;
 	}
 	get connectionState() {
-		return this._connectionState;
+		return CONNECTION_STATE_CONNECTED;
+		// return this._connectionState;
 	}
 
 	get socket() {
@@ -193,6 +196,79 @@ export class IvipBaseApp extends SimpleEventEmitter {
 		}[]
 	> {
 		return this.request({ route: "projects" });
+	}
+
+	async connect() {
+		if (this._connectionState === CONNECTION_STATE_DISCONNECTED) {
+			this._connectionState = CONNECTION_STATE_CONNECTING;
+
+			this._socket = connectSocket(this.url);
+
+			this._socket.on("connect", () => {
+				this._connectionState = CONNECTION_STATE_CONNECTED;
+				this.emit("connect");
+			});
+
+			this._socket.on("disconnect", () => {
+				this._connectionState = CONNECTION_STATE_DISCONNECTED;
+				this.emit("disconnect");
+			});
+
+			this._socket.on("reconnecting", () => {
+				this._connectionState = CONNECTION_STATE_CONNECTING;
+				this.emit("reconnecting");
+			});
+
+			this._socket.on("reconnect", () => {
+				this._connectionState = CONNECTION_STATE_CONNECTED;
+				this.emit("reconnect");
+			});
+
+			this._socket.on("reconnect_failed", () => {
+				this._connectionState = CONNECTION_STATE_DISCONNECTED;
+				this.emit("reconnect_failed");
+			});
+		}
+	}
+
+	async disconnect() {
+		if (this._connectionState === CONNECTION_STATE_CONNECTED) {
+			this._connectionState = CONNECTION_STATE_DISCONNECTING;
+			this._socket?.disconnect();
+		}
+	}
+
+	async reconnect() {
+		if (this._connectionState === CONNECTION_STATE_DISCONNECTED) {
+			this.connect();
+		}
+	}
+
+	async destroy() {
+		this.disconnect();
+		// this._socket?.destroy();
+	}
+
+	async reset(options: Partial<IvipBaseApp>) {
+		this._connectionState = CONNECTION_STATE_DISCONNECTED;
+		this._socket = null;
+		this._ready = false;
+		this.isDeleted = false;
+
+		await this.disconnect();
+
+		this.settings.reset(options.settings);
+
+		this.storage = applySettings(this.settings.dbname, this.settings.storage);
+
+		this.isServer = typeof this.settings.server === "object";
+
+		this.databases.clear();
+		this.auth.clear();
+
+		this.emit("reset");
+
+		await this.initialize();
 	}
 }
 

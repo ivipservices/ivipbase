@@ -1,84 +1,103 @@
-const Home = ({ goToPage }) => {
-	const [projects, setProjects] = React.useState(null);
+const Home = (() => {
+	const { useEffect } = React;
+	const { getApp } = ivipbase;
+	const { CircularProgress } = MaterialUI;
 
-	React.useEffect(() => {
-		const time = setTimeout(() => {
-			setProjects([
-				{ name: "db-root", description: "Project 1" },
-				{ name: "db-1", description: "Project 2" },
-				{ name: "db-2", description: "Project 3" },
-				{ name: "db-3", description: "Project 4" },
-				{ name: "db-4", description: "Project 5" },
-			]);
-		}, 2000);
+	return () => {
+		const [projects, setProjects] = useDataStorager("projects", null);
 
-		return () => clearTimeout(time);
-	}, []);
+		useEffect(() => {
+			if (Array.isArray(projects) && projects.length > 0) {
+				return;
+			}
 
-	return (
-		<MountPage title={"Projetos"}>
-			{!projects && (
-				<div className="loading">
-					<MaterialUI.CircularProgress />
-				</div>
-			)}
-			{Array.isArray(projects) && (
-				<div
-					style={{
-						display: "flex",
-						flexDirection: "row",
-						justifyContent: "center",
-						alignItems: "center",
-						flexWrap: "wrap",
-					}}
-				>
-					{projects.map(({ name, description }, i) => {
-						return (
-							<ProjectCard
-								key={i}
-								title={name}
-								label={description}
-								style={{
-									margin: 10,
-								}}
-								onClick={() => window.goToPage("login", { dbName: name })}
-							/>
-						);
-					})}
+			const time = setTimeout(() => {
+				const app = getApp();
+
+				app.ready(() => {
+					app.projects().then((list) => {
+						setProjects([...list]);
+					});
+				}).catch((err) => {
+					setProjects([
+						{
+							name: "Sem projetos",
+							description: "Não há projetos disponíveis no momento.",
+							disabled: true,
+						},
+					]);
+				});
+			}, 1000);
+
+			return () => clearTimeout(time);
+		}, [projects]);
+
+		return (
+			<MountPage title={"Projetos"}>
+				{!projects && (
+					<div className="loading">
+						<CircularProgress />
+					</div>
+				)}
+				{Array.isArray(projects) && (
 					<div
 						style={{
-							opacity: 0,
-							width: 290,
-							height: 0,
-							margin: 10,
+							display: "flex",
+							flexDirection: "row",
+							justifyContent: "center",
+							alignItems: "center",
+							flexWrap: "wrap",
 						}}
-					></div>
-					<div
-						style={{
-							opacity: 0,
-							width: 290,
-							height: 0,
-							margin: 10,
-						}}
-					></div>
-					<div
-						style={{
-							opacity: 0,
-							width: 290,
-							height: 0,
-							margin: 10,
-						}}
-					></div>
-					<div
-						style={{
-							opacity: 0,
-							width: 290,
-							height: 0,
-							margin: 10,
-						}}
-					></div>
-				</div>
-			)}
-		</MountPage>
-	);
-};
+					>
+						{projects.map(({ name, description, disabled = false }, i) => {
+							return (
+								<ProjectCard
+									key={i}
+									title={name}
+									label={description}
+									style={{
+										margin: 10,
+									}}
+									onClick={() => window.goToPage("login", { dbName: name })}
+									disabled={disabled}
+								/>
+							);
+						})}
+						<div
+							style={{
+								opacity: 0,
+								width: 290,
+								height: 0,
+								margin: 10,
+							}}
+						></div>
+						<div
+							style={{
+								opacity: 0,
+								width: 290,
+								height: 0,
+								margin: 10,
+							}}
+						></div>
+						<div
+							style={{
+								opacity: 0,
+								width: 290,
+								height: 0,
+								margin: 10,
+							}}
+						></div>
+						<div
+							style={{
+								opacity: 0,
+								width: 290,
+								height: 0,
+								margin: 10,
+							}}
+						></div>
+					</div>
+				)}
+			</MountPage>
+		);
+	};
+})();

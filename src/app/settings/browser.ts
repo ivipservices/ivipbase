@@ -115,18 +115,23 @@ export class IvipBaseSettings {
 		description: "iVipBase database",
 	};
 
-	readonly description: string;
-	readonly logLevel: "log" | "warn" | "error" = "log";
+	public description: string = "";
+	public logLevel: "log" | "warn" | "error" = "log";
 	public storage: StorageSettings = new DataStorageSettings();
 
-	readonly protocol: "http" | "https";
-	readonly host: string;
-	readonly port?: number;
+	public protocol: "http" | "https" = "http";
+	public host: string = "localhost";
+	public port?: number;
 
 	public isServer: boolean = false;
 	public isValidClient: boolean = true;
+	public bootable: boolean = true;
 
 	constructor(options: Partial<Omit<IvipBaseSettings, "isServer" | "isValidClient">> = {}) {
+		this.reset(options);
+	}
+
+	reset(options: Partial<Omit<IvipBaseSettings, "isServer" | "isValidClient">> = {}) {
 		if (typeof options.name === "string") {
 			this.name = options.name;
 		}
@@ -172,5 +177,7 @@ export class IvipBaseSettings {
 		this.protocol = ["https", "http"].includes(protocol) ? (protocol as any) : options.protocol === "https" ? "https" : "http";
 		this.host = host ?? "localhost";
 		this.port = port ? parseInt(port) : options.port;
+
+		this.bootable = options.bootable ?? true;
 	}
 }

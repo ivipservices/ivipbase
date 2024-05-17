@@ -30,4 +30,4 @@ interface ErrorParams {
 	[AppError.DB_NOT_FOUND]: { dbName: string };
 }
 
-export const ERROR_FACTORY = new ErrorFactory<AppError, ErrorParams>("app", "Firebase", ERRORS);
+export const ERROR_FACTORY = new ErrorFactory<AppError, ErrorParams>("app", "iVipBase", ERRORS);

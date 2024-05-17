@@ -55,7 +55,7 @@ export const addRoutes = (env) => {
         try {
             const { results, context, stop } = await env.db(dbName).storage.query(path, query, options);
             cancelSubscription = stop;
-            if (!env.settings.transactions?.log) {
+            if (!env.settings.transactions?.log && context && context.database_cursor) {
                 delete context.database_cursor;
             }
             const response = {

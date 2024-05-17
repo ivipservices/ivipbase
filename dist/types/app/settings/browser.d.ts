@@ -79,14 +79,16 @@ export declare class IvipBaseSettings {
     name: string;
     dbname: string | string[];
     database: DatabaseSettings | DatabaseSettings[];
-    readonly description: string;
-    readonly logLevel: "log" | "warn" | "error";
+    description: string;
+    logLevel: "log" | "warn" | "error";
     storage: StorageSettings;
-    readonly protocol: "http" | "https";
-    readonly host: string;
-    readonly port?: number;
+    protocol: "http" | "https";
+    host: string;
+    port?: number;
     isServer: boolean;
     isValidClient: boolean;
+    bootable: boolean;
     constructor(options?: Partial<Omit<IvipBaseSettings, "isServer" | "isValidClient">>);
+    reset(options?: Partial<Omit<IvipBaseSettings, "isServer" | "isValidClient">>): void;
 }
 //# sourceMappingURL=browser.d.ts.map

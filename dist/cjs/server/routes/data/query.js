@@ -60,7 +60,7 @@ const addRoutes = (env) => {
         try {
             const { results, context, stop } = await env.db(dbName).storage.query(path, query, options);
             cancelSubscription = stop;
-            if (!((_b = env.settings.transactions) === null || _b === void 0 ? void 0 : _b.log)) {
+            if (!((_b = env.settings.transactions) === null || _b === void 0 ? void 0 : _b.log) && context && context.database_cursor) {
                 delete context.database_cursor;
             }
             const response = {

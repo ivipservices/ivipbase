@@ -19,12 +19,13 @@ export type IvipBaseSettingsOptions = Partial<IvipBaseSettings & ServerInitialSe
 export declare class IvipBaseSettings extends BrowserSettings {
     isServer: boolean;
     isValidClient: boolean;
-    readonly server?: ServerSettings;
+    server?: ServerSettings;
     /**
      * Configurações de e-mail que habilitam o iVipServer a enviar e-mails, por exemplo, para dar as boas-vindas a novos usuários, redefinir senhas, notificar sobre novos logins, etc.
      */
-    readonly email?: ServerEmailSettings;
+    email?: ServerEmailSettings;
     constructor(options?: IvipBaseSettingsOptions);
+    reset(options?: IvipBaseSettingsOptions, forceSuper?: boolean): void;
 }
 export {};
 //# sourceMappingURL=index.d.ts.map
