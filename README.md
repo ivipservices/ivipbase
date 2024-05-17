@@ -29,30 +29,30 @@ O iVipBase é fácil de configurar e pode ser executado em qualquer lugar: na nu
       - [Opções do Objeto `options.email.server`](#opções-do-objeto-optionsemailserver)
     - [Opções do Objeto `options.authentication`](#opções-do-objeto-optionsauthentication)
 - [`getDatabase` - API banco de dados](#getdatabase---api-banco-de-dados)
-  - [Carregando dados (`get`)](#carregando-dados-get)
-  - [Armazenando dados (`set`)](#armazenando-dados-set)
-  - [Atualizando dados (`update`)](#atualizando-dados-update)
-  - [Removendo dados (`remove`, `null`)](#removendo-dados-remove-null)
-  - [Gerando chaves exclusivas (`push`)](#gerando-chaves-exclusivas-push)
-  - [Usando matrizes (`Array`)](#usando-matrizes-array)
-  - [Contando filhos (`count`)](#contando-filhos-count)
-  - [Limitar o carregamento de dados aninhados (`include`, `exclude`)](#limitar-o-carregamento-de-dados-aninhados-include-exclude)
-  - [Iterando filhos (`forEach`)](#iterando-filhos-foreach)
-  - [Afirmando tipos de dados em TypeScript](#afirmando-tipos-de-dados-em-typescript)
-  - [Monitorando alterações de dados em tempo real (`on`, `off`)](#monitorando-alterações-de-dados-em-tempo-real-on-off)
-    - [Utilizando variáveis e curingas em caminhos de assinatura](#utilizando-variáveis-e-curingas-em-caminhos-de-assinatura)
-    - [Notificar apenas eventos](#notificar-apenas-eventos)
-    - [Aguarde a ativação dos eventos](#aguarde-a-ativação-dos-eventos)
-    - [Obtenha o contexto desencadeador dos eventos](#obtenha-o-contexto-desencadeador-dos-eventos)
-    - [Rastreamento de alterações usando `mutated` e `mutations` eventos](#rastreamento-de-alterações-usando-mutated-e-mutations-eventos)
-  - [Observe alterações de valor em tempo real (`observe`)](#observe-alterações-de-valor-em-tempo-real-observe)
-  - [Consultando dados (`query`)](#consultando-dados-query)
-    - [Limitando dados de resultados de consulta](#limitando-dados-de-resultados-de-consulta)
-    - [Removendo dados com uma consulta](#removendo-dados-com-uma-consulta)
-    - [Contando resultados da consulta](#contando-resultados-da-consulta)
-    - [Verificando a existência do resultado da consulta](#verificando-a-existência-do-resultado-da-consulta)
-    - [Resultados da consulta de streaming](#resultados-da-consulta-de-streaming)
-    - [Consultas em tempo real](#consultas-em-tempo-real)
+  - [`get` - Carregando dados](#get---carregando-dados)
+  - [`set` - Armazenando dados](#set---armazenando-dados)
+  - [`update` - Atualizando dados](#update---atualizando-dados)
+  - [`remove`, `null` - Removendo dados](#remove-null---removendo-dados)
+  - [`push` - Gerando chaves exclusivas](#push---gerando-chaves-exclusivas)
+  - [`Array` - Usando matrizes](#array---usando-matrizes)
+  - [`count` - Contando filhos](#count---contando-filhos)
+  - [`include`, `exclude` - Limitar o carregamento de dados aninhados](#include-exclude---limitar-o-carregamento-de-dados-aninhados)
+  - [`forEach` - Iterando filhos](#foreach---iterando-filhos)
+  - [`TypeScript` - Afirmando tipos de dados](#typescript---afirmando-tipos-de-dados)
+  - [`on`, `off` - Monitorando alterações de dados em tempo real](#on-off---monitorando-alterações-de-dados-em-tempo-real)
+    - [`*`, `$` - Utilizando variáveis e curingas em caminhos de assinatura](#----utilizando-variáveis-e-curingas-em-caminhos-de-assinatura)
+    - [`notify_` - Notificar apenas eventos](#notify_---notificar-apenas-eventos)
+    - [`activated` - Aguarde a ativação dos eventos](#activated---aguarde-a-ativação-dos-eventos)
+    - [`context` - Obtenha o contexto desencadeador dos eventos](#context---obtenha-o-contexto-desencadeador-dos-eventos)
+    - [`mutated`, `mutations` - Rastreamento de alterações de dados](#mutated-mutations---rastreamento-de-alterações-de-dados)
+  - [`observe` - Observe alterações de valor em tempo real](#observe---observe-alterações-de-valor-em-tempo-real)
+  - [`query` - Consultando dados](#query---consultando-dados)
+    - [`query.find` - Limitando dados de resultados de consulta](#queryfind---limitando-dados-de-resultados-de-consulta)
+    - [`query.remove` - Removendo dados com uma consulta](#queryremove---removendo-dados-com-uma-consulta)
+    - [`query.count` - Contando resultados da consulta](#querycount---contando-resultados-da-consulta)
+    - [`query.exists` - Verificando a existência do resultado da consulta](#queryexists---verificando-a-existência-do-resultado-da-consulta)
+    - [`query.forEach` - Resultados da consulta de streaming](#queryforeach---resultados-da-consulta-de-streaming)
+    - [`query.on` - Consultas em tempo real](#queryon---consultas-em-tempo-real)
 - [`getAuth` - API de autenticação](#getauth---api-de-autenticação)
   - [`ready` - Evento de inicialização](#ready---evento-de-inicialização)
   - [`createUserWithEmailAndPassword` - Criar usuário com e-mail e senha](#createuserwithemailandpassword---criar-usuário-com-e-mail-e-senha)
@@ -341,7 +341,7 @@ db.ready(() => {
 });
 ```
 
-## Carregando dados (`get`)
+## `get` - Carregando dados
 
 Execute `.get` em uma referência para obter o valor armazenado atualmente. É a abreviação da sintaxe do Firebase de `.once("value")`.
 
@@ -356,7 +356,7 @@ if (snapshot.exists()) {
 
 Observação: ao carregar dados, o valor atualmente armazenado será agrupado e retornado em um objeto `DataSnapshot`. Use `snapshot.exists()` para determinar se o nó existe, `snapshot.val()` para obter o valor.
 
-## Armazenando dados (`set`)
+## `set` - Armazenando dados
 
 Definindo o valor de um nó, substituindo se existir:
 
@@ -370,7 +370,7 @@ const ref = await db.ref('game/config').set({
 
 Observação: ao armazenar dados, não importa se o caminho de destino e/ou os caminhos pai já existem. Se você armazenar dados em 'chats/somechatid/messages/msgid/receipts', qualquer nó inexistente será criado nesse caminho.
 
-## Atualizando dados (`update`)
+## `update` - Atualizando dados
 
 A atualização do valor de um nó mescla o valor armazenado com o novo objeto. Se o nó de destino não existir, ele será criado com o valor passado.
 
@@ -386,7 +386,7 @@ const config = snapshot.val();
 // `config` now has properties "name", "max_players" and "description"
 ```
 
-## Removendo dados (`remove`, `null`)
+## `remove`, `null` - Removendo dados
 
 Você pode `remover` dados com o remove método
 
@@ -412,7 +412,7 @@ db.ref('animals')
 
 <a id="Gerando"></a>
 
-## Gerando chaves exclusivas (`push`)
+## `push` - Gerando chaves exclusivas
 
 Para todos os dados genéricos adicionados, você precisa criar chaves que sejam exclusivas e que não entrem em conflito com chaves geradas por outros clientes. Para fazer isso, você pode gerar chaves exclusivas com `push`. Nos bastidores, push usa [cuid](https://www.npmjs.com/package/cuid) para gerar chaves que são garantidamente exclusivas e classificáveis ​​no tempo.
 
@@ -458,7 +458,7 @@ db.ref('messages').update(newMessages)
     };
 ```
 
-## Usando matrizes (`Array`)
+## `Array` - Usando matrizes
 
 IvipBase suporta armazenamento de arrays, mas há algumas ressalvas ao trabalhar com eles. Por exemplo, você não pode remover ou inserir itens que não estejam no final do array. Os arrays IvipBase funcionam como uma pilha, você pode adicionar e remover do topo, não de dentro. No entanto, é possível editar entradas individuais ou substituir todo o array. A maneira mais segura de editar arrays é com `transaction`, que exige que todos os dados sejam carregados e armazenados novamente. Em muitos casos, é mais sensato usar coleções de objetos.
 
@@ -527,7 +527,7 @@ NOTA: você NÃO PODE usar `ref.push()` para adicionar entradas a um array! push
 
 Para resumir: use arrays SOMENTE se usar uma coleção de objetos parecer um exagero e seja muito cauteloso! Adicionar e remover itens só pode ser feito de/para o FIM de um array, a menos que você reescreva o array inteiro. Isso significa que você terá que saber antecipadamente quantas entradas seu array possui para poder adicionar novas entradas, o que não é realmente desejável na maioria das situações. Se você sentir necessidade de usar um array porque a ordem das entradas é importante para você ou seu aplicativo: considere usar uma coleção de objetos e adicione uma 'ordem' propriedade às entradas nas quais realizar uma classificação.
 
-## Contando filhos (`count`)
+## `count` - Contando filhos
 
 Para descobrir rapidamente quantos filhos um nó específico possui, use o count método em um `DataReference`:
 
@@ -535,7 +535,7 @@ Para descobrir rapidamente quantos filhos um nó específico possui, use o count
 const messageCount = await db.ref('chat/mensagens'< a i=9>).count();
 ```
 
-## Limitar o carregamento de dados aninhados (`include`, `exclude`)
+## `include`, `exclude` - Limitar o carregamento de dados aninhados
 
 Se a estrutura do seu banco de dados estiver usando aninhamento (por exemplo, armazenando postagens em `'users/someuser/posts'` em vez de em `'posts'`), talvez você queira limitar a quantidade de dados que você estão recuperando na maioria dos casos. Por exemplo: se você deseja obter os detalhes de um usuário, mas não deseja carregar todos os dados aninhados, você pode limitar explicitamente a recuperação de dados aninhados passando `exclude`, include e/ou `child_objects` opções para `.get`:
 
@@ -567,7 +567,7 @@ db.ref('users/someuser')
 
 **OBSERVAÇÃO:** isso permite que você faça o que o Firebase não consegue: armazenar seus dados em locais lógicos e obter apenas os dados de seu interesse, rapidamente.
 
-## Iterando filhos (`forEach`)
+## `forEach` - Iterando filhos
 
 Para iterar todos os filhos de uma coleção de objetos sem carregar todos os dados na memória de uma só vez, você pode usar `forEach` que transmite cada filho e executa uma função de retorno de chamada com um instantâneo de seus dados. Se a função de retorno de chamada retornar `false`, a iteração será interrompida. Se o retorno de chamada retornar um Promise, a iteração aguardará a resolução antes de carregar o próximo filho.
 
@@ -594,7 +594,7 @@ await db.ref('books').forEach(
 );
 ```
 
-## Afirmando tipos de dados em TypeScript
+## `TypeScript` - Afirmando tipos de dados
 
 Se estiver usando TypeScript, você pode passar um parâmetro de tipo para a maioria dos métodos de recuperação de dados que declararão o tipo do valor retornado. Observe que você é responsável por garantir que o valor corresponda ao tipo declarado em tempo de execução.
 
@@ -621,7 +621,7 @@ await db.ref('users').forEach<UserClass>(userSnapshot => {
 })
 ```
 
-## Monitorando alterações de dados em tempo real (`on`, `off`)
+## `on`, `off` - Monitorando alterações de dados em tempo real
 
 Você pode assinar eventos de dados para receber notificações em tempo real à medida que o nó monitorado é alterado. Quando conectado a um servidor iVipBase remoto, os eventos serão enviados aos clientes por meio de uma conexão websocket. Os eventos suportados são:
 
@@ -716,7 +716,7 @@ const subscription2 = newPostStream.subscribe<MyOtherClass>(childSnapshot => {
 });
 ```
 
-### Utilizando variáveis e curingas em caminhos de assinatura
+### `*`, `$` - Utilizando variáveis e curingas em caminhos de assinatura
 
 Também é possível se inscrever em eventos usando curingas e variáveis no caminho:
 
@@ -756,7 +756,7 @@ db.ref('usuários/*/posts/$postid/title')
 db.ref('usuários/ewout/posts').push({ título: 'nova postagem' });
 ```
 
-### Notificar apenas eventos
+### `notify_` - Notificar apenas eventos
 
 Além dos eventos mencionados acima, você também pode assinar seus `notify_` equivalentes que fazem o mesmo, mas com uma referência aos dados alterados em vez de um instantâneo. Isto é bastante útil se você deseja monitorar alterações, mas não está interessado nos valores reais. Isso também economiza recursos do servidor e resulta na transferência de menos dados do servidor. Ex: `notify_child_changed` executará seu retorno de chamada com uma referência ao nó alterado:
 
@@ -766,7 +766,7 @@ ref.on('notify_child_changed', childRef => {
 })
 ```
 
-### Aguarde a ativação dos eventos
+### `activated` - Aguarde a ativação dos eventos
 
 Em algumas situações, é útil aguardar que os manipuladores de eventos estejam ativos antes de modificar os dados. Por exemplo, se quiser que um evento seja acionado para alterações que você está prestes a fazer, você deve certificar-se de que a assinatura está ativa antes de realizar as atualizações.
 
@@ -799,7 +799,7 @@ subscription.activated((activated, cancelReason) => {
 });
 ```
 
-### Obtenha o contexto desencadeador dos eventos
+### `context` - Obtenha o contexto desencadeador dos eventos
 
 Em alguns casos, é benéfico saber o que (e/ou quem) acionou o disparo de um evento de dados, para que você possa escolher o que deseja fazer com as atualizações de dados. Agora é possível passar informações de contexto com todos os `update`, `set`, `remove` e `transaction` operações, que serão repassadas para qualquer evento acionado nos caminhos afetados (em qualquer cliente conectado!)
 
@@ -826,7 +826,7 @@ Para evitar isso, você pode passar informações contextuais com a atualizaçã
 db.ref('usuários/ewout/documentos/some_id')
     .on('value', snap => {
         // Documento carregado ou alterado.
-        const contexto = snap.contexto();
+        const contexto = snap.context();
         if (contexto.redesenhar === false) {
             // Não é necessário redesenhar!
             return;
@@ -838,11 +838,11 @@ db.ref('usuários/ewout/documentos/some_id')
 
 // Definir last_accessed para o tempo atual, com contexto
 db.ref('usuários/ewout/documentos/some_id')
-    .contexto({ redesenhar: false }) // evita redesenhos!
+    .context({ redesenhar: false }) // evita redesenhos!
     .update({ last_accessed: new Date() });
 ```
 
-### Rastreamento de alterações usando `mutated` e `mutations` eventos
+### `mutated`, `mutations` - Rastreamento de alterações de dados
 
 Esses eventos são usados ​​principalmente pelo iVipBase nos bastidores para atualizar automaticamente os valores na memória com mutações remotas. É possível usar esses eventos sozinho, mas eles exigem alguns detalhes adicionais e provavelmente será melhor usar os métodos mencionados acima.
 
@@ -899,7 +899,7 @@ chatRef.on('mutations', snap => {
 })
 ```
 
-## Observe alterações de valor em tempo real (`observe`)
+## `observe` - Observe alterações de valor em tempo real
 
 Agora você pode observar o valor em tempo real de um caminho e (por exemplo) vinculá-lo à sua UI. `ref.observe()` retorna um Observable RxJS que pode ser usado para observar atualizações neste nó e seus filhos. Ele não retorna instantâneos, então você pode vincular o observável diretamente à sua UI. O valor observado é atualizado internamente usando a opção `mutated` evento do banco de dados. Todas as mutações do banco de dados são aplicadas automaticamente ao valor na memória e acionam o observável para emitir o novo valor.
 
@@ -939,7 +939,7 @@ ngOnDestroy() {
 
 NOTA: os objetos retornados no observável são atualizados apenas no downstream - quaisquer alterações feitas localmente não serão atualizadas no banco de dados.
 
-## Consultando dados (`query`)
+## `query` - Consultando dados
 
 Ao executar uma consulta, todos os nós filhos do caminho referenciado serão comparados com os critérios definidos e retornados em qualquer ordem `sort` solicitada. A paginação de resultados também é suportada, portanto você pode `skip` e `take` qualquer número de resultados.
 
@@ -968,14 +968,14 @@ Para filtrar resultados, diversas instruções `filter(key, operator, compare)` 
 -   NOTA: uma consulta não requer nenhum `filter` critério. Você também pode usar um `query` para paginar seus dados usando `skip`, `take` e `sort`. Se você não especificar nenhum deles, o iVipBase usará `.take`(100) como padrão. Se você não especificar um `sort`, a ordem dos valores retornados poderá variar entre as execuções.
 
 ```typescript
-db.query('músicas')
-    .filtro('ano', 'entre', [1975, 2000])
-    .filtro('título', 'corresponde', /love/i)   // Músicas com "love" no título
-    .pegar(50)                                  // limitar a 50 resultados
-    .pular(100)                                 // pular os primeiros 100 resultados
-    .ordenar('classificação', false)            // classificação mais alta primeiro
-    .ordenar('título')                          // ordenar por título ascendente
-    .obter(snapshots => {
+db.query('songs')
+    .filter('year', 'between', [1975, 2000])
+    .filter('title', 'matches', /love/i)   // Músicas com "love" no título
+    .take(50)                                  // limitar a 50 resultados
+    .skip(100)                                 // pular os primeiros 100 resultados
+    .sort('rating', false)            // classificação mais alta primeiro
+    .sort('title')                          // ordenar por título ascendente
+    .get(snapshots => {
         // ...
     });
 ```
@@ -994,10 +994,10 @@ Em vez de usar o retorno de chamada de `.get`, você também pode usar o retorna
 
 ```typescript
     // ... em alguma cadeia de promessas
-    .then(desdeAno => {
-        return db.query('músicas')
-        .filtro('ano', '>=', desdeAno)
-        .obter();
+    .then(fromYear => {
+        return db.query('songs')
+        .filter('year', '>=', fromYear)
+        .get();
     })
     .then(snapshots => {
         // Obteve snapshots da promessa retornada
@@ -1010,13 +1010,13 @@ Isso também permite usar ES6 `async / await:`
 const snapshots = await db.query("songs").filter("year", ">=", fromYear).get();
 ```
 
-### Limitando dados de resultados de consulta
+### `query.find` - Limitando dados de resultados de consulta
 
 Por padrão, as consultas retornarão instantâneos dos nós correspondentes, mas você também pode obter referências apenas passando a opção `{ snapshots: false }` ou usando a nova `.find()` método.
 
 ```typescript
 // ...
-const referências = await db.query("músicas").filtro("gênero", "contém", "rock").obter({ snapshots: false });
+const references = await db.query("songs").filter("genre", "contains", "rock").get({ snapshots: false });
 
 // agora temos apenas as referências, então podemos decidir quais dados carregar
 ```
@@ -1038,22 +1038,22 @@ const snapshots = await db
 
 Os instantâneos no exemplo acima conterão apenas o título e de cada música correspondente campos artista. Consulte [Limitar carregamento de dados aninhados](#limitar-o-carregamento-de-dados-aninhados-include-exclude) para obter mais informações sobre filtros `include e exclude`.
 
-### Removendo dados com uma consulta
+### `query.remove` - Removendo dados com uma consulta
 
 Para remover todos os nós que correspondem a uma consulta, basta chamar `remove` em vez de `get`:
 
 ```typescript
-db.query("músicas")
-    .filtro("ano", "<", 1950)
-    .remover(() => {
+db.query("songs")
+    .filter("ano", "<", 1950)
+    .remove(() => {
         // Antigas músicas removidas
     });
 
 // Ou, com await
-await db.query("músicas").filtro("ano", "<", 1950).remover();
+await db.query("músicas").filter("ano", "<", 1950).remove();
 ```
 
-### Contando resultados da consulta
+### `query.count` - Contando resultados da consulta
 
 Para obter uma contagem rápida dos resultados da consulta, você pode usar `.count()`:
 
@@ -1064,10 +1064,14 @@ const count = await db.query("songs").filter("artist", "==", "John Mayer").count
 Você pode usar isso em combinação com `skip` e `limit` para verificar se há resultados além do conjunto de dados atualmente carregado:
 
 ```typescript
-const nextPageSongsCount = await db.query("songs").filter("artist", "==", "John Mayer").skip(100).take(10).count(); // 10: full page, <10: last page.
+const nextPageSongsCount = await db.query("songs")
+    .filter("artist", "==", "John Mayer")
+    .skip(100)
+    .take(10)
+    .count(); // 10: full page, <10: last page.
 ```
 
-### Verificando a existência do resultado da consulta
+### `query.exists` - Verificando a existência do resultado da consulta
 
 Para determinar rapidamente se uma consulta tem alguma correspondência, você pode usar `.exists()`:
 
@@ -1077,7 +1081,7 @@ const exists = await db.query("users").filter("email", "==", "me@ivipcoin.com").
 
 Assim como count(), você também pode combinar isso com skip e limit.
 
-### Resultados da consulta de streaming
+### `query.forEach` - Resultados da consulta de streaming
 
 Para iterar pelos resultados de uma consulta sem carregar todos os dados na memória de uma só vez, você pode usar `forEach` que transmite cada filho e executa uma função de retorno de chamada com um instantâneo de seus dados. Se a função de retorno de chamada retornar `false`, a iteração será interrompida. Se o retorno de chamada retornar um `Promise`, a iteração aguardará a resolução antes de carregar o próximo filho.
 
@@ -1090,50 +1094,55 @@ Exemplo:
 ```typescript
 // Consultar livros, transmitindo os resultados um de cada vez:
 await db
-    .query("livros")
-    .filtro("categoria", "==", "culinária")
-    .forEach((snapshotDoLivro) => {
-        const livro = snapshotDoLivro.val();
-        console.log(`Encontrado livro de culinária "${livro.título}": "${livro.descrição}"`);
+    .query("books")
+    .filter("category", "==", "cooking")
+    .forEach((bookSnapshot) => {
+        const livro = bookSnapshot.val();
+        console.log(`Encontrado livro de culinária "${livro.title}": "${livro.description}"`);
     });
 
-// Agora, carregue apenas as propriedades 'título' e 'descrição' do livro
+// Agora, carregue apenas as propriedades 'title' e 'description' do livro
 await db
-    .query("livros")
-    .filtro("categoria", "==", "culinária")
-    .forEach({ incluir: ["título", "descrição"] }, (snapshotDoLivro) => {
-        const livro = snapshotDoLivro.val();
-        console.log(`Encontrado livro de culinária "${livro.título}": "${livro.descrição}"`);
+    .query("books")
+    .filter("categoria", "==", "culinária")
+    .forEach({ include: ["title", "description"] }, (bookSnapshot) => {
+        const livro = bookSnapshot.val();
+        console.log(`Encontrado livro de culinária "${livro.title}": "${livro.description}"`);
     });
 ```
 
 Veja também [Iteração (streaming) de filhos](#iterando-filhos-foreach)
 
-### Consultas em tempo real
+### `query.on` - Consultas em tempo real
 
 IvipBase agora suporta consultas em tempo real (ao vivo) e é capaz de enviar notificações quando há alterações nos resultados iniciais da consulta
 
 ```typescript
-let livrosCincoEstrelas = {}; // mapeia chaves para valores de livros
-function obteveCoincidencias(snapshots) {
-    snapshots.forEach((snapshot) => {
-        livrosCincoEstrelas[snapshot.key] = snapshot.val();
+let fiveStarBooks = {}; // mapeia chaves para valores de livros
+function gotMatches(snaps) {
+    snaps.forEach((snapshot) => {
+        fiveStarBooks[snapshot.key] = snapshot.val();
     });
 }
-function coincidenciaAdicionada(coin) {
+function matchAdded(match) {
     // adicionar livro aos resultados
-    livrosCincoEstrelas[coin.snapshot.key] = coin.snapshot.val();
+    fiveStarBooks[match.snapshot.key] = match.snapshot.val();
 }
-function coincidenciaAlterada(coin) {
+function matchChanged(match) {
     // atualizar detalhes do livro
-    livrosCincoEstrelas[coin.snapshot.key] = coin.snapshot.val();
+    fiveStarBooks[match.snapshot.key] = match.snapshot.val();
 }
-function coincidenciaRemovida(coin) {
+function matchRemoved(match) {
     // remover livro dos resultados
-    delete livrosCincoEstrelas[coin.ref.key];
+    delete fiveStarBooks[match.ref.key];
 }
 
-db.query("livros").filtro("classificação", "==", 5).on("add", coincidenciaAdicionada).on("change", coincidenciaAlterada).on("remove", coincidenciaRemovida).obter(obteveCoincidencias);
+db.query("livros")
+    .filter("rating", "==", 5)
+    .on("add", matchAdded)
+    .on("change", matchChanged)
+    .on("remove", matchRemoved)
+    .get(gotMatches);
 ```
 
 NOTA: O uso de `take` e `skip` atualmente não é levado em consideração. Eventos podem ser acionados para resultados que não estão no intervalo solicitado
@@ -1169,10 +1178,6 @@ const user = auth.currentUser; // Obtém o usuário atualmente autenticado
 O evento `ready` é acionado quando a API de autenticação está pronta para uso. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 auth.ready((user) => {
     console.log("API de autenticação pronta para uso");
 });
@@ -1183,10 +1188,6 @@ auth.ready((user) => {
 Para criar um usuário com e-mail e senha, você pode usar a função `createUserWithEmailAndPassword`. Ela requer dois parâmetros: um e-mail e uma senha. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 auth.createUserWithEmailAndPassword("user@example.com", "password")
     .then((user) => {
         console.log("Usuário criado com sucesso:", user);
@@ -1213,10 +1214,6 @@ auth.createUserWithEmailAndPassword("user@example.com", "password", false)
 Para criar um usuário com nome de usuário e senha, você pode usar a função `createUserWithUsernameAndPassword`. Ela requer dois parâmetros: um nome de usuário e uma senha. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 auth.createUserWithUsernameAndPassword("user", "user@example.com", "password")
     .then((user) => {
         console.log("Usuário criado com sucesso:", user);
@@ -1243,10 +1240,6 @@ auth.createUserWithUsernameAndPassword("user", "user@example.com", "password", f
 Para fazer login com e-mail e senha, você pode usar a função `signInWithEmailAndPassword`. Ela requer dois parâmetros: um e-mail e uma senha. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 auth.signInWithEmailAndPassword("user@example.com", "password")
     .then((user) => {
         console.log("Usuário logado com sucesso:", user);
@@ -1269,10 +1262,6 @@ auth.on("signin", (user) => {
 Para fazer login com nome de usuário e senha, você pode usar a função `signInWithUsernameAndPassword`. Ela requer dois parâmetros: um nome de usuário e uma senha. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 auth.signInWithUsernameAndPassword("user", "password")
     .then((user) => {
         console.log("Usuário logado com sucesso:", user);
@@ -1295,10 +1284,6 @@ auth.on("signin", (user) => {
 Para fazer login com um token, você pode usar a função `signInWithToken`. Ela requer um parâmetro: um token. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 auth.signInWithToken("token")
     .then((user) => {
         console.log("Usuário logado com sucesso:", user);
@@ -1321,10 +1306,6 @@ auth.on("signin", (user) => {
 Para fazer logout, você pode usar a função `signOut`. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 auth.signOut()
     .then(() => {
         console.log("Usuário deslogado com sucesso");
@@ -1347,10 +1328,6 @@ auth.on("signout", () => {
 Para observar mudanças de autenticação, você pode usar a função `onAuthStateChanged`. Ela requer um parâmetro: uma função de retorno de chamada que será acionada quando houver mudanças de autenticação. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 auth.onAuthStateChanged((user) => {
     if (user) {
         console.log("Usuário logado:", user);
@@ -1365,10 +1342,6 @@ auth.onAuthStateChanged((user) => {
 Para observar mudanças de token, você pode usar a função `onIdTokenChanged`. Ela requer um parâmetro: uma função de retorno de chamada que será acionada quando houver mudanças de token. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 auth.onIdTokenChanged((token) => {
     console.log("Token alterado:", token);
 });
@@ -1379,11 +1352,7 @@ auth.onIdTokenChanged((token) => {
 Para atualizar o usuário atual, você pode usar a função `updateCurrentUser`. Ela requer um parâmetro: um usuário. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
 let user = auth.currentUser;
-
 auth.updateCurrentUser(user)
     .then(() => {
         console.log("Usuário atualizado com sucesso");
@@ -1398,10 +1367,6 @@ auth.updateCurrentUser(user)
 Para enviar um e-mail de redefinição de senha, você pode usar a função `sendPasswordResetEmail`. Ela requer um parâmetro: um e-mail. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 auth.sendPasswordResetEmail("user@example.com")
     .then(() => {
         console.log("E-mail de redefinição de senha enviado com sucesso");
@@ -1416,10 +1381,6 @@ auth.sendPasswordResetEmail("user@example.com")
 Para aplicar um código de ação, você pode usar a função `applyActionCode`. Ela requer um parâmetro: um código de ação. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 auth.applyActionCode("code")
     .then(() => {
         console.log("Código de ação aplicado com sucesso");
@@ -1434,10 +1395,6 @@ auth.applyActionCode("code")
 Para verificar um código de ação, você pode usar a função `checkActionCode`. Ela requer um parâmetro: um código de ação. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 auth.checkActionCode("code")
     .then((info) => {
         console.log("Código de ação verificado com sucesso:", info);
@@ -1452,10 +1409,6 @@ auth.checkActionCode("code")
 Para confirmar a redefinição de senha, você pode usar a função `confirmPasswordReset`. Ela requer dois parâmetros: um código de ação e uma nova senha. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 auth.confirmPasswordReset("code", "newPassword")
     .then(() => {
         console.log("Redefinição de senha confirmada com sucesso");
@@ -1470,10 +1423,6 @@ auth.confirmPasswordReset("code", "newPassword")
 Para verificar um código de redefinição de senha, você pode usar a função `verifyPasswordResetCode`. Ela requer um parâmetro: um código de redefinição de senha. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 auth.verifyPasswordResetCode("code")
     .then((email) => {
         console.log("Código de redefinição de senha verificado com sucesso:", email);
@@ -1488,10 +1437,6 @@ auth.verifyPasswordResetCode("code")
 Para obter informações do usuário autenticado, você pode usar a propriedade `currentUser`. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 let user = auth.currentUser;
 
 // ID do usuário
@@ -1545,12 +1490,8 @@ console.log(user.settings);
 Para obter o token de acesso de um usuário, você pode usar a propriedade `accessToken`. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 let user = auth.currentUser;
-let token = user.accessToken;
+console.log("Token de acesso:", user.accessToken);
 ```
 
 ## `User.providerData` - Dados do provedor
@@ -1558,12 +1499,8 @@ let token = user.accessToken;
 Para obter os dados do provedor de um usuário, você pode usar a propriedade `providerData`. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 let user = auth.currentUser;
-let providerData = user.providerData;
+console.log("Dados do provedor:", user.providerData);
 ```
 
 ## `User.updateProfile` - Atualizar perfil
@@ -1571,10 +1508,6 @@ let providerData = user.providerData;
 Para atualizar o perfil de um usuário, você pode usar a função `updateProfile`. Ela requer um parâmetro: um objeto com as propriedades a serem atualizadas. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 let user = auth.currentUser;
 user.updateProfile({
     displayName: "User",
@@ -1593,10 +1526,6 @@ user.updateProfile({
 Para atualizar o e-mail de um usuário, você pode usar a função `updateEmail`. Ela requer um parâmetro: um e-mail. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 let user = auth.currentUser;
 user.updateEmail("user123@example.com")
     .then(() => {
@@ -1612,10 +1541,6 @@ user.updateEmail("user123@example.com")
 Para atualizar a senha de um usuário, você pode usar a função `updatePassword`. Ela requer um parâmetro: uma senha. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 let user = auth.currentUser;
 user.updatePassword("currentPassword", "newPassword")
     .then(() => {
@@ -1631,10 +1556,6 @@ user.updatePassword("currentPassword", "newPassword")
 Para atualizar o nome de usuário de um usuário, você pode usar a função `updateUsername`. Ela requer um parâmetro: um nome de usuário. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 let user = auth.currentUser;
 user.updateUsername("newUser")
     .then(() => {
@@ -1650,10 +1571,6 @@ user.updateUsername("newUser")
 Para enviar uma verificação de e-mail para um usuário, você pode usar a função `sendEmailVerification`. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 let user = auth.currentUser;
 user.sendEmailVerification()
     .then(() => {
@@ -1669,10 +1586,6 @@ user.sendEmailVerification()
 Para deletar um usuário, você pode usar a função `delete`. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 let user = auth.currentUser;
 user.delete()
     .then(() => {
@@ -1688,10 +1601,6 @@ user.delete()
 Para obter o token de ID de um usuário, você pode usar a função `getIdToken`. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 let user = auth.currentUser;
 user.getIdToken()
     .then((token) => {
@@ -1707,10 +1616,6 @@ user.getIdToken()
 Para obter o resultado do token de ID de um usuário, você pode usar a função `getIdTokenResult`. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 let user = auth.currentUser;
 user.getIdTokenResult()
     .then((result) => {
@@ -1726,10 +1631,6 @@ user.getIdTokenResult()
 Para recarregar um usuário, você pode usar a função `reload`. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 let user = auth.currentUser;
 user.reload()
     .then(() => {
@@ -1745,10 +1646,6 @@ user.reload()
 Para converter um usuário para JSON, você pode usar a função `toJSON`. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 let user = auth.currentUser;
 let json = user.toJSON();
 ```
@@ -1758,10 +1655,6 @@ let json = user.toJSON();
 Para converter um usuário de JSON, você pode usar a função `fromJSON`. Abaixo, segue um exemplo de uso:
 
 ```typescript
-import { getAuth } from "ivipbase";
-
-const auth = getAuth();
-
 let json = {
     uid: "uid",
     // ...
