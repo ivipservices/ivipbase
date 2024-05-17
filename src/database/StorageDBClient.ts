@@ -37,6 +37,7 @@ export class StorageDBClient extends Api {
 	}
 
 	private async initialize() {
+		await getAuth(this.db.database).ready();
 		await this.db.app.request({ route: this.serverPingUrl });
 		this.db.emit("ready");
 	}

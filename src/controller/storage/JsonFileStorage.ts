@@ -35,7 +35,7 @@ export class JsonFileStorage extends CustomStorage {
 
 		fs.access(this.options.filePath, fs.constants.F_OK, (err) => {
 			if (err) {
-				this.emitOnce("ready");
+				this.emit("ready");
 			} else {
 				fs.readFile(this.options.filePath, "utf8", (err, data) => {
 					if (err) {
@@ -58,7 +58,7 @@ export class JsonFileStorage extends CustomStorage {
 						throw `Erro ao fazer o parse do JSON: ${String(parseError)}`;
 					}
 
-					this.emitOnce("ready");
+					this.emit("ready");
 				});
 			}
 		});

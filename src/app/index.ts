@@ -65,24 +65,26 @@ export class IvipBaseApp extends SimpleEventEmitter {
 		});
 	}
 
-	init() {
+	initialize() {
 		if (!this._ready) {
-			if (this.isServer) {
-				this.server = new LocalServer(this, this.settings.server);
-				this.server.ready(() => {
-					this.emitOnce("ready");
-				});
-			} else {
-				const promises: Array<Promise<any>> = [];
+			const promises: Array<Promise<any>> = [];
+			promises.push(
+				new Promise<void>(async (resolve, reject) => {
+					await this.storage.ready();
+					resolve();
+				}),
+			);
 
+			if (this.isServer) {
 				promises.push(
-					new Promise<void>((resolve, reject) => {
-						this.storage.ready(() => {
-							resolve();
-						});
+					new Promise<void>(async (resolve, reject) => {
+						const server = new LocalServer(this, this.settings.server);
+						await server.ready();
+						this.server = server;
+						resolve();
 					}),
 				);
-
+			} else {
 				const dbList: string[] = Array.isArray(this.settings.dbname) ? this.settings.dbname : [this.settings.dbname];
 				for (const dbName of dbList) {
 					promises.push(
@@ -99,11 +101,11 @@ export class IvipBaseApp extends SimpleEventEmitter {
 						}),
 					);
 				}
-
-				Promise.all(promises).then(() => {
-					this.emitOnce("ready");
-				});
 			}
+
+			Promise.all(promises).then(() => {
+				this.emit("ready");
+			});
 		}
 	}
 
@@ -240,7 +242,7 @@ export function initializeApp(options: IvipBaseSettingsOptions): IvipBaseApp {
 
 	_apps.set(newApp.name, newApp);
 
-	newApp.init();
+	newApp.initialize();
 
 	return newApp;
 }

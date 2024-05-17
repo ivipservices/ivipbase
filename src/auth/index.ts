@@ -5,6 +5,7 @@ import { NOT_CONNECTED_ERROR_MESSAGE } from "../controller/request/error";
 import { SimpleEventEmitter } from "ivipbase-core";
 import localStorage from "../utils/localStorage";
 import { sanitizeEmailPrefix } from "../utils";
+import Base64 from "../utils/base64";
 
 export interface AuthProviderSignInResult {
 	user: AuthUser;
@@ -377,12 +378,12 @@ export class Auth extends SimpleEventEmitter {
 		if (!this._user) {
 			const user = localStorage.getItem(`[${this.database}][auth_user]`);
 			if (user) {
-				this._user = AuthUser.fromJSON(this, JSON.parse(user));
+				this._user = AuthUser.fromJSON(this, JSON.parse(Base64.decode(user)));
 				await this._user.reload();
 			}
 		}
 
-		this.emitOnce("ready");
+		this.emit("ready");
 	}
 
 	/**
@@ -404,7 +405,7 @@ export class Auth extends SimpleEventEmitter {
 
 	private set user(value: AuthUser | null) {
 		if (value) {
-			localStorage.setItem(`[${this.database}][auth_user]`, JSON.stringify(value.toJSON()));
+			localStorage.setItem(`[${this.database}][auth_user]`, Base64.encode(JSON.stringify(value.toJSON())));
 		} else {
 			localStorage.removeItem(`[${this.database}][auth_user]`);
 		}

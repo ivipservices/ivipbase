@@ -22,7 +22,7 @@ export class DataStorage extends CustomStorage {
 				this.data[name] = new Map<string, StorageNode>();
 			});
 
-		this.emitOnce("ready");
+		this.emit("ready");
 	}
 
 	async getMultiple(database: string, expression: RegExp): Promise<StorageNodeInfo[]> {

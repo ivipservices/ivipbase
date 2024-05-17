@@ -5,3 +5,8 @@ export function encode(str: string) {
 export function decode(base64: string) {
 	return decodeURIComponent(escape(atob(base64)));
 }
+
+export default {
+	encode,
+	decode,
+};

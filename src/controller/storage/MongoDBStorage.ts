@@ -61,7 +61,7 @@ export class MongodbStorage extends CustomStorage {
 		this.client = new MongoClient(this.mongoUri, {});
 
 		this.client.on("connected", () => {
-			this.emitOnce("ready");
+			this.emit("ready");
 			this.isConnected = true;
 		});
 

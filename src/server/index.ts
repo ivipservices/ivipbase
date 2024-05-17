@@ -125,7 +125,7 @@ export class LocalServer extends AbstractLocalServer<LocalServer> {
 			this.debug.log(`Server running at ${this.url}`);
 
 			this.localApp.storage.ready(() => {
-				this.emitOnce(`ready`);
+				this.emit(`ready`);
 			});
 		});
 	}

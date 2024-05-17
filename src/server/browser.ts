@@ -294,7 +294,7 @@ export abstract class AbstractLocalServer<LocalServer = any> extends SimpleEvent
 		this.debug = new DebugLogger(this.settings.logLevel, `[SERVER]`);
 		this.log = this.debug;
 
-		this.once("ready", () => {
+		this.on("ready", () => {
 			this._ready = true;
 		});
 	}
@@ -309,7 +309,7 @@ export abstract class AbstractLocalServer<LocalServer = any> extends SimpleEvent
 	async ready(callback?: () => void) {
 		if (!this._ready) {
 			// Aguarda o evento ready
-			await new Promise((resolve) => this.on("ready", resolve));
+			await new Promise((resolve) => this.once("ready", resolve));
 		}
 		callback?.();
 	}
@@ -345,7 +345,7 @@ export abstract class AbstractLocalServer<LocalServer = any> extends SimpleEvent
 	 * @param clientIp endereço IP do usuário
 	 * @param code código de verificação enviado para o endereço de e-mail do usuário
 	 */
-	verifyEmailAddress(dbName: string, clientIp: string, code: string): Promise<void> {
+	verifyEmailAddress(dbName: string, clientIp: string, code: string): Promise<string> {
 		throw new ServerNotReadyError();
 	}
 }
@@ -359,6 +359,6 @@ export class LocalServer extends AbstractLocalServer<LocalServer> {
 	}
 
 	init() {
-		this.emitOnce("ready");
+		this.emit("ready");
 	}
 }

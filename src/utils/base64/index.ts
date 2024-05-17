@@ -5,3 +5,8 @@ export function encode(str: string) {
 export function decode(base64: string) {
 	return Buffer.from(base64, "base64").toString("utf8");
 }
+
+export default {
+	encode,
+	decode,
+};

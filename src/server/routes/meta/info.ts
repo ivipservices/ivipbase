@@ -77,7 +77,7 @@ export const addRoute = (env: LocalServer) => {
 			process: process.pid,
 		};
 
-		if (req.user && req.user.admin_level >= 2) {
+		if (req.user && req.user.permission_level >= 2) {
 			const numberToByteSize = (number: number) => {
 				return Math.round((number / 1024 / 1024) * 100) / 100 + "MB";
 			};

@@ -149,7 +149,7 @@ export const addRoutes = (env: LocalServer) => {
 				last_signin_ip: req.ip,
 				photoURL: details.photoURL ?? undefined,
 				settings: details.settings ?? {},
-				admin_level: 0,
+				permission_level: 0,
 			};
 
 			const userRef = await env.authRef(dbName).push(user);

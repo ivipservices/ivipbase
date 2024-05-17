@@ -18,7 +18,7 @@ import { sendUnauthorizedError } from "../shared/error";
  */
 export const adminOnly = (env: LocalServer, errorMessage = "somente administradores podem realizar esta operação") => {
 	return (req: RouteRequest, res: Response, next: NextFunction) => {
-		if (env.settings.auth.enabled && (!req.user || req.user.admin_level < 2)) {
+		if (env.settings.auth.enabled && (!req.user || req.user.permission_level < 2)) {
 			return sendUnauthorizedError(res, "admin_only", errorMessage);
 		}
 		next();
