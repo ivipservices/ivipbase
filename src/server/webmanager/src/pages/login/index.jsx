@@ -5,8 +5,7 @@ import { mdiLockOutline } from "@mdi/js";
 import MountPage from "../../components/MountPage.jsx";
 import SvgIcon from "../../components/SvgIcon.jsx";
 import style from "./style.module.scss";
-
-console.log(style);
+import { getApp, getAuth } from "ivipbase";
 
 const defaultTheme = createTheme({
 	palette: {
@@ -21,17 +20,49 @@ export const Login = () => {
 	const handleSubmit = (event) => {
 		event.preventDefault();
 		setLoading(true);
+
 		const data = new FormData(event.currentTarget);
-		console.log({
+		const info = {
 			dbname: dbName,
 			username: data.get("username"),
 			password: data.get("password"),
+		};
+
+		getApp().ready(() => {
+			const auth = getAuth();
+
+			if (auth.currentUser) {
+				return;
+			}
+
+			auth.signInWithUsernameAndPassword(info.username, info.password)
+				.then((user) => {
+					console.log(user);
+				})
+				.catch((err) => {
+					console.error(err);
+				});
 		});
 	};
 
 	useEffect(() => {
 		const time = setTimeout(() => {
-			setLoading(false);
+			const app = getApp();
+
+			app.reset({
+				dbname: dbName,
+				bootable: true,
+			});
+
+			app.ready(() => {
+				const auth = getAuth();
+
+				if (!auth.currentUser) {
+					return setLoading(false);
+				}
+
+				console.log(auth.currentUser);
+			});
 		}, 1000);
 
 		return () => clearTimeout(time);

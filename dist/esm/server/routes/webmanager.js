@@ -15,7 +15,15 @@ export const addRoutes = (env) => {
             res.sendFile(path.join(assetsPath, "/index.html"));
         }
         else {
-            res.sendFile(path.join(assetsPath, "/", filePath));
+            const mainFilePath = path.join(assetsPath, "/", filePath);
+            const posiplePath = [mainFilePath, mainFilePath + ".js", mainFilePath + ".jsx", path.join(mainFilePath, "/", "index.js"), path.join(mainFilePath, "/", "index.jsx")];
+            for (const p of posiplePath) {
+                if (require("fs").existsSync(p) && require("fs").statSync(p).isFile()) {
+                    res.sendFile(p);
+                    return;
+                }
+            }
+            res.status(404).send("File not found");
         }
     });
 };

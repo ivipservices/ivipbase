@@ -76,6 +76,7 @@ export interface DatabaseSettings {
     rulesData?: RulesData;
 }
 export declare class IvipBaseSettings {
+    readonly options: Partial<Omit<IvipBaseSettings, "isServer" | "isValidClient">>;
     name: string;
     dbname: string | string[];
     database: DatabaseSettings | DatabaseSettings[];

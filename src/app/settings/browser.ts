@@ -127,7 +127,7 @@ export class IvipBaseSettings {
 	public isValidClient: boolean = true;
 	public bootable: boolean = true;
 
-	constructor(options: Partial<Omit<IvipBaseSettings, "isServer" | "isValidClient">> = {}) {
+	constructor(readonly options: Partial<Omit<IvipBaseSettings, "isServer" | "isValidClient">> = {}) {
 		this.reset(options);
 	}
 

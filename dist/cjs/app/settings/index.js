@@ -68,6 +68,7 @@ class ServerEmailSettings extends browser_1.ServerEmailSettings {
 class IvipBaseSettings extends browser_1.IvipBaseSettings {
     constructor(options = {}) {
         super(options);
+        this.options = options;
         this.isServer = false;
         this.isValidClient = false;
         this.reset(options, false);

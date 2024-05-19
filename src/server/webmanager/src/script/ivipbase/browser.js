@@ -172,7 +172,7 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         this._ready = false;
         this.isDeleted = false;
         await this.disconnect();
-        this.settings.reset(options.settings);
+        this.settings.reset(Object.assign(Object.assign({}, this.settings), options.settings));
         this.storage = (0, verifyStorage_1.applySettings)(this.settings.dbname, this.settings.storage);
         this.isServer = typeof this.settings.server === "object";
         this.databases.clear();
@@ -282,6 +282,7 @@ exports.ServerEmailSettings = ServerEmailSettings;
 const hostnameRegex = /^((https?):\/\/)?(localhost|([\da-z\.-]+\.[a-z\.]{2,6}|[\d\.]+))(\:{1}(\d+))?$/;
 class IvipBaseSettings {
     constructor(options = {}) {
+        this.options = options;
         this.name = internal_1.DEFAULT_ENTRY_NAME;
         this.dbname = "root";
         this.database = {
@@ -1028,7 +1029,7 @@ const ERRORS = {
     ["db-connection-error" /* AppError.DB_CONNECTION_ERROR */]: "Database connection error: {$error}",
     ["db-not-found" /* AppError.DB_NOT_FOUND */]: "Banco de dados '{$dbName}' não encontrado",
 };
-exports.ERROR_FACTORY = new util_1.ErrorFactory("app", "Firebase", ERRORS);
+exports.ERROR_FACTORY = new util_1.ErrorFactory("app", "iVipBase", ERRORS);
 
 },{"./util":8}],8:[function(require,module,exports){
 "use strict";

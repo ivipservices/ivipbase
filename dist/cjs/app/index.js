@@ -171,7 +171,7 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         this._ready = false;
         this.isDeleted = false;
         await this.disconnect();
-        this.settings.reset(options.settings);
+        this.settings.reset(Object.assign(Object.assign({}, this.settings), options.settings));
         this.storage = (0, verifyStorage_1.applySettings)(this.settings.dbname, this.settings.storage);
         this.isServer = typeof this.settings.server === "object";
         this.databases.clear();

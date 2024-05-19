@@ -101,7 +101,7 @@ export class IvipBaseSettings extends BrowserSettings {
 	 */
 	public email?: ServerEmailSettings;
 
-	constructor(options: IvipBaseSettingsOptions = {}) {
+	constructor(readonly options: IvipBaseSettingsOptions = {}) {
 		super(options);
 		this.reset(options, false);
 	}

@@ -21,7 +21,15 @@ const addRoutes = (env) => {
             res.sendFile(path_1.default.join(assetsPath, "/index.html"));
         }
         else {
-            res.sendFile(path_1.default.join(assetsPath, "/", filePath));
+            const mainFilePath = path_1.default.join(assetsPath, "/", filePath);
+            const posiplePath = [mainFilePath, mainFilePath + ".js", mainFilePath + ".jsx", path_1.default.join(mainFilePath, "/", "index.js"), path_1.default.join(mainFilePath, "/", "index.jsx")];
+            for (const p of posiplePath) {
+                if (require("fs").existsSync(p) && require("fs").statSync(p).isFile()) {
+                    res.sendFile(p);
+                    return;
+                }
+            }
+            res.status(404).send("File not found");
         }
     });
 };

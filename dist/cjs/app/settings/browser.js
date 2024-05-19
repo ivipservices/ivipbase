@@ -26,6 +26,7 @@ exports.ServerEmailSettings = ServerEmailSettings;
 const hostnameRegex = /^((https?):\/\/)?(localhost|([\da-z\.-]+\.[a-z\.]{2,6}|[\d\.]+))(\:{1}(\d+))?$/;
 class IvipBaseSettings {
     constructor(options = {}) {
+        this.options = options;
         this.name = internal_1.DEFAULT_ENTRY_NAME;
         this.dbname = "root";
         this.database = {

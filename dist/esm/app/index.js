@@ -163,7 +163,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
         this._ready = false;
         this.isDeleted = false;
         await this.disconnect();
-        this.settings.reset(options.settings);
+        this.settings.reset({ ...this.settings, ...options.settings });
         this.storage = applySettings(this.settings.dbname, this.settings.storage);
         this.isServer = typeof this.settings.server === "object";
         this.databases.clear();

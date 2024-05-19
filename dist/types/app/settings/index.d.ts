@@ -17,6 +17,7 @@ interface AppServerSettings extends ServerInitialSettings<LocalServer> {
 }
 export type IvipBaseSettingsOptions = Partial<IvipBaseSettings & ServerInitialSettings<LocalServer> & AppServerSettings>;
 export declare class IvipBaseSettings extends BrowserSettings {
+    readonly options: IvipBaseSettingsOptions;
     isServer: boolean;
     isValidClient: boolean;
     server?: ServerSettings;
