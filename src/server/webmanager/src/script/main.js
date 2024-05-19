@@ -74,6 +74,10 @@ async function _require(momentPath, module) {
 			if (/\.(css|scss|sass|less|styl)$/gi.test(m)) {
 				const style = await new Promise((resolve, reject) => {
 					let sassText = scriptText;
+					if (sassText.trim() === "") {
+						return resolve({});
+					}
+
 					const classNames = Object.fromEntries(extractClassNames(sassText).map((c) => [c, c]));
 
 					if (/\.module\.(css|scss|sass|less|styl)$/gi.test(m)) {

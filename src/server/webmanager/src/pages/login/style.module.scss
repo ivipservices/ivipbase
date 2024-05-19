@@ -1,25 +1,15 @@
-$color: #3bbfce;
+.card {
+    background-color: var(--background-light);
+    border-radius: 10px;
+    box-shadow: var(--box-shadow);
+    width: 100%;
+    max-width: 400px;
+    margin: 0px auto;
+    padding: 20px 16px;
 
-.content-navigation {
-    border-color: $color;
-    color: darken($color, 10%);
-}
-
-.border {
-    padding: 8px;
-    margin: 4px;
-    border: 1px solid $color;
-}
-
-div:global(.border) {
-    .content-navigation {
-        border-color: $color;
-        color: darken($color, 10%);
-    }
-
-    .border {
-        padding: 8px;
-        margin: 4px;
-        border: 1px solid $color;
+    .box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
     }
 }

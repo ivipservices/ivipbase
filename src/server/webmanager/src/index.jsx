@@ -1,20 +1,19 @@
 import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
 import { CircularProgress } from "@mui/material";
-import Home from "./pages/home.jsx";
-import Login from "./pages/login";
 import MountPage from "./components/MountPage.jsx";
 import { initializeApp } from "ivipbase";
 import MultiStorager from "./utils/multi-storager.js";
 
-const About = () => {
-	return (
-		<MountPage isCard>
-			<h1>About</h1>
-			<button onClick={() => window.goToPage("home")}>Go to Home</button>
-		</MountPage>
-	);
-};
+import { Home, Login, DataBase } from "./pages";
+
+import { createTheme, ThemeProvider } from "@mui/material/styles";
+
+const defaultTheme = createTheme({
+	palette: {
+		mode: "dark",
+	},
+});
 
 window.goToPage = (page, state) => {
 	MultiStorager.DataStorager.set("page", { page: page ?? "home", state: state ?? {} });
@@ -39,7 +38,7 @@ const App = () => {
 
 			time = setTimeout(() => {
 				setPage(page);
-			}, 1000);
+			}, 400);
 		});
 
 		return () => {
@@ -52,6 +51,8 @@ const App = () => {
 			return <Home />;
 		case "login":
 			return <Login />;
+		case "database":
+			return <DataBase />;
 		case "loading":
 			return (
 				<MountPage>
@@ -86,5 +87,10 @@ app.ready(() => {
 		progressElement.remove();
 	}
 
-	ReactDOM.render(<App />, document.getElementById("root"));
+	ReactDOM.render(
+		<ThemeProvider theme={defaultTheme}>
+			<App />
+		</ThemeProvider>,
+		document.getElementById("root"),
+	);
 });

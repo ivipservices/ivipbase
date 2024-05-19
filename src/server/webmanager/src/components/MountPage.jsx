@@ -13,15 +13,15 @@ export const MountPage = ({ title, header, toBack, children, isCard }) => {
 				<div className="feature"></div>
 				<div className="content">
 					{title && (
-						<h1>
+						<div className="title">
 							{typeof toBack === "function" && (
 								<SvgIcon
 									onClick={toBack}
 									path={mdiChevronLeftCircle}
 								/>
 							)}
-							<spna>{title}</spna>
-						</h1>
+							{typeof title === "string" ? <h1>{title}</h1> : title}
+						</div>
 					)}
 					{header}
 				</div>

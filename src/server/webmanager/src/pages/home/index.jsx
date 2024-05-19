@@ -1,9 +1,9 @@
 import React, { useEffect } from "react";
 import { getApp } from "ivipbase";
 import { CircularProgress } from "@mui/material";
-import MountPage from "../components/MountPage.jsx";
-import ProjectCard from "../components/ProjectCard.jsx";
-import { useDataStorager } from "../utils/multi-storager.js";
+import MountPage from "../../components/MountPage.jsx";
+import ProjectCard from "../../components/ProjectCard.jsx";
+import { useDataStorager } from "../../utils/multi-storager.js";
 
 export const Home = () => {
 	const [projects, setProjects] = useDataStorager("projects", null);
