@@ -1,3 +1,12 @@
+import React, { useState, useEffect } from "react";
+import ReactDOM from "react-dom";
+import { CircularProgress } from "@mui/material";
+import Home from "./pages/home.jsx";
+import Login from "./pages/login";
+import MountPage from "./components/MountPage.jsx";
+import { initializeApp } from "ivipbase";
+import MultiStorager from "./utils/multi-storager.js";
+
 const About = () => {
 	return (
 		<MountPage isCard>
@@ -16,51 +25,66 @@ window.pageState = () => {
 	return state ?? {};
 };
 
-const App = (() => {
-	const { useState, useEffect } = React;
-	const { CircularProgress } = MaterialUI;
+const App = () => {
+	const [page, setPage] = useState("home");
 
-	return () => {
-		const [page, setPage] = useState("home");
+	useEffect(() => {
+		let time;
+		const event = MultiStorager.DataStorager.addListener("page", ({ page }) => {
+			if (time) {
+				clearTimeout(time);
+			}
 
-		useEffect(() => {
-			let time;
-			const event = MultiStorager.DataStorager.addListener("page", ({ page }) => {
-				if (time) {
-					clearTimeout(time);
-				}
+			setPage("loading");
 
-				setPage("loading");
+			time = setTimeout(() => {
+				setPage(page);
+			}, 1000);
+		});
 
-				time = setTimeout(() => {
-					setPage(page);
-				}, 1000);
-			});
+		return () => {
+			event.stop();
+		};
+	}, []);
 
-			return () => {
-				event.stop();
-			};
-		}, []);
+	switch (page) {
+		case "home":
+			return <Home />;
+		case "login":
+			return <Login />;
+		case "loading":
+			return (
+				<MountPage>
+					<div className="loading">
+						<CircularProgress />
+					</div>
+				</MountPage>
+			);
+		default:
+			return (
+				<MountPage>
+					<h1>404</h1>
+				</MountPage>
+			);
+	}
+};
 
-		switch (page) {
-			case "home":
-				return <Home />;
-			case "login":
-				return <Login />;
-			case "loading":
-				return (
-					<MountPage>
-						<div className="loading">
-							<CircularProgress />
-						</div>
-					</MountPage>
-				);
-			default:
-				return (
-					<MountPage>
-						<h1>404</h1>
-					</MountPage>
-				);
-		}
-	};
-})();
+const app = initializeApp({
+	host: "localhost",
+	port: 8080,
+	dbname: "",
+	bootable: false,
+});
+
+app.ready(() => {
+	progressBar.style.width = "100%";
+	progressBar.style.backgroundColor = colors[colors.length - 1];
+	progressBarContent.setAttribute("label", "Conectando ao servidor...");
+
+	const progressElement = document.querySelector("body > #progress");
+	if (progressElement) {
+		progressElement.remove();
+	}
+
+	ReactDOM.render(<App />, document.getElementById("root"));
+});

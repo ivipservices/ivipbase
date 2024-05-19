@@ -1,0 +1,25 @@
+$color: #3bbfce;
+
+.content-navigation {
+    border-color: $color;
+    color: darken($color, 10%);
+}
+
+.border {
+    padding: 8px;
+    margin: 4px;
+    border: 1px solid $color;
+}
+
+div:global(.border) {
+    .content-navigation {
+        border-color: $color;
+        color: darken($color, 10%);
+    }
+
+    .border {
+        padding: 8px;
+        margin: 4px;
+        border: 1px solid $color;
+    }
+}

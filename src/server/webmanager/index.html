@@ -157,37 +157,6 @@
         }
     </style>
     <link rel="stylesheet" href="./src/styles/main.css" />
-    <script>
-        window.exports = {};
-
-        async function require(url) {
-            // Verifica se a URL é relativa ou absoluta
-            if (!url.startsWith('http') && !url.startsWith('/')) {
-                url = './' + url;
-            }
-
-            try {
-                // Faz a requisição do módulo
-                const response = await fetch(url);
-
-                // Verifica se a requisição foi bem-sucedida
-                if (!response.ok) {
-                    throw new Error(`Failed to load module script with URL ${url}`);
-                }
-
-                const scriptText = await response.text();
-
-                const exports = {};
-
-                eval(scriptText);
-
-                return exports;
-            } catch (error) {
-                console.error(`Error loading module from ${url}`, error);
-                throw error;
-            }
-        }
-    </script>
     <script src="./src/script/react.production.min.js" crossorigin></script>
     <script src="./src/script/react-dom.production.min.js" crossorigin></script>
     <script src="./src/script/babel.min.js"></script>
@@ -196,6 +165,7 @@
     <script src="https://unpkg.com/@mui/material@5.15.17/umd/material-ui.production.min.js" crossorigin></script>
     <script src="./src/script/mdi.js" crossorigin></script>
     <script src="./src/script/ivipbase/browser.js" crossorigin></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sass.js/0.11.1/sass.sync.min.js"></script>
 </head>
 
 <body>
@@ -205,14 +175,8 @@
         <div class="progress-bar" style="width: 0%;"></div>
     </div>
 
-    <script type="text/babel" src="./src/components/MountPage.jsx"></script>
-    <script type="text/babel" src="./src/components/ProjectCard.jsx"></script>
-    <script type="text/babel" src="./src/components/SvgIcon.jsx"></script>
-    <script type="text/babel" src="./src/utils/multi-storager.js"></script>
-    <script type="text/babel" src="./src/pages/home.jsx"></script>
-    <script type="text/babel" src="./src/pages/login.jsx"></script>
-    <script type="text/babel" src="./src/index.jsx"></script>
-    <script type="text/babel" data-presets="env,react">
+    <script src="./src/script/main.js"></script>
+    <script>
         var progressBarContent = document.querySelector('body > #progress');
         var progressBar = progressBarContent.querySelector('.progress-bar');
         var colors = ["#f63a0f", "#f27011", "#f2b01e", "#f2d31b", "#86e01e"];
@@ -259,41 +223,23 @@
 
         let time;
 
-        const initialize = () => {
+        const init = () => {
+            window.removeEventListener('load', init);
+            document.removeEventListener("DOMContentLoaded", init);
             clearTimeout(time);
-
-            const app = ivipbase.initializeApp({
-                host: "localhost",
-                port: 8080,
-                dbname: "",
-                bootable: false
-            });
-
-            app.ready(() => {
-                clearInterval(timer);
-                clearInterval(initialTimer);
-                progressBar.style.width = '100%';
-                progressBar.style.backgroundColor = colors[colors.length - 1];
-                progressBarContent.setAttribute("label", "Conectando ao servidor...");
-
-                const progressElement = document.querySelector("body > #progress");
-                if (progressElement) {
-                    progressElement.remove();
-                }
-
-                ReactDOM.render(<App />, document.getElementById("root"));
-            });
+            initialize("./src/index.jsx");
         }
 
-        window.addEventListener('load', initialize);
+        window.addEventListener('load', init);
 
         window.addEventListener('beforeunload', function (e) {
             e.preventDefault();
         });
 
+        document.addEventListener("DOMContentLoaded", init);
+
         time = setTimeout(() => {
-            window.removeEventListener('load', initialize);
-            initialize();
+            init();
         }, 15000);
     </script>
 </body>

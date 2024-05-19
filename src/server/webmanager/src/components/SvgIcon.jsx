@@ -1,12 +1,13 @@
-const SvgIcon = (() => {
-	const { SvgIcon } = MaterialUI;
+import React from "react";
+import { SvgIcon as MuiSvgIcon } from "@mui/material";
 
-	return ({ path, children, ...props }) => {
-		return (
-			<SvgIcon {...props}>
-				{typeof path === "string" && <path d={path} />}
-				{children}
-			</SvgIcon>
-		);
-	};
-})();
+export const SvgIcon = ({ path, children, ...props }) => {
+	return (
+		<MuiSvgIcon {...props}>
+			{typeof path === "string" && <path d={path} />}
+			{children}
+		</MuiSvgIcon>
+	);
+};
+
+export default SvgIcon;
