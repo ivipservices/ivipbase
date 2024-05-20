@@ -10,7 +10,7 @@ window.exports["ivipbase"] = window.ivipbase;
 
 function extractClassNames(css) {
 	const classNames = [];
-	const regex = /\.([a-zA-Z0-9_-]+)\s*{/g;
+	const regex = /\.([a-zA-Z0-9_-]+)/g;
 	let match;
 	while ((match = regex.exec(css)) !== null) {
 		classNames.push(match[1]);
@@ -84,7 +84,7 @@ async function _require(momentPath, module) {
 						for (const c in classNames) {
 							classNames[c] = `${c}_${Math.random().toString(36).substring(7)}`;
 
-							sassText = sassText.replace(new RegExp(`\\.${c}`, "g"), `.${classNames[c]}`);
+							sassText = sassText.replace(new RegExp(`\\.${c}([\\,\\s\\{\\.\\#\\>\\:])`, "g"), `.${classNames[c]}$1`);
 						}
 					}
 

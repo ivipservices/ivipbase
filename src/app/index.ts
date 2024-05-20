@@ -163,27 +163,32 @@ export class IvipBaseApp extends SimpleEventEmitter {
 		const url = `${this.url}/${options.route.replace(/^\/+/, "")}`;
 
 		return new Promise(async (resolve, reject) => {
-			const result = await (async () => {
-				try {
-					return await _request(options.method || "GET", url, {
-						data: options.data,
-						accessToken: options.accessToken,
-						dataReceivedCallback: options.dataReceivedCallback,
-						dataRequestCallback: options.dataRequestCallback,
-						context: options.context,
-					});
-				} catch (err: any) {
-					// Rethrow the error
-					throw err;
+			try {
+				const result = await (async () => {
+					try {
+						return await _request(options.method || "GET", url, {
+							data: options.data,
+							accessToken: options.accessToken,
+							dataReceivedCallback: options.dataReceivedCallback,
+							dataRequestCallback: options.dataRequestCallback,
+							context: options.context,
+						});
+					} catch (err: any) {
+						// Rethrow the error
+						throw err;
+					}
+				})();
+
+				if (options.includeContext === true) {
+					if (!result.context) {
+						result.context = {};
+					}
+					return resolve(result);
+				} else {
+					return resolve(result.data);
 				}
-			})();
-			if (options.includeContext === true) {
-				if (!result.context) {
-					result.context = {};
-				}
-				return resolve(result);
-			} else {
-				return resolve(result.data);
+			} catch (err: any) {
+				reject(err);
 			}
 		});
 	}

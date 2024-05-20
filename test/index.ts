@@ -7,6 +7,20 @@ import { initializeApp, getDatabase, DataStorageSettings, JsonFileStorageSetting
 const app = initializeApp({
 	port: 8080,
 	isServer: true,
+	database: [
+		{
+			name: "root",
+			description: "Root database",
+		},
+		{
+			name: "development",
+			description: "Development database",
+		},
+		{
+			name: "production",
+			description: "Production database",
+		},
+	],
 	storage: new JsonFileStorageSettings({
 		filePath: "./test_file.json",
 	}),

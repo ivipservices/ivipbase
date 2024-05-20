@@ -211,7 +211,7 @@
                     "permission_level": "root",
                     "last_signin": {
                         "type": 6,
-                        "value": 1716114946445
+                        "value": 1716190215156
                     },
                     "last_signin_ip": "127.0.0.1",
                     "access_token": "lwajmoqr0003rghx1pjo56lo",
@@ -221,14 +221,14 @@
                     },
                     "prev_signin": {
                         "type": 6,
-                        "value": 1716114780603
+                        "value": 1716190144639
                     },
                     "prev_signin_ip": "127.0.0.1"
                 },
-                "revision": "lwdej3bj000n24hxe7nz71ra",
-                "revision_nr": 93,
+                "revision": "lwencd1000214khx5qp6dfsi",
+                "revision_nr": 161,
                 "created": 1715294044608,
-                "modified": 1716114946448
+                "modified": 1716190215157
             }
         },
         {
@@ -240,6 +240,186 @@
                 "revision_nr": 1,
                 "created": 1715942104373,
                 "modified": 1715942104373
+            }
+        }
+    ],
+    "development": [
+        {
+            "path": "root",
+            "content": {
+                "type": 1,
+                "value": {},
+                "revision": "lwefvf8700034whxhftvhg3n",
+                "revision_nr": 1,
+                "created": 1716177667545,
+                "modified": 1716177667545
+            }
+        },
+        {
+            "path": "root/__auth__",
+            "content": {
+                "type": 1,
+                "value": {},
+                "revision": "lwefvf8700034whxhftvhg3n",
+                "revision_nr": 1,
+                "created": 1716177667545,
+                "modified": 1716177667545
+            }
+        },
+        {
+            "path": "root/__auth__/security",
+            "content": {
+                "type": 1,
+                "value": {},
+                "revision": "lwefvf8700034whxhftvhg3n",
+                "revision_nr": 1,
+                "created": 1716177667545,
+                "modified": 1716177667545
+            }
+        },
+        {
+            "path": "root/__auth__/security/token_salt",
+            "content": {
+                "type": 5,
+                "value": "922663c64d22c80fc191481570ff99b10122682f2385cf22cd924f40d729a153c22eac19cc98bf6b19a4be0045c193147e8378c6bf81843d652be4ceb5608501c7ff24736650811135417b28e19c2b7959f245f5ba75b1b1a7dbf1d9b50e108133005133becb6ce0e1ef344a6854e5a4d4fb81ed42a77fc374133501c0e27247",
+                "revision": "lwefvf8700034whxhftvhg3n",
+                "revision_nr": 1,
+                "created": 1716177667546,
+                "modified": 1716177667546
+            }
+        },
+        {
+            "path": "root/__auth__/accounts",
+            "content": {
+                "type": 1,
+                "value": {},
+                "revision": "lwefvf8m00084whxbmoz3j76",
+                "revision_nr": 1,
+                "created": 1716177667574,
+                "modified": 1716177667574
+            }
+        },
+        {
+            "path": "root/__auth__/accounts/admin",
+            "content": {
+                "type": 1,
+                "value": {
+                    "username": "admin",
+                    "display_name": "[development] IvipBase admin",
+                    "password_salt": "a674a624a61d9b1c",
+                    "change_password": true,
+                    "created": {
+                        "type": 6,
+                        "value": 1716177667558
+                    },
+                    "settings": {},
+                    "permission_level": 2
+                },
+                "revision": "lwefvf8m00084whxbmoz3j76",
+                "revision_nr": 1,
+                "created": 1716177667575,
+                "modified": 1716177667575
+            }
+        },
+        {
+            "path": "root/__auth__/accounts/admin/password",
+            "content": {
+                "type": 5,
+                "value": "c48846ba97b097ae1e639f6e851fb1bc5a6fa2a8bf6a68e134ad2201e552838863f27d10d3bceaa9256e07ef24b11b472e3e9f5820791437bdd83fcc0eda513a",
+                "revision": "lwefvf8m00084whxbmoz3j76",
+                "revision_nr": 1,
+                "created": 1716177667575,
+                "modified": 1716177667575
+            }
+        }
+    ],
+    "production": [
+        {
+            "path": "root",
+            "content": {
+                "type": 1,
+                "value": {},
+                "revision": "lwefvf8700044whxhi312jwj",
+                "revision_nr": 1,
+                "created": 1716177667546,
+                "modified": 1716177667546
+            }
+        },
+        {
+            "path": "root/__auth__",
+            "content": {
+                "type": 1,
+                "value": {},
+                "revision": "lwefvf8v00094whxdaathq35",
+                "revision_nr": 1,
+                "created": 1716177667575,
+                "modified": 1716177667575
+            }
+        },
+        {
+            "path": "root/__auth__/security",
+            "content": {
+                "type": 1,
+                "value": {},
+                "revision": "lwefvf8700044whxhi312jwj",
+                "revision_nr": 1,
+                "created": 1716177667546,
+                "modified": 1716177667546
+            }
+        },
+        {
+            "path": "root/__auth__/security/token_salt",
+            "content": {
+                "type": 5,
+                "value": "50a943b5cb12c2bcb917559097d0aa71ab9621f1176d43dbfb9d3622d9a9748ade064f6db5e6c2a558de5f6156856ba7b806ef8ce3b29e00259a7752933699399cdc44cfcc1aec0b7c776e9b510672c3dc59129d9992c8a7c8864b33bb2a08d14bb5ec0662957d171ffd8d4be5a3cc667c0394b97fc693da1c4655579c724864",
+                "revision": "lwefvf8700044whxhi312jwj",
+                "revision_nr": 1,
+                "created": 1716177667547,
+                "modified": 1716177667547
+            }
+        },
+        {
+            "path": "root/__auth__/accounts",
+            "content": {
+                "type": 1,
+                "value": {},
+                "revision": "lwefvf8v00094whxdaathq35",
+                "revision_nr": 1,
+                "created": 1716177667575,
+                "modified": 1716177667575
+            }
+        },
+        {
+            "path": "root/__auth__/accounts/admin",
+            "content": {
+                "type": 1,
+                "value": {
+                    "username": "admin",
+                    "display_name": "[production] IvipBase admin",
+                    "password_salt": "2b690d95349221ac",
+                    "change_password": true,
+                    "created": {
+                        "type": 6,
+                        "value": 1716177667567
+                    },
+                    "settings": {},
+                    "permission_level": 2
+                },
+                "revision": "lwefvf8v00094whxdaathq35",
+                "revision_nr": 1,
+                "created": 1716177667575,
+                "modified": 1716177667575
+            }
+        },
+        {
+            "path": "root/__auth__/accounts/admin/password",
+            "content": {
+                "type": 5,
+                "value": "a6670ab016c325850f3bf0caf7a6b7ddca374c68ff4a96cbed62f700c1a6742981652d59fa087177303aa7b64f49029ac938ff126cd8fcc5dd97a8c8d32775e4",
+                "revision": "lwefvf8v00094whxdaathq35",
+                "revision_nr": 1,
+                "created": 1716177667575,
+                "modified": 1716177667575
             }
         }
     ]

@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useRef, Fragment } from "react";
 import MountPage from "../../components/MountPage";
 import { getApp, getAuth } from "ivipbase";
-import { Button, ClickAwayListener, Grow, Paper, Popper, MenuItem, MenuList, ListItemIcon, ListItemText } from "@mui/material";
+import { Box, Button, ClickAwayListener, Grow, Paper, Popper, MenuItem, MenuList, ListItemIcon, ListItemText, Tabs, Tab } from "@mui/material";
 import { mdiMenuDown, mdiDatabaseOutline, mdiAccountMultiple, mdiFolderImage, mdiGoogleAnalytics } from "@mdi/js";
 import SvgIcon from "../../components/SvgIcon.jsx";
 import style from "./style.module.scss";
+import JsonEditor from "../../components/JsonEditor/index.jsx";
 
 const options = [
 	{ id: 0, label: "Realtime Database", icon: mdiDatabaseOutline },
@@ -95,7 +96,13 @@ const MenuItems = ({}) => {
 };
 
 export const DataBase = () => {
+	const [tabValue, setTabValue] = useState(0);
 	const { dbName } = window.pageState();
+	const refDatabaseEditor = useRef();
+
+	const handleTabChange = (event, newValue) => {
+		setTabValue(newValue);
+	};
 
 	useEffect(() => {
 		const auth = getAuth();
@@ -120,6 +127,26 @@ export const DataBase = () => {
 		};
 	}, []);
 
+	useEffect(() => {
+		if (!refDatabaseEditor.current) return;
+
+		refDatabaseEditor.current.loadData(() => {
+			return {
+				key: dbName,
+				exists: true,
+				type: "object",
+				children: {
+					more: false,
+					list: [
+						{ key: "appName", type: "string", value: "My social app" },
+						{ key: "appVersion", type: "number", value: 1 },
+						{ key: "posts", type: "object" },
+					],
+				},
+			};
+		});
+	}, [refDatabaseEditor.current]);
+
 	return (
 		<MountPage
 			title={<MenuItems />}
@@ -127,7 +154,37 @@ export const DataBase = () => {
 				getAuth().signOut();
 			}}
 			isCard
-		></MountPage>
+			header={
+				<Box sx={{ maxWidth: { xs: 320, sm: 480 }, marginTop: "35px" }}>
+					<Tabs
+						value={tabValue}
+						onChange={handleTabChange}
+						variant="scrollable"
+						scrollButtons="auto"
+						aria-label="scrollable auto tabs example"
+					>
+						<Tab label="Dados" />
+						<Tab
+							label="Regras"
+							disabled
+						/>
+						<Tab
+							label="Backups"
+							disabled
+						/>
+						<Tab
+							label="Uso"
+							disabled
+						/>
+					</Tabs>
+				</Box>
+			}
+		>
+			<JsonEditor
+				ref={refDatabaseEditor}
+				rootDir={dbName}
+			/>
+		</MountPage>
 	);
 };
 

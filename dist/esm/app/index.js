@@ -87,29 +87,34 @@ export class IvipBaseApp extends SimpleEventEmitter {
     async request(options) {
         const url = `${this.url}/${options.route.replace(/^\/+/, "")}`;
         return new Promise(async (resolve, reject) => {
-            const result = await (async () => {
-                try {
-                    return await _request(options.method || "GET", url, {
-                        data: options.data,
-                        accessToken: options.accessToken,
-                        dataReceivedCallback: options.dataReceivedCallback,
-                        dataRequestCallback: options.dataRequestCallback,
-                        context: options.context,
-                    });
+            try {
+                const result = await (async () => {
+                    try {
+                        return await _request(options.method || "GET", url, {
+                            data: options.data,
+                            accessToken: options.accessToken,
+                            dataReceivedCallback: options.dataReceivedCallback,
+                            dataRequestCallback: options.dataRequestCallback,
+                            context: options.context,
+                        });
+                    }
+                    catch (err) {
+                        // Rethrow the error
+                        throw err;
+                    }
+                })();
+                if (options.includeContext === true) {
+                    if (!result.context) {
+                        result.context = {};
+                    }
+                    return resolve(result);
                 }
-                catch (err) {
-                    // Rethrow the error
-                    throw err;
+                else {
+                    return resolve(result.data);
                 }
-            })();
-            if (options.includeContext === true) {
-                if (!result.context) {
-                    result.context = {};
-                }
-                return resolve(result);
             }
-            else {
-                return resolve(result.data);
+            catch (err) {
+                reject(err);
             }
         });
     }

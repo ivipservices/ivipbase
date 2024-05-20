@@ -1,10 +1,11 @@
 import { IvipBaseApp, getApp, getAppsName, getFirstApp } from "../app";
 import { hasDatabase } from "../database";
-import { NOT_CONNECTED_ERROR_MESSAGE } from "../controller/request/error";
 import { SimpleEventEmitter } from "ivipbase-core";
 import localStorage from "../utils/localStorage";
 import { sanitizeEmailPrefix } from "../utils";
 import Base64 from "../utils/base64";
+
+const AUTH_USER_LOGIN_ERROR_MESSAGE = "auth/login-failed";
 
 export interface AuthProviderSignInResult {
 	user: AuthUser;
@@ -251,7 +252,11 @@ export class AuthUser {
 				this._accessToken = result.access_token;
 				this._lastAccessTokenRefresh = Date.now();
 				this.auth.emit("signin", this);
-			} catch {}
+			} catch {
+				this._accessToken = undefined;
+				this.auth.emit("signout");
+				throw new Error(AUTH_USER_LOGIN_ERROR_MESSAGE);
+			}
 		}
 		return Promise.resolve(this._accessToken ?? "");
 	}
@@ -271,7 +276,7 @@ export class AuthUser {
 	 */
 	async reload(): Promise<void> {
 		if (!this._accessToken) {
-			throw new Error(NOT_CONNECTED_ERROR_MESSAGE);
+			throw new Error(AUTH_USER_LOGIN_ERROR_MESSAGE);
 		}
 		await this.getIdToken(true);
 	}
@@ -373,14 +378,17 @@ export class Auth extends SimpleEventEmitter {
 		this.on("signin", (user) => {
 			try {
 				if (user) {
+					this._user = user;
 					localStorage.setItem(`[${this.database}][auth_user]`, Base64.encode(JSON.stringify(user.toJSON())));
 				} else {
+					this._user = null;
 					localStorage.removeItem(`[${this.database}][auth_user]`);
 				}
 			} catch {}
 		});
 
 		this.on("signout", () => {
+			this._user = null;
 			localStorage.removeItem(`[${this.database}][auth_user]`);
 		});
 
@@ -396,7 +404,9 @@ export class Auth extends SimpleEventEmitter {
 					await this._user.reload();
 				}
 			}
-		} catch {}
+		} catch {
+			this._user = null;
+		}
 
 		this.emit("ready");
 	}
@@ -447,6 +457,8 @@ export class Auth extends SimpleEventEmitter {
 		emitEvent = true,
 	) {
 		if (!result || !result.user || !result.access_token) {
+			this.user = null;
+			this.emit("signout");
 			throw new Error("auth/user-not-found");
 		}
 
@@ -559,6 +571,7 @@ export class Auth extends SimpleEventEmitter {
 			return this.handleSignInResult(result);
 		} catch (error) {
 			this.user = null;
+			this.emit("signout");
 			throw error;
 		}
 	}
@@ -583,6 +596,7 @@ export class Auth extends SimpleEventEmitter {
 			return this.handleSignInResult(result);
 		} catch (error) {
 			this.user = null;
+			this.emit("signout");
 			throw error;
 		}
 	}
@@ -607,6 +621,7 @@ export class Auth extends SimpleEventEmitter {
 			return this.handleSignInResult(result, emitEvent);
 		} catch (error) {
 			this.user = null;
+			this.emit("signout");
 			throw error;
 		}
 	}

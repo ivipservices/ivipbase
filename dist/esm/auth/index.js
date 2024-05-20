@@ -1,10 +1,10 @@
 import { IvipBaseApp, getApp, getAppsName, getFirstApp } from "../app/index.js";
 import { hasDatabase } from "../database/index.js";
-import { NOT_CONNECTED_ERROR_MESSAGE } from "../controller/request/error.js";
 import { SimpleEventEmitter } from "ivipbase-core";
 import localStorage from "../utils/localStorage/index.js";
 import { sanitizeEmailPrefix } from "../utils/index.js";
 import Base64 from "../utils/base64/index.js";
+const AUTH_USER_LOGIN_ERROR_MESSAGE = "auth/login-failed";
 export class AuthUser {
     constructor(auth, user, access_token = undefined) {
         this.auth = auth;
@@ -155,7 +155,11 @@ export class AuthUser {
                 this._lastAccessTokenRefresh = Date.now();
                 this.auth.emit("signin", this);
             }
-            catch { }
+            catch {
+                this._accessToken = undefined;
+                this.auth.emit("signout");
+                throw new Error(AUTH_USER_LOGIN_ERROR_MESSAGE);
+            }
         }
         return Promise.resolve(this._accessToken ?? "");
     }
@@ -173,7 +177,7 @@ export class AuthUser {
      */
     async reload() {
         if (!this._accessToken) {
-            throw new Error(NOT_CONNECTED_ERROR_MESSAGE);
+            throw new Error(AUTH_USER_LOGIN_ERROR_MESSAGE);
         }
         await this.getIdToken(true);
     }
@@ -230,15 +234,18 @@ export class Auth extends SimpleEventEmitter {
         this.on("signin", (user) => {
             try {
                 if (user) {
+                    this._user = user;
                     localStorage.setItem(`[${this.database}][auth_user]`, Base64.encode(JSON.stringify(user.toJSON())));
                 }
                 else {
+                    this._user = null;
                     localStorage.removeItem(`[${this.database}][auth_user]`);
                 }
             }
             catch { }
         });
         this.on("signout", () => {
+            this._user = null;
             localStorage.removeItem(`[${this.database}][auth_user]`);
         });
         this.initialize();
@@ -253,7 +260,9 @@ export class Auth extends SimpleEventEmitter {
                 }
             }
         }
-        catch { }
+        catch {
+            this._user = null;
+        }
         this.emit("ready");
     }
     /**
@@ -288,6 +297,8 @@ export class Auth extends SimpleEventEmitter {
     }
     handleSignInResult(result, emitEvent = true) {
         if (!result || !result.user || !result.access_token) {
+            this.user = null;
+            this.emit("signout");
             throw new Error("auth/user-not-found");
         }
         const user = new AuthUser(this, result.user, result.access_token);
@@ -395,6 +406,7 @@ export class Auth extends SimpleEventEmitter {
         }
         catch (error) {
             this.user = null;
+            this.emit("signout");
             throw error;
         }
     }
@@ -419,6 +431,7 @@ export class Auth extends SimpleEventEmitter {
         }
         catch (error) {
             this.user = null;
+            this.emit("signout");
             throw error;
         }
     }
@@ -443,6 +456,7 @@ export class Auth extends SimpleEventEmitter {
         }
         catch (error) {
             this.user = null;
+            this.emit("signout");
             throw error;
         }
     }

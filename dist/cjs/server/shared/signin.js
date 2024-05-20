@@ -37,6 +37,9 @@ const signIn = async (credentials, env, req) => {
                 }
                 try {
                     tokenDetails = (0, tokens_1.decodePublicAccessToken)(credentials.access_token, env.tokenSalt);
+                    if (Date.now() - tokenDetails.created > 1000 * 60 * 60 * 60 * 24 * 7) {
+                        throw new Error("Token expired");
+                    }
                     query.filter("access_token", "==", tokenDetails.access_token);
                 }
                 catch (err) {
