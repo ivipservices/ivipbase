@@ -300,35 +300,51 @@ const EditValueChild = ({ name, value, type, onChange, goToPath, isAdded = false
 const ViewTree = ({ currentPath, onChange, loadData, isExpanded = false, index = 0, goToPath }) => {
 	const [actualPath, setActualPath] = useState(currentPath);
 	const [loading, setLoading] = useState(true);
+	const [loadingMore, setLoadingMore] = useState(false);
 	const [data, setData] = useState(null);
 	const [expandChildren, setExpandChildren] = useState([]);
 	const [hiddenActionExpandChildren, setHiddenActionExpandChildren] = useState([]);
 
 	const getData = (isNextMore = false) => {
 		if (typeof loadData !== "function") {
+			setLoadingMore(false);
 			setLoading(false);
 			return;
 		}
 
-		setLoading(true);
-		loadData(resolveArrayPath(currentPath, isNextMore)).then((dataJson) => {
-			if (!isNextMore) {
-				setData(dataJson);
-			} else {
-				setData((prev) => {
-					return !prev
-						? dataJson
-						: {
-								...prev,
-								children: {
-									...(dataJson.children ?? {}),
-									list: [...(prev.children?.list ?? []), ...(dataJson.children?.list ?? [])],
-								},
-						  };
-				});
-			}
-			setLoading(false);
-		});
+		if (isNextMore) {
+			setLoadingMore(true);
+		} else {
+			setLoading(true);
+		}
+
+		loadData(resolveArrayPath(currentPath), isNextMore)
+			.then((dataJson) => {
+				if (!isNextMore) {
+					setData(dataJson);
+				} else {
+					setData((prev) => {
+						return !prev
+							? dataJson
+							: {
+									...(prev ?? dataJson ?? {}),
+									children: {
+										...(dataJson.children ?? prev.children ?? {}),
+										list: [...(prev.children?.list ?? []), ...(dataJson.children?.list ?? [])].filter((data, i, self) => {
+											return self.findIndex(({ key }) => key === data.key) === i;
+										}),
+									},
+							  };
+					});
+				}
+			})
+			.finally(() => {
+				if (isNextMore) {
+					setLoadingMore(false);
+				} else {
+					setLoading(false);
+				}
+			});
 	};
 
 	useEffect(() => {
@@ -337,6 +353,7 @@ const ViewTree = ({ currentPath, onChange, loadData, isExpanded = false, index =
 		}
 		setActualPath(currentPath);
 		setLoading(true);
+		setLoadingMore(false);
 		setData(null);
 		setExpandChildren([]);
 		setHiddenActionExpandChildren([]);
@@ -393,11 +410,6 @@ const ViewTree = ({ currentPath, onChange, loadData, isExpanded = false, index =
 			</div>
 			{isExpanded && (
 				<div className={style["tree"]}>
-					{!children?.list && loading && (
-						<div className={style["loading"]}>
-							<Typography variant="body2">Loading...</Typography>
-						</div>
-					)}
 					{(children?.list ?? [])
 						.filter(({ value }) => value !== null)
 						.map(({ key, value, type }, i) => {
@@ -461,13 +473,21 @@ const ViewTree = ({ currentPath, onChange, loadData, isExpanded = false, index =
 						</div>
 					)}
 
-					{children?.more && (
+					{((!children?.list && loading) || loadingMore) && (
+						<div className={style["loading"]}>
+							<Typography variant="body2">Loading...</Typography>
+						</div>
+					)}
+
+					{children?.more && !loadingMore && (
 						<div>
 							<div className={style["mark"]}>
 								{["object", "array"].includes(type) && (
 									<div
 										className={style["action"]}
-										onClick={() => {}}
+										onClick={() => {
+											getData(true);
+										}}
 									>
 										<SvgIcon path={mdiChevronDown} />
 									</div>
@@ -475,7 +495,18 @@ const ViewTree = ({ currentPath, onChange, loadData, isExpanded = false, index =
 							</div>
 							<div className={style["content"]}>
 								<div className={style["label"]}>
-									<Typography variant="body2">more...</Typography>
+									<Link
+										underline="hover"
+										color="inherit"
+										onClick={() => {
+											getData(true);
+										}}
+										style={{
+											cursor: "pointer",
+										}}
+									>
+										<Typography variant="body2">more...</Typography>
+									</Link>
 								</div>
 							</div>
 						</div>
@@ -535,22 +566,27 @@ export const JsonEditor = forwardRef(({ rootDir }, ref) => {
 				const prev = cache.current.get(path);
 				const context = prev?.context ?? {};
 				context.isNext = isNextMore;
+
 				Promise.race([callbackLoadData(path, context)]).then((data) => {
-					if (!isNextMore) {
+					const prev = cache.current.get(path);
+
+					if (!isNextMore || !prev) {
 						cache.current.set(path, data);
 					} else {
-						if (!prev) {
-							cache.current.set(path, data);
-						} else {
-							cache.current.set(path, {
-								...prev,
-								children: {
-									...(data.children ?? {}),
-									list: [...(prev.children?.list ?? []), ...(data.children?.list ?? [])],
-								},
-							});
-						}
+						const list = [...(prev.children?.list ?? []), ...(data.children?.list ?? [])].filter((data, i, self) => {
+							return self.findIndex(({ key }) => key === data.key) === i;
+						});
+
+						cache.current.set(path, {
+							...(data ?? prev ?? {}),
+							context: data.context,
+							children: {
+								...(data.children ?? {}),
+								list: list,
+							},
+						});
 					}
+
 					resolve(data);
 				});
 			} else {

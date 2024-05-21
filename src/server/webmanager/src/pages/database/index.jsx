@@ -118,8 +118,6 @@ export const DataBase = () => {
 				window.goToPage("login", { dbName });
 				event.stop();
 			}
-
-			console.log(auth.currentUser);
 		});
 
 		return () => {
@@ -131,7 +129,7 @@ export const DataBase = () => {
 		if (!refDatabaseEditor.current) return;
 		const db = getDatabase();
 
-		refDatabaseEditor.current.loadData((path, { isNext = false, child_limit = 100, child_skip = 0, length = 0 }) => {
+		refDatabaseEditor.current.loadData((path, { isNext = false, child_limit = 50, child_skip = 0, length = 0 }) => {
 			return new Promise((resolve, reject) => {
 				db.ready(() => {
 					db.ref(path)

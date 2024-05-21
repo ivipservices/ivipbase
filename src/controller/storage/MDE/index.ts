@@ -514,6 +514,16 @@ export default class MDE extends SimpleEventEmitter {
 			info.childCount = nodes.reduce((c, { path: p }) => c + (pathInfo.isParentOf(p) ? 1 : 0), Object.keys(info.value).length);
 		}
 
+		if (info.value !== null && typeof info.value === "object") {
+			info.value = Object.fromEntries(
+				Object.entries(info.value).sort((a, b) => {
+					const key1 = a[0].toString();
+					const key2 = b[0].toString();
+					return key1.startsWith("__") && !key2.startsWith("__") ? 1 : !key1.startsWith("__") && key2.startsWith("__") ? -1 : key1 > key2 ? 1 : key1 < key2 ? -1 : 0;
+				}),
+			);
+		}
+
 		return info;
 	}
 
@@ -564,7 +574,16 @@ export default class MDE extends SimpleEventEmitter {
 				return;
 			}
 
-			for (let node of nodes) {
+			const childNodes = nodes
+				.filter((node) => !(pathInfo.equals(node.path) || !pathInfo.isParentOf(node.path)))
+				.sort((a, b) => {
+					const key1 = (PathInfo.get(a.path).key ?? a.path).toString();
+					const key2 = (PathInfo.get(b.path).key ?? b.path).toString();
+
+					return key1.startsWith("__") && !key2.startsWith("__") ? 1 : !key1.startsWith("__") && key2.startsWith("__") ? -1 : key1 > key2 ? 1 : key1 < key2 ? -1 : 0;
+				});
+
+			for (let node of childNodes) {
 				if (!isContinue) {
 					break;
 				}
