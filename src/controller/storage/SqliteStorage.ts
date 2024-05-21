@@ -204,8 +204,11 @@ export class SqliteStorage extends CustomStorage {
 			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
 		}
 
-		const sql = `DELETE FROM ${database} WHERE path = ?`;
+		if (path === "") {
+			return;
+		}
 
-		await this._exec(sql, [path]);
+		const sql = `DELETE FROM ${database} WHERE path = '${path}' OR path LIKE '${path}/%' OR path LIKE '${path}[%'`;
+		await this._exec(sql);
 	}
 }
