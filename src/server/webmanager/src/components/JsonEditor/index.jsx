@@ -533,8 +533,8 @@ const ViewTree = ({ currentPath, onChange, loadData, isExpanded = false, index =
 	);
 };
 
-export const JsonEditor = forwardRef(({ rootDir }, ref) => {
-	const [currentPath, setCurrentPath] = useState([rootDir ?? "root"]);
+export const JsonEditor = forwardRef(({ rootDir = "root", path = [] }, ref) => {
+	const [currentPath, setCurrentPath] = useState([rootDir ?? "root", ...(path ?? [])]);
 
 	const [callbackLoadData, setCallbackLoadData] = useState(null);
 	const [mutated, setMutated] = useState({});
@@ -542,6 +542,14 @@ export const JsonEditor = forwardRef(({ rootDir }, ref) => {
 	const [editPath, setEditPath] = useState(false);
 
 	const cache = useRef(new Map());
+
+	const goToPath = (path) => {
+		if (resolveArrayPath(path) === resolveArrayPath(currentPath)) {
+			return;
+		}
+		cache.current.clear();
+		setCurrentPath(path);
+	};
 
 	useImperativeHandle(
 		ref,
@@ -622,7 +630,7 @@ export const JsonEditor = forwardRef(({ rootDir }, ref) => {
 								underline="hover"
 								color="inherit"
 								onClick={() => {
-									setCurrentPath(self.slice(0, i + 1));
+									goToPath(self.slice(0, i + 1));
 								}}
 								sx={{
 									cursor: "pointer",
@@ -656,7 +664,7 @@ export const JsonEditor = forwardRef(({ rootDir }, ref) => {
 								);
 
 								if (resolveArrayPath(currentPath) !== resolveArrayPath(path)) {
-									setCurrentPath(path);
+									goToPath(path);
 								}
 								setEditPath(!editPath);
 							}}
@@ -698,9 +706,7 @@ export const JsonEditor = forwardRef(({ rootDir }, ref) => {
 					onChange={(path, value) => {}}
 					isExpanded={true}
 					goToPath={(path) => {
-						if (resolveArrayPath(path) !== resolveArrayPath(currentPath)) {
-							setCurrentPath(path);
-						}
+						goToPath(path);
 					}}
 				/>
 			</div>
