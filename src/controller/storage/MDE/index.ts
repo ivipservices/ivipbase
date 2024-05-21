@@ -140,13 +140,6 @@ export default class MDE extends SimpleEventEmitter {
 	 */
 	readonly settings: MDESettings;
 
-	/**
-	 * Uma lista de informações sobre nodes, mantido em cache até que as modificações sejam processadas no BD com êxito.
-	 *
-	 * @type {NodesPending[]}
-	 */
-	private nodes: Record<string, NodesPending[]> = {};
-
 	private _lastTid: number;
 	createTid() {
 		return DEBUG_MODE ? ++this._lastTid : ID.generate();
@@ -273,29 +266,16 @@ export default class MDE extends SimpleEventEmitter {
 	 */
 	async getNodesBy(database: string, path: string, onlyChildren: boolean = false, allHeirs: boolean = false): Promise<StorageNodeInfo[]> {
 		const reg = this.pathToRegex(path, onlyChildren, allHeirs);
-		let nodeList: StorageNodeInfo[] = (this.nodes[database] ?? [])
-			.filter(({ path }) => reg.test(path))
-			.sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
-				return aM > bM ? -1 : aM < bM ? 1 : 0;
-			})
-			.filter(({ path }, i, list) => {
-				return list.findIndex(({ path: p }) => PathInfo.get(p).equals(path)) === i;
-			})
-			.sort(({ path: a }, { path: b }) => {
-				return PathInfo.get(a).isAncestorOf(b) ? 1 : PathInfo.get(a).isDescendantOf(b) ? -1 : 0;
-			});
 
-		// console.log("getNodesBy::1::", JSON.stringify(nodeList, null, 4));
+		// console.log("getNodesBy::1::", reg.source);
 
-		let byNodes: StorageNodeInfo[] = [];
+		let result: StorageNodeInfo[] = [];
 
 		try {
-			byNodes = await this.settings.getMultiple(database, reg);
+			result = await this.settings.getMultiple(database, reg);
 		} catch {}
 
-		// console.log("getNodesBy::2::", JSON.stringify(byNodes, null, 4));
-
-		const { result } = prepareMergeNodes.apply(this, [byNodes, nodeList]);
+		// console.log("getNodesBy::2::", JSON.stringify(result, null, 4));
 
 		let nodes = result.filter(({ path: p }) => PathInfo.get(path).equals(p));
 
@@ -334,11 +314,7 @@ export default class MDE extends SimpleEventEmitter {
 			.shift();
 	}
 
-	async sendNodes(database: string) {
-		const batch = this.nodes[database].splice(0).sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
-			return aM > bM ? -1 : aM < bM ? 1 : 0;
-		});
-
+	async sendNodes(database: string, nodes: NodesPending[]) {
 		const batchError: NodesPending[] = [];
 
 		try {
@@ -346,7 +322,7 @@ export default class MDE extends SimpleEventEmitter {
 
 			let byNodes: StorageNodeInfo[] = [];
 
-			const paths = batch
+			const paths = nodes
 				.filter((node, i, self) => {
 					return self.findIndex(({ path }) => path === node.path) === i;
 				})
@@ -362,7 +338,7 @@ export default class MDE extends SimpleEventEmitter {
 				return self.findIndex(({ path }) => path === node.path) === i;
 			});
 
-			const { added, modified, removed, result } = prepareMergeNodes.apply(this, [byNodes, batch]);
+			const { added, modified, removed, result } = prepareMergeNodes.apply(this, [byNodes, nodes]);
 
 			// console.log("added: ", JSON.stringify(added, null, 4));
 			// console.log("modified: ", JSON.stringify(modified, null, 4));
@@ -399,38 +375,6 @@ export default class MDE extends SimpleEventEmitter {
 				}
 			}
 		} catch {}
-
-		const next = Object.keys(this.nodes).find((n) => this.nodes[n].length > 0);
-		if (next) {
-			this.sendNodes(next);
-		}
-	}
-
-	/**
-	 * Adiciona um ou mais nodes a matriz de nodes atual e aplica evento de alteração.
-	 * @param {string} database - Nome do banco de dados.
-	 * @param nodes - Um ou mais nós a serem adicionados.
-	 * @returns {MDE} O nó atual após a adição dos nós.
-	 */
-	pushNode(database: string, ...nodes: (NodesPending[] | NodesPending)[]): MDE {
-		const forNodes: NodesPending[] =
-			Array.prototype.concat
-				.apply(
-					[],
-					nodes.map((node) => (Array.isArray(node) ? node : [node])),
-				)
-				.filter((node: any = {}) => node && typeof node.path === "string" && "content" in node) ?? [];
-
-		if (!Array.isArray(this.nodes[database])) {
-			this.nodes[database] = [];
-		}
-
-		for (let node of forNodes) {
-			this.nodes[database].push(node);
-		}
-
-		this.sendNodes(database);
-		return this;
 	}
 
 	/**
@@ -681,7 +625,7 @@ export default class MDE extends SimpleEventEmitter {
 		const { include_info_node, onlyChildren, ..._options } = options ?? {};
 		path = PathInfo.get([this.settings.prefix, path]).path;
 		const nodes = await this.getNodesBy(database, path, onlyChildren, true);
-		const main_node = nodes.find(({ path: p }) => PathInfo.get(p).equals(path));
+		const main_node = nodes.find(({ path: p }) => PathInfo.get(p).equals(path) || PathInfo.get(p).isParentOf(path));
 		if (!main_node) {
 			return undefined;
 		}
@@ -723,6 +667,8 @@ export default class MDE extends SimpleEventEmitter {
 		//console.log("olt", JSON.stringify(byNodes.find((node) => node.path === "root/test") ?? {}, null, 4));
 		const { added, modified, removed } = prepareMergeNodes.apply(this, [byNodes, nodes]);
 
+		// console.log(JSON.stringify(modified, null, 4));
+
 		// console.log("set", JSON.stringify(nodes, null, 4));
 		// console.log("set-added", JSON.stringify(added, null, 4));
 		// console.log("set-modified", JSON.stringify(modified, null, 4));
@@ -758,7 +704,7 @@ export default class MDE extends SimpleEventEmitter {
 			});
 		}
 
-		this.pushNode(database, nodes);
+		await this.sendNodes(database, nodes);
 	}
 
 	async update(

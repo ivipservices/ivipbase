@@ -1,2 +1,2 @@
 export * from "./browser";
-export { MongodbSettings, JsonFileStorageSettings } from "./controller/storage";
+export { MongodbSettings, JsonFileStorageSettings, SqliteSettings } from "./controller/storage";

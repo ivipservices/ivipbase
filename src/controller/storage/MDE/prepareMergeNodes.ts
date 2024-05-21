@@ -190,7 +190,7 @@ export default function prepareMergeNodes(
 						const { created, revision_nr } = lastNode.content.modified > node.content.modified ? node.content : lastNode.content;
 
 						const contents = lastNode.content.modified > node.content.modified ? [node.content, lastNode.content] : [lastNode.content, node.content];
-						const content_values: object[] = contents.map<any>(({ value }) => value);
+						const content_values: object[] = contents.map<any>(({ value }) => value).filter((v) => v !== null && v !== undefined);
 
 						const new_content_value = Object.assign.apply(null, content_values as any);
 

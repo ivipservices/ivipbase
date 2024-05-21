@@ -198,7 +198,7 @@ const EditValueChild = ({ name, value, type, onChange, goToPath, isAdded = false
 							color="inherit"
 							onClick={() => {
 								if (typeof goToPath === "function") {
-									goToPath(currentPath);
+									goToPath();
 								}
 							}}
 						>
@@ -454,7 +454,7 @@ const ViewTree = ({ currentPath, onChange, loadData, isExpanded = false, index =
 												value={value}
 												type={type}
 												onChange={(newValue) => onChange(key, newValue)}
-												goToPath={goToPath}
+												goToPath={() => goToPath(currentPath.concat([key]))}
 											/>
 										)}
 									</div>
@@ -528,7 +528,7 @@ const ViewTree = ({ currentPath, onChange, loadData, isExpanded = false, index =
 			value={value}
 			type={type}
 			onChange={(newValue) => onChange(key, newValue)}
-			goToPath={goToPath}
+			goToPath={() => goToPath(currentPath)}
 		/>
 	);
 };

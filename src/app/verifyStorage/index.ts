@@ -1,9 +1,15 @@
-import { CustomStorage, DataStorage, DataStorageSettings, JsonFileStorage, JsonFileStorageSettings, MongodbSettings, MongodbStorage } from "../../controller/storage";
+import { CustomStorage, DataStorage, DataStorageSettings, JsonFileStorage, JsonFileStorageSettings, MongodbSettings, MongodbStorage, SqliteSettings, SqliteStorage } from "../../controller/storage";
 
-export type StorageSettings = CustomStorage | DataStorageSettings | MongodbSettings | JsonFileStorageSettings;
+export type StorageSettings = CustomStorage | DataStorageSettings | MongodbSettings | JsonFileStorageSettings | SqliteSettings;
 
 export function validSettings(options: any): options is StorageSettings {
-	return options instanceof DataStorageSettings || options instanceof MongodbSettings || options instanceof JsonFileStorageSettings || options instanceof CustomStorage;
+	return (
+		options instanceof DataStorageSettings ||
+		options instanceof MongodbSettings ||
+		options instanceof JsonFileStorageSettings ||
+		options instanceof CustomStorage ||
+		options instanceof SqliteSettings
+	);
 }
 
 export function applySettings(dbname: string | string[], options: StorageSettings) {
@@ -13,6 +19,8 @@ export function applySettings(dbname: string | string[], options: StorageSetting
 		return new MongodbStorage(dbname, options);
 	} else if (options instanceof JsonFileStorageSettings) {
 		return new JsonFileStorage(dbname, options);
+	} else if (options instanceof SqliteSettings) {
+		return new SqliteStorage(dbname, options);
 	} else if (options instanceof CustomStorage) {
 		return options;
 	}
