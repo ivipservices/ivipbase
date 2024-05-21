@@ -206,6 +206,7 @@ export default class MDE extends SimpleEventEmitter {
 		const replasePathToRegex = (path: string) => {
 			path = path.replace(/\/((\*)|(\$[^/\$]*))/g, "/([^/]*)");
 			path = path.replace(/\[\*\]/g, "\\[(\\d+)\\]");
+			path = path.replace(/\[(\d+)\]/g, "\\[$1\\]");
 			return path;
 		};
 
@@ -213,9 +214,9 @@ export default class MDE extends SimpleEventEmitter {
 		pathsRegex.push(replasePathToRegex(path));
 
 		if (onlyChildren) {
-			pathsRegex.forEach((exp) => pathsRegex.push(`${exp}((\/([^\/]*)){1})`));
+			pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/]*))|(\\[([^/]*)\\])){1})`));
 		} else if (allHeirs) {
-			pathsRegex.forEach((exp) => pathsRegex.push(`${exp}((\/([^\/]*)){1,})`));
+			pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/]*))|(\\[([^/]*)\\])){1,})`));
 		}
 
 		// Obtém o caminho pai e adiciona a expressão regular correspondente ao array.

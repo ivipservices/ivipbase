@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, Fragment } from "react";
 import MountPage from "../../components/MountPage";
-import { getApp, getAuth } from "ivipbase";
+import { getApp, getAuth, getDatabase } from "ivipbase";
 import { Box, Button, ClickAwayListener, Grow, Paper, Popper, MenuItem, MenuList, ListItemIcon, ListItemText, Tabs, Tab } from "@mui/material";
 import { mdiMenuDown, mdiDatabaseOutline, mdiAccountMultiple, mdiFolderImage, mdiGoogleAnalytics } from "@mdi/js";
 import SvgIcon from "../../components/SvgIcon.jsx";
@@ -129,21 +129,24 @@ export const DataBase = () => {
 
 	useEffect(() => {
 		if (!refDatabaseEditor.current) return;
+		const db = getDatabase();
 
-		refDatabaseEditor.current.loadData(() => {
-			return {
-				key: dbName,
-				exists: true,
-				type: "object",
-				children: {
-					more: false,
-					list: [
-						{ key: "appName", type: "string", value: "My social app" },
-						{ key: "appVersion", type: "number", value: 1 },
-						{ key: "posts", type: "object" },
-					],
-				},
-			};
+		refDatabaseEditor.current.loadData((path, { isNext = false, child_limit = 100, child_skip = 0, length = 0 }) => {
+			return new Promise((resolve, reject) => {
+				db.ready(() => {
+					db.ref(path)
+						.reflect("info", { child_limit, child_skip: isNext ? child_skip + child_limit : child_skip })
+						.then((info) => {
+							info.key = info.key === "" ? dbName : info.key;
+							info.context = {
+								child_limit,
+								child_skip: isNext ? child_skip + child_limit : child_skip,
+								length: length + (info.children?.list ?? []).length,
+							};
+							resolve(info);
+						});
+				}).catch(reject);
+			});
 		});
 	}, [refDatabaseEditor.current]);
 
