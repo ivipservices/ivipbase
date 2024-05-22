@@ -188,7 +188,7 @@ export default class MDE extends SimpleEventEmitter {
 	 * @param {boolean} [allHeirs=false] - Se verdadeiro, exporta todos os descendentes em relação ao path especificado.
 	 * @returns {RegExp} - A expressão regular resultante.
 	 */
-	private pathToRegex(path: string, onlyChildren: boolean = false, allHeirs: boolean = false): RegExp {
+	private pathToRegex(path: string, onlyChildren: boolean = false, allHeirs: boolean = false, includeAncestor: boolean = false): RegExp {
 		const pathsRegex: string[] = [];
 
 		/**
@@ -212,8 +212,17 @@ export default class MDE extends SimpleEventEmitter {
 			pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/]*))|(\\[([^/]*)\\])){1,})`));
 		}
 
+		let parent = PathInfo.get(path).parent;
+
 		// Obtém o caminho pai e adiciona a expressão regular correspondente ao array.
-		pathsRegex.push(replasePathToRegex(PathInfo.get(path).parentPath as any));
+		if (includeAncestor) {
+			while (parent) {
+				pathsRegex.push(replasePathToRegex(parent.path));
+				parent = parent.parent;
+			}
+		} else if (parent) {
+			pathsRegex.push(replasePathToRegex(parent.path));
+		}
 
 		// Cria a expressão regular completa combinando as expressões individuais no array.
 		const fullRegex: RegExp = new RegExp(`^(${pathsRegex.map((e) => e.replace(/\/$/gi, "/?")).join("$)|(")}$)`);
@@ -264,8 +273,8 @@ export default class MDE extends SimpleEventEmitter {
 	 * @returns {Promise<StorageNodeInfo[]>} - Uma Promise que resolve para uma lista de informações sobre os nodes.
 	 * @throws {Error} - Lança um erro se ocorrer algum problema durante a busca assíncrona.
 	 */
-	async getNodesBy(database: string, path: string, onlyChildren: boolean = false, allHeirs: boolean = false): Promise<StorageNodeInfo[]> {
-		const reg = this.pathToRegex(path, onlyChildren, allHeirs);
+	async getNodesBy(database: string, path: string, onlyChildren: boolean = false, allHeirs: boolean = false, includeAncestor: boolean = false): Promise<StorageNodeInfo[]> {
+		const reg = this.pathToRegex(path, onlyChildren, allHeirs, includeAncestor);
 
 		// console.log("getNodesBy::1::", reg.source);
 
@@ -285,6 +294,10 @@ export default class MDE extends SimpleEventEmitter {
 			nodes = result.filter(({ path: p }) => PathInfo.get(path).equals(p) || PathInfo.get(path).isParentOf(p));
 		} else if (allHeirs) {
 			nodes = result.filter(({ path: p }) => PathInfo.get(path).equals(p) || PathInfo.get(path).isAncestorOf(p));
+		}
+
+		if (includeAncestor) {
+			nodes = result.filter(({ path: p }) => PathInfo.get(p).isParentOf(path) || PathInfo.get(p).isAncestorOf(path)).concat(nodes);
 		}
 
 		return nodes;
@@ -395,7 +408,7 @@ export default class MDE extends SimpleEventEmitter {
 			info.childCount = nodes.reduce((c, { path: p }) => c + (pathInfo.isParentOf(p) ? 1 : 0), Object.keys(info.value).length);
 		}
 
-		if (info.value !== null && typeof info.value === "object") {
+		if (info.value !== null && ["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(info.value))) {
 			info.value = Object.fromEntries(
 				Object.entries(info.value).sort((a, b) => {
 					const key1 = a[0].toString();
@@ -597,10 +610,12 @@ export default class MDE extends SimpleEventEmitter {
 		} = {},
 		type: "SET" | "UPDATE" = "SET",
 	): Promise<void> {
+		type = typeof value !== "object" || value instanceof Array || value instanceof ArrayBuffer || value instanceof Date ? "UPDATE" : type;
+
 		path = PathInfo.get([this.settings.prefix, path]).path;
 		const nodes = destructureData.apply(this, [type, path, value, options]);
 		//console.log("now", JSON.stringify(nodes.find((node) => node.path === "root/test") ?? {}, null, 4));
-		const byNodes = await this.getNodesBy(database, path, false, true);
+		const byNodes = await this.getNodesBy(database, path, false, true, true);
 		//console.log("olt", JSON.stringify(byNodes.find((node) => node.path === "root/test") ?? {}, null, 4));
 		const { added, modified, removed } = prepareMergeNodes.apply(this, [path, byNodes, nodes]);
 
@@ -615,30 +630,25 @@ export default class MDE extends SimpleEventEmitter {
 		const promises: (() => Promise<any>)[] = [];
 
 		for (let node of removed) {
-			const reg = this.pathToRegex(node.path, false, true);
-			Promise.race([this.settings.getMultiple(database, reg)]).then((byNodes) => {
-				for (let r of byNodes) {
-					this.emit("remove", {
-						name: "remove",
-						path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
-						value: removeNulls(r.content.value),
-					});
+			this.emit("remove", {
+				name: "remove",
+				path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
+				value: removeNulls(node.content.value),
+			});
 
-					promises.push(async () => {
-						try {
-							await Promise.race([this.settings.removeNode(database, r.path, r.content, r)]).catch((e) => {
-								batchError.push({
-									path: r.path,
-									content: {
-										...r.content,
-										type: 0,
-										value: null,
-									},
-								});
-							});
-						} catch {}
+			promises.push(async () => {
+				try {
+					await Promise.race([this.settings.removeNode(database, node.path, node.content, node)]).catch((e) => {
+						batchError.push({
+							path: node.path,
+							content: {
+								...node.content,
+								type: 0,
+								value: null,
+							},
+						});
 					});
-				}
+				} catch {}
 			});
 		}
 

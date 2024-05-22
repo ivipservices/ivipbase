@@ -27,6 +27,8 @@ export default function destructureData(
 		if (!comparison) {
 			result.push(node);
 			return;
+		} else if (node.type === "VERIFY") {
+			return;
 		}
 
 		result = result.filter((n) => !PathInfo.get(n.path).equals(node.path));
@@ -44,24 +46,26 @@ export default function destructureData(
 		result.push(node);
 	};
 
-	if (options.include_checks) {
-		while (typeof pathInfo.parentPath === "string" && pathInfo.parentPath.trim() !== "") {
-			const node: NodesPending = {
-				path: pathInfo.parentPath,
-				type: "VERIFY",
-				content: {
-					type: (typeof pathInfo.key === "number" ? nodeValueTypes.ARRAY : nodeValueTypes.OBJECT) as any,
-					value: {},
-					revision,
-					revision_nr: 1,
-					created: Date.now(),
-					modified: Date.now(),
-				},
-			};
-			resolveConflict(node);
-			pathInfo = PathInfo.get(pathInfo.parentPath);
-		}
-	}
+	const include_checks = options.include_checks;
+
+	// if (options.include_checks) {
+	// 	while (typeof pathInfo.parentPath === "string" && pathInfo.parentPath.trim() !== "") {
+	// 		const node: NodesPending = {
+	// 			path: pathInfo.parentPath,
+	// 			type: "VERIFY",
+	// 			content: {
+	// 				type: (typeof pathInfo.key === "number" ? nodeValueTypes.ARRAY : nodeValueTypes.OBJECT) as any,
+	// 				value: {},
+	// 				revision,
+	// 				revision_nr: 1,
+	// 				created: Date.now(),
+	// 				modified: Date.now(),
+	// 			},
+	// 		};
+	// 		resolveConflict(node);
+	// 		pathInfo = PathInfo.get(pathInfo.parentPath);
+	// 	}
+	// }
 
 	options.include_checks = false;
 
@@ -114,7 +118,7 @@ export default function destructureData(
 		}
 
 		if (parentNode.content.type === nodeValueTypes.OBJECT || parentNode.content.type === nodeValueTypes.ARRAY) {
-			parentNode.content.value[pathInfo.key as any] = isObjectFitsInline ? getTypedChildValue(value) : null;
+			(parentNode.content.value as any)[pathInfo.key as string | number] = isObjectFitsInline ? getTypedChildValue(value) : null;
 			result = result.filter((node) => !PathInfo.get(node.path).equals(parentPath));
 			resolveConflict(parentNode);
 		}
@@ -122,7 +126,7 @@ export default function destructureData(
 
 	const node: NodesPending = {
 		path,
-		type,
+		type: isObjectFitsInline ? "SET" : type,
 		content: {
 			type: valueType as any,
 			value: isObjectFitsInline ? null : value,
@@ -135,14 +139,13 @@ export default function destructureData(
 
 	resolveConflict(node);
 
-	let intex = 0;
+	const verifyNodes: NodesPending[] = [];
 
-	while (intex < result.length) {
-		const node = result[intex];
+	for (const node of result) {
 		const pathInfo = PathInfo.get(node.path);
-		const parentNode = result.find((n) => PathInfo.get(n.path).isParentOf(node.path));
+		const parentNode = result.find((n) => PathInfo.get(n.path).isParentOf(node.path)) ?? verifyNodes.find((n) => PathInfo.get(n.path).isParentOf(node.path));
 
-		if (!parentNode && pathInfo.parentPath && pathInfo.parentPath.trim() !== "") {
+		if (!parentNode && pathInfo.parentPath && pathInfo.parentPath.trim() !== "" && include_checks) {
 			const verifyNode: NodesPending = {
 				path: pathInfo.parentPath as any,
 				type: "VERIFY",
@@ -156,11 +159,9 @@ export default function destructureData(
 				},
 			};
 
-			result.push(verifyNode);
+			verifyNodes.push(verifyNode);
 		}
-
-		intex++;
 	}
 
-	return result;
+	return verifyNodes.concat(result);
 }

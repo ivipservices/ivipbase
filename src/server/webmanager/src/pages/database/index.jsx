@@ -146,6 +146,17 @@ export const DataBase = () => {
 				}).catch(reject);
 			});
 		});
+
+		refDatabaseEditor.current.onChange(async (path, value, type) => {
+			if (value !== undefined) {
+				if (value !== null) {
+					await db.ref(path).update(value);
+				} else {
+					await db.ref(path).remove();
+				}
+			}
+			return Promise.resolve(value);
+		});
 	}, [refDatabaseEditor.current]);
 
 	return (

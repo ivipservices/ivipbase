@@ -23,7 +23,7 @@ export const addRoutes = (env) => {
         const details = req.body;
         const clientId = details.client_id || null;
         try {
-            const user = await signIn(details, env, req);
+            const user = await signIn(dbName, details, env, req);
             if (!user || !user.uid || !user.access_token) {
                 throw new Error("User not found");
             }

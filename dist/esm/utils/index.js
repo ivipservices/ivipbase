@@ -41,7 +41,7 @@ export function joinObjects(obj1, ...objs) {
         if (!obj1 || !obj2) {
             return obj2 ?? obj1;
         }
-        if (typeof obj1 !== "object" || typeof obj2 !== "object") {
+        if (Object.prototype.toString.call(obj1) !== "[object Object]" || Object.prototype.toString.call(obj2) !== "[object Object]") {
             return obj2;
         }
         const result = Array.isArray(obj1) ? [] : {};

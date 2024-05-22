@@ -14,7 +14,7 @@ class SetDataError extends Error {
 exports.SetDataError = SetDataError;
 const addRoutes = (env) => {
     env.router.put(`/data/:dbName/*`, async (req, res) => {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
         const { dbName } = req.params;
         if (!env.hasDatabase(dbName)) {
             return (0, error_1.sendError)(res, {
@@ -36,32 +36,32 @@ const addRoutes = (env) => {
                 throw new SetDataError("invalid_serialized_value", "The sent value is not properly serialized");
             }
             const val = ivipbase_core_1.Transport.deserialize(data);
-            if (path === "" && ((_d = req.user) === null || _d === void 0 ? void 0 : _d.uid) !== "admin" && val !== null && typeof val === "object") {
+            if (path === "" && ((_e = (_d = req.user) === null || _d === void 0 ? void 0 : _d.permission_level) !== null && _e !== void 0 ? _e : 0) > 1 && val !== null && typeof val === "object") {
                 // Non-admin user: remove any private properties from the update object
                 Object.keys(val)
                     .filter((key) => key.startsWith("__"))
                     .forEach((key) => delete val[key]);
             }
-            access = await env.rules(dbName).isOperationAllowed((_e = req.user) !== null && _e !== void 0 ? _e : {}, path, "set", { value: val, context: req.context });
+            access = await env.rules(dbName).isOperationAllowed((_f = req.user) !== null && _f !== void 0 ? _f : {}, path, "set", { value: val, context: req.context });
             if (!access.allow) {
                 throw new rules_1.AccessRuleValidationError(access);
             }
             // Schema validation moved to storage, no need to check here but an early check won't do no harm!
             const validation = await env.db(dbName).schema.check(path, val, false);
             if (!validation.ok) {
-                throw new database_1.SchemaValidationError((_f = validation.reason) !== null && _f !== void 0 ? _f : "Schema validation failed");
+                throw new database_1.SchemaValidationError((_g = validation.reason) !== null && _g !== void 0 ? _g : "Schema validation failed");
             }
             await env.db(dbName).ref(path).context(req.context).set(val);
             // NEW: add cursor to response context, which was added to the request context in `database_cursor` if transaction logging is enabled
-            const returnContext = { database_cursor: (_g = req === null || req === void 0 ? void 0 : req.context) === null || _g === void 0 ? void 0 : _g.database_cursor };
+            const returnContext = { database_cursor: (_h = req === null || req === void 0 ? void 0 : req.context) === null || _h === void 0 ? void 0 : _h.database_cursor };
             res.setHeader("AceBase-Context", JSON.stringify(returnContext));
             res.send({ success: true });
         }
         catch (err) {
             if (err instanceof rules_1.AccessRuleValidationError) {
                 const access = err.result;
-                env.log.error(LOG_ACTION, "unauthorized", Object.assign(Object.assign({}, LOG_DETAILS), { rule_code: access.code, rule_path: (_h = access.rulePath) !== null && _h !== void 0 ? _h : null, rule_error: (_k = (_j = access.details) === null || _j === void 0 ? void 0 : _j.message) !== null && _k !== void 0 ? _k : null }));
-                return (0, error_1.sendUnauthorizedError)(res, (_l = access.code) !== null && _l !== void 0 ? _l : "access_rule", (_m = access.message) !== null && _m !== void 0 ? _m : "Unauthorized");
+                env.log.error(LOG_ACTION, "unauthorized", Object.assign(Object.assign({}, LOG_DETAILS), { rule_code: access.code, rule_path: (_j = access.rulePath) !== null && _j !== void 0 ? _j : null, rule_error: (_l = (_k = access.details) === null || _k === void 0 ? void 0 : _k.message) !== null && _l !== void 0 ? _l : null }));
+                return (0, error_1.sendUnauthorizedError)(res, (_m = access.code) !== null && _m !== void 0 ? _m : "access_rule", (_o = access.message) !== null && _o !== void 0 ? _o : "Unauthorized");
             }
             else if (err instanceof database_1.SchemaValidationError) {
                 env.log.error(LOG_ACTION, "schema_validation_failed", Object.assign(Object.assign({}, LOG_DETAILS), { reason: err.reason }));

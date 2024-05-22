@@ -48,7 +48,7 @@ export const addRoutes = (env: LocalServer) => {
 			}
 			const val = Transport.deserialize(data);
 
-			if (path === "" && req.user?.uid !== "admin" && val !== null && typeof val === "object") {
+			if (path === "" && (req.user?.permission_level ?? 0) > 1 && val !== null && typeof val === "object") {
 				// Non-admin user: remove any private properties from the update object
 				Object.keys(val)
 					.filter((key) => key.startsWith("__"))

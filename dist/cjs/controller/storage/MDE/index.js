@@ -19,7 +19,7 @@ const ivipbase_core_1 = require("ivipbase-core");
 const NodeInfo_1 = require("./NodeInfo");
 const utils_1 = require("./utils");
 Object.defineProperty(exports, "VALUE_TYPES", { enumerable: true, get: function () { return utils_1.VALUE_TYPES; } });
-const prepareMergeNodes_1 = require("./prepareMergeNodes");
+const prepareMergeNodes_1 = __importDefault(require("./prepareMergeNodes"));
 const structureNodes_1 = __importDefault(require("./structureNodes"));
 const destructureData_1 = __importDefault(require("./destructureData"));
 const utils_2 = require("../../../utils");
@@ -168,7 +168,7 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
      * @param {boolean} [allHeirs=false] - Se verdadeiro, exporta todos os descendentes em relação ao path especificado.
      * @returns {RegExp} - A expressão regular resultante.
      */
-    pathToRegex(path, onlyChildren = false, allHeirs = false) {
+    pathToRegex(path, onlyChildren = false, allHeirs = false, includeAncestor = false) {
         const pathsRegex = [];
         /**
          * Substitui o caminho por uma expressão regular.
@@ -189,8 +189,17 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         else if (allHeirs) {
             pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/]*))|(\\[([^/]*)\\])){1,})`));
         }
+        let parent = ivipbase_core_1.PathInfo.get(path).parent;
         // Obtém o caminho pai e adiciona a expressão regular correspondente ao array.
-        pathsRegex.push(replasePathToRegex(ivipbase_core_1.PathInfo.get(path).parentPath));
+        if (includeAncestor) {
+            while (parent) {
+                pathsRegex.push(replasePathToRegex(parent.path));
+                parent = parent.parent;
+            }
+        }
+        else if (parent) {
+            pathsRegex.push(replasePathToRegex(parent.path));
+        }
         // Cria a expressão regular completa combinando as expressões individuais no array.
         const fullRegex = new RegExp(`^(${pathsRegex.map((e) => e.replace(/\/$/gi, "/?")).join("$)|(")}$)`);
         return fullRegex;
@@ -233,8 +242,8 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
      * @returns {Promise<StorageNodeInfo[]>} - Uma Promise que resolve para uma lista de informações sobre os nodes.
      * @throws {Error} - Lança um erro se ocorrer algum problema durante a busca assíncrona.
      */
-    async getNodesBy(database, path, onlyChildren = false, allHeirs = false) {
-        const reg = this.pathToRegex(path, onlyChildren, allHeirs);
+    async getNodesBy(database, path, onlyChildren = false, allHeirs = false, includeAncestor = false) {
+        const reg = this.pathToRegex(path, onlyChildren, allHeirs, includeAncestor);
         // console.log("getNodesBy::1::", reg.source);
         let result = [];
         try {
@@ -251,6 +260,9 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         }
         else if (allHeirs) {
             nodes = result.filter(({ path: p }) => ivipbase_core_1.PathInfo.get(path).equals(p) || ivipbase_core_1.PathInfo.get(path).isAncestorOf(p));
+        }
+        if (includeAncestor) {
+            nodes = result.filter(({ path: p }) => ivipbase_core_1.PathInfo.get(p).isParentOf(path) || ivipbase_core_1.PathInfo.get(p).isAncestorOf(path)).concat(nodes);
         }
         return nodes;
     }
@@ -455,12 +467,13 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
      */
     async set(database, path, value, options = {}, type = "SET") {
         var _a;
+        type = typeof value !== "object" || value instanceof Array || value instanceof ArrayBuffer || value instanceof Date ? "UPDATE" : type;
         path = ivipbase_core_1.PathInfo.get([this.settings.prefix, path]).path;
         const nodes = destructureData_1.default.apply(this, [type, path, value, options]);
         //console.log("now", JSON.stringify(nodes.find((node) => node.path === "root/test") ?? {}, null, 4));
-        const byNodes = await this.getNodesBy(database, path, false, true);
+        const byNodes = await this.getNodesBy(database, path, false, true, true);
         //console.log("olt", JSON.stringify(byNodes.find((node) => node.path === "root/test") ?? {}, null, 4));
-        const { added, modified, removed } = prepareMergeNodes_1._prepareMergeNodes.apply(this, [path, byNodes, nodes]);
+        const { added, modified, removed } = prepareMergeNodes_1.default.apply(this, [path, byNodes, nodes]);
         // console.log(JSON.stringify(modified, null, 4));
         // console.log("set", JSON.stringify(nodes, null, 4));
         // console.log("set-added", JSON.stringify(added, null, 4));
@@ -469,26 +482,21 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         const batchError = [];
         const promises = [];
         for (let node of removed) {
-            const reg = this.pathToRegex(node.path, false, true);
-            Promise.race([this.settings.getMultiple(database, reg)]).then((byNodes) => {
-                for (let r of byNodes) {
-                    this.emit("remove", {
-                        name: "remove",
-                        path: ivipbase_core_1.PathInfo.get(ivipbase_core_1.PathInfo.get(node.path).keys.slice(1)).path,
-                        value: (0, utils_2.removeNulls)(r.content.value),
-                    });
-                    promises.push(async () => {
-                        try {
-                            await Promise.race([this.settings.removeNode(database, r.path, r.content, r)]).catch((e) => {
-                                batchError.push({
-                                    path: r.path,
-                                    content: Object.assign(Object.assign({}, r.content), { type: 0, value: null }),
-                                });
-                            });
-                        }
-                        catch (_a) { }
+            this.emit("remove", {
+                name: "remove",
+                path: ivipbase_core_1.PathInfo.get(ivipbase_core_1.PathInfo.get(node.path).keys.slice(1)).path,
+                value: (0, utils_2.removeNulls)(node.content.value),
+            });
+            promises.push(async () => {
+                try {
+                    await Promise.race([this.settings.removeNode(database, node.path, node.content, node)]).catch((e) => {
+                        batchError.push({
+                            path: node.path,
+                            content: Object.assign(Object.assign({}, node.content), { type: 0, value: null }),
+                        });
                     });
                 }
+                catch (_a) { }
             });
         }
         for (let node of modified) {
@@ -530,9 +538,9 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         }
     }
     async update(database, path, value, options = {}) {
-        const beforeValue = await this.get(database, path);
-        value = (0, utils_2.joinObjects)(beforeValue, value);
-        this.set(database, path, value, options, "SET");
+        // const beforeValue = await this.get(database, path);
+        // value = joinObjects(beforeValue, value);
+        await this.set(database, path, value, options, "UPDATE");
     }
     /**
      * Atualiza um nó obtendo seu valor, executando uma função de retorno de chamada que transforma

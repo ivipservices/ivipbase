@@ -124,16 +124,14 @@ class SqliteStorage extends CustomStorage_1.CustomStorage {
         });
     }
     async _getByRegex(table, param, expression) {
-        const sql = `SELECT path, type, json_value, revision, revision_nr, created, modified FROM ${table}`;
+        const sql = `SELECT path, type, text_value, json_value, revision, revision_nr, created, modified FROM ${table}`;
         const rows = await this._get(sql);
         const list = rows.filter((row) => param in row && expression.test(row[param]));
         const promises = list.map(async (row) => {
-            if ([MDE_1.VALUE_TYPES.STRING, MDE_1.VALUE_TYPES.REFERENCE, MDE_1.VALUE_TYPES.BINARY].includes(row.type)) {
-                return await this._getOne(`SELECT path, text_value, binary_value FROM ${table} WHERE path = '${row.path}'`)
-                    .then(({ text_value, binary_value, json_value }) => {
-                    row.text_value = text_value;
+            if ([MDE_1.VALUE_TYPES.BINARY].includes(row.type)) {
+                return await this._getOne(`SELECT path, binary_value FROM ${table} WHERE path = '${row.path}'`)
+                    .then(({ binary_value }) => {
                     row.binary_value = binary_value;
-                    row.json_value = json_value;
                     return Promise.resolve(row);
                 })
                     .catch((err) => {
@@ -150,8 +148,8 @@ class SqliteStorage extends CustomStorage_1.CustomStorage {
         }
         const pendingList = Array.from(this.pending[database].values()).filter((row) => expression.test(row.path));
         const list = await this._getByRegex(database, "path", expression);
-        const result = list
-            .concat(pendingList)
+        const result = pendingList
+            .concat(list)
             .filter((row, i, l) => {
             return l.findIndex((r) => r.path === row.path) === i;
         })

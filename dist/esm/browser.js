@@ -2,4 +2,5 @@ export { CustomStorage, DataStorageSettings } from "./controller/storage/index.j
 export * from "./app/index.js";
 export * from "./database/index.js";
 export * from "./auth/index.js";
+export { PathInfo, SimpleEventEmitter, SimpleCache, Utils, PathReference, ascii85 } from "ivipbase-core";
 //# sourceMappingURL=browser.js.map

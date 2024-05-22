@@ -9,6 +9,7 @@ import { DataBase } from "../database";
 import { Auth } from "../auth";
 import _request from "../controller/request";
 import { connect as connectSocket } from "socket.io-client";
+import { joinObjects } from "../utils";
 
 type IOWebSocket = ReturnType<typeof connectSocket>;
 
@@ -21,7 +22,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 	public _ready = false;
 
 	readonly name: string = DEFAULT_ENTRY_NAME;
-	readonly settings: IvipBaseSettings;
+	public settings: IvipBaseSettings;
 	public storage: CustomStorage;
 	isDeleted: boolean = false;
 	public isServer: boolean;
@@ -254,7 +255,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 		// this._socket?.destroy();
 	}
 
-	async reset(options: Partial<IvipBaseApp>) {
+	async reset(options: IvipBaseSettingsOptions) {
 		this._connectionState = CONNECTION_STATE_DISCONNECTED;
 		this._socket = null;
 		this._ready = false;
@@ -262,7 +263,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 
 		await this.disconnect();
 
-		this.settings.reset({ ...this.settings, ...options.settings });
+		this.settings = new IvipBaseSettings(joinObjects(this.settings.options, options));
 
 		this.storage = applySettings(this.settings.dbname, this.settings.storage);
 

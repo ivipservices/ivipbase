@@ -35,19 +35,23 @@ export default function prepareMergeNodes(
 	let modified: (NodesPending & { previous_content?: StorageNode })[] = [];
 	let removed: NodesPending[] = [];
 
-	// console.log(path, JSON.stringify(comparison, null, 4));
+	// console.log(path, JSON.stringify(nodes, null, 4));
 	// console.log(nodes.find(({ path }) => path === "root/__auth__/accounts/admin"));
 
 	for (let node of nodes) {
 		let pathInfo = PathInfo.get(node.path);
+		let response = comparison.find(({ path }) => PathInfo.get(path).equals(node.path));
 
-		while (!(pathInfo.isAncestorOf(path) || pathInfo.path.trim() === "")) {
-			const response = comparison.find(({ path }) => PathInfo.get(path).equals(pathInfo.path));
+		if (response) {
+			continue;
+		}
 
-			if (response && response.type === "SET" && !pathInfo.equals(response.path)) {
-				const iten = nodes.find(({ path }) => PathInfo.get(path).equals(node.path)) ?? node;
-				removed.push(iten);
-				nodes = nodes.filter((n) => !PathInfo.get(n.path).equals(iten.path));
+		while (pathInfo && pathInfo.path.trim() !== "") {
+			response = comparison.find(({ path }) => PathInfo.get(path).equals(pathInfo.path));
+
+			if (response && response.type === "SET") {
+				removed.push(node);
+				nodes = nodes.filter((n) => !PathInfo.get(n.path).equals(node.path));
 				break;
 			}
 
@@ -121,6 +125,8 @@ export default function prepareMergeNodes(
 	added = added.filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i);
 	modified = modified.filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i);
 	removed = removed.filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i);
+
+	// console.log("removed:", JSON.stringify(removed, null, 4));
 
 	// console.log("RESULT:", path, JSON.stringify(result, null, 4));
 

@@ -106,7 +106,7 @@ export default class MDE extends SimpleEventEmitter {
      * @returns {Promise<StorageNodeInfo[]>} - Uma Promise que resolve para uma lista de informações sobre os nodes.
      * @throws {Error} - Lança um erro se ocorrer algum problema durante a busca assíncrona.
      */
-    getNodesBy(database: string, path: string, onlyChildren?: boolean, allHeirs?: boolean): Promise<StorageNodeInfo[]>;
+    getNodesBy(database: string, path: string, onlyChildren?: boolean, allHeirs?: boolean, includeAncestor?: boolean): Promise<StorageNodeInfo[]>;
     /**
      * Obtém o node pai de um caminho específico.
      * @param {string} database - Nome do banco de dados.

@@ -32,5 +32,5 @@ export declare class SignInError extends Error {
  * @param req current http request
  * @returns
  */
-export declare const signIn: (credentials: SignInCredentials, env: LocalServer, req: RouteRequest) => Promise<DbUserAccountDetails>;
+export declare const signIn: (database: string, credentials: SignInCredentials, env: LocalServer, req: RouteRequest) => Promise<DbUserAccountDetails>;
 //# sourceMappingURL=signin.d.ts.map

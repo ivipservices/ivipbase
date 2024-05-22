@@ -7,7 +7,7 @@ import { Auth } from "../auth";
 export declare class IvipBaseApp extends SimpleEventEmitter {
     _ready: boolean;
     readonly name: string;
-    readonly settings: IvipBaseSettings;
+    settings: IvipBaseSettings;
     storage: CustomStorage;
     isDeleted: boolean;
     isServer: boolean;
@@ -80,7 +80,7 @@ export declare class IvipBaseApp extends SimpleEventEmitter {
     disconnect(): Promise<void>;
     reconnect(): Promise<void>;
     destroy(): Promise<void>;
-    reset(options: Partial<IvipBaseApp>): Promise<void>;
+    reset(options: IvipBaseSettingsOptions): Promise<void>;
 }
 export declare function initializeApp(options: IvipBaseSettingsOptions): IvipBaseApp;
 export declare function appExists(name?: string): boolean;

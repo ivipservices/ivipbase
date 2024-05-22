@@ -24,16 +24,20 @@ export class SignInError extends Error {
  * @param req current http request
  * @returns
  */
-export const signIn = async (credentials: SignInCredentials, env: LocalServer, req: RouteRequest) => {
+export const signIn = async (database: string, credentials: SignInCredentials, env: LocalServer, req: RouteRequest) => {
 	const LOG_ACTION = "auth.signin";
 	const LOG_DETAILS = { ip: req.ip, method: credentials.method };
 
 	try {
+		if (credentials.database && credentials.database !== database) {
+			throw new SignInError("auth/invalid-database", "Invalid database");
+		}
+
 		if (!env.tokenSalt) {
 			throw new SignInError("auth/system-error", "Token salt not ready");
 		}
 
-		const query = env.authRef(credentials.database).query();
+		const query = env.authRef(database).query();
 		let tokenDetails: PublicAccessToken | undefined;
 
 		switch (credentials.method) {

@@ -26,7 +26,7 @@ const addRoutes = (env) => {
         const details = req.body;
         const clientId = details.client_id || null;
         try {
-            const user = await (0, signin_1.signIn)(details, env, req);
+            const user = await (0, signin_1.signIn)(dbName, details, env, req);
             if (!user || !user.uid || !user.access_token) {
                 throw new Error("User not found");
             }

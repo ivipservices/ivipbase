@@ -69,7 +69,6 @@ const setupAuthentication = async (env) => {
                         passwordHash = (0, password_1.getPasswordHash)(env.settings.auth.defaultAdminPassword, adminAccount.password_salt);
                     }
                     if (adminAccount.password !== passwordHash) {
-                        env.debug.warn(`WARNING: default password for admin user was not changed!`);
                         const pwd = (0, password_1.createPasswordHash)(env.settings.auth.defaultAdminPassword);
                         adminAccount.password = pwd.hash;
                         adminAccount.password_salt = pwd.salt;

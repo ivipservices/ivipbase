@@ -145,14 +145,13 @@ export class SqliteStorage extends CustomStorage {
 	}
 
 	private async _getByRegex(table: string, param: string, expression: RegExp): Promise<any[]> {
-		const sql = `SELECT path, type, json_value, revision, revision_nr, created, modified FROM ${table}`;
+		const sql = `SELECT path, type, text_value, json_value, revision, revision_nr, created, modified FROM ${table}`;
 		const rows = await this._get(sql);
 		const list = rows.filter((row) => param in row && expression.test(row[param]));
 		const promises = list.map(async (row: any) => {
-			if ([VALUE_TYPES.STRING, VALUE_TYPES.REFERENCE, VALUE_TYPES.BINARY].includes(row.type)) {
-				return await this._getOne(`SELECT path, text_value, binary_value FROM ${table} WHERE path = '${row.path}'`)
-					.then(({ text_value, binary_value }) => {
-						row.text_value = text_value;
+			if ([VALUE_TYPES.BINARY].includes(row.type)) {
+				return await this._getOne(`SELECT path, binary_value FROM ${table} WHERE path = '${row.path}'`)
+					.then(({ binary_value }) => {
 						row.binary_value = binary_value;
 						return Promise.resolve(row);
 					})

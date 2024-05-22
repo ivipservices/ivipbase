@@ -1,10 +1,10 @@
 import { DebugLogger, ID, PathInfo, SchemaDefinition, SimpleEventEmitter } from "ivipbase-core";
 import { CustomStorageNodeInfo, NodeAddress } from "./NodeInfo.js";
 import { VALUE_TYPES, getTypeFromStoredValue, getValueType, nodeValueTypes, processReadNodeValue } from "./utils.js";
-import { _prepareMergeNodes } from "./prepareMergeNodes.js";
+import prepareMergeNodes from "./prepareMergeNodes.js";
 import structureNodes from "./structureNodes.js";
 import destructureData from "./destructureData.js";
-import { joinObjects, removeNulls } from "../../../utils/index.js";
+import { removeNulls } from "../../../utils/index.js";
 export { VALUE_TYPES };
 const DEBUG_MODE = false;
 const NOOP = () => { };
@@ -150,7 +150,7 @@ export default class MDE extends SimpleEventEmitter {
      * @param {boolean} [allHeirs=false] - Se verdadeiro, exporta todos os descendentes em relação ao path especificado.
      * @returns {RegExp} - A expressão regular resultante.
      */
-    pathToRegex(path, onlyChildren = false, allHeirs = false) {
+    pathToRegex(path, onlyChildren = false, allHeirs = false, includeAncestor = false) {
         const pathsRegex = [];
         /**
          * Substitui o caminho por uma expressão regular.
@@ -171,8 +171,17 @@ export default class MDE extends SimpleEventEmitter {
         else if (allHeirs) {
             pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/]*))|(\\[([^/]*)\\])){1,})`));
         }
+        let parent = PathInfo.get(path).parent;
         // Obtém o caminho pai e adiciona a expressão regular correspondente ao array.
-        pathsRegex.push(replasePathToRegex(PathInfo.get(path).parentPath));
+        if (includeAncestor) {
+            while (parent) {
+                pathsRegex.push(replasePathToRegex(parent.path));
+                parent = parent.parent;
+            }
+        }
+        else if (parent) {
+            pathsRegex.push(replasePathToRegex(parent.path));
+        }
         // Cria a expressão regular completa combinando as expressões individuais no array.
         const fullRegex = new RegExp(`^(${pathsRegex.map((e) => e.replace(/\/$/gi, "/?")).join("$)|(")}$)`);
         return fullRegex;
@@ -215,8 +224,8 @@ export default class MDE extends SimpleEventEmitter {
      * @returns {Promise<StorageNodeInfo[]>} - Uma Promise que resolve para uma lista de informações sobre os nodes.
      * @throws {Error} - Lança um erro se ocorrer algum problema durante a busca assíncrona.
      */
-    async getNodesBy(database, path, onlyChildren = false, allHeirs = false) {
-        const reg = this.pathToRegex(path, onlyChildren, allHeirs);
+    async getNodesBy(database, path, onlyChildren = false, allHeirs = false, includeAncestor = false) {
+        const reg = this.pathToRegex(path, onlyChildren, allHeirs, includeAncestor);
         // console.log("getNodesBy::1::", reg.source);
         let result = [];
         try {
@@ -233,6 +242,9 @@ export default class MDE extends SimpleEventEmitter {
         }
         else if (allHeirs) {
             nodes = result.filter(({ path: p }) => PathInfo.get(path).equals(p) || PathInfo.get(path).isAncestorOf(p));
+        }
+        if (includeAncestor) {
+            nodes = result.filter(({ path: p }) => PathInfo.get(p).isParentOf(path) || PathInfo.get(p).isAncestorOf(path)).concat(nodes);
         }
         return nodes;
     }
@@ -431,12 +443,13 @@ export default class MDE extends SimpleEventEmitter {
      * @returns {Promise<void>}
      */
     async set(database, path, value, options = {}, type = "SET") {
+        type = typeof value !== "object" || value instanceof Array || value instanceof ArrayBuffer || value instanceof Date ? "UPDATE" : type;
         path = PathInfo.get([this.settings.prefix, path]).path;
         const nodes = destructureData.apply(this, [type, path, value, options]);
         //console.log("now", JSON.stringify(nodes.find((node) => node.path === "root/test") ?? {}, null, 4));
-        const byNodes = await this.getNodesBy(database, path, false, true);
+        const byNodes = await this.getNodesBy(database, path, false, true, true);
         //console.log("olt", JSON.stringify(byNodes.find((node) => node.path === "root/test") ?? {}, null, 4));
-        const { added, modified, removed } = _prepareMergeNodes.apply(this, [path, byNodes, nodes]);
+        const { added, modified, removed } = prepareMergeNodes.apply(this, [path, byNodes, nodes]);
         // console.log(JSON.stringify(modified, null, 4));
         // console.log("set", JSON.stringify(nodes, null, 4));
         // console.log("set-added", JSON.stringify(added, null, 4));
@@ -445,30 +458,25 @@ export default class MDE extends SimpleEventEmitter {
         const batchError = [];
         const promises = [];
         for (let node of removed) {
-            const reg = this.pathToRegex(node.path, false, true);
-            Promise.race([this.settings.getMultiple(database, reg)]).then((byNodes) => {
-                for (let r of byNodes) {
-                    this.emit("remove", {
-                        name: "remove",
-                        path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
-                        value: removeNulls(r.content.value),
-                    });
-                    promises.push(async () => {
-                        try {
-                            await Promise.race([this.settings.removeNode(database, r.path, r.content, r)]).catch((e) => {
-                                batchError.push({
-                                    path: r.path,
-                                    content: {
-                                        ...r.content,
-                                        type: 0,
-                                        value: null,
-                                    },
-                                });
-                            });
-                        }
-                        catch { }
+            this.emit("remove", {
+                name: "remove",
+                path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
+                value: removeNulls(node.content.value),
+            });
+            promises.push(async () => {
+                try {
+                    await Promise.race([this.settings.removeNode(database, node.path, node.content, node)]).catch((e) => {
+                        batchError.push({
+                            path: node.path,
+                            content: {
+                                ...node.content,
+                                type: 0,
+                                value: null,
+                            },
+                        });
                     });
                 }
+                catch { }
             });
         }
         for (let node of modified) {
@@ -510,9 +518,9 @@ export default class MDE extends SimpleEventEmitter {
         }
     }
     async update(database, path, value, options = {}) {
-        const beforeValue = await this.get(database, path);
-        value = joinObjects(beforeValue, value);
-        this.set(database, path, value, options, "SET");
+        // const beforeValue = await this.get(database, path);
+        // value = joinObjects(beforeValue, value);
+        await this.set(database, path, value, options, "UPDATE");
     }
     /**
      * Atualiza um nó obtendo seu valor, executando uma função de retorno de chamada que transforma

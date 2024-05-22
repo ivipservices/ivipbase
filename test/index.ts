@@ -76,8 +76,12 @@ app.ready(async () => {
 
 	await db.ref("test").set({ text: "This is my first iVipCoin test in RunKit" });
 
-	let snap = await db.ref("test/text").get();
-	console.log(snap.val());
+	// await db
+	// 	.ref("test/text")
+	// 	.get()
+	// 	.then((snap) => {
+	// 		console.log(snap.val());
+	// 	});
 
 	await db.ref("test").update({
 		type: "deposit",
@@ -110,13 +114,13 @@ app.ready(async () => {
 		history_id: "1677138262468",
 	});
 
-	await db.ref("test").update({ text: null });
-	await db
-		.ref("test/text")
-		.get()
-		.then((snap) => {
-			console.log(snap.val());
-		});
+	// await db.ref("test").update({ text: null });
+	// await db
+	// 	.ref("test/text")
+	// 	.get()
+	// 	.then((snap) => {
+	// 		console.log(snap.val());
+	// 	});
 
 	// setTimeout(async () => {
 	// 	snap = await db.ref("test").get();

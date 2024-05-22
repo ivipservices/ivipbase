@@ -20,15 +20,18 @@ exports.SignInError = SignInError;
  * @param req current http request
  * @returns
  */
-const signIn = async (credentials, env, req) => {
+const signIn = async (database, credentials, env, req) => {
     var _a;
     const LOG_ACTION = "auth.signin";
     const LOG_DETAILS = { ip: req.ip, method: credentials.method };
     try {
+        if (credentials.database && credentials.database !== database) {
+            throw new SignInError("auth/invalid-database", "Invalid database");
+        }
         if (!env.tokenSalt) {
             throw new SignInError("auth/system-error", "Token salt not ready");
         }
-        const query = env.authRef(credentials.database).query();
+        const query = env.authRef(database).query();
         let tokenDetails;
         switch (credentials.method) {
             case "token": {

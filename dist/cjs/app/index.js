@@ -13,6 +13,7 @@ const settings_1 = require("./settings");
 const database_1 = require("../database");
 const request_1 = __importDefault(require("../controller/request"));
 const socket_io_client_1 = require("socket.io-client");
+const utils_1 = require("../utils");
 const CONNECTION_STATE_DISCONNECTED = "disconnected";
 const CONNECTION_STATE_CONNECTING = "connecting";
 const CONNECTION_STATE_CONNECTED = "connected";
@@ -176,7 +177,7 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         this._ready = false;
         this.isDeleted = false;
         await this.disconnect();
-        this.settings.reset(Object.assign(Object.assign({}, this.settings), options.settings));
+        this.settings = new settings_1.IvipBaseSettings((0, utils_1.joinObjects)(this.settings.options, options));
         this.storage = (0, verifyStorage_1.applySettings)(this.settings.dbname, this.settings.storage);
         this.isServer = typeof this.settings.server === "object";
         this.databases.clear();

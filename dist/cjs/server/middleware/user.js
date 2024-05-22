@@ -36,7 +36,7 @@ const addMiddleware = (env) => {
             if (!user) {
                 // Query database to get user for this token
                 try {
-                    user = await (0, signin_1.signIn)({ database: tokenDetails.database, method: "internal", access_token: tokenDetails.access_token }, env, req);
+                    user = await (0, signin_1.signIn)(tokenDetails.database, { database: tokenDetails.database, method: "internal", access_token: tokenDetails.access_token }, env, req);
                 }
                 catch (err) {
                     return (0, error_1.sendNotAuthenticatedError)(res, err.code, err.message);
