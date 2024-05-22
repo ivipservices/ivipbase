@@ -172,12 +172,12 @@ export class SqliteStorage extends CustomStorage {
 			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
 		}
 
-		const pendingList = Array.from(this.pending[database].values()).filter((row) => expression.test(row.path));
+		const pendingList: any[] = Array.from(this.pending[database].values()).filter((row) => expression.test(row.path));
 
 		const list = await this._getByRegex(database, "path", expression);
 
-		const result: StorageNodeInfo[] = list
-			.concat(pendingList)
+		const result: StorageNodeInfo[] = pendingList
+			.concat(list)
 			.filter((row, i, l) => {
 				return l.findIndex((r) => r.path === row.path) === i;
 			})

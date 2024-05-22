@@ -71,7 +71,7 @@ app.ready(async () => {
 	// db.ref("test")
 	// 	.observe()
 	// 	.subscribe((val) => {
-	// 		console.log("text: ", val.text);
+	// 		console.log("observe: ", val);
 	// 	});
 
 	await db.ref("test").set({ text: "This is my first iVipCoin test in RunKit" });
@@ -111,6 +111,12 @@ app.ready(async () => {
 	});
 
 	await db.ref("test").update({ text: null });
+	await db
+		.ref("test/text")
+		.get()
+		.then((snap) => {
+			console.log(snap.val());
+		});
 
 	// setTimeout(async () => {
 	// 	snap = await db.ref("test").get();

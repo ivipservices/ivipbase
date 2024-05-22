@@ -1,7 +1,7 @@
 import { DebugLogger, ID, PathInfo, SchemaDefinition, SimpleEventEmitter, Types, Utils } from "ivipbase-core";
 import { CustomStorageNodeInfo, NodeAddress, NodesPending, StorageNode, StorageNodeInfo } from "./NodeInfo";
 import { NodeValueType, VALUE_TYPES, getTypeFromStoredValue, getValueType, nodeValueTypes, processReadNodeValue, promiseState } from "./utils";
-import prepareMergeNodes, { _prepareMergeNodes } from "./prepareMergeNodes";
+import prepareMergeNodes from "./prepareMergeNodes";
 import structureNodes from "./structureNodes";
 import destructureData from "./destructureData";
 import { joinObjects, removeNulls, replaceUndefined } from "../../../utils";
@@ -602,7 +602,7 @@ export default class MDE extends SimpleEventEmitter {
 		//console.log("now", JSON.stringify(nodes.find((node) => node.path === "root/test") ?? {}, null, 4));
 		const byNodes = await this.getNodesBy(database, path, false, true);
 		//console.log("olt", JSON.stringify(byNodes.find((node) => node.path === "root/test") ?? {}, null, 4));
-		const { added, modified, removed } = _prepareMergeNodes.apply(this, [path, byNodes, nodes]);
+		const { added, modified, removed } = prepareMergeNodes.apply(this, [path, byNodes, nodes]);
 
 		// console.log(JSON.stringify(modified, null, 4));
 
@@ -695,9 +695,9 @@ export default class MDE extends SimpleEventEmitter {
 			};
 		} = {},
 	): Promise<void> {
-		const beforeValue = await this.get(database, path);
-		value = joinObjects(beforeValue, value);
-		this.set(database, path, value, options, "SET");
+		// const beforeValue = await this.get(database, path);
+		// value = joinObjects(beforeValue, value);
+		await this.set(database, path, value, options, "UPDATE");
 	}
 
 	/**
