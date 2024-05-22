@@ -19,7 +19,7 @@ const ivipbase_core_1 = require("ivipbase-core");
 const NodeInfo_1 = require("./NodeInfo");
 const utils_1 = require("./utils");
 Object.defineProperty(exports, "VALUE_TYPES", { enumerable: true, get: function () { return utils_1.VALUE_TYPES; } });
-const prepareMergeNodes_1 = __importDefault(require("./prepareMergeNodes"));
+const prepareMergeNodes_1 = require("./prepareMergeNodes");
 const structureNodes_1 = __importDefault(require("./structureNodes"));
 const destructureData_1 = __importDefault(require("./destructureData"));
 const utils_2 = require("../../../utils");
@@ -132,12 +132,6 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
     constructor(options = {}) {
         super();
         this._ready = false;
-        /**
-         * Uma lista de informações sobre nodes, mantido em cache até que as modificações sejam processadas no BD com êxito.
-         *
-         * @type {NodesPending[]}
-         */
-        this.nodes = {};
         this.schemas = {};
         this.settings = new MDESettings(options);
         this._lastTid = 0;
@@ -184,15 +178,16 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         const replasePathToRegex = (path) => {
             path = path.replace(/\/((\*)|(\$[^/\$]*))/g, "/([^/]*)");
             path = path.replace(/\[\*\]/g, "\\[(\\d+)\\]");
+            path = path.replace(/\[(\d+)\]/g, "\\[$1\\]");
             return path;
         };
         // Adiciona a expressão regular do caminho principal ao array.
         pathsRegex.push(replasePathToRegex(path));
         if (onlyChildren) {
-            pathsRegex.forEach((exp) => pathsRegex.push(`${exp}((\/([^\/]*)){1})`));
+            pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/]*))|(\\[([^/]*)\\])){1})`));
         }
         else if (allHeirs) {
-            pathsRegex.forEach((exp) => pathsRegex.push(`${exp}((\/([^\/]*)){1,})`));
+            pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/]*))|(\\[([^/]*)\\])){1,})`));
         }
         // Obtém o caminho pai e adiciona a expressão regular correspondente ao array.
         pathsRegex.push(replasePathToRegex(ivipbase_core_1.PathInfo.get(path).parentPath));
@@ -239,28 +234,15 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
      * @throws {Error} - Lança um erro se ocorrer algum problema durante a busca assíncrona.
      */
     async getNodesBy(database, path, onlyChildren = false, allHeirs = false) {
-        var _a;
         const reg = this.pathToRegex(path, onlyChildren, allHeirs);
-        let nodeList = ((_a = this.nodes[database]) !== null && _a !== void 0 ? _a : [])
-            .filter(({ path }) => reg.test(path))
-            .sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
-            return aM > bM ? -1 : aM < bM ? 1 : 0;
-        })
-            .filter(({ path }, i, list) => {
-            return list.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(path)) === i;
-        })
-            .sort(({ path: a }, { path: b }) => {
-            return ivipbase_core_1.PathInfo.get(a).isAncestorOf(b) ? 1 : ivipbase_core_1.PathInfo.get(a).isDescendantOf(b) ? -1 : 0;
-        });
-        // console.log("getNodesBy::1::", JSON.stringify(nodeList, null, 4));
-        let byNodes = [];
+        // console.log("getNodesBy::1::", reg.source);
+        let result = [];
         try {
-            byNodes = await this.settings.getMultiple(database, reg);
+            result = await this.settings.getMultiple(database, reg);
         }
-        catch (_b) { }
-        // console.log("getNodesBy::2::", JSON.stringify(byNodes, null, 4));
-        const { result } = prepareMergeNodes_1.default.apply(this, [byNodes, nodeList]);
-        let nodes = result.filter(({ path: p }) => ivipbase_core_1.PathInfo.get(path).equals(p));
+        catch (_a) { }
+        // console.log("getNodesBy::2::", JSON.stringify(result, null, 4));
+        let nodes = result.filter(({ path: p, content }) => ivipbase_core_1.PathInfo.get(path).equals(p) && (content.type !== utils_1.nodeValueTypes.EMPTY || content.value !== null || content.value !== undefined));
         if (nodes.length <= 0) {
             nodes = result.filter(({ path: p }) => ivipbase_core_1.PathInfo.get(path).isChildOf(p));
         }
@@ -292,81 +274,6 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
             return pathA.isDescendantOf(pathB.path) ? -1 : pathB.isDescendantOf(pathA.path) ? 1 : 0;
         })
             .shift();
-    }
-    async sendNodes(database) {
-        const batch = this.nodes[database].splice(0).sort(({ content: { modified: aM } }, { content: { modified: bM } }) => {
-            return aM > bM ? -1 : aM < bM ? 1 : 0;
-        });
-        const batchError = [];
-        try {
-            // const forAsync = prepareMergeNodes.apply(this, [batch]);
-            let byNodes = [];
-            const paths = batch
-                .filter((node, i, self) => {
-                return self.findIndex(({ path }) => path === node.path) === i;
-            })
-                .map(({ path }) => path);
-            for (const path of paths) {
-                const reg = this.pathToRegex(path, false, false);
-                const by = await this.settings.getMultiple(database, reg);
-                byNodes = byNodes.concat(by);
-            }
-            byNodes = byNodes.filter((node, i, self) => {
-                return self.findIndex(({ path }) => path === node.path) === i;
-            });
-            const { added, modified, removed, result } = prepareMergeNodes_1.default.apply(this, [byNodes, batch]);
-            // console.log("added: ", JSON.stringify(added, null, 4));
-            // console.log("modified: ", JSON.stringify(modified, null, 4));
-            // console.log("removed: ", JSON.stringify(removed, null, 4));
-            // console.log("result: ", JSON.stringify(result, null, 4));
-            for (let node of modified) {
-                await Promise.race([this.settings.setNode(database, node.path, (0, utils_2.removeNulls)(node.content), (0, utils_2.removeNulls)(node))]).catch(() => {
-                    batchError.push(node);
-                });
-            }
-            for (let node of added) {
-                await Promise.race([this.settings.setNode(database, node.path, (0, utils_2.removeNulls)(node.content), (0, utils_2.removeNulls)(node))]).catch(() => {
-                    batchError.push(node);
-                });
-            }
-            for (let node of removed) {
-                const reg = this.pathToRegex(node.path, false, true);
-                const byNodes = await this.settings.getMultiple(database, reg);
-                for (let r of byNodes) {
-                    await Promise.race([this.settings.removeNode(database, r.path, r.content, r)]).catch(() => {
-                        batchError.push({
-                            path: r.path,
-                            content: Object.assign(Object.assign({}, r.content), { type: 0, value: null }),
-                        });
-                    });
-                }
-            }
-        }
-        catch (_a) { }
-        const next = Object.keys(this.nodes).find((n) => this.nodes[n].length > 0);
-        if (next) {
-            this.sendNodes(next);
-        }
-    }
-    /**
-     * Adiciona um ou mais nodes a matriz de nodes atual e aplica evento de alteração.
-     * @param {string} database - Nome do banco de dados.
-     * @param nodes - Um ou mais nós a serem adicionados.
-     * @returns {MDE} O nó atual após a adição dos nós.
-     */
-    pushNode(database, ...nodes) {
-        var _a;
-        const forNodes = (_a = Array.prototype.concat
-            .apply([], nodes.map((node) => (Array.isArray(node) ? node : [node])))
-            .filter((node = {}) => node && typeof node.path === "string" && "content" in node)) !== null && _a !== void 0 ? _a : [];
-        if (!Array.isArray(this.nodes[database])) {
-            this.nodes[database] = [];
-        }
-        for (let node of forNodes) {
-            this.nodes[database].push(node);
-        }
-        this.sendNodes(database);
-        return this;
     }
     /**
      * Obtém informações personalizadas sobre um node com base no caminho especificado.
@@ -433,6 +340,13 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         if (include_child_count && (containsChild || isArrayChild)) {
             info.childCount = nodes.reduce((c, { path: p }) => c + (pathInfo.isParentOf(p) ? 1 : 0), Object.keys(info.value).length);
         }
+        if (info.value !== null && typeof info.value === "object") {
+            info.value = Object.fromEntries(Object.entries(info.value).sort((a, b) => {
+                const key1 = a[0].toString();
+                const key2 = b[0].toString();
+                return key1.startsWith("__") && !key2.startsWith("__") ? 1 : !key1.startsWith("__") && key2.startsWith("__") ? -1 : key1 > key2 ? 1 : key1 < key2 ? -1 : 0;
+            }));
+        }
         return info;
     }
     getChildren(database, path, options = {}) {
@@ -474,7 +388,15 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
             if (!isContinue) {
                 return;
             }
-            for (let node of nodes) {
+            const childNodes = nodes
+                .filter((node) => !(pathInfo.equals(node.path) || !pathInfo.isParentOf(node.path)))
+                .sort((a, b) => {
+                var _a, _b;
+                const key1 = ((_a = ivipbase_core_1.PathInfo.get(a.path).key) !== null && _a !== void 0 ? _a : a.path).toString();
+                const key2 = ((_b = ivipbase_core_1.PathInfo.get(b.path).key) !== null && _b !== void 0 ? _b : b.path).toString();
+                return key1.startsWith("__") && !key2.startsWith("__") ? 1 : !key1.startsWith("__") && key2.startsWith("__") ? -1 : key1 > key2 ? 1 : key1 < key2 ? -1 : 0;
+            });
+            for (let node of childNodes) {
                 if (!isContinue) {
                     break;
                 }
@@ -513,7 +435,7 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         const _b = options !== null && options !== void 0 ? options : {}, { include_info_node, onlyChildren } = _b, _options = __rest(_b, ["include_info_node", "onlyChildren"]);
         path = ivipbase_core_1.PathInfo.get([this.settings.prefix, path]).path;
         const nodes = await this.getNodesBy(database, path, onlyChildren, true);
-        const main_node = nodes.find(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(path));
+        const main_node = nodes.find(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(path) || ivipbase_core_1.PathInfo.get(p).isParentOf(path));
         if (!main_node) {
             return undefined;
         }
@@ -538,26 +460,14 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         //console.log("now", JSON.stringify(nodes.find((node) => node.path === "root/test") ?? {}, null, 4));
         const byNodes = await this.getNodesBy(database, path, false, true);
         //console.log("olt", JSON.stringify(byNodes.find((node) => node.path === "root/test") ?? {}, null, 4));
-        const { added, modified, removed } = prepareMergeNodes_1.default.apply(this, [byNodes, nodes]);
+        const { added, modified, removed } = prepareMergeNodes_1._prepareMergeNodes.apply(this, [path, byNodes, nodes]);
+        // console.log(JSON.stringify(modified, null, 4));
         // console.log("set", JSON.stringify(nodes, null, 4));
         // console.log("set-added", JSON.stringify(added, null, 4));
         // console.log("set-modified", JSON.stringify(modified, null, 4));
         // console.log("set-removed", JSON.stringify(removed, null, 4));
-        for (let node of modified) {
-            this.emit("change", {
-                name: "change",
-                path: ivipbase_core_1.PathInfo.get(ivipbase_core_1.PathInfo.get(node.path).keys.slice(1)).path,
-                value: (0, utils_2.removeNulls)(node.content.value),
-                previous: (0, utils_2.removeNulls)((_a = node.previous_content) === null || _a === void 0 ? void 0 : _a.value),
-            });
-        }
-        for (let node of added) {
-            this.emit("add", {
-                name: "add",
-                path: ivipbase_core_1.PathInfo.get(ivipbase_core_1.PathInfo.get(node.path).keys.slice(1)).path,
-                value: (0, utils_2.removeNulls)(node.content.value),
-            });
-        }
+        const batchError = [];
+        const promises = [];
         for (let node of removed) {
             const reg = this.pathToRegex(node.path, false, true);
             Promise.race([this.settings.getMultiple(database, reg)]).then((byNodes) => {
@@ -567,13 +477,62 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
                         path: ivipbase_core_1.PathInfo.get(ivipbase_core_1.PathInfo.get(node.path).keys.slice(1)).path,
                         value: (0, utils_2.removeNulls)(r.content.value),
                     });
+                    promises.push(async () => {
+                        try {
+                            await Promise.race([this.settings.removeNode(database, r.path, r.content, r)]).catch((e) => {
+                                batchError.push({
+                                    path: r.path,
+                                    content: Object.assign(Object.assign({}, r.content), { type: 0, value: null }),
+                                });
+                            });
+                        }
+                        catch (_a) { }
+                    });
                 }
             });
         }
-        this.pushNode(database, nodes);
+        for (let node of modified) {
+            this.emit("change", {
+                name: "change",
+                path: ivipbase_core_1.PathInfo.get(ivipbase_core_1.PathInfo.get(node.path).keys.slice(1)).path,
+                value: (0, utils_2.removeNulls)(node.content.value),
+                previous: (0, utils_2.removeNulls)((_a = node.previous_content) === null || _a === void 0 ? void 0 : _a.value),
+            });
+            promises.push(async () => {
+                try {
+                    await Promise.race([this.settings.setNode(database, node.path, (0, utils_2.removeNulls)(node.content), (0, utils_2.removeNulls)(node))]).catch((e) => {
+                        batchError.push(node);
+                    });
+                }
+                catch (_a) { }
+            });
+        }
+        for (let node of added) {
+            this.emit("add", {
+                name: "add",
+                path: ivipbase_core_1.PathInfo.get(ivipbase_core_1.PathInfo.get(node.path).keys.slice(1)).path,
+                value: (0, utils_2.removeNulls)(node.content.value),
+            });
+            promises.push(async () => {
+                try {
+                    await Promise.race([this.settings.setNode(database, node.path, (0, utils_2.removeNulls)(node.content), (0, utils_2.removeNulls)(node))]).catch((e) => {
+                        batchError.push(node);
+                    });
+                }
+                catch (_a) { }
+            });
+        }
+        for (let p of promises) {
+            try {
+                await p();
+            }
+            catch (_b) { }
+        }
     }
     async update(database, path, value, options = {}) {
-        this.set(database, path, value, options, "UPDATE");
+        const beforeValue = await this.get(database, path);
+        value = (0, utils_2.joinObjects)(beforeValue, value);
+        this.set(database, path, value, options, "SET");
     }
     /**
      * Atualiza um nó obtendo seu valor, executando uma função de retorno de chamada que transforma

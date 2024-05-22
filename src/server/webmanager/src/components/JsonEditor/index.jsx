@@ -361,6 +361,13 @@ const ViewTree = ({ currentPath, onChange, loadData, isExpanded = false, index =
 
 	useEffect(() => {
 		if (!isExpanded) {
+			setExpandChildren([]);
+			setHiddenActionExpandChildren([]);
+		}
+	}, [isExpanded]);
+
+	useEffect(() => {
+		if (!isExpanded) {
 			return;
 		}
 

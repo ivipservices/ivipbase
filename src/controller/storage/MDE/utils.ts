@@ -322,7 +322,8 @@ export function processReadNodeValue(node: StorageNode): StorageNode {
 		}
 
 		default:
-			throw new Error(`Invalid standalone record value type`); // nunca deve acontecer
+			node.value = null;
+		// throw new Error(`Invalid standalone record value type: ${node.type}`); // nunca deve acontecer
 	}
 
 	return node;

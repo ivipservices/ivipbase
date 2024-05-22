@@ -17,4 +17,5 @@ Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./browser"), exports);
 __exportStar(require("./MongoDBStorage"), exports);
 __exportStar(require("./JsonFileStorage"), exports);
+__exportStar(require("./SqliteStorage"), exports);
 //# sourceMappingURL=index.js.map

@@ -14,9 +14,10 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.JsonFileStorageSettings = exports.MongodbSettings = void 0;
+exports.SqliteSettings = exports.JsonFileStorageSettings = exports.MongodbSettings = void 0;
 __exportStar(require("./browser"), exports);
 var storage_1 = require("./controller/storage");
 Object.defineProperty(exports, "MongodbSettings", { enumerable: true, get: function () { return storage_1.MongodbSettings; } });
 Object.defineProperty(exports, "JsonFileStorageSettings", { enumerable: true, get: function () { return storage_1.JsonFileStorageSettings; } });
+Object.defineProperty(exports, "SqliteSettings", { enumerable: true, get: function () { return storage_1.SqliteSettings; } });
 //# sourceMappingURL=index.js.map

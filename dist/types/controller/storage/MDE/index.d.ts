@@ -1,5 +1,5 @@
 import { DebugLogger, SimpleEventEmitter, Types } from "ivipbase-core";
-import { CustomStorageNodeInfo, NodesPending, StorageNode, StorageNodeInfo } from "./NodeInfo";
+import { CustomStorageNodeInfo, StorageNode, StorageNodeInfo } from "./NodeInfo";
 import { VALUE_TYPES } from "./utils";
 export { VALUE_TYPES, StorageNode, StorageNodeInfo };
 /**
@@ -68,12 +68,6 @@ export default class MDE extends SimpleEventEmitter {
      * As configurações do node.
      */
     readonly settings: MDESettings;
-    /**
-     * Uma lista de informações sobre nodes, mantido em cache até que as modificações sejam processadas no BD com êxito.
-     *
-     * @type {NodesPending[]}
-     */
-    private nodes;
     private _lastTid;
     createTid(): string | number;
     private schemas;
@@ -120,14 +114,6 @@ export default class MDE extends SimpleEventEmitter {
      * @returns {Promise<StorageNodeInfo | undefined>} O node pai correspondente ao caminho ou `undefined` se não for encontrado.
      */
     getNodeParentBy(database: string, path: string): Promise<StorageNodeInfo | undefined>;
-    sendNodes(database: string): Promise<void>;
-    /**
-     * Adiciona um ou mais nodes a matriz de nodes atual e aplica evento de alteração.
-     * @param {string} database - Nome do banco de dados.
-     * @param nodes - Um ou mais nós a serem adicionados.
-     * @returns {MDE} O nó atual após a adição dos nós.
-     */
-    pushNode(database: string, ...nodes: (NodesPending[] | NodesPending)[]): MDE;
     /**
      * Obtém informações personalizadas sobre um node com base no caminho especificado.
      *

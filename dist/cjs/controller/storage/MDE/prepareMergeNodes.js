@@ -1,8 +1,121 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports._prepareMergeNodes = void 0;
 const ivipbase_core_1 = require("ivipbase-core");
 const utils_1 = require("./utils");
 const utils_2 = require("../../../utils");
+const _prepareMergeNodes = function (path, nodes, comparison) {
+    var _a, _b, _c;
+    const revision = ivipbase_core_1.ID.generate();
+    let result = [];
+    let added = [];
+    let modified = [];
+    let removed = [];
+    // console.log(path, JSON.stringify(comparison, null, 4));
+    for (let node of comparison) {
+        const pathInfo = ivipbase_core_1.PathInfo.get(node.path);
+        if (node.type === "VERIFY") {
+            if (nodes.findIndex(({ path }) => ivipbase_core_1.PathInfo.get(node.path).equals(path)) < 0) {
+                result.push(node);
+                added.push(node);
+            }
+            continue;
+        }
+        else {
+            if (node.type === "SET" || node.content.type === utils_1.nodeValueTypes.EMPTY || node.content.value === null || node.content.value === undefined) {
+                for (let n of nodes) {
+                    if (ivipbase_core_1.PathInfo.get(n.path).isChildOf(path) || ivipbase_core_1.PathInfo.get(n.path).isDescendantOf(path)) {
+                        removed.push(n);
+                    }
+                }
+                nodes = nodes.filter((n) => !(ivipbase_core_1.PathInfo.get(n.path).isChildOf(path) || ivipbase_core_1.PathInfo.get(n.path).isDescendantOf(path)));
+            }
+            if (node.content.type === utils_1.nodeValueTypes.EMPTY || node.content.value === null || node.content.value === undefined) {
+                removed.push(node);
+                nodes = nodes.filter(({ path }) => !ivipbase_core_1.PathInfo.get(path).equals(node.path));
+                continue;
+            }
+            let include = true;
+            if ([utils_1.nodeValueTypes.OBJECT, utils_1.nodeValueTypes.ARRAY].includes(node.content.type)) {
+                include = !(Object.keys((_a = node.content.value) !== null && _a !== void 0 ? _a : {}).length >= 0 && comparison.findIndex(({ path }) => ivipbase_core_1.PathInfo.get(path).isChildOf(node.path)) > 0);
+            }
+            else {
+                include = (0, utils_1.valueFitsInline)(node.content.value, this.settings);
+            }
+            const parentNode = nodes.find(({ path }) => ivipbase_core_1.PathInfo.get(path).isParentOf(node.path));
+            const currentNode = nodes.find(({ path }) => ivipbase_core_1.PathInfo.get(path).equals(node.path));
+            if (include && parentNode) {
+                const key = ivipbase_core_1.PathInfo.get(node.path).key;
+                const currentValue = parentNode.content.value[key];
+                const newValue = node.content.type === utils_1.nodeValueTypes.ARRAY && !Array.isArray(node.content.value) ? [] : node.content.value;
+                let n;
+                if ([utils_1.nodeValueTypes.OBJECT, utils_1.nodeValueTypes.ARRAY].includes(parentNode.content.type)) {
+                    if (currentValue !== newValue) {
+                        n = Object.assign(Object.assign({}, parentNode), { content: Object.assign(Object.assign({}, parentNode.content), { value: Object.assign(Object.assign({}, ((_b = parentNode.content.value) !== null && _b !== void 0 ? _b : {})), { [key]: newValue }), modified: Date.now(), revision, revision_nr: parentNode.content.revision_nr + 1 }), previous_content: parentNode.content });
+                    }
+                }
+                else {
+                    n = {
+                        path: parentNode.path,
+                        type: "UPDATE",
+                        content: Object.assign(Object.assign({}, parentNode.content), { type: utils_1.nodeValueTypes.OBJECT, value: { [key]: newValue }, modified: Date.now(), revision, revision_nr: parentNode.content.revision_nr + 1 }),
+                        previous_content: parentNode.content,
+                    };
+                }
+                if (n) {
+                    modified.push(n);
+                    result.push(n);
+                    if (currentNode) {
+                        removed.push(currentNode);
+                    }
+                }
+            }
+            else if (currentNode) {
+                let n;
+                if (node.type === "SET") {
+                    n = Object.assign(Object.assign({}, node), { previous_content: currentNode.content });
+                }
+                else {
+                    n = {
+                        path: node.path,
+                        type: "UPDATE",
+                        content: {
+                            type: node.content.type,
+                            value: null,
+                            created: node.content.created,
+                            modified: Date.now(),
+                            revision,
+                            revision_nr: node.content.revision_nr + 1,
+                        },
+                        previous_content: currentNode.content,
+                    };
+                    if (n.content.type === utils_1.nodeValueTypes.OBJECT || n.content.type === utils_1.nodeValueTypes.ARRAY) {
+                        n.content.value = Object.assign(Object.assign({}, (typeof currentNode.content.value === "object" ? (_c = currentNode.content.value) !== null && _c !== void 0 ? _c : {} : {})), n.content.value);
+                    }
+                    else {
+                        n.content.value = n.content.value;
+                    }
+                }
+                if (n) {
+                    modified.push(n);
+                    result.push(n);
+                }
+            }
+            else {
+                added.push(node);
+                result.push(node);
+            }
+        }
+    }
+    result = result.filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i);
+    added = added.filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i);
+    modified = modified.filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i);
+    removed = removed.filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i);
+    // console.log("RESULT:", path, JSON.stringify(result, null, 4));
+    // console.log(path, JSON.stringify({ result, added, modified, removed }, null, 4));
+    return { result, added, modified, removed };
+};
+exports._prepareMergeNodes = _prepareMergeNodes;
 /**
  * Responsável pela mesclagem de nodes soltos, apropriado para evitar conflitos de dados.
  *
@@ -16,7 +129,7 @@ const utils_2 = require("../../../utils");
  *   removed: StorageNodeInfo[];
  * }} Retorna uma lista de informações sobre os nodes de acordo com seu estado.
  */
-function prepareMergeNodes(nodes, comparison = undefined) {
+function prepareMergeNodes(path, nodes, comparison = undefined) {
     let result = [];
     let added = [];
     let modified = [];
@@ -162,7 +275,7 @@ function prepareMergeNodes(nodes, comparison = undefined) {
                     case utils_1.nodeValueTypes.ARRAY: {
                         const { created, revision_nr } = lastNode.content.modified > node.content.modified ? node.content : lastNode.content;
                         const contents = lastNode.content.modified > node.content.modified ? [node.content, lastNode.content] : [lastNode.content, node.content];
-                        const content_values = contents.map(({ value }) => value);
+                        const content_values = contents.map(({ value }) => value).filter((v) => v !== null && v !== undefined);
                         const new_content_value = Object.assign.apply(null, content_values);
                         const content = Object.assign.apply(null, [
                             ...contents,

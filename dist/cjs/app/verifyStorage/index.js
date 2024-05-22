@@ -6,7 +6,11 @@ Object.defineProperty(exports, "CustomStorage", { enumerable: true, get: functio
 Object.defineProperty(exports, "DataStorage", { enumerable: true, get: function () { return storage_1.DataStorage; } });
 Object.defineProperty(exports, "DataStorageSettings", { enumerable: true, get: function () { return storage_1.DataStorageSettings; } });
 function validSettings(options) {
-    return options instanceof storage_1.DataStorageSettings || options instanceof storage_1.MongodbSettings || options instanceof storage_1.JsonFileStorageSettings || options instanceof storage_1.CustomStorage;
+    return (options instanceof storage_1.DataStorageSettings ||
+        options instanceof storage_1.MongodbSettings ||
+        options instanceof storage_1.JsonFileStorageSettings ||
+        options instanceof storage_1.CustomStorage ||
+        options instanceof storage_1.SqliteSettings);
 }
 exports.validSettings = validSettings;
 function applySettings(dbname, options) {
@@ -18,6 +22,9 @@ function applySettings(dbname, options) {
     }
     else if (options instanceof storage_1.JsonFileStorageSettings) {
         return new storage_1.JsonFileStorage(dbname, options);
+    }
+    else if (options instanceof storage_1.SqliteSettings) {
+        return new storage_1.SqliteStorage(dbname, options);
     }
     else if (options instanceof storage_1.CustomStorage) {
         return options;

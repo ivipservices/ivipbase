@@ -1,10 +1,10 @@
 import { DebugLogger, ID, PathInfo, SchemaDefinition, SimpleEventEmitter, Types, Utils } from "ivipbase-core";
 import { CustomStorageNodeInfo, NodeAddress, NodesPending, StorageNode, StorageNodeInfo } from "./NodeInfo";
 import { NodeValueType, VALUE_TYPES, getTypeFromStoredValue, getValueType, nodeValueTypes, processReadNodeValue, promiseState } from "./utils";
-import prepareMergeNodes from "./prepareMergeNodes";
+import prepareMergeNodes, { _prepareMergeNodes } from "./prepareMergeNodes";
 import structureNodes from "./structureNodes";
 import destructureData from "./destructureData";
-import { removeNulls, replaceUndefined } from "../../../utils";
+import { joinObjects, removeNulls, replaceUndefined } from "../../../utils";
 
 export { VALUE_TYPES, StorageNode, StorageNodeInfo };
 
@@ -277,7 +277,7 @@ export default class MDE extends SimpleEventEmitter {
 
 		// console.log("getNodesBy::2::", JSON.stringify(result, null, 4));
 
-		let nodes = result.filter(({ path: p }) => PathInfo.get(path).equals(p));
+		let nodes = result.filter(({ path: p, content }) => PathInfo.get(path).equals(p) && (content.type !== nodeValueTypes.EMPTY || content.value !== null || content.value !== undefined));
 
 		if (nodes.length <= 0) {
 			nodes = result.filter(({ path: p }) => PathInfo.get(path).isChildOf(p));
@@ -312,69 +312,6 @@ export default class MDE extends SimpleEventEmitter {
 				return pathA.isDescendantOf(pathB.path) ? -1 : pathB.isDescendantOf(pathA.path) ? 1 : 0;
 			})
 			.shift();
-	}
-
-	async sendNodes(database: string, nodes: NodesPending[]) {
-		const batchError: NodesPending[] = [];
-
-		try {
-			// const forAsync = prepareMergeNodes.apply(this, [batch]);
-
-			let byNodes: StorageNodeInfo[] = [];
-
-			const paths = nodes
-				.filter((node, i, self) => {
-					return self.findIndex(({ path }) => path === node.path) === i;
-				})
-				.map(({ path }) => path);
-
-			for (const path of paths) {
-				const reg = this.pathToRegex(path, false, false);
-				const by = await this.settings.getMultiple(database, reg);
-				byNodes = byNodes.concat(by);
-			}
-
-			byNodes = byNodes.filter((node, i, self) => {
-				return self.findIndex(({ path }) => path === node.path) === i;
-			});
-
-			const { added, modified, removed, result } = prepareMergeNodes.apply(this, [byNodes, nodes]);
-
-			// console.log("added: ", JSON.stringify(added, null, 4));
-			// console.log("modified: ", JSON.stringify(modified, null, 4));
-			// console.log("removed: ", JSON.stringify(removed, null, 4));
-			// console.log("result: ", JSON.stringify(result, null, 4));
-
-			for (let node of modified) {
-				await Promise.race([this.settings.setNode(database, node.path, removeNulls(node.content), removeNulls(node))]).catch(() => {
-					batchError.push(node);
-				});
-			}
-
-			for (let node of added) {
-				await Promise.race([this.settings.setNode(database, node.path, removeNulls(node.content), removeNulls(node))]).catch(() => {
-					batchError.push(node);
-				});
-			}
-
-			for (let node of removed) {
-				const reg = this.pathToRegex(node.path, false, true);
-				const byNodes = await this.settings.getMultiple(database, reg);
-
-				for (let r of byNodes) {
-					await Promise.race([this.settings.removeNode(database, r.path, r.content, r)]).catch(() => {
-						batchError.push({
-							path: r.path,
-							content: {
-								...r.content,
-								type: 0,
-								value: null,
-							},
-						});
-					});
-				}
-			}
-		} catch {}
 	}
 
 	/**
@@ -665,7 +602,7 @@ export default class MDE extends SimpleEventEmitter {
 		//console.log("now", JSON.stringify(nodes.find((node) => node.path === "root/test") ?? {}, null, 4));
 		const byNodes = await this.getNodesBy(database, path, false, true);
 		//console.log("olt", JSON.stringify(byNodes.find((node) => node.path === "root/test") ?? {}, null, 4));
-		const { added, modified, removed } = prepareMergeNodes.apply(this, [byNodes, nodes]);
+		const { added, modified, removed } = _prepareMergeNodes.apply(this, [path, byNodes, nodes]);
 
 		// console.log(JSON.stringify(modified, null, 4));
 
@@ -674,22 +611,8 @@ export default class MDE extends SimpleEventEmitter {
 		// console.log("set-modified", JSON.stringify(modified, null, 4));
 		// console.log("set-removed", JSON.stringify(removed, null, 4));
 
-		for (let node of modified) {
-			this.emit("change", {
-				name: "change",
-				path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
-				value: removeNulls(node.content.value),
-				previous: removeNulls(node.previous_content?.value),
-			});
-		}
-
-		for (let node of added) {
-			this.emit("add", {
-				name: "add",
-				path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
-				value: removeNulls(node.content.value),
-			});
-		}
+		const batchError: NodesPending[] = [];
+		const promises: (() => Promise<any>)[] = [];
 
 		for (let node of removed) {
 			const reg = this.pathToRegex(node.path, false, true);
@@ -700,11 +623,63 @@ export default class MDE extends SimpleEventEmitter {
 						path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
 						value: removeNulls(r.content.value),
 					});
+
+					promises.push(async () => {
+						try {
+							await Promise.race([this.settings.removeNode(database, r.path, r.content, r)]).catch((e) => {
+								batchError.push({
+									path: r.path,
+									content: {
+										...r.content,
+										type: 0,
+										value: null,
+									},
+								});
+							});
+						} catch {}
+					});
 				}
 			});
 		}
 
-		await this.sendNodes(database, nodes);
+		for (let node of modified) {
+			this.emit("change", {
+				name: "change",
+				path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
+				value: removeNulls(node.content.value),
+				previous: removeNulls(node.previous_content?.value),
+			});
+
+			promises.push(async () => {
+				try {
+					await Promise.race([this.settings.setNode(database, node.path, removeNulls(node.content), removeNulls(node))]).catch((e) => {
+						batchError.push(node);
+					});
+				} catch {}
+			});
+		}
+
+		for (let node of added) {
+			this.emit("add", {
+				name: "add",
+				path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
+				value: removeNulls(node.content.value),
+			});
+
+			promises.push(async () => {
+				try {
+					await Promise.race([this.settings.setNode(database, node.path, removeNulls(node.content), removeNulls(node))]).catch((e) => {
+						batchError.push(node);
+					});
+				} catch {}
+			});
+		}
+
+		for (let p of promises) {
+			try {
+				await p();
+			} catch {}
+		}
 	}
 
 	async update(
@@ -720,7 +695,9 @@ export default class MDE extends SimpleEventEmitter {
 			};
 		} = {},
 	): Promise<void> {
-		this.set(database, path, value, options, "UPDATE");
+		const beforeValue = await this.get(database, path);
+		value = joinObjects(beforeValue, value);
+		this.set(database, path, value, options, "SET");
 	}
 
 	/**

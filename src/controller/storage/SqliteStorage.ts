@@ -4,14 +4,6 @@ import { CustomStorage, CustomStorageSettings } from "./CustomStorage";
 import { StorageNode, StorageNodeInfo, VALUE_TYPES } from "./MDE";
 import sqlite3 from "sqlite3";
 
-const regexpFunction = (pattern, value) => {
-	try {
-		return new RegExp(pattern).test(value);
-	} catch (e) {
-		return false;
-	}
-};
-
 export class SqliteSettings extends CustomStorageSettings implements Omit<CustomStorageSettings, "getMultiple" | "setNode" | "removeNode"> {
 	readonly memory: string;
 
@@ -22,10 +14,22 @@ export class SqliteSettings extends CustomStorageSettings implements Omit<Custom
 	}
 }
 
+interface SqliteRow {
+	path: string;
+	type: number;
+	text_value?: string | null;
+	binary_value?: string | null;
+	json_value?: string | null;
+	created: number;
+	modified: number;
+	revision_nr: number;
+	revision: string;
+}
+
 export class SqliteStorage extends CustomStorage {
 	private sqlite = sqlite3.verbose();
 	private db: sqlite3.Database;
-	private dbLoaded: string[] = [];
+	private pending: { [db: string]: Map<string, SqliteRow> } = {};
 
 	constructor(readonly database: string | string[], options: Partial<SqliteSettings> = {}) {
 		super(options);
@@ -45,7 +49,7 @@ export class SqliteStorage extends CustomStorage {
 
 			for (const db of dbs) {
 				if (ignoreDbs.includes(db)) {
-					this.dbLoaded.push(db);
+					this.pending[db] = new Map();
 					continue;
 				}
 
@@ -74,10 +78,10 @@ export class SqliteStorage extends CustomStorage {
 					},
 				];
 
-				const promises = rows.map(async (row) => {
+				const promises = rows.map(async (row: any) => {
 					const keys = Object.keys(row);
 					const sql = `INSERT INTO ${db} (${keys.join(",")}) VALUES (${keys.map((key) => "$" + key).join(",")})`;
-					const params = keys.reduce((obj, key) => {
+					const params = keys.reduce((obj: any, key: string | number) => {
 						obj["$" + key] = row[key];
 						return obj;
 					}, {} as any);
@@ -86,7 +90,7 @@ export class SqliteStorage extends CustomStorage {
 
 				await Promise.all(promises);
 
-				this.dbLoaded.push(db);
+				this.pending[db] = new Map();
 			}
 
 			this.emit("ready");
@@ -110,6 +114,21 @@ export class SqliteStorage extends CustomStorage {
 		});
 	}
 
+	private _getOne(sql: string, params?: any): Promise<any> {
+		const stack = new Error("").stack;
+		return new Promise<any>((resolve, reject) => {
+			this.db.get(sql, params || {}, (err: any, row: any) => {
+				if (err) {
+					err.stack = stack;
+					err.statement = sql;
+					err.params = params;
+					return reject(err);
+				}
+				resolve(row);
+			});
+		});
+	}
+
 	private _exec(sql: string, params?: any): Promise<SqliteStorage> {
 		const stack = new Error("").stack;
 		return new Promise<SqliteStorage>((resolve, reject) => {
@@ -126,48 +145,76 @@ export class SqliteStorage extends CustomStorage {
 	}
 
 	private async _getByRegex(table: string, param: string, expression: RegExp): Promise<any[]> {
-		const sql = `SELECT * FROM ${table}`;
-		const list = await this._get(sql);
-		return list.filter((row) => param in row && expression.test(row[param]));
+		const sql = `SELECT path, type, json_value, revision, revision_nr, created, modified FROM ${table}`;
+		const rows = await this._get(sql);
+		const list = rows.filter((row) => param in row && expression.test(row[param]));
+		const promises = list.map(async (row: any) => {
+			if ([VALUE_TYPES.STRING, VALUE_TYPES.REFERENCE, VALUE_TYPES.BINARY].includes(row.type)) {
+				return await this._getOne(`SELECT path, text_value, binary_value FROM ${table} WHERE path = '${row.path}'`)
+					.then(({ text_value, binary_value }) => {
+						row.text_value = text_value;
+						row.binary_value = binary_value;
+						return Promise.resolve(row);
+					})
+					.catch((err) => {
+						return Promise.resolve(row);
+					});
+			}
+
+			return Promise.resolve(row);
+		});
+
+		return await Promise.all(promises);
 	}
 
 	async getMultiple(database: string, expression: RegExp): Promise<StorageNodeInfo[]> {
-		if (!this.dbLoaded.includes(database)) {
+		if (!(database in this.pending)) {
 			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
 		}
 
+		const pendingList = Array.from(this.pending[database].values()).filter((row) => expression.test(row.path));
+
 		const list = await this._getByRegex(database, "path", expression);
 
-		const result: StorageNodeInfo[] = list.map((row) => {
-			let value = null;
+		const result: StorageNodeInfo[] = list
+			.concat(pendingList)
+			.filter((row, i, l) => {
+				return l.findIndex((r) => r.path === row.path) === i;
+			})
+			.map((row) => {
+				let value = null;
 
-			if (row.type === VALUE_TYPES.STRING || row.type === VALUE_TYPES.REFERENCE) {
-				value = row.text_value;
-			} else if (row.type === VALUE_TYPES.BINARY) {
-				value = row.binary_value;
-			} else if (row.type === VALUE_TYPES.OBJECT || row.type === VALUE_TYPES.ARRAY) {
-				value = JSON.parse(row.json_value) ?? {};
-			}
+				if (row.type === VALUE_TYPES.STRING || row.type === VALUE_TYPES.REFERENCE) {
+					value = row.text_value;
+				} else if (row.type === VALUE_TYPES.BINARY) {
+					value = row.binary_value;
+				} else if (row.type === VALUE_TYPES.OBJECT || row.type === VALUE_TYPES.ARRAY) {
+					value = JSON.parse(row.json_value) ?? {};
+				}
 
-			return {
-				path: row.path,
-				content: {
-					type: row.type,
-					value,
-					revision: row.revision,
-					revision_nr: row.revision_nr,
-					created: row.created,
-					modified: row.modified,
-				},
-			};
-		});
+				return {
+					path: row.path,
+					content: {
+						type: row.type,
+						value,
+						revision: row.revision,
+						revision_nr: row.revision_nr,
+						created: row.created,
+						modified: row.modified,
+					},
+				};
+			});
 
 		return result;
 	}
 
 	async setNode(database: string, path: string, content: StorageNode) {
-		if (!this.dbLoaded.includes(database)) {
+		if (!(database in this.pending)) {
 			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
+		}
+
+		if (content.type === VALUE_TYPES.EMPTY || content.value === null || content.value === undefined) {
+			return;
 		}
 
 		const sql = `
@@ -187,8 +234,8 @@ export class SqliteStorage extends CustomStorage {
 		const params = {
 			$path: path,
 			$type: content.type,
-			$text_value: content.type === VALUE_TYPES.STRING || content.type === VALUE_TYPES.REFERENCE ? content.value : null,
-			$binary_value: content.type === VALUE_TYPES.BINARY ? content.value : null,
+			$text_value: content.type === VALUE_TYPES.STRING || content.type === VALUE_TYPES.REFERENCE ? (content.value as string) : null,
+			$binary_value: content.type === VALUE_TYPES.BINARY ? (content.value as string) : null,
 			$json_value: content.type === VALUE_TYPES.OBJECT || content.type === VALUE_TYPES.ARRAY ? JSON.stringify(content.value) : null,
 			$revision: content.revision,
 			$revision_nr: content.revision_nr,
@@ -196,16 +243,34 @@ export class SqliteStorage extends CustomStorage {
 			$modified: content.modified,
 		};
 
-		await this._exec(sql, params);
+		this.pending[database].set(path, {
+			path,
+			type: content.type,
+			text_value: params.$text_value,
+			binary_value: params.$binary_value,
+			json_value: params.$json_value,
+			created: params.$created,
+			modified: params.$modified,
+			revision_nr: params.$revision_nr,
+			revision: params.$revision,
+		});
+
+		this._exec(sql, params).finally(() => {
+			this.pending[database].delete(path);
+		});
 	}
 
 	async removeNode(database: string, path: string) {
-		if (!this.dbLoaded.includes(database)) {
+		if (!(database in this.pending)) {
 			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
 		}
 
 		if (path === "") {
 			return;
+		}
+
+		if (this.pending[database].has(path)) {
+			this.pending[database].delete(path);
 		}
 
 		const sql = `DELETE FROM ${database} WHERE path = '${path}' OR path LIKE '${path}/%' OR path LIKE '${path}[%'`;

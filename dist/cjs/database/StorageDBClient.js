@@ -46,6 +46,7 @@ class StorageDBClient extends ivipbase_core_1.Api {
         return this.app.connectionState;
     }
     async _request(options) {
+        var _a;
         if (this.isConnected || options.ignoreConnectionState === true) {
             try {
                 const user = this.auth().currentUser;
@@ -53,6 +54,7 @@ class StorageDBClient extends ivipbase_core_1.Api {
                 return await this.db.app.request(Object.assign(Object.assign({}, options), { accessToken }));
             }
             catch (err) {
+                (_a = this.auth().currentUser) === null || _a === void 0 ? void 0 : _a.reload();
                 if (this.isConnected && err.isNetworkError) {
                     // This is a network error, but the websocket thinks we are still connected.
                     this.db.debug.warn(`A network error occurred loading ${options.route}`);
