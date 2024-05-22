@@ -83,13 +83,22 @@ export default function destructureData(
 
 			result = destructureData.apply(this, [type, PathInfo.get([path, valueType === VALUE_TYPES.OBJECT ? key : parseInt(key)]).path, data[key], { ...options, previous_result: result }]);
 		}
-	} else if (valueFitsInline(value, this.settings)) {
-		const parentPath = PathInfo.get(pathInfo.parentPath as any);
+	}
+
+	const parentPath = PathInfo.get(pathInfo.parentPath as any);
+
+	const isObjectFitsInline = [VALUE_TYPES.ARRAY, VALUE_TYPES.OBJECT].includes(valueType as any)
+		? result.findIndex((n) => {
+				return PathInfo.get(n.path).isChildOf(pathInfo) || PathInfo.get(n.path).isDescendantOf(pathInfo);
+		  }) < 0 && Object.keys(value).length === 0
+		: valueFitsInline(value, this.settings);
+
+	if (parentPath.path && parentPath.path.trim() !== "") {
 		const parentNode: NodesPending = result.find((node) => PathInfo.get(node.path).equals(parentPath)) ?? {
 			path: parentPath.path,
 			type: "UPDATE",
 			content: {
-				type: (typeof parentPath.key === "number" ? nodeValueTypes.ARRAY : nodeValueTypes.OBJECT) as any,
+				type: (typeof pathInfo.key === "number" ? nodeValueTypes.ARRAY : nodeValueTypes.OBJECT) as any,
 				value: {},
 				revision,
 				revision_nr: 1,
@@ -98,39 +107,33 @@ export default function destructureData(
 			},
 		};
 
-		result = result.filter((node) => !PathInfo.get(node.path).equals(parentPath));
-
 		parentNode.type = "UPDATE";
 
 		if (parentNode.content.value === null || typeof parentNode.content.value !== "object") {
 			parentNode.content.value = {};
 		}
 
-		if (parentNode.content.type === nodeValueTypes.OBJECT) {
-			parentNode.content.value[pathInfo.key as string] = getTypedChildValue(value);
-		} else {
-			(parentNode as any).content.value[parseInt(pathInfo.key as string)] = getTypedChildValue(value);
+		if (parentNode.content.type === nodeValueTypes.OBJECT || parentNode.content.type === nodeValueTypes.ARRAY) {
+			parentNode.content.value[pathInfo.key as any] = isObjectFitsInline ? getTypedChildValue(value) : null;
+			result = result.filter((node) => !PathInfo.get(node.path).equals(parentPath));
+			resolveConflict(parentNode);
 		}
-
-		resolveConflict(parentNode);
 	}
 
-	if (!valueFitsInline(value, this.settings) || value === null) {
-		const node: NodesPending = {
-			path,
-			type,
-			content: {
-				type: valueType as any,
-				value,
-				revision,
-				revision_nr: 1,
-				created: Date.now(),
-				modified: Date.now(),
-			},
-		};
+	const node: NodesPending = {
+		path,
+		type,
+		content: {
+			type: valueType as any,
+			value: isObjectFitsInline ? null : value,
+			revision,
+			revision_nr: 1,
+			created: Date.now(),
+			modified: Date.now(),
+		},
+	};
 
-		resolveConflict(node);
-	}
+	resolveConflict(node);
 
 	let intex = 0;
 
@@ -159,5 +162,5 @@ export default function destructureData(
 		intex++;
 	}
 
-	return result; //.filter((node, index, self) => self.findIndex((n) => n.path === node.path) === index);
+	return result;
 }
