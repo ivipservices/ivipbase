@@ -333,7 +333,7 @@ export default class MDE extends SimpleEventEmitter {
         if (include_child_count && (containsChild || isArrayChild)) {
             info.childCount = nodes.reduce((c, { path: p }) => c + (pathInfo.isParentOf(p) ? 1 : 0), Object.keys(info.value).length);
         }
-        if (info.value !== null && typeof info.value === "object") {
+        if (info.value !== null && ["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(info.value))) {
             info.value = Object.fromEntries(Object.entries(info.value).sort((a, b) => {
                 const key1 = a[0].toString();
                 const key2 = b[0].toString();

@@ -287,6 +287,17 @@
                     opacity: 0;
                 }
             }
+
+            >.warning {
+                padding: 0px 10px 10px;
+                color: rgba(255, 152, 0, .8) !important;
+                font-weight: bold;
+                font-style: italic;
+
+                * {
+                    color: currentColor !important;
+                }
+            }
         }
 
         .key-tree {

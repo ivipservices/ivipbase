@@ -1693,7 +1693,7 @@ function destructureData(type, path, data, options = {}) {
     options.include_checks = false;
     let value = data;
     let valueType = (0, utils_1.getValueType)(value);
-    if (typeof value === "object" && value !== null) {
+    if (valueType === utils_1.VALUE_TYPES.OBJECT || valueType === utils_1.VALUE_TYPES.ARRAY) {
         value = {};
         valueType = Array.isArray(data) ? utils_1.VALUE_TYPES.ARRAY : utils_1.VALUE_TYPES.OBJECT;
         for (let key in data) {
@@ -2128,7 +2128,7 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         if (include_child_count && (containsChild || isArrayChild)) {
             info.childCount = nodes.reduce((c, { path: p }) => c + (pathInfo.isParentOf(p) ? 1 : 0), Object.keys(info.value).length);
         }
-        if (info.value !== null && typeof info.value === "object") {
+        if (info.value !== null && ["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(info.value))) {
             info.value = Object.fromEntries(Object.entries(info.value).sort((a, b) => {
                 const key1 = a[0].toString();
                 const key2 = b[0].toString();
@@ -2623,10 +2623,22 @@ function prepareMergeNodes(path, nodes, comparison) {
             }
         }
     }
-    result = result.filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i);
-    added = added.filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i);
-    modified = modified.filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i);
-    removed = removed.filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i);
+    const modifyRevision = (node) => {
+        if (node.previous_content) {
+            node.content.created = node.previous_content.created;
+            node.content.revision_nr = node.previous_content.revision_nr;
+        }
+        if (node.type === "SET" || node.type === "UPDATE") {
+            node.content.modified = Date.now();
+        }
+        node.content.revision = revision;
+        node.content.revision_nr = node.content.revision_nr + 1;
+        return node;
+    };
+    result = result.filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i).map(modifyRevision);
+    added = added.filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i).map(modifyRevision);
+    modified = modified.filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i).map(modifyRevision);
+    removed = removed.filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i).map(modifyRevision);
     // console.log("removed:", JSON.stringify(removed, null, 4));
     // console.log("RESULT:", path, JSON.stringify(result, null, 4));
     // console.log(path, JSON.stringify({ result, added, modified, removed }, null, 4));
@@ -4752,7 +4764,7 @@ function pathValueToObject(dataPath, currentPath, value) {
 }
 exports.pathValueToObject = pathValueToObject;
 function removeNulls(obj) {
-    if (obj === null || !(typeof obj === "object" && Object.prototype.toString.call(obj) === "[object Object]")) {
+    if (obj === null || !["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(obj))) {
         return obj;
     }
     const result = Array.isArray(obj) ? [] : {};
@@ -4774,7 +4786,8 @@ function joinObjects(obj1, ...objs) {
         if (!obj1 || !obj2) {
             return obj2 !== null && obj2 !== void 0 ? obj2 : obj1;
         }
-        if (Object.prototype.toString.call(obj1) !== "[object Object]" || Object.prototype.toString.call(obj2) !== "[object Object]") {
+        if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(obj1)) !== true ||
+            ["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(obj2)) !== true) {
             return obj2;
         }
         const result = Array.isArray(obj1) ? [] : {};
@@ -11145,7 +11158,7 @@ exports.isInfinity = isInfinity;
 const isDate = (value) => {
     return (value instanceof Date ||
         (typeof value === "object" && value !== null && typeof value.getMonth === "function") ||
-        (typeof value === "string" && /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2}(?:\.\d*)?)Z?$/.test(value) && !isNaN(Date.parse(value))));
+        (typeof value === "string" && /^\d+$/.test(value) !== true && !isNaN(Date.parse(value))));
 };
 exports.isDate = isDate;
 const isUndefined = (value) => {
@@ -15072,7 +15085,7 @@ class ObjectDifferences {
 }
 exports.ObjectDifferences = ObjectDifferences;
 const isDate = function (value) {
-    return value instanceof Date || (typeof value === "string" && !isNaN(Date.parse(value)));
+    return value instanceof Date || (typeof value === "string" && /^\d+$/.test(value) !== true && !isNaN(Date.parse(value)));
 };
 exports.isDate = isDate;
 function compareValues(oldVal, newVal, sortedResults = false) {

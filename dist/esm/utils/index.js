@@ -20,7 +20,7 @@ export function pathValueToObject(dataPath, currentPath, value) {
     return result;
 }
 export function removeNulls(obj) {
-    if (obj === null || !(typeof obj === "object" && Object.prototype.toString.call(obj) === "[object Object]")) {
+    if (obj === null || !["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(obj))) {
         return obj;
     }
     const result = Array.isArray(obj) ? [] : {};
@@ -41,7 +41,8 @@ export function joinObjects(obj1, ...objs) {
         if (!obj1 || !obj2) {
             return obj2 ?? obj1;
         }
-        if (Object.prototype.toString.call(obj1) !== "[object Object]" || Object.prototype.toString.call(obj2) !== "[object Object]") {
+        if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(obj1)) !== true ||
+            ["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(obj2)) !== true) {
             return obj2;
         }
         const result = Array.isArray(obj1) ? [] : {};

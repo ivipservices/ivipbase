@@ -72,7 +72,7 @@ export default function destructureData(
 	let value = data;
 	let valueType = getValueType(value);
 
-	if (typeof value === "object" && value !== null) {
+	if (valueType === VALUE_TYPES.OBJECT || valueType === VALUE_TYPES.ARRAY) {
 		value = {};
 		valueType = Array.isArray(data) ? VALUE_TYPES.ARRAY : VALUE_TYPES.OBJECT;
 

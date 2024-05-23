@@ -1,6 +1,10 @@
 import React, { useEffect, useState, useRef, forwardRef, useImperativeHandle } from "react";
 import style from "./style.module.scss";
 import { Box, Typography, Breadcrumbs, Link, TextField, IconButton, MenuItem, CircularProgress } from "@mui/material";
+import PropTypes from "prop-types";
+import IMask from "imask";
+import { IMaskInput } from "react-imask";
+import moment from "moment";
 import {
 	mdiAlphabetical,
 	mdiNumeric,
@@ -39,7 +43,6 @@ const types = {
 	array: mdiCodeBrackets,
 	reference: mdiHook,
 	bigint: mdiNumeric9PlusBoxMultiple,
-	dedicated_record: mdiCodeJson,
 	binary: mdiMatrix,
 };
 
@@ -97,7 +100,7 @@ const AutoWidthTextField = ({ value, defaultValue, minWidth = 30, maxWidth = 400
 				}}
 				inputRef={inputRef}
 			/>
-			<span
+			<div
 				ref={spanRef}
 				style={{
 					position: "absolute",
@@ -110,9 +113,64 @@ const AutoWidthTextField = ({ value, defaultValue, minWidth = 30, maxWidth = 400
 				}}
 			>
 				{value ?? defaultValue}
-			</span>
+			</div>
 		</Box>
 	);
+};
+
+const momentFormat = "DD/MM/YYYY HH:mm:ss";
+
+const TextMaskDate = React.forwardRef(function TextMaskCustom({ onChange, ...props }, ref) {
+	return (
+		<IMaskInput
+			{...props}
+			mask={Date}
+			pattern={momentFormat}
+			lazy={false}
+			format={(date) => moment(date).format(momentFormat)}
+			parse={(str) => moment(str, momentFormat)}
+			blocks={{
+				YYYY: {
+					mask: IMask.MaskedRange,
+					from: 1800,
+					to: 3100,
+				},
+				MM: {
+					mask: IMask.MaskedRange,
+					from: 1,
+					to: 12,
+				},
+				DD: {
+					mask: IMask.MaskedRange,
+					from: 1,
+					to: 31,
+				},
+				HH: {
+					mask: IMask.MaskedRange,
+					from: 0,
+					to: 23,
+				},
+				mm: {
+					mask: IMask.MaskedRange,
+					from: 0,
+					to: 59,
+				},
+				ss: {
+					mask: IMask.MaskedRange,
+					from: 0,
+					to: 59,
+				},
+			}}
+			inputRef={ref}
+			onAccept={(value) => onChange({ target: { name: props.name, value } })}
+			overwrite
+		/>
+	);
+});
+
+TextMaskDate.propTypes = {
+	name: PropTypes.string.isRequired,
+	onChange: PropTypes.func.isRequired,
 };
 
 const resolveArrayPath = (path) => {
@@ -133,12 +191,12 @@ const valueToString = (value) => {
 		return "";
 	}
 
-	if (["string", "number", "boolean"].includes(typeof value)) {
-		return value;
+	if (Utils.isDate(value)) {
+		return moment(value).format(momentFormat);
 	}
 
-	if (value instanceof Date) {
-		return value.toISOString();
+	if (["string", "number", "boolean"].includes(typeof value)) {
+		return value;
 	}
 
 	if (value instanceof PathReference) {
@@ -159,29 +217,49 @@ const valueToString = (value) => {
 const normalizeValue = (value, type, selfVerify = true) => {
 	switch (type) {
 		case "string":
+			if (typeof value !== "string") throw new Error("Invalid value for string type");
 			value = value.replace(/^"(.*)"$/gi, "$1");
 			break;
 		case "number":
+			if (/[\d\,\.]+/gi.test(value) !== true) throw new Error("Invalid value for number type");
 			value = parseFloat(value);
 			break;
 		case "bigint":
+			if (/[\d\,\.]+/gi.test(value) !== true) throw new Error("Invalid value for bigint type");
 			value = BigInt(value);
 			break;
 		case "boolean":
+			// if (!["true", "false"].includes(value)) throw new Error("Invalid value for boolean type");
 			value = value === "false" ? false : true;
 			break;
 		case "binary":
+			if (typeof value !== "string") throw new Error("Invalid value for binary type");
 			value = ascii85.decode(value);
 			break;
 		case "date":
-			value = new Date(value);
+			if (Utils.isDate(value)) {
+				value = new Date(value).toISOString();
+			} else if (moment(value, momentFormat).isValid()) {
+				value = moment(value, momentFormat).toDate().toISOString();
+			} else {
+				throw new Error(`Invalid value for Date type`);
+			}
 			break;
 		case "reference":
-			value = new PathReference();
+			if (typeof value !== "string") throw new Error(`Invalid value for Reference type`);
+			value = new PathReference(value);
 			break;
 		case "object":
 		case "array":
-			value = JSON.parse(value);
+			if (typeof value !== "string" || !isJson(value)) throw new Error(`Invalid value for ${type} type`);
+
+			const obj = JSON.parse(value);
+
+			if (type === "array" && Object.prototype.toString.call(obj) !== "[object Array]") throw new Error("Invalid value for array type");
+
+			if (type === "object" && Object.prototype.toString.call(obj) !== "[object Object]") throw new Error("Invalid value for object type");
+
+			value = obj;
 			break;
 		default: {
 			if (["true", "false"].includes(value)) {
@@ -190,12 +268,13 @@ const normalizeValue = (value, type, selfVerify = true) => {
 				type = "number";
 			} else if (!isNaN(BigInt(value))) {
 				type = "bigint";
-			} else if (Utils.isDate(value)) {
+			} else if (Utils.isDate(value) || moment(value, momentFormat).isValid()) {
 				type = "date";
 			} else if (isJson(value)) {
 				type = Array.isArray(JSON.parse(value)) ? "array" : "object";
 			} else {
 				type = "string";
+				value = `"${value}"`;
 			}
 
 			if (selfVerify) {
@@ -207,11 +286,12 @@ const normalizeValue = (value, type, selfVerify = true) => {
 	return { value, type };
 };
 
-const EditValueChild = ({ name, value = "", type, onChange, onRemoved, goToPath, isAdded = false }) => {
+const EditValueChild = ({ name, value, type, onChange, onRemoved, goToPath, isAdded = false, exists = false }) => {
 	const [loading, setLoading] = useState(false);
 	const [edit, setEdit] = useState(false);
-	const [currentValue, setCurrentValue] = useState(value ?? "");
+	const [currentValue, setCurrentValue] = useState(valueToString(value));
 	const [currentType, setCurrentType] = useState(type);
+	const [textWarning, setTextWarning] = useState(null);
 
 	const mainRef = useRef(null);
 
@@ -241,7 +321,8 @@ const EditValueChild = ({ name, value = "", type, onChange, onRemoved, goToPath,
 
 	const confirmEdit = async () => {
 		setEdit(false);
-		if (currentValue === (value ?? "")) {
+		setTextWarning(null);
+		if (currentValue === valueToString(value)) {
 			return;
 		}
 		setLoading(true);
@@ -253,14 +334,14 @@ const EditValueChild = ({ name, value = "", type, onChange, onRemoved, goToPath,
 				const { value, type } = normalizeValue(currentValue, currentType);
 
 				await Promise.race([onChange(value, type)]).then(() => {
-					setCurrentValue(value);
+					setCurrentValue(valueToString(value));
 					setCurrentType(type);
 					setLoading(false);
 					emitNotify("change");
 					return Promise.resolve(value);
 				});
 			} catch (e) {
-				console.error(e);
+				setTextWarning(e.message);
 				setEdit(true);
 				setLoading(false);
 			}
@@ -271,13 +352,15 @@ const EditValueChild = ({ name, value = "", type, onChange, onRemoved, goToPath,
 	};
 
 	const cancelEdit = () => {
-		setCurrentValue(value ?? "");
+		setCurrentValue(valueToString(value));
 		setCurrentType(type);
 		setEdit(false);
+		setTextWarning(null);
 	};
 
 	const deleteValue = async () => {
 		setLoading(true);
+		setTextWarning(null);
 		await new Promise((resolve) => setTimeout(resolve, 1000));
 
 		try {
@@ -288,7 +371,7 @@ const EditValueChild = ({ name, value = "", type, onChange, onRemoved, goToPath,
 				return Promise.resolve();
 			});
 		} catch (e) {
-			console.error(e);
+			setTextWarning(e.message);
 			setLoading(false);
 		}
 	};
@@ -304,10 +387,14 @@ const EditValueChild = ({ name, value = "", type, onChange, onRemoved, goToPath,
 			return;
 		}
 
-		if ((value ?? "") !== currentValue) {
-			setCurrentValue(value ?? "");
-			setCurrentType(type);
-			emitNotify(value === null ? "remove" : "change");
+		if (valueToString(value) !== currentValue) {
+			if (value === null) {
+				emitNotify("remove");
+			} else {
+				setCurrentValue(valueToString(value));
+				setCurrentType(type);
+				emitNotify("change");
+			}
 		}
 	}, [value]);
 
@@ -327,7 +414,35 @@ const EditValueChild = ({ name, value = "", type, onChange, onRemoved, goToPath,
 		}
 	}, [edit, loading]);
 
-	const editabled = !["dedicated_record", "binary", "bigint", "reference"].includes(currentType);
+	const verifyType = (type) => {
+		try {
+			const { value } = normalizeValue(currentValue, type ?? currentType, false);
+			setCurrentValue(value);
+		} catch {
+			switch (type ?? currentType) {
+				case "date":
+					setCurrentValue(moment().format(momentFormat));
+					break;
+				case "boolean":
+					setCurrentValue("true");
+					break;
+				case "number":
+				case "bigint":
+					setCurrentValue("0");
+					break;
+				case "object":
+					setCurrentValue("{}");
+					break;
+				case "array":
+					setCurrentValue("[]");
+					break;
+				default:
+					setCurrentValue("");
+			}
+		}
+	};
+
+	const editabled = !["binary", "bigint", "reference"].includes(currentType);
 
 	return (
 		<div
@@ -374,6 +489,27 @@ const EditValueChild = ({ name, value = "", type, onChange, onRemoved, goToPath,
 								<MenuItem value={"true"}>True</MenuItem>
 								<MenuItem value={"false"}>False</MenuItem>
 							</TextField>
+						) : currentType === "date" ? (
+							<AutoWidthTextField
+								maxWidth={800}
+								value={currentValue}
+								onChange={(e) => {
+									if (e.target.value !== currentValue) setCurrentValue(e.target.value);
+								}}
+								variant="outlined"
+								size="small"
+								InputProps={{
+									readOnly: !edit,
+									inputComponent: TextMaskDate,
+								}}
+								onKeyPress={(e) => {
+									if (!edit || e.key !== "Enter") {
+										return;
+									}
+
+									confirmEdit();
+								}}
+							/>
 						) : (
 							<AutoWidthTextField
 								maxWidth={800}
@@ -397,7 +533,15 @@ const EditValueChild = ({ name, value = "", type, onChange, onRemoved, goToPath,
 							/>
 						)}
 					</div>
-					<div className={style["type"]}>
+					<div
+						className={style["type"]}
+						onClick={() => {
+							if (!editabled || edit || loading) {
+								return;
+							}
+							setEdit(true);
+						}}
+					>
 						<TextField
 							select
 							value={currentType}
@@ -407,15 +551,18 @@ const EditValueChild = ({ name, value = "", type, onChange, onRemoved, goToPath,
 								readOnly: !edit,
 							}}
 							onChange={(e) => {
+								verifyType(e.target.value);
 								setCurrentType(e.target.value);
 							}}
 						>
 							{Object.keys(types).map((type, i) => {
+								const label = type === "unknown" ? "auto" : type;
+
 								return (
 									<MenuItem
 										key={i}
 										value={type}
-										disabled={["unknown", "dedicated_record", "binary", "bigint", "reference"].includes(type)}
+										disabled={["unknown", "binary", "bigint", "reference"].includes(type)}
 									>
 										<SvgIcon path={types[type]} />
 										<Typography
@@ -427,7 +574,7 @@ const EditValueChild = ({ name, value = "", type, onChange, onRemoved, goToPath,
 												textTransform: "capitalize",
 											}}
 										>
-											{type}
+											{label}
 										</Typography>
 									</MenuItem>
 								);
@@ -447,7 +594,12 @@ const EditValueChild = ({ name, value = "", type, onChange, onRemoved, goToPath,
 								<SvgIcon path={mdiClose} />
 							</IconButton>
 						)}
-						{!edit && (
+						{!edit && !exists && (
+							<IconButton>
+								<SvgIcon path={mdiPlus} />
+							</IconButton>
+						)}
+						{!edit && exists && (
 							<IconButton onClick={deleteValue}>
 								<SvgIcon path={mdiDelete} />
 							</IconButton>
@@ -464,6 +616,16 @@ const EditValueChild = ({ name, value = "", type, onChange, onRemoved, goToPath,
 					/>
 				)}
 			</div>
+			{edit && textWarning && (
+				<div className={style["warning"]}>
+					<Typography
+						variant="caption"
+						component="span"
+					>
+						Warning: {textWarning}
+					</Typography>
+				</div>
+			)}
 		</div>
 	);
 };
@@ -598,7 +760,7 @@ const ViewTree = ({ currentPath, onChange, onRemoved, checkRemoved, loadData, is
 		};
 	}, [loadData, currentPath, isExpanded]);
 
-	const { type, value, children } = data ?? {};
+	const { type, value, children, exists = false } = data ?? {};
 	const key = data?.key ?? currentPath[currentPath.length - 1];
 
 	const colorMark = palette[index % palette.length];
@@ -630,9 +792,11 @@ const ViewTree = ({ currentPath, onChange, onRemoved, checkRemoved, loadData, is
 						<IconButton>
 							<SvgIcon path={mdiPlus} />
 						</IconButton>
-						<IconButton onClick={deleteValue}>
-							<SvgIcon path={mdiDelete} />
-						</IconButton>
+						{exists && (
+							<IconButton onClick={deleteValue}>
+								<SvgIcon path={mdiDelete} />
+							</IconButton>
+						)}
 					</div>
 				)}
 				{((isExpanded && loading) || forceLoading) && (
@@ -704,6 +868,7 @@ const ViewTree = ({ currentPath, onChange, onRemoved, checkRemoved, loadData, is
 													onRemoved?.(resolveArrayPath(path));
 												}}
 												goToPath={() => goToPath(path)}
+												exists={type !== "unknown"}
 											/>
 										)}
 									</div>
@@ -775,6 +940,7 @@ const ViewTree = ({ currentPath, onChange, onRemoved, checkRemoved, loadData, is
 				onRemoved?.(resolveArrayPath(currentPath));
 			}}
 			goToPath={() => goToPath(currentPath)}
+			exists={exists}
 		/>
 	);
 };

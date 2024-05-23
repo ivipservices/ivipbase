@@ -52,7 +52,7 @@ function destructureData(type, path, data, options = {}) {
     options.include_checks = false;
     let value = data;
     let valueType = (0, utils_1.getValueType)(value);
-    if (typeof value === "object" && value !== null) {
+    if (valueType === utils_1.VALUE_TYPES.OBJECT || valueType === utils_1.VALUE_TYPES.ARRAY) {
         value = {};
         valueType = Array.isArray(data) ? utils_1.VALUE_TYPES.ARRAY : utils_1.VALUE_TYPES.OBJECT;
         for (let key in data) {

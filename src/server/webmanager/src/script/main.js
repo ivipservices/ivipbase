@@ -7,6 +7,10 @@ window.exports["@emotion/styled"] = window.MaterialUI;
 window.exports["@mui/material/styles"] = window.MaterialUI;
 window.exports["@mdi/js"] = window.mdi;
 window.exports["ivipbase"] = window.ivipbase;
+window.exports["imask"] = window.IMask;
+window.exports["react-imask"] = window.ReactIMask;
+window.exports["prop-types"] = window.PropTypes;
+window.exports["moment"] = { default: window.moment, __esModule: true };
 
 function extractClassNames(css) {
 	const classNames = [];
