@@ -20,6 +20,9 @@ import {
 	mdiCheck,
 	mdiCodeBraces,
 	mdiCodeBrackets,
+	mdiNumeric9PlusBoxMultiple,
+	mdiHook,
+	mdiMatrix,
 } from "@mdi/js";
 import SvgIcon from "../SvgIcon";
 import { PathReference, PathInfo, Utils, ascii85 } from "ivipbase";
@@ -27,17 +30,17 @@ import { PathReference, PathInfo, Utils, ascii85 } from "ivipbase";
 const palette = ["102,187,106", "38,166,154", "229,115,115", "66,165,245", "0, 161, 180", "255, 194, 0", "236,64,122", "126,87,194", "255, 122, 0"];
 
 const types = {
-	string: mdiAlphabetical,
-	boolean: mdiToggleSwitch,
-	number: mdiNumeric,
-	binary: mdiNumeric,
 	unknown: mdiAsterisk,
+	string: mdiAlphabetical,
+	number: mdiNumeric,
+	date: mdiCalendar,
+	boolean: mdiToggleSwitch,
 	object: mdiCodeBraces,
 	array: mdiCodeBrackets,
-	date: mdiCalendar,
-	reference: mdiAlphabetical,
-	bigint: mdiNumeric,
+	reference: mdiHook,
+	bigint: mdiNumeric9PlusBoxMultiple,
 	dedicated_record: mdiCodeJson,
+	binary: mdiMatrix,
 };
 
 const isJson = (str) => {
@@ -248,8 +251,10 @@ const EditValueChild = ({ name, value = "", type, onChange, onRemoved, goToPath,
 		if (typeof onChange === "function") {
 			try {
 				const { value, type } = normalizeValue(currentValue, currentType);
-				await Promise.race([onChange(value, type)]).then((value) => {
-					// setCurrentValue(value);
+
+				await Promise.race([onChange(value, type)]).then(() => {
+					setCurrentValue(value);
+					setCurrentType(type);
 					setLoading(false);
 					emitNotify("change");
 					return Promise.resolve(value);
@@ -300,9 +305,11 @@ const EditValueChild = ({ name, value = "", type, onChange, onRemoved, goToPath,
 		}
 
 		if ((value ?? "") !== currentValue) {
+			setCurrentValue(value ?? "");
+			setCurrentType(type);
 			emitNotify(value === null ? "remove" : "change");
 		}
-	}, [value, currentValue, edit, loading]);
+	}, [value]);
 
 	useEffect(() => {
 		if (!mainRef.current) {
@@ -319,6 +326,8 @@ const EditValueChild = ({ name, value = "", type, onChange, onRemoved, goToPath,
 			}
 		}
 	}, [edit, loading]);
+
+	const editabled = !["dedicated_record", "binary", "bigint", "reference"].includes(currentType);
 
 	return (
 		<div
@@ -343,7 +352,7 @@ const EditValueChild = ({ name, value = "", type, onChange, onRemoved, goToPath,
 					<div
 						className={style["value"]}
 						onClick={() => {
-							if (edit || loading) {
+							if (!editabled || edit || loading) {
 								return;
 							}
 							setEdit(true);
@@ -368,10 +377,10 @@ const EditValueChild = ({ name, value = "", type, onChange, onRemoved, goToPath,
 						) : (
 							<AutoWidthTextField
 								maxWidth={800}
-								value={type === "string" && !edit ? `"${currentValue}"` : currentValue}
+								value={currentType === "string" && !edit ? `"${currentValue}"` : currentValue}
 								variant="outlined"
 								size="small"
-								type={["number", "binary", "bigint"].includes(type) ? "number" : "text"}
+								type={["number", "binary", "bigint"].includes(currentType) ? "number" : "text"}
 								InputProps={{
 									readOnly: !edit,
 								}}
@@ -401,32 +410,28 @@ const EditValueChild = ({ name, value = "", type, onChange, onRemoved, goToPath,
 								setCurrentType(e.target.value);
 							}}
 						>
-							{Object.keys(types)
-								.filter((type) => {
-									return !["dedicated_record", "binary", "bigint", "reference"].includes(type);
-								})
-								.map((type, i) => {
-									return (
-										<MenuItem
-											key={i}
-											value={type}
-											disabled={["unknown"].includes(type)}
+							{Object.keys(types).map((type, i) => {
+								return (
+									<MenuItem
+										key={i}
+										value={type}
+										disabled={["unknown", "dedicated_record", "binary", "bigint", "reference"].includes(type)}
+									>
+										<SvgIcon path={types[type]} />
+										<Typography
+											variant="body2"
+											sx={{
+												marginLeft: "14px",
+												opacity: 0.6,
+												fontStyle: "italic",
+												textTransform: "capitalize",
+											}}
 										>
-											<SvgIcon path={types[type]} />
-											<Typography
-												variant="body2"
-												sx={{
-													marginLeft: "14px",
-													opacity: 0.6,
-													fontStyle: "italic",
-													textTransform: "capitalize",
-												}}
-											>
-												{type}
-											</Typography>
-										</MenuItem>
-									);
-								})}
+											{type}
+										</Typography>
+									</MenuItem>
+								);
+							})}
 						</TextField>
 					</div>
 				</div>
@@ -863,12 +868,12 @@ export const JsonEditor = forwardRef(({ rootDir = "root", path = [] }, ref) => {
 				}
 
 				Promise.race([callbackChangeData(path, value, type)])
-					.then((data) => {
+					.then(async (data) => {
 						const parent = PathInfo.get(path).parentPath;
-						if (cache.current.has(parent)) loadData(parent, false, true);
+						if (cache.current.has(parent)) await loadData(parent, false, true);
 						if (cache.current.has(path)) {
 							if (value !== null || value !== undefined) {
-								loadData(path, false, true);
+								await loadData(path, false, true);
 							} else {
 								cache.current.delete(path);
 							}

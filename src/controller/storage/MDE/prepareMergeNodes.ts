@@ -121,10 +121,25 @@ export default function prepareMergeNodes(
 		}
 	}
 
-	result = result.filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i);
-	added = added.filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i);
-	modified = modified.filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i);
-	removed = removed.filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i);
+	const modifyRevision = (node: (typeof modified)[number]) => {
+		if (node.previous_content) {
+			node.content.created = node.previous_content.created;
+			node.content.revision_nr = node.previous_content.revision_nr;
+		}
+
+		if (node.type === "SET" || node.type === "UPDATE") {
+			node.content.modified = Date.now();
+		}
+
+		node.content.revision = revision;
+		node.content.revision_nr = node.content.revision_nr + 1;
+		return node;
+	};
+
+	result = result.filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i).map(modifyRevision);
+	added = added.filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i).map(modifyRevision);
+	modified = modified.filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i).map(modifyRevision);
+	removed = removed.filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i).map(modifyRevision);
 
 	// console.log("removed:", JSON.stringify(removed, null, 4));
 
