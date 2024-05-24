@@ -1,6 +1,6 @@
 import { IvipBaseApp } from "../app";
 import { ID, PathInfo, Types } from "ivipbase-core";
-import { processReadNodeValue } from "./storage/MDE/utils";
+import { nodeValueTypes, processReadNodeValue } from "./storage/MDE/utils";
 import { isDate } from "ivip-utils";
 
 const noop = () => {};
@@ -42,11 +42,21 @@ export async function executeQuery(
 	const querySort: Array<Types.QueryOrder & { index?: any }> = query.order.map((s) => ({ ...s }));
 
 	const nodes = await api.storage
-		.getNodesBy(database, path, true, false)
+		.getNodesBy(database, path, false, 2, false, true)
 		.then((nodes) => {
+			const childrens = nodes.filter(({ path: p }) => PathInfo.get(p).isChildOf(path));
+
 			return Promise.resolve(
-				nodes.filter(({ path: p }) => {
-					return PathInfo.get(p).isChildOf(path);
+				childrens.map((node) => {
+					if (node.content && (node.content.type === nodeValueTypes.OBJECT || node.content.type === nodeValueTypes.ARRAY)) {
+						const childrens = nodes.filter(({ path: p }) => PathInfo.get(p).isChildOf(node.path));
+
+						node.content.value = childrens.reduce((acc, { path, content }) => {
+							acc[PathInfo.get(path).key as any] = content.value;
+							return acc;
+						}, node.content.value ?? {});
+					}
+					return node;
 				}),
 			);
 		})

@@ -80,6 +80,7 @@
 		"nodemailer": "^6.9.7",
 		"os-utils": "^0.0.14",
 		"proper-lockfile": "^4.1.2",
+		"sequelize": "^6.37.3",
 		"socket.io": "^4.5.0",
 		"socket.io-client": "^4.7.5",
 		"sqlite3": "^5.1.7",

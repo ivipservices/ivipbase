@@ -144,12 +144,12 @@ export class SqliteStorage extends CustomStorage {
 		});
 	}
 
-	private async _getByRegex(table: string, param: string, expression: RegExp): Promise<any[]> {
+	private async _getByRegex(table: string, param: string, expression: RegExp, simplifyValues: boolean = false): Promise<any[]> {
 		const sql = `SELECT path, type, text_value, json_value, revision, revision_nr, created, modified FROM ${table}`;
 		const rows = await this._get(sql);
 		const list = rows.filter((row) => param in row && expression.test(row[param]));
 		const promises = list.map(async (row: any) => {
-			if ([VALUE_TYPES.BINARY].includes(row.type)) {
+			if ([VALUE_TYPES.BINARY].includes(row.type) && !simplifyValues) {
 				return await this._getOne(`SELECT path, binary_value FROM ${table} WHERE path = '${row.path}'`)
 					.then(({ binary_value }) => {
 						row.binary_value = binary_value;
@@ -166,14 +166,14 @@ export class SqliteStorage extends CustomStorage {
 		return await Promise.all(promises);
 	}
 
-	async getMultiple(database: string, expression: RegExp): Promise<StorageNodeInfo[]> {
+	async getMultiple(database: string, expression: RegExp, simplifyValues: boolean = false): Promise<StorageNodeInfo[]> {
 		if (!(database in this.pending)) {
 			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
 		}
 
 		const pendingList: any[] = Array.from(this.pending[database].values()).filter((row) => expression.test(row.path));
 
-		const list = await this._getByRegex(database, "path", expression);
+		const list = await this._getByRegex(database, "path", expression, simplifyValues);
 
 		const result: StorageNodeInfo[] = pendingList
 			.concat(list)
@@ -184,11 +184,11 @@ export class SqliteStorage extends CustomStorage {
 				let value = null;
 
 				if (row.type === VALUE_TYPES.STRING || row.type === VALUE_TYPES.REFERENCE) {
-					value = row.text_value;
+					value = row.text_value ?? "";
 				} else if (row.type === VALUE_TYPES.BINARY) {
-					value = row.binary_value;
+					value = row.binary_value ?? "";
 				} else if (row.type === VALUE_TYPES.OBJECT || row.type === VALUE_TYPES.ARRAY) {
-					value = JSON.parse(row.json_value) ?? {};
+					value = JSON.parse(row.json_value) ?? (row.type === VALUE_TYPES.ARRAY ? [] : {});
 				}
 
 				return {

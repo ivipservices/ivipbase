@@ -1,5 +1,5 @@
 import { LocalServer, ServerInitialSettings, ServerSettings, isPossiblyServer } from "../../server";
-import { IvipBaseSettings as BrowserSettings, InitialServerEmailSettings, ServerEmailSettings as BrowserEmailSettings, EmailRequest, DatabaseSettings } from "./browser";
+import { IvipBaseSettings as BrowserSettings, InitialServerEmailSettings, ServerEmailSettings as BrowserEmailSettings, EmailRequest } from "./browser";
 import NodeMailer from "nodemailer";
 import juice from "juice";
 

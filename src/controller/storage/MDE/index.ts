@@ -55,7 +55,7 @@ export class MDESettings {
 	 * @type {((expression: RegExp) => Promise<StorageNodeInfo[]> | StorageNodeInfo[]) | undefined}
 	 * @default undefined
 	 */
-	getMultiple: (database: string, expression: RegExp) => Promise<StorageNodeInfo[]> | StorageNodeInfo[] = () => [];
+	getMultiple: (database: string, expression: RegExp, simplifyValues?: boolean) => Promise<StorageNodeInfo[]> | StorageNodeInfo[] = () => [];
 
 	/**
 	 * Uma função que realiza um set de um node na base de dados com base em um path especificado.
@@ -188,7 +188,7 @@ export default class MDE extends SimpleEventEmitter {
 	 * @param {boolean} [allHeirs=false] - Se verdadeiro, exporta todos os descendentes em relação ao path especificado.
 	 * @returns {RegExp} - A expressão regular resultante.
 	 */
-	private pathToRegex(path: string, onlyChildren: boolean = false, allHeirs: boolean = false, includeAncestor: boolean = false): RegExp {
+	private pathToRegex(path: string, onlyChildren: boolean = false, allHeirs: boolean | number = false, includeAncestor: boolean = false): RegExp {
 		const pathsRegex: string[] = [];
 
 		/**
@@ -207,9 +207,11 @@ export default class MDE extends SimpleEventEmitter {
 		pathsRegex.push(replasePathToRegex(path));
 
 		if (onlyChildren) {
-			pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/]*))|(\\[([^/]*)\\])){1})`));
-		} else if (allHeirs) {
-			pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/]*))|(\\[([^/]*)\\])){1,})`));
+			pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1})`));
+		} else if (allHeirs === true) {
+			pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1,})`));
+		} else if (typeof allHeirs === "number") {
+			pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1,${allHeirs}})`));
 		}
 
 		let parent = PathInfo.get(path).parent;
@@ -273,7 +275,14 @@ export default class MDE extends SimpleEventEmitter {
 	 * @returns {Promise<StorageNodeInfo[]>} - Uma Promise que resolve para uma lista de informações sobre os nodes.
 	 * @throws {Error} - Lança um erro se ocorrer algum problema durante a busca assíncrona.
 	 */
-	async getNodesBy(database: string, path: string, onlyChildren: boolean = false, allHeirs: boolean = false, includeAncestor: boolean = false): Promise<StorageNodeInfo[]> {
+	async getNodesBy(
+		database: string,
+		path: string,
+		onlyChildren: boolean = false,
+		allHeirs: boolean | number = false,
+		includeAncestor: boolean = false,
+		simplifyValues: boolean = false,
+	): Promise<StorageNodeInfo[]> {
 		const reg = this.pathToRegex(path, onlyChildren, allHeirs, includeAncestor);
 
 		// console.log("getNodesBy::1::", reg.source);
@@ -281,7 +290,7 @@ export default class MDE extends SimpleEventEmitter {
 		let result: StorageNodeInfo[] = [];
 
 		try {
-			result = await this.settings.getMultiple(database, reg);
+			result = await this.settings.getMultiple(database, reg, simplifyValues);
 		} catch {}
 
 		// console.log("getNodesBy::2::", JSON.stringify(result, null, 4));
@@ -292,7 +301,7 @@ export default class MDE extends SimpleEventEmitter {
 			nodes = result.filter(({ path: p }) => PathInfo.get(path).isChildOf(p));
 		} else if (onlyChildren) {
 			nodes = result.filter(({ path: p }) => PathInfo.get(path).equals(p) || PathInfo.get(path).isParentOf(p));
-		} else if (allHeirs) {
+		} else if (allHeirs === true || typeof allHeirs === "number") {
 			nodes = result.filter(({ path: p }) => PathInfo.get(path).equals(p) || PathInfo.get(path).isAncestorOf(p));
 		}
 
@@ -300,7 +309,7 @@ export default class MDE extends SimpleEventEmitter {
 			nodes = result.filter(({ path: p }) => PathInfo.get(p).isParentOf(path) || PathInfo.get(p).isAncestorOf(path)).concat(nodes);
 		}
 
-		return nodes;
+		return nodes.filter(({ path }, i, l) => l.findIndex(({ path: p }) => p === path) === i);
 	}
 
 	/**

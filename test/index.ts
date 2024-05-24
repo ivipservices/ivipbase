@@ -2,7 +2,7 @@
 //require("./MDE/test_ismael");
 //require("./MDE/test_initial_app");
 
-import { initializeApp, getDatabase, DataStorageSettings, JsonFileStorageSettings, SqliteSettings } from "../src";
+import { initializeApp, getDatabase, DataStorageSettings, JsonFileStorageSettings, SqliteSettings, SequelizeSettings } from "../src";
 
 const app = initializeApp({
 	port: 8080,
