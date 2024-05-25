@@ -243,7 +243,7 @@ const normalizeValue = (value, type, selfVerify = true) => {
 		case "date":
 			if (Utils.isDate(value)) {
 				value = new Date(value).toISOString();
-			} else if (moment(value, momentFormat).isValid()) {
+			} else if (/^([\d\/\s\:]+)$/gi.test(value) && moment(value, momentFormat).isValid()) {
 				value = moment(value, momentFormat).toDate().toISOString();
 			} else {
 				throw new Error(`Invalid value for Date type`);
@@ -272,7 +272,7 @@ const normalizeValue = (value, type, selfVerify = true) => {
 				type = "number";
 			} else if (/^(?:[-+]?[0-9]+|0[xX][0-9a-fA-F]+|0[bB][01]+)$/gi.test(String(value)) && !isNaN(BigInt(value))) {
 				type = "bigint";
-			} else if (Utils.isDate(value) || moment(value, momentFormat).isValid()) {
+			} else if (Utils.isDate(value) || (/^([\d\/\s\:]+)$/gi.test(value) && moment(value, momentFormat).isValid())) {
 				type = "date";
 			} else if (isJson(value)) {
 				type = Array.isArray(JSON.parse(value)) ? "array" : "object";
