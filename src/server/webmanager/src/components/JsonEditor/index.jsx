@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, forwardRef, useImperativeHandle } from "react";
 import style from "./style.module.scss";
-import { Box, Typography, Breadcrumbs, Link, TextField, IconButton, MenuItem, CircularProgress } from "@mui/material";
+import { Box, Typography, Breadcrumbs, Link, TextField, Button, IconButton, MenuItem, CircularProgress } from "@mui/material";
 import PropTypes from "prop-types";
 import IMask from "imask";
 import { IMaskInput } from "react-imask";
@@ -29,7 +29,7 @@ import {
 	mdiMatrix,
 } from "@mdi/js";
 import SvgIcon from "../SvgIcon";
-import { PathReference, PathInfo, Utils, ascii85 } from "ivipbase";
+import { PathReference, PathInfo, Utils, ascii85, ID } from "ivipbase";
 
 const palette = ["102,187,106", "38,166,154", "229,115,115", "66,165,245", "0, 161, 180", "255, 194, 0", "236,64,122", "126,87,194", "255, 122, 0"];
 
@@ -48,7 +48,8 @@ const types = {
 
 const isJson = (str) => {
 	try {
-		JSON.parse(str);
+		const d = JSON.parse(str);
+		return ["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(d));
 	} catch (e) {
 		return false;
 	}
@@ -96,7 +97,7 @@ const AutoWidthTextField = ({ value, defaultValue, minWidth = 30, maxWidth = 400
 				type={type}
 				style={{
 					...(style ?? {}),
-					width: Math.max(minWidth, Math.min(inputWidth, maxWidth)),
+					width: Math.max(String(value) === "" ? minWidth : 30, Math.min(inputWidth, maxWidth)),
 				}}
 				inputRef={inputRef}
 			/>
@@ -109,7 +110,7 @@ const AutoWidthTextField = ({ value, defaultValue, minWidth = 30, maxWidth = 400
 					visibility: "hidden",
 					overflow: "hidden",
 					maxWidth: `${maxWidth}px`,
-					minWidth: `${minWidth}px`,
+					minWidth: `${String(value) === "" ? minWidth : 30}px`,
 				}}
 			>
 				{value ?? defaultValue}
@@ -225,7 +226,7 @@ const normalizeValue = (value, type, selfVerify = true) => {
 			value = parseFloat(value);
 			break;
 		case "bigint":
-			if (/[\d\,\.]+/gi.test(value) !== true) throw new Error("Invalid value for bigint type");
+			if (/^(?:[-+]?[0-9]+|0[xX][0-9a-fA-F]+|0[bB][01]+)$/gi.test(value) !== true) throw new Error("Invalid value for bigint type");
 			value = BigInt(value);
 			break;
 		case "boolean":
@@ -264,9 +265,9 @@ const normalizeValue = (value, type, selfVerify = true) => {
 		default: {
 			if (["true", "false"].includes(value)) {
 				type = "boolean";
-			} else if (!isNaN(value)) {
+			} else if (/[\d\.\,]+/gi.test(String(value)) && !isNaN(value)) {
 				type = "number";
-			} else if (!isNaN(BigInt(value))) {
+			} else if (/^(?:[-+]?[0-9]+|0[xX][0-9a-fA-F]+|0[bB][01]+)$/gi.test(String(value)) && !isNaN(BigInt(value))) {
 				type = "bigint";
 			} else if (Utils.isDate(value) || moment(value, momentFormat).isValid()) {
 				type = "date";
@@ -277,6 +278,8 @@ const normalizeValue = (value, type, selfVerify = true) => {
 				value = `"${value}"`;
 			}
 
+			console.log("type", type);
+
 			if (selfVerify) {
 				return normalizeValue(value, type, false);
 			}
@@ -286,14 +289,39 @@ const normalizeValue = (value, type, selfVerify = true) => {
 	return { value, type };
 };
 
-const EditValueChild = ({ name, value, type, onChange, onRemoved, goToPath, isAdded = false, exists = false }) => {
+const EditValueChild = forwardRef(({ isNewChild = false, name, value, type, onChange, onRemoved, goToPath, isAdded = false, exists = false }, ref) => {
 	const [loading, setLoading] = useState(false);
-	const [edit, setEdit] = useState(false);
+	const [edit, setEdit] = useState(isNewChild);
+	const [currentKey, setCurrentKey] = useState(name);
 	const [currentValue, setCurrentValue] = useState(valueToString(value));
 	const [currentType, setCurrentType] = useState(type);
 	const [textWarning, setTextWarning] = useState(null);
 
 	const mainRef = useRef(null);
+
+	useImperativeHandle(
+		ref,
+		() => ({
+			getData: () => {
+				return { key: currentKey, type: currentType, value: currentValue };
+			},
+		}),
+		[currentKey, currentValue, currentType],
+	);
+
+	useEffect(() => {
+		if (!isNewChild) {
+			return;
+		}
+		try {
+			if (typeof onChange === "function") {
+				const { value, type } = normalizeValue(currentValue, currentType);
+				onChange(currentKey, value, type);
+			}
+		} catch (e) {
+			setTextWarning(e.message);
+		}
+	}, [isNewChild, currentKey, currentValue, currentType, onChange]);
 
 	const emitNotify = (event) => {
 		if (!mainRef.current) {
@@ -320,6 +348,10 @@ const EditValueChild = ({ name, value, type, onChange, onRemoved, goToPath, isAd
 	};
 
 	const confirmEdit = async () => {
+		if (isNewChild) {
+			return;
+		}
+
 		setEdit(false);
 		setTextWarning(null);
 		if (currentValue === valueToString(value)) {
@@ -333,7 +365,7 @@ const EditValueChild = ({ name, value, type, onChange, onRemoved, goToPath, isAd
 			try {
 				const { value, type } = normalizeValue(currentValue, currentType);
 
-				await Promise.race([onChange(value, type)]).then(() => {
+				await Promise.race([onChange(currentKey, value, type)]).then(() => {
 					setCurrentValue(valueToString(value));
 					setCurrentType(type);
 					setLoading(false);
@@ -352,6 +384,12 @@ const EditValueChild = ({ name, value, type, onChange, onRemoved, goToPath, isAd
 	};
 
 	const cancelEdit = () => {
+		if (isNewChild) {
+			if (typeof onRemoved === "function") {
+				onRemoved();
+			}
+			return;
+		}
 		setCurrentValue(valueToString(value));
 		setCurrentType(type);
 		setEdit(false);
@@ -364,7 +402,7 @@ const EditValueChild = ({ name, value, type, onChange, onRemoved, goToPath, isAd
 		await new Promise((resolve) => setTimeout(resolve, 1000));
 
 		try {
-			await Promise.race([onChange(null, "unknown")]).then((value) => {
+			await Promise.race([onChange(currentKey, null, "unknown")]).then((value) => {
 				// setCurrentValue(value);
 				setLoading(false);
 				emitNotify("remove");
@@ -451,18 +489,62 @@ const EditValueChild = ({ name, value, type, onChange, onRemoved, goToPath, isAd
 		>
 			<div className={style["header"]}>
 				<div className={style["content"]}>
-					<div className={style["key"]}>
-						<Link
-							underline="hover"
-							color="inherit"
-							onClick={() => {
-								if (typeof goToPath === "function") {
-									goToPath();
-								}
-							}}
-						>
-							<Typography variant="subtitle1">{typeof name === "number" ? name : `"${name}"`}:</Typography>
-						</Link>
+					<div className={[style["key"], isNewChild ? style["new"] : ""].join(" ")}>
+						{!isNewChild && (
+							<Link
+								underline="hover"
+								color="inherit"
+								onClick={() => {
+									if (typeof goToPath === "function") {
+										goToPath();
+									}
+								}}
+							>
+								<Typography variant="subtitle1">{typeof currentKey === "number" ? currentKey : `"${currentKey}"`}:</Typography>
+							</Link>
+						)}
+						{isNewChild && (
+							<>
+								<AutoWidthTextField
+									minWidth={50}
+									maxWidth={800}
+									value={currentKey === "string" && !edit ? (typeof currentKey === "number" ? currentKey : `"${currentKey}"`) : currentKey}
+									variant="outlined"
+									size="small"
+									placeholder="Chave"
+									type={"text"}
+									autoComplete="off"
+									InputProps={{
+										readOnly: !edit,
+										autoComplete: "off",
+									}}
+									onChange={(e) => {
+										setCurrentKey(e.target.value);
+									}}
+									onKeyPress={(e) => {
+										if (!edit || e.key !== "Enter") {
+											return;
+										}
+
+										confirmEdit();
+									}}
+									onClick={() => {
+										if (!editabled || edit || loading) {
+											return;
+										}
+										setEdit(true);
+									}}
+								/>
+								<Typography
+									variant="subtitle1"
+									sx={{
+										marginLeft: "10px",
+									}}
+								>
+									:
+								</Typography>
+							</>
+						)}
 					</div>
 					<div
 						className={style["value"]}
@@ -479,6 +561,7 @@ const EditValueChild = ({ name, value, type, onChange, onRemoved, goToPath, isAd
 								value={["true", "false"].includes(currentValue) ? currentValue : "true"}
 								variant="outlined"
 								size="small"
+								placeholder="Valor"
 								InputProps={{
 									readOnly: !edit,
 								}}
@@ -491,6 +574,7 @@ const EditValueChild = ({ name, value, type, onChange, onRemoved, goToPath, isAd
 							</TextField>
 						) : currentType === "date" ? (
 							<AutoWidthTextField
+								minWidth={50}
 								maxWidth={800}
 								value={currentValue}
 								onChange={(e) => {
@@ -498,9 +582,12 @@ const EditValueChild = ({ name, value, type, onChange, onRemoved, goToPath, isAd
 								}}
 								variant="outlined"
 								size="small"
+								placeholder="Valor"
+								autoComplete="off"
 								InputProps={{
 									readOnly: !edit,
 									inputComponent: TextMaskDate,
+									autoComplete: "off",
 								}}
 								onKeyPress={(e) => {
 									if (!edit || e.key !== "Enter") {
@@ -512,13 +599,17 @@ const EditValueChild = ({ name, value, type, onChange, onRemoved, goToPath, isAd
 							/>
 						) : (
 							<AutoWidthTextField
+								minWidth={50}
 								maxWidth={800}
 								value={currentType === "string" && !edit ? `"${currentValue}"` : currentValue}
 								variant="outlined"
 								size="small"
+								placeholder="Valor"
 								type={["number", "binary", "bigint"].includes(currentType) ? "number" : "text"}
+								autoComplete="off"
 								InputProps={{
 									readOnly: !edit,
+									autoComplete: "off",
 								}}
 								onChange={(e) => {
 									setCurrentValue(e.target.value);
@@ -562,7 +653,7 @@ const EditValueChild = ({ name, value, type, onChange, onRemoved, goToPath, isAd
 									<MenuItem
 										key={i}
 										value={type}
-										disabled={["unknown", "binary", "bigint", "reference"].includes(type)}
+										disabled={["binary", "reference"].includes(type)}
 									>
 										<SvgIcon path={types[type]} />
 										<Typography
@@ -584,7 +675,12 @@ const EditValueChild = ({ name, value, type, onChange, onRemoved, goToPath, isAd
 				</div>
 				{!loading && (
 					<div className={style["actions"]}>
-						{edit && (
+						{!exists && (
+							<IconButton>
+								<SvgIcon path={mdiPlus} />
+							</IconButton>
+						)}
+						{edit && exists && (
 							<IconButton onClick={confirmEdit}>
 								<SvgIcon path={mdiCheck} />
 							</IconButton>
@@ -592,11 +688,6 @@ const EditValueChild = ({ name, value, type, onChange, onRemoved, goToPath, isAd
 						{edit && (
 							<IconButton onClick={cancelEdit}>
 								<SvgIcon path={mdiClose} />
-							</IconButton>
-						)}
-						{!edit && !exists && (
-							<IconButton>
-								<SvgIcon path={mdiPlus} />
 							</IconButton>
 						)}
 						{!edit && exists && (
@@ -628,7 +719,7 @@ const EditValueChild = ({ name, value, type, onChange, onRemoved, goToPath, isAd
 			)}
 		</div>
 	);
-};
+});
 
 const ViewTree = ({ currentPath, onChange, onRemoved, checkRemoved, loadData, isExpanded = false, index = 0, goToPath }) => {
 	const [actualPath, setActualPath] = useState(currentPath);
@@ -641,7 +732,10 @@ const ViewTree = ({ currentPath, onChange, onRemoved, checkRemoved, loadData, is
 	const [removeChildren, setRemoveChildren] = useState([]);
 	const [removed, setRemoved] = useState(typeof checkRemoved === "function" ? checkRemoved(resolveArrayPath(currentPath.concat([key]))) : false);
 
+	const [newChildres, setNewChildres] = useState([]);
+
 	const mainRef = useRef(null);
+	const objectChildresRef = useRef({});
 
 	const emitNotify = (event) => {
 		if (!mainRef.current) {
@@ -789,7 +883,21 @@ const ViewTree = ({ currentPath, onChange, onRemoved, checkRemoved, loadData, is
 				</div>
 				{!((isExpanded && loading) || forceLoading) && (
 					<div className={style["actions"]}>
-						<IconButton>
+						<IconButton
+							onClick={() => {
+								setNewChildres((prev) => {
+									return [
+										...prev,
+										{
+											id: ID.generate(),
+											key: "",
+											value: "",
+											type: "unknown",
+										},
+									];
+								});
+							}}
+						>
 							<SvgIcon path={mdiPlus} />
 						</IconButton>
 						{exists && (
@@ -809,6 +917,69 @@ const ViewTree = ({ currentPath, onChange, onRemoved, checkRemoved, loadData, is
 					/>
 				)}
 			</div>
+			{newChildres.length > 0 && (
+				<div className={style["tree"]}>
+					{newChildres.map(({ id, key, velue, type }) => {
+						return (
+							<div key={id}>
+								<div className={style["mark"]}></div>
+								<div className={style["content"]}>
+									<EditValueChild
+										isNewChild={true}
+										name={key}
+										value={velue}
+										type={type}
+										exists={false}
+										onChange={(key, value, type) => {
+											key = String(key).trim() !== "" ? key : id;
+											objectChildresRef.current[id] = { key, value, type };
+											console.log(JSON.stringify(objectChildresRef.current, null, 4));
+										}}
+										onRemoved={() => {
+											setNewChildres((prev) => {
+												return prev.filter((iten) => iten.id !== id);
+											});
+										}}
+									/>
+								</div>
+							</div>
+						);
+					})}
+					<div>
+						<div
+							className={style["mark"]}
+							style={{ opacity: 0 }}
+						></div>
+						<div className={style["content"]}>
+							<div
+								style={{
+									display: "flex",
+									flexDirection: "row",
+									alignItems: "center",
+									gap: "10px",
+									margin: "5px 0px 10px 0px",
+								}}
+							>
+								<Button
+									size="small"
+									onClick={() => {
+										setNewChildres([]);
+										objectChildresRef.current = {};
+									}}
+								>
+									Cancelar
+								</Button>
+								<Button
+									size="small"
+									variant="outlined"
+								>
+									Adicionar
+								</Button>
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
 			{isExpanded && (
 				<div className={style["tree"]}>
 					{(children?.list ?? [])
@@ -860,7 +1031,7 @@ const ViewTree = ({ currentPath, onChange, onRemoved, checkRemoved, loadData, is
 												name={key}
 												value={valueToString(value)}
 												type={type}
-												onChange={(newValue, typeValue) => onChange(resolveArrayPath(path), newValue, typeValue)}
+												onChange={(key, newValue, typeValue) => onChange(resolveArrayPath(path), newValue, typeValue)}
 												onRemoved={() => {
 													setRemoveChildren((prev) => {
 														return [...prev, key];
@@ -934,7 +1105,7 @@ const ViewTree = ({ currentPath, onChange, onRemoved, checkRemoved, loadData, is
 			name={key}
 			value={valueToString(value)}
 			type={type}
-			onChange={(newValue, typeValue) => onChange(resolveArrayPath(currentPath), newValue, typeValue)}
+			onChange={(key, newValue, typeValue) => onChange(resolveArrayPath(currentPath), newValue, typeValue)}
 			onRemoved={() => {
 				setRemoved(true);
 				onRemoved?.(resolveArrayPath(currentPath));

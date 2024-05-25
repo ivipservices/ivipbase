@@ -123,12 +123,12 @@ class SqliteStorage extends CustomStorage_1.CustomStorage {
             });
         });
     }
-    async _getByRegex(table, param, expression) {
+    async _getByRegex(table, param, expression, simplifyValues = false) {
         const sql = `SELECT path, type, text_value, json_value, revision, revision_nr, created, modified FROM ${table}`;
         const rows = await this._get(sql);
         const list = rows.filter((row) => param in row && expression.test(row[param]));
         const promises = list.map(async (row) => {
-            if ([MDE_1.VALUE_TYPES.BINARY].includes(row.type)) {
+            if ([MDE_1.VALUE_TYPES.BINARY].includes(row.type) && !simplifyValues) {
                 return await this._getOne(`SELECT path, binary_value FROM ${table} WHERE path = '${row.path}'`)
                     .then(({ binary_value }) => {
                     row.binary_value = binary_value;
@@ -142,28 +142,28 @@ class SqliteStorage extends CustomStorage_1.CustomStorage {
         });
         return await Promise.all(promises);
     }
-    async getMultiple(database, expression) {
+    async getMultiple(database, expression, simplifyValues = false) {
         if (!(database in this.pending)) {
             throw erros_1.ERROR_FACTORY.create("db-not-found" /* AppError.DB_NOT_FOUND */, { dbName: database });
         }
         const pendingList = Array.from(this.pending[database].values()).filter((row) => expression.test(row.path));
-        const list = await this._getByRegex(database, "path", expression);
+        const list = await this._getByRegex(database, "path", expression, simplifyValues);
         const result = pendingList
             .concat(list)
             .filter((row, i, l) => {
             return l.findIndex((r) => r.path === row.path) === i;
         })
             .map((row) => {
-            var _a;
+            var _a, _b, _c;
             let value = null;
             if (row.type === MDE_1.VALUE_TYPES.STRING || row.type === MDE_1.VALUE_TYPES.REFERENCE) {
-                value = row.text_value;
+                value = (_a = row.text_value) !== null && _a !== void 0 ? _a : "";
             }
             else if (row.type === MDE_1.VALUE_TYPES.BINARY) {
-                value = row.binary_value;
+                value = (_b = row.binary_value) !== null && _b !== void 0 ? _b : "";
             }
             else if (row.type === MDE_1.VALUE_TYPES.OBJECT || row.type === MDE_1.VALUE_TYPES.ARRAY) {
-                value = (_a = JSON.parse(row.json_value)) !== null && _a !== void 0 ? _a : {};
+                value = (_c = JSON.parse(row.json_value)) !== null && _c !== void 0 ? _c : (row.type === MDE_1.VALUE_TYPES.ARRAY ? [] : {});
             }
             return {
                 path: row.path,

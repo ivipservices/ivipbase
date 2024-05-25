@@ -71,11 +71,9 @@
                     >.content {
                         border-color: var(--text-color-main);
 
-                        >.value {
-                            :global(.MuiInputBase-root) {
-                                :global(.MuiOutlinedInput-notchedOutline) {
-                                    border-color: var(--text-color-main) !important;
-                                }
+                        :global(.MuiInputBase-root) {
+                            :global(.MuiOutlinedInput-notchedOutline) {
+                                border-color: var(--text-color-main) !important;
                             }
                         }
 
@@ -193,37 +191,62 @@
                     }
 
                     >.key {
-                        height: 38px;
-                        max-height: 38px;
-                        cursor: pointer;
-                        opacity: .8;
-                        font-weight: bold;
+                        display: flex;
+                        flex-direction: row;
+                        align-items: center;
+
+                        &:not(.new) {
+                            height: 38px;
+                            max-height: 38px;
+                            cursor: pointer;
+                            opacity: .8;
+                            font-weight: bold;
+                        }
                     }
 
-                    >.value {
-                        :global(.MuiInputBase-root) {
-                            border-radius: 0px !important;
+                    :global(.MuiInputBase-root) {
+                        border-radius: 0px !important;
 
-                            &:global(.Mui-focused) {
-                                :global(.MuiOutlinedInput-notchedOutline) {
-                                    border-color: rgb(41, 182, 246) !important;
-                                    border-width: 2px;
-                                }
-                            }
-
-                            &:not(:global(.Mui-focused)):hover {
-                                :global(.MuiOutlinedInput-notchedOutline) {
-                                    border-color: var(--text-color-main) !important;
-                                }
-                            }
-
-                            >input {
-                                padding: 8.5px 14px !important;
-                            }
-
+                        &:global(.Mui-focused) {
                             :global(.MuiOutlinedInput-notchedOutline) {
-                                border-color: rgba(255, 255, 255, 0.1) !important;
+                                border-color: rgb(41, 182, 246) !important;
+                                border-width: 2px;
                             }
+                        }
+
+                        &:not(:global(.Mui-focused)):hover {
+                            :global(.MuiOutlinedInput-notchedOutline) {
+                                border-color: var(--text-color-main) !important;
+                            }
+                        }
+
+                        >input {
+                            padding: 8.5px 14px !important;
+                        }
+
+                        :global(.MuiOutlinedInput-notchedOutline) {
+                            border-color: rgba(255, 255, 255, 0.1) !important;
+                        }
+
+
+                        >:global(.MuiSelect-select) {
+                            padding-top: 0px !important;
+                            padding-bottom: 0px !important;
+                            padding-left: 0px !important;
+                            padding-right: 25px !important;
+                            display: flex;
+                            flex-direction: row;
+                            align-items: center;
+                            justify-content: center;
+
+                            >:global(.MuiTypography-root) {
+                                display: none;
+                            }
+                        }
+
+                        >:global(.MuiSelect-icon) {
+                            right: 0px !important;
+                            opacity: .5;
                         }
                     }
 
@@ -237,26 +260,6 @@
                         }
 
                         :global(.MuiInputBase-root) {
-                            >:global(.MuiSelect-select) {
-                                padding-top: 0px !important;
-                                padding-bottom: 0px !important;
-                                padding-left: 0px !important;
-                                padding-right: 25px !important;
-                                display: flex;
-                                flex-direction: row;
-                                align-items: center;
-                                justify-content: center;
-
-                                >:global(.MuiTypography-root) {
-                                    display: none;
-                                }
-                            }
-
-                            >:global(.MuiSelect-icon) {
-                                right: 0px !important;
-                                opacity: .5;
-                            }
-
                             &:hover {
                                 >:global(.MuiSelect-icon) {
                                     opacity: .8;
@@ -376,6 +379,7 @@
 
                     >.content {
                         display: flex;
+                        flex-direction: column;
                         flex: 1;
                         min-height: 38px;
                         padding: 0px 10px 0px 0px;

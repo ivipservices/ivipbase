@@ -51,7 +51,7 @@ export async function executeQuery(
 					if (node.content && (node.content.type === nodeValueTypes.OBJECT || node.content.type === nodeValueTypes.ARRAY)) {
 						const childrens = nodes.filter(({ path: p }) => PathInfo.get(p).isChildOf(node.path));
 
-						node.content.value = childrens.reduce((acc, { path, content }) => {
+						node.content.value = childrens.reduce((acc: any, { path, content }) => {
 							acc[PathInfo.get(path).key as any] = content.value;
 							return acc;
 						}, node.content.value ?? {});

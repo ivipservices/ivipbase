@@ -14,7 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ascii85 = exports.PathReference = exports.Utils = exports.SimpleCache = exports.SimpleEventEmitter = exports.PathInfo = exports.DataStorageSettings = exports.CustomStorage = void 0;
+exports.ID = exports.ascii85 = exports.PathReference = exports.Utils = exports.SimpleCache = exports.SimpleEventEmitter = exports.PathInfo = exports.DataStorageSettings = exports.CustomStorage = void 0;
 var storage_1 = require("./controller/storage");
 Object.defineProperty(exports, "CustomStorage", { enumerable: true, get: function () { return storage_1.CustomStorage; } });
 Object.defineProperty(exports, "DataStorageSettings", { enumerable: true, get: function () { return storage_1.DataStorageSettings; } });
@@ -28,4 +28,5 @@ Object.defineProperty(exports, "SimpleCache", { enumerable: true, get: function 
 Object.defineProperty(exports, "Utils", { enumerable: true, get: function () { return ivipbase_core_1.Utils; } });
 Object.defineProperty(exports, "PathReference", { enumerable: true, get: function () { return ivipbase_core_1.PathReference; } });
 Object.defineProperty(exports, "ascii85", { enumerable: true, get: function () { return ivipbase_core_1.ascii85; } });
+Object.defineProperty(exports, "ID", { enumerable: true, get: function () { return ivipbase_core_1.ID; } });
 //# sourceMappingURL=browser.js.map

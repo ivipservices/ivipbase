@@ -1,10 +1,11 @@
-import { CustomStorage, DataStorage, DataStorageSettings, JsonFileStorage, JsonFileStorageSettings, MongodbSettings, MongodbStorage, SqliteSettings, SqliteStorage } from "../../controller/storage/index.js";
+import { CustomStorage, DataStorage, DataStorageSettings, JsonFileStorage, JsonFileStorageSettings, MongodbSettings, MongodbStorage, SqliteSettings, SqliteStorage, SequelizeSettings, SequelizeStorage, } from "../../controller/storage/index.js";
 export function validSettings(options) {
     return (options instanceof DataStorageSettings ||
         options instanceof MongodbSettings ||
         options instanceof JsonFileStorageSettings ||
         options instanceof CustomStorage ||
-        options instanceof SqliteSettings);
+        options instanceof SqliteSettings ||
+        options instanceof SequelizeSettings);
 }
 export function applySettings(dbname, options) {
     if (options instanceof DataStorageSettings) {
@@ -18,6 +19,9 @@ export function applySettings(dbname, options) {
     }
     else if (options instanceof SqliteSettings) {
         return new SqliteStorage(dbname, options);
+    }
+    else if (options instanceof SequelizeSettings) {
+        return new SequelizeStorage(dbname, options);
     }
     else if (options instanceof CustomStorage) {
         return options;

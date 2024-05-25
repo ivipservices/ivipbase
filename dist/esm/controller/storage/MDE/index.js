@@ -166,10 +166,13 @@ export default class MDE extends SimpleEventEmitter {
         // Adiciona a expressão regular do caminho principal ao array.
         pathsRegex.push(replasePathToRegex(path));
         if (onlyChildren) {
-            pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/]*))|(\\[([^/]*)\\])){1})`));
+            pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1})`));
         }
-        else if (allHeirs) {
-            pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/]*))|(\\[([^/]*)\\])){1,})`));
+        else if (allHeirs === true) {
+            pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1,})`));
+        }
+        else if (typeof allHeirs === "number") {
+            pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1,${allHeirs}})`));
         }
         let parent = PathInfo.get(path).parent;
         // Obtém o caminho pai e adiciona a expressão regular correspondente ao array.
@@ -224,12 +227,12 @@ export default class MDE extends SimpleEventEmitter {
      * @returns {Promise<StorageNodeInfo[]>} - Uma Promise que resolve para uma lista de informações sobre os nodes.
      * @throws {Error} - Lança um erro se ocorrer algum problema durante a busca assíncrona.
      */
-    async getNodesBy(database, path, onlyChildren = false, allHeirs = false, includeAncestor = false) {
+    async getNodesBy(database, path, onlyChildren = false, allHeirs = false, includeAncestor = false, simplifyValues = false) {
         const reg = this.pathToRegex(path, onlyChildren, allHeirs, includeAncestor);
         // console.log("getNodesBy::1::", reg.source);
         let result = [];
         try {
-            result = await this.settings.getMultiple(database, reg);
+            result = await this.settings.getMultiple(database, reg, simplifyValues);
         }
         catch { }
         // console.log("getNodesBy::2::", JSON.stringify(result, null, 4));
@@ -240,13 +243,13 @@ export default class MDE extends SimpleEventEmitter {
         else if (onlyChildren) {
             nodes = result.filter(({ path: p }) => PathInfo.get(path).equals(p) || PathInfo.get(path).isParentOf(p));
         }
-        else if (allHeirs) {
+        else if (allHeirs === true || typeof allHeirs === "number") {
             nodes = result.filter(({ path: p }) => PathInfo.get(path).equals(p) || PathInfo.get(path).isAncestorOf(p));
         }
         if (includeAncestor) {
             nodes = result.filter(({ path: p }) => PathInfo.get(p).isParentOf(path) || PathInfo.get(p).isAncestorOf(path)).concat(nodes);
         }
-        return nodes;
+        return nodes.filter(({ path }, i, l) => l.findIndex(({ path: p }) => p === path) === i);
     }
     /**
      * Obtém o node pai de um caminho específico.

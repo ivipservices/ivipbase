@@ -40,7 +40,7 @@ export declare class MDESettings {
      * @type {((expression: RegExp) => Promise<StorageNodeInfo[]> | StorageNodeInfo[]) | undefined}
      * @default undefined
      */
-    getMultiple: (database: string, expression: RegExp) => Promise<StorageNodeInfo[]> | StorageNodeInfo[];
+    getMultiple: (database: string, expression: RegExp, simplifyValues?: boolean) => Promise<StorageNodeInfo[]> | StorageNodeInfo[];
     /**
      * Uma função que realiza um set de um node na base de dados com base em um path especificado.
      *
@@ -106,7 +106,7 @@ export default class MDE extends SimpleEventEmitter {
      * @returns {Promise<StorageNodeInfo[]>} - Uma Promise que resolve para uma lista de informações sobre os nodes.
      * @throws {Error} - Lança um erro se ocorrer algum problema durante a busca assíncrona.
      */
-    getNodesBy(database: string, path: string, onlyChildren?: boolean, allHeirs?: boolean, includeAncestor?: boolean): Promise<StorageNodeInfo[]>;
+    getNodesBy(database: string, path: string, onlyChildren?: boolean, allHeirs?: boolean | number, includeAncestor?: boolean, simplifyValues?: boolean): Promise<StorageNodeInfo[]>;
     /**
      * Obtém o node pai de um caminho específico.
      * @param {string} database - Nome do banco de dados.

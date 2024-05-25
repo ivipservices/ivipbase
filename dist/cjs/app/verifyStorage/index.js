@@ -10,7 +10,8 @@ function validSettings(options) {
         options instanceof storage_1.MongodbSettings ||
         options instanceof storage_1.JsonFileStorageSettings ||
         options instanceof storage_1.CustomStorage ||
-        options instanceof storage_1.SqliteSettings);
+        options instanceof storage_1.SqliteSettings ||
+        options instanceof storage_1.SequelizeSettings);
 }
 exports.validSettings = validSettings;
 function applySettings(dbname, options) {
@@ -25,6 +26,9 @@ function applySettings(dbname, options) {
     }
     else if (options instanceof storage_1.SqliteSettings) {
         return new storage_1.SqliteStorage(dbname, options);
+    }
+    else if (options instanceof storage_1.SequelizeSettings) {
+        return new storage_1.SequelizeStorage(dbname, options);
     }
     else if (options instanceof storage_1.CustomStorage) {
         return options;

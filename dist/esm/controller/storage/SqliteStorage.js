@@ -114,12 +114,12 @@ export class SqliteStorage extends CustomStorage {
             });
         });
     }
-    async _getByRegex(table, param, expression) {
+    async _getByRegex(table, param, expression, simplifyValues = false) {
         const sql = `SELECT path, type, text_value, json_value, revision, revision_nr, created, modified FROM ${table}`;
         const rows = await this._get(sql);
         const list = rows.filter((row) => param in row && expression.test(row[param]));
         const promises = list.map(async (row) => {
-            if ([VALUE_TYPES.BINARY].includes(row.type)) {
+            if ([VALUE_TYPES.BINARY].includes(row.type) && !simplifyValues) {
                 return await this._getOne(`SELECT path, binary_value FROM ${table} WHERE path = '${row.path}'`)
                     .then(({ binary_value }) => {
                     row.binary_value = binary_value;
@@ -133,12 +133,12 @@ export class SqliteStorage extends CustomStorage {
         });
         return await Promise.all(promises);
     }
-    async getMultiple(database, expression) {
+    async getMultiple(database, expression, simplifyValues = false) {
         if (!(database in this.pending)) {
             throw ERROR_FACTORY.create("db-not-found" /* AppError.DB_NOT_FOUND */, { dbName: database });
         }
         const pendingList = Array.from(this.pending[database].values()).filter((row) => expression.test(row.path));
-        const list = await this._getByRegex(database, "path", expression);
+        const list = await this._getByRegex(database, "path", expression, simplifyValues);
         const result = pendingList
             .concat(list)
             .filter((row, i, l) => {
@@ -147,13 +147,13 @@ export class SqliteStorage extends CustomStorage {
             .map((row) => {
             let value = null;
             if (row.type === VALUE_TYPES.STRING || row.type === VALUE_TYPES.REFERENCE) {
-                value = row.text_value;
+                value = row.text_value ?? "";
             }
             else if (row.type === VALUE_TYPES.BINARY) {
-                value = row.binary_value;
+                value = row.binary_value ?? "";
             }
             else if (row.type === VALUE_TYPES.OBJECT || row.type === VALUE_TYPES.ARRAY) {
-                value = JSON.parse(row.json_value) ?? {};
+                value = JSON.parse(row.json_value) ?? (row.type === VALUE_TYPES.ARRAY ? [] : {});
             }
             return {
                 path: row.path,

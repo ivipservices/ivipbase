@@ -29,10 +29,19 @@ async function executeQuery(api, database, path, query, options = { snapshots: f
     const queryFilters = query.filters.map((f) => (Object.assign({}, f)));
     const querySort = query.order.map((s) => (Object.assign({}, s)));
     const nodes = await api.storage
-        .getNodesBy(database, path, true, false)
+        .getNodesBy(database, path, false, 2, false, true)
         .then((nodes) => {
-        return Promise.resolve(nodes.filter(({ path: p }) => {
-            return ivipbase_core_1.PathInfo.get(p).isChildOf(path);
+        const childrens = nodes.filter(({ path: p }) => ivipbase_core_1.PathInfo.get(p).isChildOf(path));
+        return Promise.resolve(childrens.map((node) => {
+            var _a;
+            if (node.content && (node.content.type === utils_1.nodeValueTypes.OBJECT || node.content.type === utils_1.nodeValueTypes.ARRAY)) {
+                const childrens = nodes.filter(({ path: p }) => ivipbase_core_1.PathInfo.get(p).isChildOf(node.path));
+                node.content.value = childrens.reduce((acc, { path, content }) => {
+                    acc[ivipbase_core_1.PathInfo.get(path).key] = content.value;
+                    return acc;
+                }, (_a = node.content.value) !== null && _a !== void 0 ? _a : {});
+            }
+            return node;
         }));
     })
         .catch(() => Promise.resolve([]));

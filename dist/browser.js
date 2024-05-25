@@ -1027,7 +1027,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ascii85 = exports.PathReference = exports.Utils = exports.SimpleCache = exports.SimpleEventEmitter = exports.PathInfo = exports.DataStorageSettings = exports.CustomStorage = void 0;
+exports.ID = exports.ascii85 = exports.PathReference = exports.Utils = exports.SimpleCache = exports.SimpleEventEmitter = exports.PathInfo = exports.DataStorageSettings = exports.CustomStorage = void 0;
 var storage_1 = require("./controller/storage");
 Object.defineProperty(exports, "CustomStorage", { enumerable: true, get: function () { return storage_1.CustomStorage; } });
 Object.defineProperty(exports, "DataStorageSettings", { enumerable: true, get: function () { return storage_1.DataStorageSettings; } });
@@ -1041,6 +1041,7 @@ Object.defineProperty(exports, "SimpleCache", { enumerable: true, get: function 
 Object.defineProperty(exports, "Utils", { enumerable: true, get: function () { return ivipbase_core_1.Utils; } });
 Object.defineProperty(exports, "PathReference", { enumerable: true, get: function () { return ivipbase_core_1.PathReference; } });
 Object.defineProperty(exports, "ascii85", { enumerable: true, get: function () { return ivipbase_core_1.ascii85; } });
+Object.defineProperty(exports, "ID", { enumerable: true, get: function () { return ivipbase_core_1.ID; } });
 
 },{"./app":1,"./auth":5,"./controller/storage":20,"./database":24,"ivipbase-core":94}],7:[function(require,module,exports){
 "use strict";
@@ -1143,10 +1144,19 @@ async function executeQuery(api, database, path, query, options = { snapshots: f
     const queryFilters = query.filters.map((f) => (Object.assign({}, f)));
     const querySort = query.order.map((s) => (Object.assign({}, s)));
     const nodes = await api.storage
-        .getNodesBy(database, path, true, false)
+        .getNodesBy(database, path, false, 2, false, true)
         .then((nodes) => {
-        return Promise.resolve(nodes.filter(({ path: p }) => {
-            return ivipbase_core_1.PathInfo.get(p).isChildOf(path);
+        const childrens = nodes.filter(({ path: p }) => ivipbase_core_1.PathInfo.get(p).isChildOf(path));
+        return Promise.resolve(childrens.map((node) => {
+            var _a;
+            if (node.content && (node.content.type === utils_1.nodeValueTypes.OBJECT || node.content.type === utils_1.nodeValueTypes.ARRAY)) {
+                const childrens = nodes.filter(({ path: p }) => ivipbase_core_1.PathInfo.get(p).isChildOf(node.path));
+                node.content.value = childrens.reduce((acc, { path, content }) => {
+                    acc[ivipbase_core_1.PathInfo.get(path).key] = content.value;
+                    return acc;
+                }, (_a = node.content.value) !== null && _a !== void 0 ? _a : {});
+            }
+            return node;
         }));
     })
         .catch(() => Promise.resolve([]));
@@ -1960,10 +1970,13 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         // Adiciona a expressão regular do caminho principal ao array.
         pathsRegex.push(replasePathToRegex(path));
         if (onlyChildren) {
-            pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/]*))|(\\[([^/]*)\\])){1})`));
+            pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1})`));
         }
-        else if (allHeirs) {
-            pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/]*))|(\\[([^/]*)\\])){1,})`));
+        else if (allHeirs === true) {
+            pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1,})`));
+        }
+        else if (typeof allHeirs === "number") {
+            pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1,${allHeirs}})`));
         }
         let parent = ivipbase_core_1.PathInfo.get(path).parent;
         // Obtém o caminho pai e adiciona a expressão regular correspondente ao array.
@@ -2018,12 +2031,12 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
      * @returns {Promise<StorageNodeInfo[]>} - Uma Promise que resolve para uma lista de informações sobre os nodes.
      * @throws {Error} - Lança um erro se ocorrer algum problema durante a busca assíncrona.
      */
-    async getNodesBy(database, path, onlyChildren = false, allHeirs = false, includeAncestor = false) {
+    async getNodesBy(database, path, onlyChildren = false, allHeirs = false, includeAncestor = false, simplifyValues = false) {
         const reg = this.pathToRegex(path, onlyChildren, allHeirs, includeAncestor);
         // console.log("getNodesBy::1::", reg.source);
         let result = [];
         try {
-            result = await this.settings.getMultiple(database, reg);
+            result = await this.settings.getMultiple(database, reg, simplifyValues);
         }
         catch (_a) { }
         // console.log("getNodesBy::2::", JSON.stringify(result, null, 4));
@@ -2034,13 +2047,13 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         else if (onlyChildren) {
             nodes = result.filter(({ path: p }) => ivipbase_core_1.PathInfo.get(path).equals(p) || ivipbase_core_1.PathInfo.get(path).isParentOf(p));
         }
-        else if (allHeirs) {
+        else if (allHeirs === true || typeof allHeirs === "number") {
             nodes = result.filter(({ path: p }) => ivipbase_core_1.PathInfo.get(path).equals(p) || ivipbase_core_1.PathInfo.get(path).isAncestorOf(p));
         }
         if (includeAncestor) {
             nodes = result.filter(({ path: p }) => ivipbase_core_1.PathInfo.get(p).isParentOf(path) || ivipbase_core_1.PathInfo.get(p).isAncestorOf(path)).concat(nodes);
         }
-        return nodes;
+        return nodes.filter(({ path }, i, l) => l.findIndex(({ path: p }) => p === path) === i);
     }
     /**
      * Obtém o node pai de um caminho específico.

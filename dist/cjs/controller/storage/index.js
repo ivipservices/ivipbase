@@ -18,4 +18,5 @@ __exportStar(require("./browser"), exports);
 __exportStar(require("./MongoDBStorage"), exports);
 __exportStar(require("./JsonFileStorage"), exports);
 __exportStar(require("./SqliteStorage"), exports);
+__exportStar(require("./SequelizeStorage"), exports);
 //# sourceMappingURL=index.js.map
