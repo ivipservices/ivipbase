@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, forwardRef, useImperativeHandle } from "react";
+import React, { useEffect, useLayoutEffect, useState, useRef, forwardRef, useImperativeHandle } from "react";
 import style from "./style.module.scss";
 import { Box, Typography, Breadcrumbs, Link, TextField, Button, IconButton, MenuItem, CircularProgress } from "@mui/material";
 import PropTypes from "prop-types";
@@ -53,7 +53,6 @@ const isJson = (str) => {
 	} catch (e) {
 		return false;
 	}
-	return true;
 };
 
 const AutoWidthTextField = ({ value, defaultValue, minWidth = 30, maxWidth = 400, type, style, ...props }) => {
@@ -192,11 +191,15 @@ const valueToString = (value) => {
 		return "";
 	}
 
+	if (typeof value === "boolean") {
+		return value ? "true" : "false";
+	}
+
 	if (Utils.isDate(value)) {
 		return moment(value).format(momentFormat);
 	}
 
-	if (["string", "number", "boolean"].includes(typeof value)) {
+	if (["string", "number"].includes(typeof value)) {
 		return value;
 	}
 
@@ -231,7 +234,7 @@ const normalizeValue = (value, type, selfVerify = true) => {
 			break;
 		case "boolean":
 			// if (!["true", "false"].includes(value)) throw new Error("Invalid value for boolean type");
-			value = value === "false" ? false : true;
+			value = value === "false" || value === false ? false : true;
 			break;
 		case "binary":
 			if (typeof value !== "string") throw new Error("Invalid value for binary type");
@@ -263,7 +266,7 @@ const normalizeValue = (value, type, selfVerify = true) => {
 			value = obj;
 			break;
 		default: {
-			if (["true", "false"].includes(value)) {
+			if (["true", "false", true, false].includes(value)) {
 				type = "boolean";
 			} else if (/[\d\.\,]+/gi.test(String(value)) && !isNaN(value)) {
 				type = "number";
@@ -278,8 +281,6 @@ const normalizeValue = (value, type, selfVerify = true) => {
 				value = `"${value}"`;
 			}
 
-			console.log("type", type);
-
 			if (selfVerify) {
 				return normalizeValue(value, type, false);
 			}
@@ -289,44 +290,78 @@ const normalizeValue = (value, type, selfVerify = true) => {
 	return { value, type };
 };
 
-const EditValueChild = forwardRef(({ isNewChild = false, name, value, type, onChange, onRemoved, goToPath, isAdded = false, exists = false }, ref) => {
-	const [loading, setLoading] = useState(false);
+const getValueType = (value) => {
+	if (value instanceof Array) {
+		return "array";
+	} else if (value instanceof PathReference) {
+		return "reference";
+	} else if (value instanceof ArrayBuffer) {
+		return "binary";
+	} else if (Utils.isDate(value)) {
+		return "date";
+	} else if (typeof value === "string") {
+		return "string";
+	} else if (typeof value === "object" && value !== null) {
+		return "object";
+	} else if (typeof value === "number") {
+		return "number";
+	} else if (typeof value === "boolean") {
+		return "boolean";
+	} else if (typeof value === "bigint") {
+		return "bigint";
+	}
+	return "unknown";
+};
+
+const EditValueChild = ({ isNewChild = false, disabled: _disabled = false, name, value, type, beforeValue, onChange, onRemoved, goToPath, isAdded = false, exists = false, index = 0 }) => {
+	const [_loading, setLoading] = useState(false);
+	const [disabled, setDisabled] = useState(_disabled);
 	const [edit, setEdit] = useState(isNewChild);
 	const [currentKey, setCurrentKey] = useState(name);
 	const [currentValue, setCurrentValue] = useState(valueToString(value));
 	const [currentType, setCurrentType] = useState(type);
 	const [textWarning, setTextWarning] = useState(null);
 
-	const mainRef = useRef(null);
+	const [newChildres, setNewChildres] = useState([]);
 
-	useImperativeHandle(
-		ref,
-		() => ({
-			getData: () => {
-				return { key: currentKey, type: currentType, value: currentValue };
-			},
-		}),
-		[currentKey, currentValue, currentType],
-	);
+	const mainRef = useRef(null);
+	const objectChildresRef = useRef({});
 
 	useEffect(() => {
+		setDisabled(_disabled);
+	}, [_disabled]);
+
+	const changeNewValue = () => {
 		if (!isNewChild) {
 			return;
 		}
 		try {
 			if (typeof onChange === "function") {
-				const { value, type } = normalizeValue(currentValue, currentType);
-				onChange(currentKey, value, type);
+				if (newChildres.length <= 0) {
+					const { value, type } = normalizeValue(currentValue, currentType);
+					onChange(currentKey, value, type);
+				} else {
+					const obj = {};
+					for (let id in objectChildresRef.current) {
+						const { key, value, type } = objectChildresRef.current[id];
+						obj[String(key) === "" ? id : key] = normalizeValue(value, type).value;
+					}
+					onChange(currentKey, JSON.stringify(obj), "object");
+				}
 			}
 		} catch (e) {
 			setTextWarning(e.message);
 		}
-	}, [isNewChild, currentKey, currentValue, currentType, onChange]);
+	};
+
+	useEffect(changeNewValue, [isNewChild, currentKey, currentValue, currentType, newChildres, onChange]);
 
 	const emitNotify = (event) => {
 		if (!mainRef.current) {
 			return;
 		}
+
+		setDisabled(true);
 
 		const classes = {
 			remove: style["removed"],
@@ -339,6 +374,7 @@ const EditValueChild = forwardRef(({ isNewChild = false, name, value, type, onCh
 		setTimeout(
 			() => {
 				mainRef.current?.classList?.remove(classes[event]);
+				setDisabled(false);
 				if (typeof onRemoved === "function" && event === "remove") {
 					onRemoved();
 				}
@@ -347,6 +383,13 @@ const EditValueChild = forwardRef(({ isNewChild = false, name, value, type, onCh
 		);
 	};
 
+	useLayoutEffect(() => {
+		console.log(valueToString(beforeValue ?? value), valueToString(value));
+		if (valueToString(beforeValue ?? value) !== valueToString(value)) {
+			emitNotify("change");
+		}
+	}, [mainRef.current, beforeValue, value]);
+
 	const confirmEdit = async () => {
 		if (isNewChild) {
 			return;
@@ -354,23 +397,20 @@ const EditValueChild = forwardRef(({ isNewChild = false, name, value, type, onCh
 
 		setEdit(false);
 		setTextWarning(null);
-		if (currentValue === valueToString(value)) {
-			return;
-		}
 		setLoading(true);
 
 		await new Promise((resolve) => setTimeout(resolve, 1000));
 
 		if (typeof onChange === "function") {
 			try {
-				const { value, type } = normalizeValue(currentValue, currentType);
+				const { value: newValue, type } = normalizeValue(currentValue, currentType);
 
-				await Promise.race([onChange(currentKey, value, type)]).then(() => {
-					setCurrentValue(valueToString(value));
-					setCurrentType(type);
+				console.log(newValue, type);
+
+				await Promise.race([onChange(currentKey, newValue, type)]).then(() => {
 					setLoading(false);
 					emitNotify("change");
-					return Promise.resolve(value);
+					return Promise.resolve(newValue);
 				});
 			} catch (e) {
 				setTextWarning(e.message);
@@ -390,7 +430,7 @@ const EditValueChild = forwardRef(({ isNewChild = false, name, value, type, onCh
 			}
 			return;
 		}
-		setCurrentValue(valueToString(value));
+		setCurrentValue(value);
 		setCurrentType(type);
 		setEdit(false);
 		setTextWarning(null);
@@ -421,7 +461,7 @@ const EditValueChild = forwardRef(({ isNewChild = false, name, value, type, onCh
 	}, [mainRef.current, isAdded]);
 
 	useEffect(() => {
-		if (edit || loading) {
+		if (edit || _loading) {
 			return;
 		}
 
@@ -434,14 +474,14 @@ const EditValueChild = forwardRef(({ isNewChild = false, name, value, type, onCh
 				emitNotify("change");
 			}
 		}
-	}, [value]);
+	}, [currentValue, value]);
 
 	useEffect(() => {
 		if (!mainRef.current) {
 			return;
 		}
 
-		if (edit || loading) {
+		if (edit || _loading) {
 			if (mainRef.current.classList.contains(style["active"]) === false) {
 				mainRef.current.classList.add(style["active"]);
 			}
@@ -450,7 +490,7 @@ const EditValueChild = forwardRef(({ isNewChild = false, name, value, type, onCh
 				mainRef.current.classList.remove(style["active"]);
 			}
 		}
-	}, [edit, loading]);
+	}, [edit, _loading]);
 
 	const verifyType = (type) => {
 		try {
@@ -482,9 +522,14 @@ const EditValueChild = forwardRef(({ isNewChild = false, name, value, type, onCh
 
 	const editabled = !["binary", "bigint", "reference"].includes(currentType);
 
+	const colorMark = palette[index % palette.length];
+
+	const loading = _loading || disabled;
+
 	return (
 		<div
 			className={style["key-value"]}
+			style={{ "--color-mark": colorMark }}
 			ref={mainRef}
 		>
 			<div className={style["header"]}>
@@ -546,137 +591,155 @@ const EditValueChild = forwardRef(({ isNewChild = false, name, value, type, onCh
 							</>
 						)}
 					</div>
-					<div
-						className={style["value"]}
-						onClick={() => {
-							if (!editabled || edit || loading) {
-								return;
-							}
-							setEdit(true);
-						}}
-					>
-						{currentType === "boolean" ? (
-							<TextField
-								select
-								value={["true", "false"].includes(currentValue) ? currentValue : "true"}
-								variant="outlined"
-								size="small"
-								placeholder="Valor"
-								InputProps={{
-									readOnly: !edit,
-								}}
-								onChange={(e) => {
-									setCurrentValue(e.target.value);
+					{newChildres.length <= 0 && (
+						<>
+							<div
+								className={style["value"]}
+								onMouseDown={() => {
+									if (!editabled || edit || loading) {
+										return;
+									}
+									setEdit(true);
 								}}
 							>
-								<MenuItem value={"true"}>True</MenuItem>
-								<MenuItem value={"false"}>False</MenuItem>
-							</TextField>
-						) : currentType === "date" ? (
-							<AutoWidthTextField
-								minWidth={50}
-								maxWidth={800}
-								value={currentValue}
-								onChange={(e) => {
-									if (e.target.value !== currentValue) setCurrentValue(e.target.value);
-								}}
-								variant="outlined"
-								size="small"
-								placeholder="Valor"
-								autoComplete="off"
-								InputProps={{
-									readOnly: !edit,
-									inputComponent: TextMaskDate,
-									autoComplete: "off",
-								}}
-								onKeyPress={(e) => {
-									if (!edit || e.key !== "Enter") {
-										return;
-									}
-
-									confirmEdit();
-								}}
-							/>
-						) : (
-							<AutoWidthTextField
-								minWidth={50}
-								maxWidth={800}
-								value={currentType === "string" && !edit ? `"${currentValue}"` : currentValue}
-								variant="outlined"
-								size="small"
-								placeholder="Valor"
-								type={["number", "binary", "bigint"].includes(currentType) ? "number" : "text"}
-								autoComplete="off"
-								InputProps={{
-									readOnly: !edit,
-									autoComplete: "off",
-								}}
-								onChange={(e) => {
-									setCurrentValue(e.target.value);
-								}}
-								onKeyPress={(e) => {
-									if (!edit || e.key !== "Enter") {
-										return;
-									}
-
-									confirmEdit();
-								}}
-							/>
-						)}
-					</div>
-					<div
-						className={style["type"]}
-						onClick={() => {
-							if (!editabled || edit || loading) {
-								return;
-							}
-							setEdit(true);
-						}}
-					>
-						<TextField
-							select
-							value={currentType}
-							variant="outlined"
-							size="small"
-							InputProps={{
-								readOnly: !edit,
-							}}
-							onChange={(e) => {
-								verifyType(e.target.value);
-								setCurrentType(e.target.value);
-							}}
-						>
-							{Object.keys(types).map((type, i) => {
-								const label = type === "unknown" ? "auto" : type;
-
-								return (
-									<MenuItem
-										key={i}
-										value={type}
-										disabled={["binary", "reference"].includes(type)}
+								{currentType === "boolean" ? (
+									<TextField
+										select
+										value={["true", "false"].includes(currentValue) ? currentValue : "true"}
+										variant="outlined"
+										size="small"
+										placeholder="Valor"
+										onChange={(e) => {
+											setCurrentValue(e.target.value);
+										}}
 									>
-										<SvgIcon path={types[type]} />
-										<Typography
-											variant="body2"
-											sx={{
-												marginLeft: "14px",
-												opacity: 0.6,
-												fontStyle: "italic",
-												textTransform: "capitalize",
-											}}
-										>
-											{label}
-										</Typography>
-									</MenuItem>
-								);
-							})}
-						</TextField>
-					</div>
+										<MenuItem value={"true"}>True</MenuItem>
+										<MenuItem value={"false"}>False</MenuItem>
+									</TextField>
+								) : currentType === "date" ? (
+									<AutoWidthTextField
+										minWidth={50}
+										maxWidth={800}
+										value={currentValue}
+										onChange={(e) => {
+											if (e.target.value !== currentValue) setCurrentValue(e.target.value);
+										}}
+										variant="outlined"
+										size="small"
+										placeholder="Valor"
+										autoComplete="off"
+										InputProps={{
+											readOnly: !edit,
+											inputComponent: TextMaskDate,
+											autoComplete: "off",
+										}}
+										onKeyPress={(e) => {
+											if (!edit || e.key !== "Enter") {
+												return;
+											}
+
+											confirmEdit();
+										}}
+									/>
+								) : (
+									<AutoWidthTextField
+										minWidth={50}
+										maxWidth={800}
+										value={currentType === "string" && !edit ? `"${currentValue}"` : currentValue}
+										variant="outlined"
+										size="small"
+										placeholder="Valor"
+										type={["number", "binary", "bigint"].includes(currentType) ? "number" : "text"}
+										autoComplete="off"
+										InputProps={{
+											readOnly: !edit,
+											autoComplete: "off",
+										}}
+										onChange={(e) => {
+											setCurrentValue(e.target.value);
+										}}
+										onKeyPress={(e) => {
+											if (!edit || e.key !== "Enter") {
+												return;
+											}
+
+											confirmEdit();
+										}}
+									/>
+								)}
+							</div>
+							<div
+								className={style["type"]}
+								onClick={() => {
+									if (!editabled || edit || loading) {
+										return;
+									}
+									setEdit(true);
+								}}
+								style={{
+									paddingRight: edit ? "0px" : "10px",
+								}}
+							>
+								<TextField
+									select
+									value={currentType}
+									variant="outlined"
+									size="small"
+									InputProps={{
+										readOnly: !edit,
+									}}
+									onChange={(e) => {
+										verifyType(e.target.value);
+										setCurrentType(e.target.value);
+									}}
+								>
+									{Object.keys(types).map((type, i) => {
+										const label = type === "unknown" ? "auto" : type;
+
+										return (
+											<MenuItem
+												key={i}
+												value={type}
+												disabled={["binary", "reference"].includes(type)}
+											>
+												<SvgIcon path={types[type]} />
+												<Typography
+													variant="body2"
+													sx={{
+														marginLeft: "14px",
+														opacity: 0.6,
+														fontStyle: "italic",
+														textTransform: "capitalize",
+													}}
+												>
+													{label}
+												</Typography>
+											</MenuItem>
+										);
+									})}
+								</TextField>
+							</div>
+						</>
+					)}
 				</div>
 				{!loading && (
 					<div className={style["actions"]}>
 						{!exists && (
-							<IconButton>
+							<IconButton
+								onClick={() => {
+									setNewChildres((prev) => {
+										return [
+											...prev,
+											{
+												id: ID.generate(),
+												key: "",
+												value: "",
+												type: "unknown",
+											},
+										];
+									});
+								}}
+							>
 								<SvgIcon path={mdiPlus} />
 							</IconButton>
 						)}
@@ -697,7 +760,7 @@ const EditValueChild = forwardRef(({ isNewChild = false, name, value, type, onCh
 						)}
 					</div>
 				)}
-				{loading && (
+				{loading && !disabled && (
 					<CircularProgress
 						color="inherit"
 						size="24px"
@@ -717,11 +780,50 @@ const EditValueChild = forwardRef(({ isNewChild = false, name, value, type, onCh
 					</Typography>
 				</div>
 			)}
+			{newChildres.length > 0 && (
+				<>
+					<div className={style["tree"]}>
+						{newChildres.map(({ id, key, velue, type }) => {
+							return (
+								<div key={id}>
+									<div className={style["mark"]}></div>
+									<div className={style["content"]}>
+										<EditValueChild
+											isNewChild={true}
+											name={key}
+											value={velue}
+											type={type}
+											exists={false}
+											onChange={(key, value, type) => {
+												key = String(key).trim() !== "" ? key : id;
+												objectChildresRef.current[id] = { key, value, type };
+												changeNewValue();
+											}}
+											onRemoved={() => {
+												setNewChildres((prev) => {
+													return prev.filter((iten) => iten.id !== id);
+												});
+											}}
+											index={index + 1}
+											disabled={disabled}
+										/>
+									</div>
+								</div>
+							);
+						})}
+					</div>
+					<div
+						style={{
+							height: "25px",
+						}}
+					></div>
+				</>
+			)}
 		</div>
 	);
-});
+};
 
-const ViewTree = ({ currentPath, onChange, onRemoved, checkRemoved, loadData, isExpanded = false, index = 0, goToPath }) => {
+const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, checkRemoved, loadData, isExpanded = false, index = 0, goToPath }) => {
 	const [actualPath, setActualPath] = useState(currentPath);
 	const [loading, setLoading] = useState(true);
 	const [forceLoading, setForceLoading] = useState(false);
@@ -731,11 +833,13 @@ const ViewTree = ({ currentPath, onChange, onRemoved, checkRemoved, loadData, is
 	const [hiddenActionExpandChildren, setHiddenActionExpandChildren] = useState([]);
 	const [removeChildren, setRemoveChildren] = useState([]);
 	const [removed, setRemoved] = useState(typeof checkRemoved === "function" ? checkRemoved(resolveArrayPath(currentPath.concat([key]))) : false);
+	const [orderFirstChildren, setOrderFirstChildren] = useState([]);
 
 	const [newChildres, setNewChildres] = useState([]);
 
 	const mainRef = useRef(null);
 	const objectChildresRef = useRef({});
+	const beforeValues = useRef({});
 
 	const emitNotify = (event) => {
 		if (!mainRef.current) {
@@ -754,7 +858,7 @@ const ViewTree = ({ currentPath, onChange, onRemoved, checkRemoved, loadData, is
 			() => {
 				mainRef.current?.classList?.remove(classes[event]);
 				if (typeof onRemoved === "function" && event === "remove") {
-					onRemoved(resolveArrayPath(currentPath));
+					onRemoved(resolveArrayPath(actualPath));
 				}
 			},
 			event === "remove" ? 2000 : 3000,
@@ -767,7 +871,7 @@ const ViewTree = ({ currentPath, onChange, onRemoved, checkRemoved, loadData, is
 		emitNotify("remove");
 		setForceLoading(false);
 		try {
-			await Promise.race([onChange(resolveArrayPath(currentPath), null, "unknown")]).then((value) => {
+			await Promise.race([onChange(resolveArrayPath(actualPath), null, "unknown")]).then((value) => {
 				setForceLoading(false);
 				emitNotify("remove");
 				return Promise.resolve();
@@ -791,7 +895,7 @@ const ViewTree = ({ currentPath, onChange, onRemoved, checkRemoved, loadData, is
 			setLoading(true);
 		}
 
-		loadData(resolveArrayPath(currentPath), isNextMore)
+		loadData(resolveArrayPath(actualPath), isNextMore)
 			.then((dataJson) => {
 				if (!isNextMore) {
 					setData(dataJson);
@@ -854,8 +958,83 @@ const ViewTree = ({ currentPath, onChange, onRemoved, checkRemoved, loadData, is
 		};
 	}, [loadData, currentPath, isExpanded]);
 
+	const applyNewChildres = () => {
+		if (newChildres.length <= 0) {
+			return;
+		}
+
+		setForceLoading(true);
+
+		const obj = {};
+
+		for (let id in objectChildresRef.current) {
+			const { key, value, type } = objectChildresRef.current[id];
+			obj[String(key) === "" ? id : key] = normalizeValue(value, type).value;
+		}
+
+		onNewChildres(resolveArrayPath(actualPath), obj, "object")
+			.then(() => {
+				setNewChildres([]);
+				objectChildresRef.current = {};
+
+				setOrderFirstChildren((prev) => {
+					return Object.keys(obj)
+						.concat(prev)
+						.filter((key, i, l) => l.findIndex((it) => it === key) === i);
+				});
+
+				for (let key in obj) {
+					beforeValues.current[key] = "";
+				}
+
+				setData((data) => {
+					if (!Array.isArray(data?.children?.list)) {
+						return data;
+					}
+
+					for (let key in obj) {
+						const type = getValueType(obj[key]);
+						data.children.list.push({ key, value: obj[key], type });
+					}
+
+					data.children.list = data.children.list.filter(({ key }, i, l) => {
+						return l.findIndex((it) => it.key === key) === i;
+					});
+
+					return { ...data };
+				});
+
+				// setTimeout(() => {
+				// 	getData();
+				// }, 2000);
+			})
+			.finally(() => {
+				setForceLoading(false);
+			});
+	};
+
+	const onChildreChange = async (key, value, type) => {
+		console.log("onChildreChange", key, value, type);
+		await onChange(resolveArrayPath(actualPath.concat([key])), value, type);
+		setData((data) => {
+			if (!Array.isArray(data?.children?.list)) {
+				return data;
+			}
+
+			const _type = getValueType(value);
+
+			data.children.list.push({ key: key, value: ["object", "array", "dedicated_record", "binary"].includes(_type) ? undefined : value, type: _type });
+
+			data.children.list = data.children.list.filter(({ key }, i, l) => {
+				return l.findIndex((it) => it.key === key) === i;
+			});
+
+			return { ...data };
+		});
+	};
+
 	const { type, value, children, exists = false } = data ?? {};
-	const key = data?.key ?? currentPath[currentPath.length - 1];
+	const key = data?.key ?? actualPath[actualPath.length - 1];
 
 	const colorMark = palette[index % palette.length];
 
@@ -873,7 +1052,7 @@ const ViewTree = ({ currentPath, onChange, onRemoved, checkRemoved, loadData, is
 							color="inherit"
 							onClick={() => {
 								if (typeof goToPath === "function") {
-									goToPath(currentPath);
+									goToPath(actualPath);
 								}
 							}}
 						>
@@ -933,13 +1112,14 @@ const ViewTree = ({ currentPath, onChange, onRemoved, checkRemoved, loadData, is
 										onChange={(key, value, type) => {
 											key = String(key).trim() !== "" ? key : id;
 											objectChildresRef.current[id] = { key, value, type };
-											console.log(JSON.stringify(objectChildresRef.current, null, 4));
 										}}
 										onRemoved={() => {
 											setNewChildres((prev) => {
 												return prev.filter((iten) => iten.id !== id);
 											});
 										}}
+										index={index + 1}
+										disabled={forceLoading}
 									/>
 								</div>
 							</div>
@@ -972,6 +1152,7 @@ const ViewTree = ({ currentPath, onChange, onRemoved, checkRemoved, loadData, is
 								<Button
 									size="small"
 									variant="outlined"
+									onClick={applyNewChildres}
 								>
 									Adicionar
 								</Button>
@@ -985,10 +1166,15 @@ const ViewTree = ({ currentPath, onChange, onRemoved, checkRemoved, loadData, is
 					{(children?.list ?? [])
 						.filter(
 							({ value, key }) =>
-								value !== null && !removeChildren.includes(value) && (typeof checkRemoved === "function" ? !checkRemoved(resolveArrayPath(currentPath.concat([key]))) : true),
+								value !== null && !removeChildren.includes(value) && (typeof checkRemoved === "function" ? !checkRemoved(resolveArrayPath(actualPath.concat([key]))) : true),
 						)
+						.sort((a, b) => {
+							const indexA = orderFirstChildren.indexOf(a.key);
+							const indexB = orderFirstChildren.indexOf(b.key);
+							return indexA >= 0 && indexB < 0 ? -1 : indexA < 0 && indexB >= 0 ? 1 : indexA - indexB;
+						})
 						.map(({ key, value, type }, i) => {
-							const path = currentPath.concat([key]);
+							const path = actualPath.concat([key]);
 							return (
 								<div key={key}>
 									<div className={style["mark"]}>
@@ -1025,13 +1211,15 @@ const ViewTree = ({ currentPath, onChange, onRemoved, checkRemoved, loadData, is
 												isExpanded={expandChildren.includes(key)}
 												index={index + 1}
 												goToPath={goToPath}
+												onNewChildres={onNewChildres}
 											/>
 										) : (
 											<EditValueChild
 												name={key}
 												value={valueToString(value)}
+												beforeValue={valueToString(beforeValues.current[key] ?? value)}
 												type={type}
-												onChange={(key, newValue, typeValue) => onChange(resolveArrayPath(path), newValue, typeValue)}
+												onChange={onChildreChange}
 												onRemoved={() => {
 													setRemoveChildren((prev) => {
 														return [...prev, key];
@@ -1040,6 +1228,7 @@ const ViewTree = ({ currentPath, onChange, onRemoved, checkRemoved, loadData, is
 												}}
 												goToPath={() => goToPath(path)}
 												exists={type !== "unknown"}
+												index={index + 1}
 											/>
 										)}
 									</div>
@@ -1105,13 +1294,14 @@ const ViewTree = ({ currentPath, onChange, onRemoved, checkRemoved, loadData, is
 			name={key}
 			value={valueToString(value)}
 			type={type}
-			onChange={(key, newValue, typeValue) => onChange(resolveArrayPath(currentPath), newValue, typeValue)}
+			onChange={(key, newValue, typeValue) => onChange(resolveArrayPath(actualPath), newValue, typeValue)}
 			onRemoved={() => {
 				setRemoved(true);
-				onRemoved?.(resolveArrayPath(currentPath));
+				onRemoved?.(resolveArrayPath(actualPath));
 			}}
-			goToPath={() => goToPath(currentPath)}
+			goToPath={() => goToPath(actualPath)}
 			exists={exists}
+			index={index + 1}
 		/>
 	);
 };
@@ -1121,6 +1311,7 @@ export const JsonEditor = forwardRef(({ rootDir = "root", path = [] }, ref) => {
 
 	const [callbackLoadData, setCallbackLoadData] = useState(null);
 	const [callbackChangeData, setCallbackChangeData] = useState(null);
+	const [callbackNewChildres, setCallbackNewChildres] = useState(null);
 	const [mutated, setMutated] = useState({});
 
 	const [editPath, setEditPath] = useState(false);
@@ -1146,6 +1337,9 @@ export const JsonEditor = forwardRef(({ rootDir = "root", path = [] }, ref) => {
 			},
 			onChange: (callback) => {
 				setCallbackChangeData(() => (typeof callback === "function" ? callback : null));
+			},
+			onNewChildres: (callback) => {
+				setCallbackNewChildres(() => (typeof callback === "function" ? callback : null));
 			},
 			mutated: (data) => {
 				setMutated(data);
@@ -1214,6 +1408,35 @@ export const JsonEditor = forwardRef(({ rootDir = "root", path = [] }, ref) => {
 							} else {
 								cache.current.delete(path);
 							}
+						}
+						resolve(data);
+					})
+					.catch(reject);
+			} catch (e) {
+				reject(e);
+			}
+		});
+	};
+
+	const onNewChildres = (path, value, type) => {
+		return new Promise((resolve, reject) => {
+			try {
+				if (typeof callbackNewChildres !== "function") {
+					return reject(new Error("Not implemented"));
+				}
+
+				Promise.race([callbackNewChildres(path, value, type)])
+					.then(async (data) => {
+						if (cache.current.has(path)) {
+							const tree = cache.current.get(path);
+							if (tree.children?.list) {
+								for (let key in data) {
+									const value = data[key];
+									const type = getValueType(value);
+									tree.children.list.push({ key: key, value: ["object", "array", "dedicated_record", "binary"].includes(type) ? undefined : value, type });
+								}
+							}
+							cache.current.set(path, tree);
 						}
 						resolve(data);
 					})
@@ -1325,6 +1548,7 @@ export const JsonEditor = forwardRef(({ rootDir = "root", path = [] }, ref) => {
 					currentPath={currentPath}
 					loadData={loadData}
 					onChange={onChange}
+					onNewChildres={onNewChildres}
 					onRemoved={(path) => {
 						setRemovedPaths((prev) => {
 							return [...prev, path];

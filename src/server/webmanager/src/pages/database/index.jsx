@@ -157,6 +157,13 @@ export const DataBase = () => {
 			}
 			return Promise.resolve(value);
 		});
+
+		refDatabaseEditor.current.onNewChildres(async (path, value) => {
+			if (value !== undefined) {
+				await db.ref(path).update(value);
+			}
+			return Promise.resolve(value);
+		});
 	}, [refDatabaseEditor.current]);
 
 	return (
