@@ -313,7 +313,21 @@ const getValueType = (value) => {
 	return "unknown";
 };
 
-const EditValueChild = ({ isNewChild = false, disabled: _disabled = false, name, value, type, beforeValue, onChange, onRemoved, goToPath, isAdded = false, exists = false, index = 0 }) => {
+const EditValueChild = ({
+	isNewChild = false,
+	disabled: _disabled = false,
+	name,
+	value,
+	type,
+	beforeValue,
+	onChange,
+	onRemoved,
+	goToPath,
+	isAdded = false,
+	exists = false,
+	index = 0,
+	inTree = false,
+}) => {
 	const [_loading, setLoading] = useState(false);
 	const [disabled, setDisabled] = useState(_disabled);
 	const [edit, setEdit] = useState(isNewChild);
@@ -384,7 +398,6 @@ const EditValueChild = ({ isNewChild = false, disabled: _disabled = false, name,
 	};
 
 	useLayoutEffect(() => {
-		console.log(valueToString(beforeValue ?? value), valueToString(value));
 		if (valueToString(beforeValue ?? value) !== valueToString(value)) {
 			emitNotify("change");
 		}
@@ -812,11 +825,13 @@ const EditValueChild = ({ isNewChild = false, disabled: _disabled = false, name,
 							);
 						})}
 					</div>
-					<div
-						style={{
-							height: "25px",
-						}}
-					></div>
+					{!inTree && (
+						<div
+							style={{
+								height: "25px",
+							}}
+						></div>
+					)}
 				</>
 			)}
 		</div>
@@ -1098,7 +1113,7 @@ const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, checkRemove
 			</div>
 			{newChildres.length > 0 && (
 				<div className={style["tree"]}>
-					{newChildres.map(({ id, key, velue, type }) => {
+					{newChildres.map(({ id, key, velue, type }, i, list) => {
 						return (
 							<div key={id}>
 								<div className={style["mark"]}></div>
@@ -1120,6 +1135,7 @@ const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, checkRemove
 										}}
 										index={index + 1}
 										disabled={forceLoading}
+										inTree={i >= list.length - 1}
 									/>
 								</div>
 							</div>
