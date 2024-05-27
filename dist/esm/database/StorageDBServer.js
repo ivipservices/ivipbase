@@ -11,6 +11,14 @@ export class StorageDBServer extends Api {
             this.db.emit("ready");
         });
     }
+    async getInfo() {
+        return {
+            dbname: this.db.database,
+            version: "",
+            time: Date.now(),
+            process: process.pid,
+        };
+    }
     async stats() {
         return {
             writes: 0,

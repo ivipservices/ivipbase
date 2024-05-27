@@ -90,6 +90,9 @@ export class StorageDBClient extends Api {
     unsubscribe(path, event, callback) {
         this.db.subscriptions.remove(path, event, callback);
     }
+    async getInfo() {
+        return await this._request({ route: `/info/${this.db.database}` });
+    }
     async stats() {
         return this._request({ route: `/stats/${this.db.database}` });
     }

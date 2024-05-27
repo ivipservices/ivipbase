@@ -46,6 +46,13 @@ export class DataBase extends DataBaseCore {
         }
         throw new Error("Method not implemented");
     }
+    async getInfo() {
+        return await this.storage.getInfo();
+    }
+    async getPerformance() {
+        const { data } = await this.storage.getInfo();
+        return data ?? [];
+    }
 }
 export function getDatabase(...args) {
     let app = args.find((a) => a instanceof IvipBaseApp), dbName;

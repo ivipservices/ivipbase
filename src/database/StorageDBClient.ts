@@ -138,6 +138,43 @@ export class StorageDBClient extends Api {
 		this.db.subscriptions.remove(path, event, callback);
 	}
 
+	async getInfo(): Promise<{
+		dbname: string;
+		version: string;
+		time: number;
+		process: number;
+		platform?: NodeJS.Platform;
+		arch?: string;
+		release?: string;
+		host?: string;
+		uptime?: string;
+		load?: number[];
+		mem?: {
+			total: string;
+			free: string;
+			process: {
+				arrayBuffers: string;
+				external: string;
+				heapTotal: string;
+				heapUsed: string;
+				residentSet: string;
+			};
+		};
+		cpus?: any;
+		network?: any;
+		data?: Array<{
+			cpuUsage: number;
+			networkStats: {
+				sent: number;
+				received: number;
+			};
+			memoryUsage: { total: number; free: number; used: number };
+			timestamp: number;
+		}>;
+	}> {
+		return await this._request({ route: `/info/${this.db.database}` });
+	}
+
 	async stats(): Promise<{
 		writes: number;
 		reads: number;

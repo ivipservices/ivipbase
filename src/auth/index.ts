@@ -384,12 +384,23 @@ export class Auth extends SimpleEventEmitter {
 					this._user = null;
 					localStorage.removeItem(`[${this.database}][auth_user]`);
 				}
-			} catch {}
+			} catch {
+				this._user = null;
+				localStorage.removeItem(`[${this.database}][auth_user]`);
+			}
+
+			if (!this._ready) {
+				this.emit("ready");
+			}
 		});
 
 		this.on("signout", () => {
 			this._user = null;
 			localStorage.removeItem(`[${this.database}][auth_user]`);
+
+			if (!this._ready) {
+				this.emit("ready");
+			}
 		});
 
 		this.initialize();
@@ -406,9 +417,12 @@ export class Auth extends SimpleEventEmitter {
 			}
 		} catch {
 			this._user = null;
-		}
+			localStorage.removeItem(`[${this.database}][auth_user]`);
 
-		this.emit("ready");
+			if (!this._ready) {
+				this.emit("ready");
+			}
+		}
 	}
 
 	/**

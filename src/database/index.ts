@@ -62,6 +62,15 @@ export class DataBase extends DataBaseCore {
 		}
 		throw new Error("Method not implemented");
 	}
+
+	public async getInfo() {
+		return await this.storage.getInfo();
+	}
+
+	public async getPerformance() {
+		const { data } = await this.storage.getInfo();
+		return data ?? [];
+	}
 }
 
 export function getDatabase(): DataBase;

@@ -1,17 +1,18 @@
 import React, { useEffect, useState, useRef, Fragment } from "react";
-import MountPage from "../../components/MountPage";
-import { getApp, getAuth, getDatabase } from "ivipbase";
-import { Box, Button, ClickAwayListener, Grow, Paper, Popper, MenuItem, MenuList, ListItemIcon, ListItemText, Tabs, Tab } from "@mui/material";
-import { mdiMenuDown, mdiDatabaseOutline, mdiAccountMultiple, mdiFolderImage, mdiGoogleAnalytics } from "@mdi/js";
+import MountPage, { PageView } from "../../components/MountPage";
+import { getAuth, getDatabase } from "ivipbase";
+import { Button, ClickAwayListener, Grow, Paper, Popper, MenuItem, MenuList, ListItemIcon, ListItemText } from "@mui/material";
+import { mdiMenuDown, mdiDatabaseOutline, mdiAccountMultiple, mdiFolderImage, mdiCodeBracesBox } from "@mdi/js";
 import SvgIcon from "../../components/SvgIcon.jsx";
 import style from "./style.module.scss";
 import JsonEditor from "../../components/JsonEditor/index.jsx";
+import Performance from "./Performance.jsx";
 
 const options = [
 	{ id: 0, label: "Realtime Database", icon: mdiDatabaseOutline },
 	{ id: 1, label: "Authentication", disabled: true, icon: mdiAccountMultiple },
 	{ id: 2, label: "Storage", disabled: true, icon: mdiFolderImage },
-	{ id: 3, label: "Performance", disabled: true, icon: mdiGoogleAnalytics },
+	{ id: 3, label: "Functions", disabled: true, icon: mdiCodeBracesBox },
 ];
 
 const MenuItems = ({}) => {
@@ -95,35 +96,9 @@ const MenuItems = ({}) => {
 	);
 };
 
-export const DataBase = () => {
-	const [tabValue, setTabValue] = useState(0);
+const DataBaseEditor = () => {
 	const { dbName } = window.pageState();
 	const refDatabaseEditor = useRef();
-
-	const handleTabChange = (event, newValue) => {
-		setTabValue(newValue);
-	};
-
-	useEffect(() => {
-		const auth = getAuth();
-		let event = auth.onAuthStateChanged((user) => {
-			if (!user) {
-				window.goToPage("login", { dbName });
-				event.stop();
-			}
-		});
-
-		auth.ready(() => {
-			if (!auth.currentUser) {
-				window.goToPage("login", { dbName });
-				event.stop();
-			}
-		});
-
-		return () => {
-			event.stop();
-		};
-	}, []);
 
 	useEffect(() => {
 		if (!refDatabaseEditor.current) return;
@@ -167,42 +142,62 @@ export const DataBase = () => {
 	}, [refDatabaseEditor.current]);
 
 	return (
+		<JsonEditor
+			ref={refDatabaseEditor}
+			rootDir={dbName}
+		/>
+	);
+};
+
+export const DataBase = () => {
+	const { dbName } = window.pageState();
+
+	useEffect(() => {
+		const auth = getAuth();
+		let event = auth.onAuthStateChanged((user) => {
+			if (!user) {
+				window.goToPage("login", { dbName });
+				event.stop();
+			}
+		});
+
+		auth.ready(() => {
+			if (!auth.currentUser) {
+				window.goToPage("login", { dbName });
+				event.stop();
+			}
+		});
+
+		return () => {
+			event.stop();
+		};
+	}, []);
+
+	return (
 		<MountPage
 			title={<MenuItems />}
 			toBack={() => {
 				getAuth().signOut();
 			}}
 			isCard
-			header={
-				<Box sx={{ maxWidth: { xs: 320, sm: 480 }, marginTop: "35px" }}>
-					<Tabs
-						value={tabValue}
-						onChange={handleTabChange}
-						variant="scrollable"
-						scrollButtons="auto"
-						aria-label="scrollable auto tabs example"
-					>
-						<Tab label="Dados" />
-						<Tab
-							label="Regras"
-							disabled
-						/>
-						<Tab
-							label="Backups"
-							disabled
-						/>
-						<Tab
-							label="Uso"
-							disabled
-						/>
-					</Tabs>
-				</Box>
-			}
+			style={{
+				minHeight: "400px",
+			}}
 		>
-			<JsonEditor
-				ref={refDatabaseEditor}
-				rootDir={dbName}
-			/>
+			<PageView label="Dados">
+				<DataBaseEditor />
+			</PageView>
+			<PageView
+				label="Regras"
+				disabled
+			></PageView>
+			<PageView
+				label="Backups"
+				disabled
+			></PageView>
+			<PageView label="Uso">
+				<Performance />
+			</PageView>
 		</MountPage>
 	);
 };

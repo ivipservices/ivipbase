@@ -242,11 +242,20 @@ export class Auth extends SimpleEventEmitter {
                     localStorage.removeItem(`[${this.database}][auth_user]`);
                 }
             }
-            catch { }
+            catch {
+                this._user = null;
+                localStorage.removeItem(`[${this.database}][auth_user]`);
+            }
+            if (!this._ready) {
+                this.emit("ready");
+            }
         });
         this.on("signout", () => {
             this._user = null;
             localStorage.removeItem(`[${this.database}][auth_user]`);
+            if (!this._ready) {
+                this.emit("ready");
+            }
         });
         this.initialize();
     }
@@ -262,8 +271,11 @@ export class Auth extends SimpleEventEmitter {
         }
         catch {
             this._user = null;
+            localStorage.removeItem(`[${this.database}][auth_user]`);
+            if (!this._ready) {
+                this.emit("ready");
+            }
         }
-        this.emit("ready");
     }
     /**
      * Aguarda até que o módulo Auth esteja pronto.

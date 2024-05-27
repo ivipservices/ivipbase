@@ -50,6 +50,13 @@ class DataBase extends ivipbase_core_1.DataBase {
         }
         throw new Error("Method not implemented");
     }
+    async getInfo() {
+        return await this.storage.getInfo();
+    }
+    async getPerformance() {
+        const { data } = await this.storage.getInfo();
+        return data !== null && data !== void 0 ? data : [];
+    }
 }
 exports.DataBase = DataBase;
 function getDatabase(...args) {

@@ -638,11 +638,20 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
                     localStorage_1.default.removeItem(`[${this.database}][auth_user]`);
                 }
             }
-            catch (_a) { }
+            catch (_a) {
+                this._user = null;
+                localStorage_1.default.removeItem(`[${this.database}][auth_user]`);
+            }
+            if (!this._ready) {
+                this.emit("ready");
+            }
         });
         this.on("signout", () => {
             this._user = null;
             localStorage_1.default.removeItem(`[${this.database}][auth_user]`);
+            if (!this._ready) {
+                this.emit("ready");
+            }
         });
         this.initialize();
     }
@@ -658,8 +667,11 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
         }
         catch (_a) {
             this._user = null;
+            localStorage_1.default.removeItem(`[${this.database}][auth_user]`);
+            if (!this._ready) {
+                this.emit("ready");
+            }
         }
-        this.emit("ready");
     }
     /**
      * Aguarda até que o módulo Auth esteja pronto.
@@ -3203,6 +3215,9 @@ class StorageDBClient extends ivipbase_core_1.Api {
     unsubscribe(path, event, callback) {
         this.db.subscriptions.remove(path, event, callback);
     }
+    async getInfo() {
+        return await this._request({ route: `/info/${this.db.database}` });
+    }
     async stats() {
         return this._request({ route: `/stats/${this.db.database}` });
     }
@@ -3306,6 +3321,7 @@ class StorageDBClient extends ivipbase_core_1.Api {
 exports.StorageDBClient = StorageDBClient;
 
 },{"../auth":5,"../controller/request/error":11,"ivipbase-core":94}],22:[function(require,module,exports){
+(function (process){(function (){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3324,6 +3340,14 @@ class StorageDBServer extends ivipbase_core_1.Api {
         this.db.app.storage.ready(() => {
             this.db.emit("ready");
         });
+    }
+    async getInfo() {
+        return {
+            dbname: this.db.database,
+            version: "",
+            time: Date.now(),
+            process: process.pid,
+        };
     }
     async stats() {
         return {
@@ -3517,7 +3541,8 @@ class StorageDBServer extends ivipbase_core_1.Api {
 }
 exports.StorageDBServer = StorageDBServer;
 
-},{"../controller/executeQuery":9,"../controller/storage/MDE":16,"../utils":29,"ivipbase-core":94}],23:[function(require,module,exports){
+}).call(this)}).call(this,require('_process'))
+},{"../controller/executeQuery":9,"../controller/storage/MDE":16,"../utils":29,"_process":97,"ivipbase-core":94}],23:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Subscriptions = void 0;
@@ -4044,6 +4069,13 @@ class DataBase extends ivipbase_core_1.DataBase {
             return this.storage.disconnect();
         }
         throw new Error("Method not implemented");
+    }
+    async getInfo() {
+        return await this.storage.getInfo();
+    }
+    async getPerformance() {
+        const { data } = await this.storage.getInfo();
+        return data !== null && data !== void 0 ? data : [];
     }
 }
 exports.DataBase = DataBase;
@@ -13805,6 +13837,17 @@ class SimpleCache {
             if (entry.expires <= now) {
                 this.cache.delete(key);
             }
+        });
+    }
+    keys() {
+        return Array.from(this.cache.keys());
+    }
+    values() {
+        return Array.from(this.cache.values()).map((v) => v.value);
+    }
+    forEach(callback) {
+        this.cache.forEach((entry, key) => {
+            callback(entry.value, key, this);
         });
     }
 }

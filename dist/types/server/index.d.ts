@@ -46,7 +46,7 @@ export declare class LocalServer extends AbstractLocalServer<LocalServer> {
             free: number;
             used: number;
         };
-        time: number;
+        timestamp: number;
     }>;
     tokenSalt: string | null;
     constructor(localApp: IvipBaseApp, settings?: Partial<ServerSettings>);

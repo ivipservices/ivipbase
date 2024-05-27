@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { Api, Types } from "ivipbase-core";
 import type { DataBase } from ".";
 export declare class StorageDBClient extends Api {
@@ -19,6 +20,44 @@ export declare class StorageDBClient extends Api {
     disconnect(): void;
     subscribe(path: string, event: string, callback: Types.EventSubscriptionCallback, settings?: Types.EventSubscriptionSettings): void;
     unsubscribe(path: string, event?: string, callback?: Types.EventSubscriptionCallback): void;
+    getInfo(): Promise<{
+        dbname: string;
+        version: string;
+        time: number;
+        process: number;
+        platform?: NodeJS.Platform;
+        arch?: string;
+        release?: string;
+        host?: string;
+        uptime?: string;
+        load?: number[];
+        mem?: {
+            total: string;
+            free: string;
+            process: {
+                arrayBuffers: string;
+                external: string;
+                heapTotal: string;
+                heapUsed: string;
+                residentSet: string;
+            };
+        };
+        cpus?: any;
+        network?: any;
+        data?: Array<{
+            cpuUsage: number;
+            networkStats: {
+                sent: number;
+                received: number;
+            };
+            memoryUsage: {
+                total: number;
+                free: number;
+                used: number;
+            };
+            timestamp: number;
+        }>;
+    }>;
     stats(): Promise<{
         writes: number;
         reads: number;

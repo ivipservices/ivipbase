@@ -15,8 +15,6 @@ const getCpuUsage = () => {
 };
 const getInfoMoment = async () => {
     const d = new Date();
-    d.setMilliseconds(0);
-    d.setSeconds(0);
     const cpuUsage = await getCpuUsage();
     const mem = await si.mem();
     const netStats = await si.networkStats();
@@ -35,21 +33,22 @@ const getInfoMoment = async () => {
             free: mem.free,
             used: mem.used,
         },
-        time: d.getTime(),
+        timestamp: d.getTime(),
     };
 };
 export const addRoute = (env) => {
     clearInterval(time);
     time = setInterval(async () => {
         const d = await getInfoMoment();
-        env.metaInfoCache.set(d.time, d);
-    }, 1000 * 60);
+        env.metaInfoCache.set(d.timestamp, d);
+    }, 10000);
     getInfoMoment().then((d) => {
-        env.metaInfoCache.set(d.time, d);
+        env.metaInfoCache.set(d.timestamp, d);
     });
     // Add info endpoint
     env.router.get(`/info/:dbName`, async (req, res) => {
         let info = {
+            dbname: req.params["dbName"],
             version: env.settings.serverVersion,
             time: Date.now(),
             process: process.pid,
@@ -73,7 +72,6 @@ export const addRoute = (env) => {
             };
             const mem = process.memoryUsage();
             const adminInfo = {
-                dbname: req.params["dbName"],
                 platform: os.platform(),
                 arch: os.arch(),
                 release: os.release(),
@@ -93,34 +91,10 @@ export const addRoute = (env) => {
                 },
                 cpus: os.cpus(),
                 network: os.networkInterfaces(),
-                data: [],
+                data: env.metaInfoCache.values(),
             };
-            for (let i = 0; i < 100; i++) {
-                const d = new Date();
-                d.setMilliseconds(0);
-                d.setSeconds(0);
-                d.setMinutes(d.getMinutes() - i);
-                if (i === 0 && !env.metaInfoCache.has(d.getTime())) {
-                    getInfoMoment().then((d) => {
-                        env.metaInfoCache.set(d.time, d);
-                    });
-                }
-                adminInfo.data.push(env.metaInfoCache.get(d.getTime()) ?? {
-                    cpuUsage: 0,
-                    networkStats: {
-                        sent: 0,
-                        received: 0,
-                    },
-                    memoryUsage: {
-                        total: 0,
-                        free: 0,
-                        used: 0,
-                    },
-                    time: d.getTime(),
-                });
-            }
             adminInfo.data.sort((a, b) => {
-                return a.time - b.time;
+                return a.timestamp - b.timestamp;
             });
             info = { ...info, ...adminInfo };
         }

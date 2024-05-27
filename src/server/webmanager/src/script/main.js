@@ -11,6 +11,7 @@ window.exports["imask"] = window.IMask;
 window.exports["react-imask"] = window.ReactIMask;
 window.exports["prop-types"] = window.PropTypes;
 window.exports["moment"] = { default: window.moment, __esModule: true };
+window.exports["chart.js/auto"] = { default: window.Chart, __esModule: true };
 
 function extractClassNames(css) {
 	const classNames = [];

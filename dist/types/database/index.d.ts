@@ -14,6 +14,57 @@ export declare class DataBase extends DataBaseCore {
     constructor(database: string, app: IvipBaseApp, options?: Partial<DataBaseSettings>);
     connect(retry?: boolean): void;
     disconnect(): void;
+    getInfo(): Promise<{
+        dbname: string;
+        version: string;
+        time: number;
+        process: number;
+        platform?: NodeJS.Platform | undefined;
+        arch?: string | undefined;
+        release?: string | undefined;
+        host?: string | undefined;
+        uptime?: string | undefined;
+        load?: number[] | undefined;
+        mem?: {
+            total: string;
+            free: string;
+            process: {
+                arrayBuffers: string;
+                external: string;
+                heapTotal: string;
+                heapUsed: string;
+                residentSet: string;
+            };
+        } | undefined;
+        cpus?: any;
+        network?: any;
+        data?: {
+            cpuUsage: number;
+            networkStats: {
+                sent: number;
+                received: number;
+            };
+            memoryUsage: {
+                total: number;
+                free: number;
+                used: number;
+            };
+            timestamp: number;
+        }[] | undefined;
+    }>;
+    getPerformance(): Promise<{
+        cpuUsage: number;
+        networkStats: {
+            sent: number;
+            received: number;
+        };
+        memoryUsage: {
+            total: number;
+            free: number;
+            used: number;
+        };
+        timestamp: number;
+    }[]>;
 }
 export declare function getDatabase(): DataBase;
 export declare function getDatabase(app: string | IvipBaseApp | undefined): DataBase;

@@ -73,7 +73,7 @@
 		"dotenv": "^16.0.3",
 		"express": "^4.17.1",
 		"ivip-utils": "^1.1.71",
-		"ivipbase-core": "^1.6.95",
+		"ivipbase-core": "^1.6.96",
 		"juice": "^10.0.0",
 		"memory-cache": "^0.2.0",
 		"mongodb": "^5.9.1",

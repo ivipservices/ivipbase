@@ -33,6 +33,8 @@ import { PathReference, PathInfo, Utils, ascii85, ID } from "ivipbase";
 
 const palette = ["102,187,106", "38,166,154", "229,115,115", "66,165,245", "0, 161, 180", "255, 194, 0", "236,64,122", "126,87,194", "255, 122, 0"];
 
+// const palette = ["209, 150, 22", "198, 120, 221", "97, 175, 239", "209, 154, 102", "224, 108, 117", "152, 195, 121", "86, 182, 194", "229, 192, 123", "158, 158, 158"];
+
 const types = {
 	unknown: mdiAsterisk,
 	string: mdiAlphabetical,
@@ -838,12 +840,12 @@ const EditValueChild = ({
 	);
 };
 
-const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, checkRemoved, loadData, isExpanded = false, index = 0, goToPath }) => {
+const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, checkRemoved, loadData, isExpanded = false, index = 0, goToPath, prevData }) => {
 	const [actualPath, setActualPath] = useState(currentPath);
 	const [loading, setLoading] = useState(true);
 	const [forceLoading, setForceLoading] = useState(false);
 	const [loadingMore, setLoadingMore] = useState(false);
-	const [data, setData] = useState(null);
+	const [data, setData] = useState(prevData ?? null);
 	const [expandChildren, setExpandChildren] = useState([]);
 	const [hiddenActionExpandChildren, setHiddenActionExpandChildren] = useState([]);
 	const [removeChildren, setRemoveChildren] = useState([]);
@@ -1053,7 +1055,9 @@ const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, checkRemove
 
 	const colorMark = palette[index % palette.length];
 
-	return removed ? null : !data || (Array.isArray(children?.list) && ["object", "array"].includes(type)) ? (
+	const isRoot = resolveArrayPath(actualPath) === "";
+
+	return removed ? null : !value || (Array.isArray(children?.list) && ["object", "array"].includes(type)) ? (
 		<div
 			className={style["key-tree"]}
 			style={{ "--color-mark": colorMark }}
@@ -1094,7 +1098,7 @@ const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, checkRemove
 						>
 							<SvgIcon path={mdiPlus} />
 						</IconButton>
-						{exists && (
+						{exists && !isRoot && (
 							<IconButton onClick={deleteValue}>
 								<SvgIcon path={mdiDelete} />
 							</IconButton>
@@ -1228,6 +1232,12 @@ const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, checkRemove
 												index={index + 1}
 												goToPath={goToPath}
 												onNewChildres={onNewChildres}
+												prevData={{
+													type,
+													value,
+													children: {},
+													exists: true,
+												}}
 											/>
 										) : (
 											<EditValueChild

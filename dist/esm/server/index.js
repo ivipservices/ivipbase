@@ -62,7 +62,8 @@ export class LocalServer extends AbstractLocalServer {
         // Iniciar escuta
         this.server.listen(this.settings.port, this.settings.host, () => {
             // Ready!!
-            this.debug.log(`Server running at ${this.url}`);
+            this.debug.log(`Server running at ${this.url} `);
+            this.debug.warn(`Web manager running at ${this.url}/webmanager/ `);
             this.localApp.storage.ready(() => {
                 this.emit(`ready`);
             });

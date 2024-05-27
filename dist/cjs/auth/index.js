@@ -266,11 +266,20 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
                     localStorage_1.default.removeItem(`[${this.database}][auth_user]`);
                 }
             }
-            catch (_a) { }
+            catch (_a) {
+                this._user = null;
+                localStorage_1.default.removeItem(`[${this.database}][auth_user]`);
+            }
+            if (!this._ready) {
+                this.emit("ready");
+            }
         });
         this.on("signout", () => {
             this._user = null;
             localStorage_1.default.removeItem(`[${this.database}][auth_user]`);
+            if (!this._ready) {
+                this.emit("ready");
+            }
         });
         this.initialize();
     }
@@ -286,8 +295,11 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
         }
         catch (_a) {
             this._user = null;
+            localStorage_1.default.removeItem(`[${this.database}][auth_user]`);
+            if (!this._ready) {
+                this.emit("ready");
+            }
         }
-        this.emit("ready");
     }
     /**
      * Aguarda até que o módulo Auth esteja pronto.

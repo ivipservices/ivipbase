@@ -58,9 +58,9 @@ export class LocalServer extends AbstractLocalServer<LocalServer> {
 				received: number;
 			};
 			memoryUsage: { total: number; free: number; used: number };
-			time: number;
+			timestamp: number;
 		}
-	> = new SimpleCache<number, any>({ expirySeconds: 300, cloneValues: false, maxEntries: 1000 });
+	> = new SimpleCache<number, any>({ expirySeconds: 500, cloneValues: false, maxEntries: 1000 });
 
 	tokenSalt: string | null = null;
 
