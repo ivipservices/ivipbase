@@ -5,6 +5,7 @@ import { createServer } from "http";
 import { add404Middleware, addCacheMiddleware, addCorsMiddleware } from "./middleware/index.js";
 import { setupAuthentication } from "./services/auth.js";
 import { SimpleCache } from "ivipbase-core";
+import { addWebsocketServer } from "./websocket/index.js";
 const createExpress = express.default ?? express;
 export { ServerSettings };
 export const isPossiblyServer = true;
@@ -19,7 +20,7 @@ export class LocalServer extends AbstractLocalServer {
         this.server = createServer(this.app);
         this.clients = new Map();
         this.authCache = new SimpleCache({ expirySeconds: 300, cloneValues: false, maxEntries: 1000 });
-        this.metaInfoCache = new SimpleCache({ expirySeconds: 300, cloneValues: false, maxEntries: 1000 });
+        this.metaInfoCache = new SimpleCache({ expirySeconds: 500, cloneValues: false, maxEntries: 1000 });
         this.tokenSalt = null;
         this.init();
     }
@@ -56,6 +57,8 @@ export class LocalServer extends AbstractLocalServer {
             this.debug.log(`Extending server: `, method, route);
             this.router[method.toLowerCase()](route, handler);
         };
+        // Create websocket server
+        addWebsocketServer(this);
         // Executar o retorno de chamada de inicialização para permitir que o código do usuário chame `server.extend`, `server.router.[method]`, `server.setRule`, etc., antes de o servidor começar a ouvir
         await this.settings.init?.(this);
         add404Middleware(this);

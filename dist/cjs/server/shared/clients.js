@@ -7,7 +7,7 @@ class ConnectedClient {
      * @param socket Socket object used by the framework
      * @param id optional: use if the socket object does not have an `id` property.
      */
-    constructor(socket, id) {
+    constructor(socket, dbName, id) {
         this.socket = socket;
         // get id() { return this.socket.id; };
         this.connectedDate = new Date();
@@ -17,6 +17,8 @@ class ConnectedClient {
         this.realtimeQueries = {};
         /** Currently running transactions */
         this.transactions = {};
+        this.disconnected = false;
+        this.dbName = dbName;
         this.id = id !== null && id !== void 0 ? id : socket.id;
         if (!this.id) {
             throw new Error("Socket has no id");

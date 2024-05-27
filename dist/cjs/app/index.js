@@ -40,9 +40,28 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         this.on("ready", () => {
             this._ready = true;
         });
+        if (!this.isServer) {
+            this.on("disconnect", () => {
+                setTimeout(() => {
+                    this.reconnect();
+                }, 10000);
+            });
+        }
     }
     async initialize() {
         if (!this._ready) {
+            if (!this.isServer && (typeof this.settings.database === "string" || (Array.isArray(this.settings.database) && this.settings.database.length > 0))) {
+                await new Promise((resolve) => {
+                    if (this._socket) {
+                        this.disconnect();
+                        this._socket = null;
+                    }
+                    this.once("connect", () => {
+                        resolve();
+                    });
+                    this.connect();
+                });
+            }
             if (this.settings.bootable) {
                 const dbList = Array.isArray(this.settings.dbname) ? this.settings.dbname : [this.settings.dbname];
                 await this.storage.ready();
@@ -72,15 +91,13 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         callback === null || callback === void 0 ? void 0 : callback();
     }
     get isConnected() {
-        return true;
-        //return this._connectionState === CONNECTION_STATE_CONNECTED;
+        return this.isServer || this._connectionState === CONNECTION_STATE_CONNECTED;
     }
     get isConnecting() {
-        return this._connectionState === CONNECTION_STATE_CONNECTING;
+        return !this.isServer && this._connectionState === CONNECTION_STATE_CONNECTING;
     }
     get connectionState() {
-        return CONNECTION_STATE_CONNECTED;
-        // return this._connectionState;
+        return this.isServer ? CONNECTION_STATE_CONNECTED : this._connectionState;
     }
     get socket() {
         return this._socket;
@@ -132,7 +149,16 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
     async connect() {
         if (this._connectionState === CONNECTION_STATE_DISCONNECTED) {
             this._connectionState = CONNECTION_STATE_CONNECTING;
-            this._socket = (0, socket_io_client_1.connect)(this.url);
+            this._socket = (0, socket_io_client_1.connect)(this.url, {
+                // Use default socket.io connection settings:
+                path: `/socket.io`,
+                autoConnect: true,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                timeout: 20000,
+                randomizationFactor: 0.5,
+                transports: ["websocket"], // Override default setting of ['polling', 'websocket']
+            });
             this._socket.on("connect", () => {
                 this._connectionState = CONNECTION_STATE_CONNECTED;
                 this.emit("connect");
@@ -152,7 +178,9 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
             this._socket.on("reconnect_failed", () => {
                 this._connectionState = CONNECTION_STATE_DISCONNECTED;
                 this.emit("reconnect_failed");
+                this.emit("disconnect");
             });
+            return;
         }
     }
     async disconnect() {
@@ -169,14 +197,14 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
     }
     async destroy() {
         this.disconnect();
-        // this._socket?.destroy();
+        this._socket = null;
     }
     async reset(options) {
         this._connectionState = CONNECTION_STATE_DISCONNECTED;
         this._socket = null;
         this._ready = false;
         this.isDeleted = false;
-        await this.disconnect();
+        await this.destroy();
         this.settings = new settings_1.IvipBaseSettings((0, utils_1.joinObjects)(this.settings.options, options));
         this.storage = (0, verifyStorage_1.applySettings)(this.settings.dbname, this.settings.storage);
         this.isServer = typeof this.settings.server === "object";

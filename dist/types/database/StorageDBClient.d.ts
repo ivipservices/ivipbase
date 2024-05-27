@@ -14,7 +14,7 @@ export declare class StorageDBClient extends Api {
     private initialize;
     get isConnected(): boolean;
     get isConnecting(): boolean;
-    get connectionState(): string;
+    get connectionState(): "connected" | "disconnected" | "connecting" | "disconnecting";
     private _request;
     connect(retry?: boolean): void;
     disconnect(): void;

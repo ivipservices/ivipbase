@@ -33,6 +33,7 @@ const http_1 = require("http");
 const middleware_1 = require("./middleware");
 const auth_1 = require("./services/auth");
 const ivipbase_core_1 = require("ivipbase-core");
+const websocket_1 = require("./websocket");
 const createExpress = (_a = express.default) !== null && _a !== void 0 ? _a : express;
 exports.isPossiblyServer = true;
 class LocalServer extends browser_1.AbstractLocalServer {
@@ -46,7 +47,7 @@ class LocalServer extends browser_1.AbstractLocalServer {
         this.server = (0, http_1.createServer)(this.app);
         this.clients = new Map();
         this.authCache = new ivipbase_core_1.SimpleCache({ expirySeconds: 300, cloneValues: false, maxEntries: 1000 });
-        this.metaInfoCache = new ivipbase_core_1.SimpleCache({ expirySeconds: 300, cloneValues: false, maxEntries: 1000 });
+        this.metaInfoCache = new ivipbase_core_1.SimpleCache({ expirySeconds: 500, cloneValues: false, maxEntries: 1000 });
         this.tokenSalt = null;
         this.init();
     }
@@ -84,6 +85,8 @@ class LocalServer extends browser_1.AbstractLocalServer {
             this.debug.log(`Extending server: `, method, route);
             this.router[method.toLowerCase()](route, handler);
         };
+        // Create websocket server
+        (0, websocket_1.addWebsocketServer)(this);
         // Executar o retorno de chamada de inicialização para permitir que o código do usuário chame `server.extend`, `server.router.[method]`, `server.setRule`, etc., antes de o servidor começar a ouvir
         await ((_b = (_a = this.settings).init) === null || _b === void 0 ? void 0 : _b.call(_a, this));
         (0, middleware_1.add404Middleware)(this);

@@ -150,10 +150,10 @@ class AuthUser {
     async delete() {
         const result = await this.auth.app.request({ method: "POST", route: `/auth/${this.auth.database}/delete`, data: { uid: this.uid } });
         if (result) {
-            this.auth.app.socket && this.auth.app.socket.emit("signout", this.accessToken);
+            const access_token = this._accessToken;
             this._accessToken = undefined;
             this._lastAccessTokenRefresh = 0;
-            this.auth.emit("signout");
+            this.auth.emit("signout", access_token);
         }
     }
     /**
@@ -178,8 +178,9 @@ class AuthUser {
                 this.auth.emit("signin", this);
             }
             catch (_c) {
+                const access_token = this._accessToken;
                 this._accessToken = undefined;
-                this.auth.emit("signout");
+                this.auth.emit("signout", access_token);
                 throw new Error(AUTH_USER_LOGIN_ERROR_MESSAGE);
             }
         }
@@ -252,10 +253,17 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
          */
         this._user = null;
         this.isValidAuth = app.isServer || !app.settings.isValidClient ? false : true;
+        app.once("connect", () => {
+            var _a, _b;
+            if ((_a = this._user) === null || _a === void 0 ? void 0 : _a.accessToken) {
+                (_b = this.app.socket) === null || _b === void 0 ? void 0 : _b.emit("signin", { dbName: this.database, accessToken: this._user.accessToken });
+            }
+        });
         this.on("ready", () => {
             this._ready = true;
         });
         this.on("signin", (user) => {
+            var _a;
             try {
                 if (user) {
                     this._user = user;
@@ -266,19 +274,24 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
                     localStorage_1.default.removeItem(`[${this.database}][auth_user]`);
                 }
             }
-            catch (_a) {
+            catch (_b) {
                 this._user = null;
                 localStorage_1.default.removeItem(`[${this.database}][auth_user]`);
             }
             if (!this._ready) {
                 this.emit("ready");
             }
+            (_a = this.app.socket) === null || _a === void 0 ? void 0 : _a.emit("signin", { dbName: this.database, accessToken: user.accessToken });
         });
-        this.on("signout", () => {
+        this.on("signout", (accessToken) => {
+            var _a;
             this._user = null;
             localStorage_1.default.removeItem(`[${this.database}][auth_user]`);
             if (!this._ready) {
                 this.emit("ready");
+            }
+            if (accessToken) {
+                (_a = this.app.socket) === null || _a === void 0 ? void 0 : _a.emit("signout", { dbName: this.database, accessToken });
             }
         });
         this.initialize();
@@ -332,7 +345,6 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
         return this.user;
     }
     handleSignInResult(result, emitEvent = true) {
-        var _a;
         if (!result || !result.user || !result.access_token) {
             this.user = null;
             this.emit("signout");
@@ -341,7 +353,6 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
         const user = new AuthUser(this, result.user, result.access_token);
         this.user = user;
         const details = { user: user, accessToken: result.access_token, provider: result.provider };
-        (_a = this.app.socket) === null || _a === void 0 ? void 0 : _a.emit("signin", details.accessToken);
         emitEvent && this.emit("signin", details.user);
         return this.user;
     }
@@ -431,6 +442,7 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
      * @throws auth/wrong-password Lançado se a senha for inválida para o e-mail fornecido, ou se a conta correspondente ao e-mail não tiver uma senha definida.
      */
     async signInWithEmailAndPassword(email, password) {
+        var _a;
         try {
             const result = await this.app
                 .request({
@@ -442,8 +454,9 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
             return this.handleSignInResult(result);
         }
         catch (error) {
+            const access_token = (_a = this.user) === null || _a === void 0 ? void 0 : _a.accessToken;
             this.user = null;
-            this.emit("signout");
+            this.emit("signout", access_token);
             throw error;
         }
     }
@@ -458,6 +471,7 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
      * @throws auth/wrong-password Lançado se a senha for inválida para o nome de usuário fornecido, ou se a conta correspondente ao nome de usuário não tiver uma senha definida.
      */
     async signInWithUsernameAndPassword(username, password) {
+        var _a;
         try {
             const result = await this.app.request({
                 method: "POST",
@@ -467,8 +481,9 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
             return this.handleSignInResult(result);
         }
         catch (error) {
+            const access_token = (_a = this.user) === null || _a === void 0 ? void 0 : _a.accessToken;
             this.user = null;
-            this.emit("signout");
+            this.emit("signout", access_token);
             throw error;
         }
     }
@@ -483,6 +498,7 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
      * @throws auth/wrong-token Lançado se o token de acesso for inválido para o usuário fornecido.
      */
     async signInWithToken(token, emitEvent = true) {
+        var _a;
         try {
             const result = await this.app.request({
                 method: "POST",
@@ -492,8 +508,9 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
             return this.handleSignInResult(result, emitEvent);
         }
         catch (error) {
+            const access_token = (_a = this.user) === null || _a === void 0 ? void 0 : _a.accessToken;
             this.user = null;
-            this.emit("signout");
+            this.emit("signout", access_token);
             throw error;
         }
     }
@@ -506,10 +523,10 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
             return Promise.resolve();
         }
         const result = await this.app.request({ method: "POST", route: `/auth/${this.database}/signout`, data: { client_id: this.app.socket && this.app.socket.id } });
-        this.app.socket && this.app.socket.emit("signout", this.user.accessToken); // Make sure the connected websocket server knows we signed out as well.
+        const access_token = this.user.accessToken;
         this.user = null;
         localStorage_1.default.removeItem(`[${this.database}][auth_user]`);
-        this.emit("signout");
+        this.emit("signout", access_token);
     }
     /**
      * Adiciona um observador para mudanças no estado de login do usuário.
@@ -517,11 +534,14 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
      * @returns Uma função que remove o observador.
      */
     onAuthStateChanged(callback) {
-        this.on("signin", callback);
-        this.on("signout", callback);
+        const byCallback = (user) => {
+            callback(user instanceof AuthUser ? user : null);
+        };
+        this.on("signin", byCallback);
+        this.on("signout", byCallback);
         const stop = () => {
-            this.off("signin", callback);
-            this.off("signout", callback);
+            this.off("signin", byCallback);
+            this.off("signout", byCallback);
         };
         return {
             stop,
@@ -535,7 +555,7 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
     onIdTokenChanged(callback) {
         const byCallback = (user) => {
             var _a;
-            callback((_a = user === null || user === void 0 ? void 0 : user.accessToken) !== null && _a !== void 0 ? _a : null);
+            callback(user instanceof AuthUser ? (_a = user === null || user === void 0 ? void 0 : user.accessToken) !== null && _a !== void 0 ? _a : null : null);
         };
         this.on("signin", byCallback);
         this.on("signout", byCallback);

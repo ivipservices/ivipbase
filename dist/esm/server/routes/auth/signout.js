@@ -12,7 +12,7 @@ export const addRoutes = (env) => {
         const LOG_DETAILS = { ip: req.ip, uid: req.user?.uid ?? null };
         try {
             if (req.user) {
-                const client = typeof req.body.client_id === "string" ? env.clients.get(req.body.client_id) : null;
+                const client = typeof req.body.client_id === "string" ? env.clients.get(`${dbName}_${req.body.client_id}`) : null;
                 if (client) {
                     client.user = undefined;
                 }

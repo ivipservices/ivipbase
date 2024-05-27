@@ -26,7 +26,7 @@ export declare class IvipBaseApp extends SimpleEventEmitter {
     ready(callback?: () => void): Promise<void>;
     get isConnected(): boolean;
     get isConnecting(): boolean;
-    get connectionState(): string;
+    get connectionState(): "connected" | "disconnected" | "connecting" | "disconnecting";
     get socket(): import("socket.io-client").Socket<import("@socket.io/component-emitter").DefaultEventsMap, import("@socket.io/component-emitter").DefaultEventsMap> | null;
     get isReady(): boolean;
     get url(): string;

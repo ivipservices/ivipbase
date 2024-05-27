@@ -129,10 +129,10 @@ export class AuthUser {
     async delete() {
         const result = await this.auth.app.request({ method: "POST", route: `/auth/${this.auth.database}/delete`, data: { uid: this.uid } });
         if (result) {
-            this.auth.app.socket && this.auth.app.socket.emit("signout", this.accessToken);
+            const access_token = this._accessToken;
             this._accessToken = undefined;
             this._lastAccessTokenRefresh = 0;
-            this.auth.emit("signout");
+            this.auth.emit("signout", access_token);
         }
     }
     /**
@@ -156,8 +156,9 @@ export class AuthUser {
                 this.auth.emit("signin", this);
             }
             catch {
+                const access_token = this._accessToken;
                 this._accessToken = undefined;
-                this.auth.emit("signout");
+                this.auth.emit("signout", access_token);
                 throw new Error(AUTH_USER_LOGIN_ERROR_MESSAGE);
             }
         }
@@ -228,6 +229,11 @@ export class Auth extends SimpleEventEmitter {
          */
         this._user = null;
         this.isValidAuth = app.isServer || !app.settings.isValidClient ? false : true;
+        app.once("connect", () => {
+            if (this._user?.accessToken) {
+                this.app.socket?.emit("signin", { dbName: this.database, accessToken: this._user.accessToken });
+            }
+        });
         this.on("ready", () => {
             this._ready = true;
         });
@@ -249,12 +255,16 @@ export class Auth extends SimpleEventEmitter {
             if (!this._ready) {
                 this.emit("ready");
             }
+            this.app.socket?.emit("signin", { dbName: this.database, accessToken: user.accessToken });
         });
-        this.on("signout", () => {
+        this.on("signout", (accessToken) => {
             this._user = null;
             localStorage.removeItem(`[${this.database}][auth_user]`);
             if (!this._ready) {
                 this.emit("ready");
+            }
+            if (accessToken) {
+                this.app.socket?.emit("signout", { dbName: this.database, accessToken });
             }
         });
         this.initialize();
@@ -316,7 +326,6 @@ export class Auth extends SimpleEventEmitter {
         const user = new AuthUser(this, result.user, result.access_token);
         this.user = user;
         const details = { user: user, accessToken: result.access_token, provider: result.provider };
-        this.app.socket?.emit("signin", details.accessToken);
         emitEvent && this.emit("signin", details.user);
         return this.user;
     }
@@ -417,8 +426,9 @@ export class Auth extends SimpleEventEmitter {
             return this.handleSignInResult(result);
         }
         catch (error) {
+            const access_token = this.user?.accessToken;
             this.user = null;
-            this.emit("signout");
+            this.emit("signout", access_token);
             throw error;
         }
     }
@@ -442,8 +452,9 @@ export class Auth extends SimpleEventEmitter {
             return this.handleSignInResult(result);
         }
         catch (error) {
+            const access_token = this.user?.accessToken;
             this.user = null;
-            this.emit("signout");
+            this.emit("signout", access_token);
             throw error;
         }
     }
@@ -467,8 +478,9 @@ export class Auth extends SimpleEventEmitter {
             return this.handleSignInResult(result, emitEvent);
         }
         catch (error) {
+            const access_token = this.user?.accessToken;
             this.user = null;
-            this.emit("signout");
+            this.emit("signout", access_token);
             throw error;
         }
     }
@@ -481,10 +493,10 @@ export class Auth extends SimpleEventEmitter {
             return Promise.resolve();
         }
         const result = await this.app.request({ method: "POST", route: `/auth/${this.database}/signout`, data: { client_id: this.app.socket && this.app.socket.id } });
-        this.app.socket && this.app.socket.emit("signout", this.user.accessToken); // Make sure the connected websocket server knows we signed out as well.
+        const access_token = this.user.accessToken;
         this.user = null;
         localStorage.removeItem(`[${this.database}][auth_user]`);
-        this.emit("signout");
+        this.emit("signout", access_token);
     }
     /**
      * Adiciona um observador para mudanças no estado de login do usuário.
@@ -492,11 +504,14 @@ export class Auth extends SimpleEventEmitter {
      * @returns Uma função que remove o observador.
      */
     onAuthStateChanged(callback) {
-        this.on("signin", callback);
-        this.on("signout", callback);
+        const byCallback = (user) => {
+            callback(user instanceof AuthUser ? user : null);
+        };
+        this.on("signin", byCallback);
+        this.on("signout", byCallback);
         const stop = () => {
-            this.off("signin", callback);
-            this.off("signout", callback);
+            this.off("signin", byCallback);
+            this.off("signout", byCallback);
         };
         return {
             stop,
@@ -509,7 +524,7 @@ export class Auth extends SimpleEventEmitter {
      */
     onIdTokenChanged(callback) {
         const byCallback = (user) => {
-            callback(user?.accessToken ?? null);
+            callback(user instanceof AuthUser ? user?.accessToken ?? null : null);
         };
         this.on("signin", byCallback);
         this.on("signout", byCallback);

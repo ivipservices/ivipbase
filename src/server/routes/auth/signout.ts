@@ -25,7 +25,7 @@ export const addRoutes = (env: LocalServer) => {
 
 		try {
 			if (req.user) {
-				const client = typeof req.body.client_id === "string" ? env.clients.get(req.body.client_id) : null;
+				const client = typeof req.body.client_id === "string" ? env.clients.get(`${dbName}_${req.body.client_id}`) : null;
 				if (client) {
 					client.user = undefined;
 				}

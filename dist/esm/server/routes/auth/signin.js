@@ -27,8 +27,8 @@ export const addRoutes = (env) => {
             if (!user || !user.uid || !user.access_token) {
                 throw new Error("User not found");
             }
-            if (typeof clientId === "string" && env.clients.has(clientId)) {
-                const client = env.clients.get(clientId);
+            if (typeof clientId === "string" && env.clients.has(`${dbName}_${clientId}`)) {
+                const client = env.clients.get(`${dbName}_${clientId}`);
                 if (!client) {
                     throw new Error(`Client with id ${clientId} not found`);
                 }

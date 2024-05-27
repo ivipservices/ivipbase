@@ -31,13 +31,13 @@ const addRoutes = (env) => {
         if (typeof options.monitor === "object" && (options.monitor.add || options.monitor.change || options.monitor.remove)) {
             const queryId = data.query_id;
             const clientId = data.client_id;
-            const client = env.clients.get(clientId);
+            const client = env.clients.get(`${dbName}_${clientId}`);
             if (client)
                 client.realtimeQueries[queryId] = { path, query, options };
             const sendEvent = async (event) => {
                 var _a;
                 try {
-                    const client = env.clients.get(clientId);
+                    const client = env.clients.get(`${dbName}_${clientId}`);
                     if (!client) {
                         return cancelSubscription === null || cancelSubscription === void 0 ? void 0 : cancelSubscription();
                     } // Not connected, stop subscription

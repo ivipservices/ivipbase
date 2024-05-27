@@ -4,13 +4,15 @@ import { HttpSocket } from "..";
 
 export class ConnectedClient {
 	readonly id: string;
+	readonly dbName: string;
 
 	/**
 	 *
 	 * @param socket Socket object used by the framework
 	 * @param id optional: use if the socket object does not have an `id` property.
 	 */
-	constructor(public socket: HttpSocket, id?: string) {
+	constructor(public socket: HttpSocket, dbName: string, id?: string) {
+		this.dbName = dbName;
 		this.id = id ?? socket.id;
 		if (!this.id) {
 			throw new Error("Socket has no id");
@@ -30,4 +32,6 @@ export class ConnectedClient {
 
 	/** Currently running transactions */
 	transactions: { [id: string]: { id: string; started: number; path: string; context: any; finish?: (val?: any) => Promise<{ cursor?: string }>; timeout: NodeJS.Timeout } } = {};
+
+	disconnected: boolean = false;
 }

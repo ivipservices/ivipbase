@@ -61,10 +61,33 @@ export class IvipBaseApp extends SimpleEventEmitter {
 		this.on("ready", () => {
 			this._ready = true;
 		});
+
+		if (!this.isServer) {
+			this.on("disconnect", () => {
+				setTimeout(() => {
+					this.reconnect();
+				}, 10000);
+			});
+		}
 	}
 
 	async initialize() {
 		if (!this._ready) {
+			if (!this.isServer && (typeof this.settings.database === "string" || (Array.isArray(this.settings.database) && this.settings.database.length > 0))) {
+				await new Promise<void>((resolve) => {
+					if (this._socket) {
+						this.disconnect();
+						this._socket = null;
+					}
+
+					this.once("connect", () => {
+						resolve();
+					});
+
+					this.connect();
+				});
+			}
+
 			if (this.settings.bootable) {
 				const dbList: string[] = Array.isArray(this.settings.dbname) ? this.settings.dbname : [this.settings.dbname];
 
@@ -100,15 +123,15 @@ export class IvipBaseApp extends SimpleEventEmitter {
 	}
 
 	get isConnected() {
-		return true;
-		//return this._connectionState === CONNECTION_STATE_CONNECTED;
+		return this.isServer || this._connectionState === CONNECTION_STATE_CONNECTED;
 	}
+
 	get isConnecting() {
-		return this._connectionState === CONNECTION_STATE_CONNECTING;
+		return !this.isServer && this._connectionState === CONNECTION_STATE_CONNECTING;
 	}
+
 	get connectionState() {
-		return CONNECTION_STATE_CONNECTED;
-		// return this._connectionState;
+		return this.isServer ? CONNECTION_STATE_CONNECTED : this._connectionState;
 	}
 
 	get socket() {
@@ -208,7 +231,16 @@ export class IvipBaseApp extends SimpleEventEmitter {
 		if (this._connectionState === CONNECTION_STATE_DISCONNECTED) {
 			this._connectionState = CONNECTION_STATE_CONNECTING;
 
-			this._socket = connectSocket(this.url);
+			this._socket = connectSocket(this.url, {
+				// Use default socket.io connection settings:
+				path: `/socket.io`,
+				autoConnect: true,
+				reconnectionDelay: 1000,
+				reconnectionDelayMax: 5000,
+				timeout: 20000,
+				randomizationFactor: 0.5,
+				transports: ["websocket"], // Override default setting of ['polling', 'websocket']
+			});
 
 			this._socket.on("connect", () => {
 				this._connectionState = CONNECTION_STATE_CONNECTED;
@@ -233,7 +265,10 @@ export class IvipBaseApp extends SimpleEventEmitter {
 			this._socket.on("reconnect_failed", () => {
 				this._connectionState = CONNECTION_STATE_DISCONNECTED;
 				this.emit("reconnect_failed");
+				this.emit("disconnect");
 			});
+
+			return;
 		}
 	}
 
@@ -252,7 +287,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 
 	async destroy() {
 		this.disconnect();
-		// this._socket?.destroy();
+		this._socket = null;
 	}
 
 	async reset(options: IvipBaseSettingsOptions) {
@@ -261,7 +296,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 		this._ready = false;
 		this.isDeleted = false;
 
-		await this.disconnect();
+		await this.destroy();
 
 		this.settings = new IvipBaseSettings(joinObjects(this.settings.options, options));
 

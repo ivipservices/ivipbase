@@ -48,7 +48,7 @@
 		"build:esm": "tsc -p tsconfig-esm.json && npx tsc-esm-fix ---target='dist/esm'",
 		"build:cjs": "tsc -p tsconfig-cjs.json",
 		"build:packages": "bash ./create-package-files",
-		"browserify": "browserify dist/cjs/browser.js -g envify -o dist/browser.js --standalone ivipbase --ignore rxjs --ignore buffer --ignore fetch && terser dist/browser.js -o dist/browser.min.js",
+		"browserify": "browserify dist/cjs/browser.js -g envify -o dist/browser.js --standalone ivipbase --ignore rxjs --ignore buffer --ignore fetch && terser dist/browser.js -o dist/browser.min.js && terser dist/browser.js -o src/server/webmanager/src/script/ivipbase/browser.js",
 		"npm:publish": "npm pack && npm publish --access public"
 	},
 	"keywords": [

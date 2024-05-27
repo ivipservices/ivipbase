@@ -10,6 +10,7 @@ import type { IvipBaseApp } from "../app";
 import { ConnectedClient } from "./shared/clients";
 import { setupAuthentication } from "./services/auth";
 import { SimpleCache } from "ivipbase-core";
+import { addWebsocketServer } from "./websocket";
 const createExpress = (express as any).default ?? express;
 
 export { ServerSettings, ServerInitialSettings };
@@ -113,6 +114,9 @@ export class LocalServer extends AbstractLocalServer<LocalServer> {
 			this.debug.log(`Extending server: `, method, route);
 			this.router[method.toLowerCase() as expressRouteMethod](route, handler);
 		};
+
+		// Create websocket server
+		addWebsocketServer(this);
 
 		// Executar o retorno de chamada de inicialização para permitir que o código do usuário chame `server.extend`, `server.router.[method]`, `server.setRule`, etc., antes de o servidor começar a ouvir
 		await this.settings.init?.(this);
