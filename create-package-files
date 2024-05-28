@@ -7,7 +7,7 @@ cat >dist/cjs/package.json <<JSON
     "browser": {
         "./index.js": "./browser.js",
 		"./server/index.js": "./server/browser.js",
-        "./server/services/sandbox/index.ts": "./server/services/sandbox/browser.js",
+        "./database/services/sandbox/index.ts": "./database/services/sandbox/browser.js",
         "./app/settings/index.js": "./app/settings/browser.js",
 		"./app/verifyStorage/index.js": "./app/verifyStorage/browser.js",
 		"./controller/storage/index.js": "./controller/storage/browser.js",
@@ -29,7 +29,7 @@ cat >dist/esm/package.json <<JSON
     "browser": {
         "./index.js": "./browser.js",
 		"./server/index.js": "./server/browser.js",
-        "./server/services/sandbox/index.ts": "./server/services/sandbox/browser.js",
+        "./database/services/sandbox/index.ts": "./database/services/sandbox/browser.js",
         "./app/settings/index.js": "./app/settings/browser.js",
 		"./app/verifyStorage/index.js": "./app/verifyStorage/browser.js",
 		"./controller/storage/index.js": "./controller/storage/browser.js",

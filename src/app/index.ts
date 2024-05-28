@@ -3,7 +3,7 @@ import { DEFAULT_ENTRY_NAME, _apps } from "./internal";
 import { AppError, ERROR_FACTORY } from "../controller/erros";
 
 import { LocalServer } from "../server";
-import { CustomStorage, DataStorage, applySettings } from "./verifyStorage";
+import { CustomStorage, applySettings } from "./verifyStorage";
 import { IvipBaseSettings, IvipBaseSettingsOptions } from "./settings";
 import { DataBase } from "../database";
 import { Auth } from "../auth";

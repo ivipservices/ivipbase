@@ -1,11 +1,10 @@
 import { DataReference, DebugLogger, SimpleEventEmitter } from "ivipbase-core";
 import { DataBase, getDatabase, getDatabasesNames, hasDatabase } from "../database";
 import type { IvipBaseApp } from "../app";
-import { PathBasedRules } from "./services/rules";
 import { DbUserAccountDetails } from "./schema/user";
 import { EmailRequest } from "../app/settings/browser";
-import type { RulesData } from "./services/rules";
-import { joinObjects } from "../utils";
+import type { RulesData } from "../database/services/rules";
+import { PathBasedRules } from "../database/services/rules";
 
 export class ServerNotReadyError extends Error {
 	constructor() {
@@ -250,7 +249,6 @@ export abstract class AbstractLocalServer<LocalServer = any> extends SimpleEvent
 	readonly db: (dbName: string) => DataBase;
 	readonly hasDatabase: (dbName: string) => boolean;
 	readonly rules: (dbName: string) => PathBasedRules;
-	private rules_db: Map<string, PathBasedRules> = new Map();
 
 	readonly securityRef: (dbName: string) => any = (dbName): DataReference<any> => {
 		return this.db(dbName).ref("__auth__/security");
@@ -285,26 +283,7 @@ export abstract class AbstractLocalServer<LocalServer = any> extends SimpleEvent
 		this.db = (dbName) => getDatabase(dbName, localApp);
 		this.hasDatabase = (dbName) => hasDatabase(dbName);
 		this.rules = (dbName) => {
-			if (this.rules_db.has(dbName)) {
-				return this.rules_db.get(dbName)!;
-			}
-
-			const db = this.db(dbName);
-
-			const dbInfo = (Array.isArray(this.localApp.settings.database) ? this.localApp.settings.database : [this.localApp.settings.database]).find((d) => d.name === dbName);
-
-			const mainRules: RulesData = this.settings.rulesData ?? { rules: {} };
-			const dbRules: RulesData = dbInfo?.rulesData ?? { rules: {} };
-
-			const rules = new PathBasedRules(this.settings.auth.defaultAccessRule, {
-				debug: this.debug,
-				db,
-				authEnabled: this.settings.auth.enabled,
-				rules: joinObjects({ rules: {} }, mainRules.rules, dbRules.rules),
-			});
-
-			this.rules_db.set(dbName, rules);
-			return rules;
+			return this.db(dbName).rules;
 		};
 		this.debug = new DebugLogger(this.settings.logLevel, `[SERVER]`);
 		this.log = this.debug;

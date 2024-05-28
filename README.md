@@ -21,7 +21,7 @@ O iVipBase é fácil de configurar e pode ser executado em qualquer lugar: na nu
     - [Experimente o iVipBase no seu navegador](#experimente-o-ivipbase-no-seu-navegador)
 - [`initializeApp` - Inicialização](#initializeapp---inicialização)
   - [Uso](#uso)
-  - [Contexto de aplicação web e/ou client](#contexto-de-aplicação-web-eou-client)
+  - [Contexto de aplicação cliente](#contexto-de-aplicação-cliente)
     - [Opções do Objeto `options`](#opções-do-objeto-options)
   - [Contexto de aplicação servidor](#contexto-de-aplicação-servidor)
     - [Opções do Objeto `options`](#opções-do-objeto-options-1)
@@ -93,6 +93,8 @@ O iVipBase é fácil de configurar e pode ser executado em qualquer lugar: na nu
   - [Armazenamento `Map` (`DataStorageSettings`)](#armazenamento-map-datastoragesettings)
   - [Conexão ao MongoDB (`MongodbSettings`)](#conexão-ao-mongodb-mongodbsettings)
   - [Arquivo local JSON (`JsonFileStorageSettings`)](#arquivo-local-json-jsonfilestoragesettings)
+  - [Armazenamento SQLite (`SqliteStorageSettings`)](#armazenamento-sqlite-sqlitestoragesettings)
+  - [Conexão Sequelize (`SequelizeStorageSettings`)](#conexão-sequelize-sequelizestoragesettings)
 
 ## Começando
 
@@ -198,9 +200,9 @@ function initializeApp(options: Record<string, any>): IvipBaseApp;
 | --------- | -------- | -------------------------------------------------------------------------------------------- |
 | options   | `object` | Objeto (instância `IvipBaseSettings`) contendo configurações para personalizar o aplicativo. |
 
-## Contexto de aplicação web e/ou client
+## Contexto de aplicação cliente
 
-As configurações no contexto de aplicação web são permitidas apenas para personalização do armazenamento (utilizando [`CustomStorage`](#armazenamento-personalizado-customstorage) ou configurações já existentes para o ambiente web) ou para uso remoto. Como mencionado anteriormente, no caso do uso remoto, as definições de `host`, `port` e `dbname` tornam-se obrigatórias para estabelecer a comunicação com o servidor.
+As configurações no contexto de aplicação cliente são permitidas apenas para personalização do armazenamento (utilizando [`CustomStorage`](#armazenamento-personalizado-customstorage) ou configurações já existentes para o ambiente cliente) ou para uso remoto. Como mencionado anteriormente, no caso do uso remoto, as definições de `host`, `port` e `dbname` tornam-se obrigatórias para estabelecer a comunicação com o servidor.
 
 ### Opções do Objeto `options`
 
@@ -247,7 +249,6 @@ Para o contexto de uma aplicação servidor, é necessário definir opções ass
 | host           | `string`                                                                                   | IP ou nome do host para iniciar o servidor.                                                                                                                                                                                                                                                     |
 | port           | `number`                                                                                   | Número da porta em que o servidor estará ouvindo.                                                                                                                                                                                                                                               |
 | storage        | `CustomStorage` \| `DataStorageSettings` \| `MongodbSettings` \| `JsonFileStorageSettings` | Configurações de armazenamento para o aplicativo. Consulte [armazenamento presonalizado com `CustomStorage`](#armazenamento-personalizado-customstorage)                                                                                                                                        |
-| rootPath       | `string`                                                                                   | Caminho raiz para as rotas do iVipBase.                                                                                                                                                                                                                                                         |
 | maxPayloadSize | `string`                                                                                   | Tamanho máximo permitido para dados enviados, por exemplo, para atualizar nós. O padrão é '10mb'.                                                                                                                                                                                               |
 | allowOrigin    | `string`                                                                                   | Valor a ser usado para o cabeçalho CORS Access-Control-Allow-Origin. O padrão é '\*'.                                                                                                                                                                                                           |
 | trustProxy     | `boolean`                                                                                  | Quando atrás de um servidor de proxy confiável, req.ip e req.hostname serão definidos corretamente.                                                                                                                                                                                             |
@@ -1758,3 +1759,7 @@ user.fromJSON(json);
 ## Conexão ao MongoDB (`MongodbSettings`)
 
 ## Arquivo local JSON (`JsonFileStorageSettings`)
+
+## Armazenamento SQLite (`SqliteStorageSettings`)
+
+## Conexão Sequelize (`SequelizeStorageSettings`)

@@ -3,6 +3,7 @@ import { VALUE_TYPES } from "../controller/storage/MDE";
 import type { DataBase } from ".";
 import { removeNulls } from "../utils";
 import executeQuery from "../controller/executeQuery";
+import { PathRuleFunction, PathRuleType } from "./services/rules";
 
 export class StorageDBServer extends Api {
 	public cache: { [path: string]: any } = {};

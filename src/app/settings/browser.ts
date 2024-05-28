@@ -1,4 +1,4 @@
-import type { RulesData } from "../../server/services/rules";
+import type { RulesData } from "../../database/services/rules";
 import { DEFAULT_ENTRY_NAME } from "../internal";
 import { DataStorageSettings, StorageSettings, validSettings } from "../verifyStorage";
 

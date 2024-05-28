@@ -1,6 +1,6 @@
 import { ID, Transport, Api, Types } from "ivipbase-core";
 import type { LocalServer, RouteRequest } from "../../";
-import { AccessRuleValidationError } from "../../services/rules";
+import { AccessRuleValidationError } from "../../../database/services/rules";
 import { sendBadRequestError, sendError, sendUnauthorizedError, sendUnexpectedError } from "../../shared/error";
 import { SchemaValidationError } from "../../../database";
 

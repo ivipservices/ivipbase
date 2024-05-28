@@ -1,5 +1,5 @@
 import type { LocalServer, RouteRequest } from "../../";
-import { AccessCheckOperation, HasAccessResult } from "../../services/rules";
+import { AccessCheckOperation, HasAccessResult } from "../../../database/services/rules";
 import { sendError, sendUnauthorizedError } from "../../shared/error";
 import { PathInfo, Types } from "ivipbase-core";
 

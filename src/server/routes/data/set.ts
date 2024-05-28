@@ -1,7 +1,7 @@
 import { Transport, Types } from "ivipbase-core";
 import type { LocalServer, RouteRequest } from "../../";
 import { sendBadRequestError, sendError, sendUnauthorizedError } from "../../shared/error";
-import { AccessRuleValidationError, RuleValidationFailCode } from "../../services/rules";
+import { AccessRuleValidationError, RuleValidationFailCode } from "../../../database/services/rules";
 import { SchemaValidationError } from "../../../database";
 
 export class SetDataError extends Error {

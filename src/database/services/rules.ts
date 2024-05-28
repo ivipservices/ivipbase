@@ -1,6 +1,6 @@
-import { DataBase, DebugLogger, PathInfo } from "ivipbase-core";
-import { DbUserAccountDetails } from "../schema/user";
-import { AUTH_ACCESS_DEFAULT, AuthAccessDefault } from "../browser";
+import { DataBase, DebugLogger, PathInfo, SimpleEventEmitter, Types } from "ivipbase-core";
+import { DbUserAccountDetails } from "../../server/schema/user";
+import { AUTH_ACCESS_DEFAULT, AuthAccessDefault } from "../../server/browser";
 import { executeSandboxed } from "./sandbox";
 import { joinObjects } from "../../utils";
 
@@ -76,8 +76,9 @@ export class AccessRuleValidationError extends Error {
 export type AccessCheckOperation = "transact" | "get" | "update" | "set" | "delete" | "reflect" | "exists" | "query" | "import" | "export";
 export type PathRuleType = "read" | "write" | "validate" | AccessCheckOperation;
 
-export class PathBasedRules {
+export class PathBasedRules extends SimpleEventEmitter {
 	private authEnabled: boolean;
+	private jsonRules: RulesData;
 	private accessRules: RulesData;
 	private db: DataBase;
 	private debug: DebugLogger;
@@ -88,13 +89,14 @@ export class PathBasedRules {
 
 	constructor(
 		defaultAccess: AuthAccessDefault,
-		env: {
+		readonly env: {
 			debug: DebugLogger;
 			db: DataBase;
 			authEnabled: boolean;
 			rules?: RulesData;
 		},
 	) {
+		super();
 		this.db = env.db;
 		this.debug = env.debug;
 
@@ -123,7 +125,28 @@ export class PathBasedRules {
 			},
 		};
 
-		const accessRules = joinObjects(defaultRules, env.rules ?? {});
+		this.jsonRules = defaultRules;
+		this.accessRules = defaultRules;
+
+		this.applyRules(env.rules ?? defaultRules, true);
+
+		this.authEnabled = env.authEnabled;
+	}
+
+	on<RulesData>(event: "changed", callback: (data: RulesData) => void): Types.SimpleEventEmitterProperty;
+	on(event: string, callback: any) {
+		return super.on(event, callback as any);
+	}
+
+	emit(event: "changed", data: RulesData): this;
+	emit(event: string, data: any) {
+		super.emit(event, data);
+		return this;
+	}
+
+	applyRules(rules: RulesData, isInitial = false) {
+		const accessRules: RulesData = joinObjects(this.jsonRules, rules);
+		this.jsonRules = joinObjects(this.jsonRules, rules);
 
 		// Converta regras de string em funções que podem ser executadas
 		const processRules = (path: string, parent: any, variables: string[]) => {
@@ -146,8 +169,8 @@ export class PathBasedRules {
 					return (parent[key] = ruleCode);
 				} else if (key === ".schema") {
 					// Adicionar esquema
-					return env.db.schema.set(path, rule).catch((err) => {
-						env.debug.error(`Error parsing ${path}/.schema: ${err.message}`);
+					return this.env.db.schema.set(path, rule).catch((err) => {
+						this.env.debug.error(`Error parsing ${path}/.schema: ${err.message}`);
 					});
 				} else if (key.startsWith("$")) {
 					variables.push(key);
@@ -159,9 +182,11 @@ export class PathBasedRules {
 		};
 
 		processRules("", accessRules.rules, []);
-
-		this.authEnabled = env.authEnabled;
 		this.accessRules = accessRules;
+
+		if (!isInitial) {
+			this.emit("changed", this.jsonRules);
+		}
 	}
 
 	async isOperationAllowed(user: Pick<DbUserAccountDetails, "uid" | "permission_level">, path: string, operation: AccessCheckOperation, data?: Record<string, any>): Promise<HasAccessResult> {
