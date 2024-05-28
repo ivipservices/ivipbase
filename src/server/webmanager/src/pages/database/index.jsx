@@ -153,10 +153,9 @@ export const DataBase = () => {
 	const { dbName } = window.pageState();
 
 	useEffect(() => {
-		const app = getApp();
 		let event;
 
-		app.ready(() => {
+		getApp().ready(() => {
 			const auth = getAuth();
 			event = auth.onAuthStateChanged((user) => {
 				if (!user) {
