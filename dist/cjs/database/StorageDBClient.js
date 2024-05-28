@@ -69,7 +69,7 @@ class StorageDBClient extends ivipbase_core_1.Api {
                 }
                 if (keepMonitoring === false) {
                     delete this._realtimeQueries[data.query_id];
-                    (_a = this.app.socket) === null || _a === void 0 ? void 0 : _a.emit("query-unsubscribe", { query_id: data.query_id });
+                    (_a = this.app.socket) === null || _a === void 0 ? void 0 : _a.emit("query-unsubscribe", { dbName: this.db.database, query_id: data.query_id });
                 }
             });
         });

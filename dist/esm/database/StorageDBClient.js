@@ -63,7 +63,7 @@ export class StorageDBClient extends Api {
                 }
                 if (keepMonitoring === false) {
                     delete this._realtimeQueries[data.query_id];
-                    this.app.socket?.emit("query-unsubscribe", { query_id: data.query_id });
+                    this.app.socket?.emit("query-unsubscribe", { dbName: this.db.database, query_id: data.query_id });
                 }
             });
         });

@@ -8,6 +8,7 @@ import { connect as connectSocket } from "socket.io-client";
 type IOWebSocket = ReturnType<typeof connectSocket>;
 export declare class IvipBaseApp extends SimpleEventEmitter {
     _ready: boolean;
+    private id;
     readonly name: string;
     settings: IvipBaseSettings;
     storage: CustomStorage;

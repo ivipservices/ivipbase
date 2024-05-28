@@ -17,6 +17,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
     constructor(options) {
         super();
         this._ready = false;
+        this.id = ID.generate();
         this.name = DEFAULT_ENTRY_NAME;
         this.isDeleted = false;
         this.databases = new Map();
@@ -38,6 +39,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
     }
     async initialize() {
         if (!this._ready) {
+            const id = this.id;
             if (!this.isServer && (typeof this.settings.database === "string" || (Array.isArray(this.settings.database) && this.settings.database.length > 0))) {
                 await new Promise((resolve) => {
                     if (this._socket) {
@@ -67,7 +69,9 @@ export class IvipBaseApp extends SimpleEventEmitter {
                     }
                 }
             }
-            this.emit("ready");
+            if (this.id === id) {
+                this.emit("ready");
+            }
         }
     }
     /**
@@ -122,6 +126,10 @@ export class IvipBaseApp extends SimpleEventEmitter {
         }
         event();
         this.on("reset", () => {
+            isReset = true;
+            this.off("connect", event);
+        });
+        this.on("destroyed", () => {
             isReset = true;
             this.off("connect", event);
         });
@@ -274,6 +282,8 @@ export class IvipBaseApp extends SimpleEventEmitter {
         this._socket = null;
     }
     async reset(options) {
+        this.emit("destroyed");
+        this.id = ID.generate();
         await this.destroy();
         this._connectionState = CONNECTION_STATE_DISCONNECTED;
         this._socket = null;

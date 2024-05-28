@@ -21,7 +21,7 @@ const CONNECTION_STATE_DISCONNECTING = "disconnecting";
 
 export class IvipBaseApp extends SimpleEventEmitter {
 	public _ready = false;
-
+	private id = ID.generate();
 	readonly name: string = DEFAULT_ENTRY_NAME;
 	public settings: IvipBaseSettings;
 	public storage: CustomStorage;
@@ -66,6 +66,8 @@ export class IvipBaseApp extends SimpleEventEmitter {
 
 	async initialize() {
 		if (!this._ready) {
+			const id = this.id;
+
 			if (!this.isServer && (typeof this.settings.database === "string" || (Array.isArray(this.settings.database) && this.settings.database.length > 0))) {
 				await new Promise<void>((resolve) => {
 					if (this._socket) {
@@ -103,7 +105,9 @@ export class IvipBaseApp extends SimpleEventEmitter {
 				}
 			}
 
-			this.emit("ready");
+			if (this.id === id) {
+				this.emit("ready");
+			}
 		}
 	}
 
@@ -173,6 +177,11 @@ export class IvipBaseApp extends SimpleEventEmitter {
 		event();
 
 		this.on("reset", () => {
+			isReset = true;
+			this.off("connect", event);
+		});
+
+		this.on("destroyed", () => {
 			isReset = true;
 			this.off("connect", event);
 		});
@@ -395,6 +404,8 @@ export class IvipBaseApp extends SimpleEventEmitter {
 	}
 
 	async reset(options: IvipBaseSettingsOptions) {
+		this.emit("destroyed");
+		this.id = ID.generate();
 		await this.destroy();
 		this._connectionState = CONNECTION_STATE_DISCONNECTED;
 		this._socket = null;
