@@ -25,17 +25,17 @@ export const addRoutes = (env: LocalServer) => {
 
 		try {
 			if (req.user) {
-				const client = typeof req.body.client_id === "string" ? env.clients.get(`${dbName}_${req.body.client_id}`) : null;
+				const client = typeof req.body.client_id === "string" ? env.clients.get(req.body.client_id) : null;
 				if (client) {
-					client.user = undefined;
+					client.user.delete(dbName);
 				}
 
 				const signOutEverywhere = typeof req.body === "object" && req.body.everywhere === true;
 				if (signOutEverywhere) {
 					env.authCache.remove(req.user.uid ?? "");
 					for (const client of env.clients.values()) {
-						if (client.user?.uid === req.user.uid) {
-							client.user = undefined;
+						if (client.user.get(dbName)?.uid === req.user.uid) {
+							client.user.delete(dbName);
 						}
 					}
 				}

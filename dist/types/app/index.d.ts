@@ -4,6 +4,8 @@ import { CustomStorage } from "./verifyStorage";
 import { IvipBaseSettings, IvipBaseSettingsOptions } from "./settings";
 import { DataBase } from "../database";
 import { Auth } from "../auth";
+import { connect as connectSocket } from "socket.io-client";
+type IOWebSocket = ReturnType<typeof connectSocket>;
 export declare class IvipBaseApp extends SimpleEventEmitter {
     _ready: boolean;
     readonly name: string;
@@ -28,6 +30,9 @@ export declare class IvipBaseApp extends SimpleEventEmitter {
     get isConnecting(): boolean;
     get connectionState(): "connected" | "disconnected" | "connecting" | "disconnecting";
     get socket(): import("socket.io-client").Socket<import("@socket.io/component-emitter").DefaultEventsMap, import("@socket.io/component-emitter").DefaultEventsMap> | null;
+    onConnect(callback: (socket: IOWebSocket | null) => void, isOnce?: boolean): Promise<{
+        stop: () => void;
+    }>;
     get isReady(): boolean;
     get url(): string;
     request(options: {
@@ -71,6 +76,14 @@ export declare class IvipBaseApp extends SimpleEventEmitter {
         context: any;
         data: any;
     }>;
+    websocketRequest<ResponseType = Record<string, any>>(socket: IOWebSocket | null, event: string, data: any, dbName: string): Promise<ResponseType & {
+        req_id: string;
+        success: boolean;
+        reason?: string | {
+            code: string;
+            message: string;
+        } | undefined;
+    }>;
     projects(): Promise<{
         name: string;
         description: string;
@@ -89,4 +102,5 @@ export declare function getApps(): IvipBaseApp[];
 export declare function getAppsName(): string[];
 export declare function getFirstApp(): IvipBaseApp;
 export declare function deleteApp(app: IvipBaseApp): void;
+export {};
 //# sourceMappingURL=index.d.ts.map

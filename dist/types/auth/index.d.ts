@@ -168,7 +168,7 @@ export declare class AuthUser {
      * Atualiza o usuário atual, se estiver conectado.
      * @returns Uma promise que é resolvida com o usuário atual após uma possível atualização do token.
      */
-    reload(): Promise<void>;
+    reload(forceRefresh?: boolean): Promise<void>;
     /**
      * Retorna uma representação JSON serializável deste objeto.
      * @returns Uma representação JSON serializável deste objeto.

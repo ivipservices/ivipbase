@@ -20,21 +20,70 @@ class StorageDBClient extends ivipbase_core_1.Api {
     constructor(db) {
         super();
         this.db = db;
-        this.cache = {};
-        this.auth = () => {
-            return (0, auth_1.getAuth)(this.db.database);
-        };
+        this._realtimeQueries = {};
+        this.auth = (0, auth_1.getAuth)(this.db.database);
         this.app = db.app;
         this.url = this.app.url.replace(/\/+$/, "");
         this.initialize();
+        this.app.onConnect(async (socket) => {
+            const subscribePromises = [];
+            this.db.subscriptions.forEach((event, path) => {
+                subscribePromises.push(new Promise(async (resolve, reject) => {
+                    try {
+                        await this.app.websocketRequest(socket, "subscribe", { path: path, event: event }, this.db.name);
+                    }
+                    catch (err) {
+                        if (err.code === "access_denied" && !this.db.accessToken) {
+                            this.db.debug.error(`Could not subscribe to event "${event}" on path "${path}" because you are not signed in. If you added this event while offline and have a user access token, you can prevent this by using client.auth.setAccessToken(token) to automatically try signing in after connecting`);
+                        }
+                        else {
+                            this.db.debug.error(err);
+                        }
+                    }
+                }));
+            });
+            await Promise.all(subscribePromises);
+        });
+        this.app.ready(() => {
+            var _a, _b;
+            (_a = this.app.socket) === null || _a === void 0 ? void 0 : _a.on("data-event", (data) => {
+                var _a;
+                const val = ivipbase_core_1.Transport.deserialize(data.val);
+                const context = (_a = data.context) !== null && _a !== void 0 ? _a : {};
+                context.acebase_event_source = "server";
+                const isValid = this.db.subscriptions.hasValueSubscribersForPath(data.subscr_path);
+                if (!isValid) {
+                    return;
+                }
+                this.db.subscriptions.trigger(data.event, data.subscr_path, data.path, val.previous, val.current, context);
+            });
+            (_b = this.app.socket) === null || _b === void 0 ? void 0 : _b.on("query-event", (data) => {
+                var _a;
+                data = ivipbase_core_1.Transport.deserialize(data);
+                const query = this._realtimeQueries[data.query_id];
+                let keepMonitoring = true;
+                try {
+                    keepMonitoring = query.options.eventHandler(data);
+                }
+                catch (err) {
+                    keepMonitoring = false;
+                }
+                if (keepMonitoring === false) {
+                    delete this._realtimeQueries[data.query_id];
+                    (_a = this.app.socket) === null || _a === void 0 ? void 0 : _a.emit("query-unsubscribe", { query_id: data.query_id });
+                }
+            });
+        });
     }
     get serverPingUrl() {
         return `/ping/${this.db.database}`;
     }
     async initialize() {
-        await (0, auth_1.getAuth)(this.db.database).ready();
-        await this.db.app.request({ route: this.serverPingUrl });
-        this.db.emit("ready");
+        this.app.onConnect(async () => {
+            await this.auth.ready();
+            await this.app.request({ route: this.serverPingUrl });
+            this.db.emit("ready");
+        }, true);
     }
     get isConnected() {
         return this.app.isConnected;
@@ -46,15 +95,14 @@ class StorageDBClient extends ivipbase_core_1.Api {
         return this.app.connectionState;
     }
     async _request(options) {
-        var _a;
+        var _a, _b, _c;
         if (this.isConnected || options.ignoreConnectionState === true) {
             try {
-                const user = this.auth().currentUser;
-                const accessToken = user ? await user.getIdToken() : undefined;
+                const accessToken = (_b = (_a = this.auth) === null || _a === void 0 ? void 0 : _a.currentUser) === null || _b === void 0 ? void 0 : _b.accessToken;
                 return await this.db.app.request(Object.assign(Object.assign({}, options), { accessToken }));
             }
             catch (err) {
-                (_a = this.auth().currentUser) === null || _a === void 0 ? void 0 : _a.reload();
+                (_c = this.auth.currentUser) === null || _c === void 0 ? void 0 : _c.reload();
                 if (this.isConnected && err.isNetworkError) {
                     // This is a network error, but the websocket thinks we are still connected.
                     this.db.debug.warn(`A network error occurred loading ${options.route}`);
@@ -85,11 +133,23 @@ class StorageDBClient extends ivipbase_core_1.Api {
     }
     connect(retry = true) { }
     disconnect() { }
-    subscribe(path, event, callback, settings) {
-        this.db.subscriptions.add(path, event, callback);
+    async subscribe(path, event, callback, settings) {
+        try {
+            this.db.subscriptions.add(path, event, callback);
+            await this.app.websocketRequest(this.app.socket, "subscribe", { path: path, event: event }, this.db.name);
+        }
+        catch (err) {
+            this.db.debug.error(err);
+        }
     }
-    unsubscribe(path, event, callback) {
-        this.db.subscriptions.remove(path, event, callback);
+    async unsubscribe(path, event, callback) {
+        try {
+            this.db.subscriptions.remove(path, event, callback);
+            await this.app.websocketRequest(this.app.socket, "unsubscribe", { path: path, event: event }, this.db.name);
+        }
+        catch (err) {
+            this.db.debug.error(err);
+        }
     }
     async getInfo() {
         return await this._request({ route: `/info/${this.db.database}` });
@@ -131,16 +191,33 @@ class StorageDBClient extends ivipbase_core_1.Api {
     exists(path) {
         return this._request({ route: `/exists/${this.db.database}/${path}` });
     }
-    async query(path, query, options = { snapshots: false }) {
+    async query(path, query, options = { snapshots: false, monitor: { add: false, change: false, remove: false } }) {
         const request = {
             query,
             options,
         };
+        if (options.monitor === true || (typeof options.monitor === "object" && (options.monitor.add || options.monitor.change || options.monitor.remove))) {
+            console.assert(typeof options.eventHandler === "function", `no eventHandler specified to handle realtime changes`);
+            if (!this.app.socket) {
+                throw new Error(`Cannot create realtime query because websocket is not connected. Check your AceBaseClient network.realtime setting`);
+            }
+            request.query_id = ivipbase_core_1.ID.generate();
+            request.client_id = this.app.socket.id;
+            this._realtimeQueries[request.query_id] = { query, options };
+        }
         const reqData = JSON.stringify(ivipbase_core_1.Transport.serialize(request));
-        const { data, context } = await this._request({ method: "POST", route: `/query/${this.db.database}/${path}`, data: reqData, includeContext: true });
-        const results = ivipbase_core_1.Transport.deserialize(data);
-        const stop = () => Promise.resolve();
-        return { results: results.list, context, stop };
+        try {
+            const { data, context } = await this._request({ method: "POST", route: `/query/${this.db.database}/${path}`, data: reqData, includeContext: true });
+            const results = ivipbase_core_1.Transport.deserialize(data);
+            const stop = async () => {
+                delete this._realtimeQueries[request.query_id];
+                await this.app.websocketRequest(this.app.socket, "query-unsubscribe", { query_id: request.query_id }, this.db.name);
+            };
+            return { results: results.list, context, stop };
+        }
+        catch (err) {
+            throw err;
+        }
     }
     reflect(path, type, args) {
         let route = `/reflect/${this.db.database}/${path}?type=${type}`;

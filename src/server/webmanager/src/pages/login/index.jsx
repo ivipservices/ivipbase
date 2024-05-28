@@ -51,11 +51,13 @@ export const Login = () => {
 			app.ready(() => {
 				const auth = getAuth();
 
-				if (!auth.currentUser) {
-					return setLoading(false);
-				}
+				auth.ready((currentUser) => {
+					if (!currentUser) {
+						return setLoading(false);
+					}
 
-				window.goToPage("database", { dbName });
+					window.goToPage("database", { dbName });
+				});
 			});
 		}, 1000);
 

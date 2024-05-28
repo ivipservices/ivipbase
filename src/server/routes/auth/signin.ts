@@ -46,12 +46,12 @@ export const addRoutes = (env: LocalServer) => {
 			if (!user || !user.uid || !user.access_token) {
 				throw new Error("User not found");
 			}
-			if (typeof clientId === "string" && env.clients.has(`${dbName}_${clientId}`)) {
-				const client = env.clients.get(`${dbName}_${clientId}`);
+			if (typeof clientId === "string" && env.clients.has(clientId)) {
+				const client = env.clients.get(clientId);
 				if (!client) {
 					throw new Error(`Client with id ${clientId} not found`);
 				}
-				client.user = user; // Bind user to client socket
+				client.user.delete(dbName); // Bind user to client socket
 			}
 			res.send({
 				access_token: createPublicAccessToken(dbName, user.uid, req.ip, user.access_token, env.tokenSalt),

@@ -34,6 +34,9 @@ export class DataBase extends DataBaseCore {
             this.emit("ready");
         });
     }
+    get accessToken() {
+        return this.app.auth.get(this.name)?.currentUser?.accessToken;
+    }
     connect(retry = true) {
         if (this.storage instanceof StorageDBClient) {
             return this.storage.connect(retry);
@@ -66,10 +69,10 @@ export function getDatabase(...args) {
         database = app.settings.dbname;
     }
     dbName = (Array.isArray(database) ? database : [database])[0];
-    if (dbName && app.databases.has(dbName)) {
+    if (app.databases.has(dbName)) {
         return app.databases.get(dbName);
     }
-    const db = new DataBase((Array.isArray(database) ? database : [database])[0], app, args.find((s) => typeof s === "object" && !(s instanceof IvipBaseApp)));
+    const db = new DataBase(dbName, app, args.find((s) => typeof s === "object" && !(s instanceof IvipBaseApp)));
     app.databases.set(dbName, db);
     return db;
 }

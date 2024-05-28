@@ -38,6 +38,10 @@ class DataBase extends ivipbase_core_1.DataBase {
             this.emit("ready");
         });
     }
+    get accessToken() {
+        var _a, _b;
+        return (_b = (_a = this.app.auth.get(this.name)) === null || _a === void 0 ? void 0 : _a.currentUser) === null || _b === void 0 ? void 0 : _b.accessToken;
+    }
     connect(retry = true) {
         if (this.storage instanceof StorageDBClient_1.StorageDBClient) {
             return this.storage.connect(retry);
@@ -71,10 +75,10 @@ function getDatabase(...args) {
         database = app.settings.dbname;
     }
     dbName = (Array.isArray(database) ? database : [database])[0];
-    if (dbName && app.databases.has(dbName)) {
+    if (app.databases.has(dbName)) {
         return app.databases.get(dbName);
     }
-    const db = new DataBase((Array.isArray(database) ? database : [database])[0], app, args.find((s) => typeof s === "object" && !(s instanceof app_1.IvipBaseApp)));
+    const db = new DataBase(dbName, app, args.find((s) => typeof s === "object" && !(s instanceof app_1.IvipBaseApp)));
     app.databases.set(dbName, db);
     return db;
 }

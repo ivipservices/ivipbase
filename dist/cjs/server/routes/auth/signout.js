@@ -16,16 +16,16 @@ const addRoutes = (env) => {
         const LOG_DETAILS = { ip: req.ip, uid: (_b = (_a = req.user) === null || _a === void 0 ? void 0 : _a.uid) !== null && _b !== void 0 ? _b : null };
         try {
             if (req.user) {
-                const client = typeof req.body.client_id === "string" ? env.clients.get(`${dbName}_${req.body.client_id}`) : null;
+                const client = typeof req.body.client_id === "string" ? env.clients.get(req.body.client_id) : null;
                 if (client) {
-                    client.user = undefined;
+                    client.user.delete(dbName);
                 }
                 const signOutEverywhere = typeof req.body === "object" && req.body.everywhere === true;
                 if (signOutEverywhere) {
                     env.authCache.remove((_c = req.user.uid) !== null && _c !== void 0 ? _c : "");
                     for (const client of env.clients.values()) {
-                        if (((_d = client.user) === null || _d === void 0 ? void 0 : _d.uid) === req.user.uid) {
-                            client.user = undefined;
+                        if (((_d = client.user.get(dbName)) === null || _d === void 0 ? void 0 : _d.uid) === req.user.uid) {
+                            client.user.delete(dbName);
                         }
                     }
                 }

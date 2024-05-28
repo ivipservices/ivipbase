@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, Fragment } from "react";
 import MountPage, { PageView } from "../../components/MountPage";
-import { getAuth, getDatabase } from "ivipbase";
+import { getApp, getAuth, getDatabase } from "ivipbase";
 import { Button, ClickAwayListener, Grow, Paper, Popper, MenuItem, MenuList, ListItemIcon, ListItemText } from "@mui/material";
 import { mdiMenuDown, mdiDatabaseOutline, mdiAccountMultiple, mdiFolderImage, mdiCodeBracesBox } from "@mdi/js";
 import SvgIcon from "../../components/SvgIcon.jsx";
@@ -153,23 +153,28 @@ export const DataBase = () => {
 	const { dbName } = window.pageState();
 
 	useEffect(() => {
-		const auth = getAuth();
-		let event = auth.onAuthStateChanged((user) => {
-			if (!user) {
-				window.goToPage("login", { dbName });
-				event.stop();
-			}
-		});
+		const app = getApp();
+		let event;
 
-		auth.ready(() => {
-			if (!auth.currentUser) {
-				window.goToPage("login", { dbName });
-				event.stop();
-			}
+		app.ready(() => {
+			const auth = getAuth();
+			event = auth.onAuthStateChanged((user) => {
+				if (!user) {
+					window.goToPage("login", { dbName });
+					event.stop();
+				}
+			});
+
+			auth.ready(() => {
+				if (!auth.currentUser) {
+					window.goToPage("login", { dbName });
+					event.stop();
+				}
+			});
 		});
 
 		return () => {
-			event.stop();
+			event?.stop();
 		};
 	}, []);
 

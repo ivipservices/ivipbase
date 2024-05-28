@@ -31,17 +31,21 @@ const addRoutes = (env) => {
         if (typeof options.monitor === "object" && (options.monitor.add || options.monitor.change || options.monitor.remove)) {
             const queryId = data.query_id;
             const clientId = data.client_id;
-            const client = env.clients.get(`${dbName}_${clientId}`);
-            if (client)
-                client.realtimeQueries[queryId] = { path, query, options };
+            const client = env.clients.get(clientId);
+            if (client) {
+                if (!(dbName in client.realtimeQueries)) {
+                    client.realtimeQueries[dbName] = {};
+                }
+                client.realtimeQueries[dbName][queryId] = { path, query, options };
+            }
             const sendEvent = async (event) => {
                 var _a;
                 try {
-                    const client = env.clients.get(`${dbName}_${clientId}`);
+                    const client = env.clients.get(clientId);
                     if (!client) {
                         return cancelSubscription === null || cancelSubscription === void 0 ? void 0 : cancelSubscription();
                     } // Not connected, stop subscription
-                    if (!(await env.rules(dbName).isOperationAllowed((_a = client.user) !== null && _a !== void 0 ? _a : {}, event.path, "get", { context: req.context, value: event.value })).allow) {
+                    if (!(await env.rules(dbName).isOperationAllowed((_a = client.user.get(dbName)) !== null && _a !== void 0 ? _a : {}, event.path, "get", { context: req.context, value: event.value })).allow) {
                         return cancelSubscription === null || cancelSubscription === void 0 ? void 0 : cancelSubscription(); // Access denied, stop subscription
                     }
                     event.query_id = queryId;

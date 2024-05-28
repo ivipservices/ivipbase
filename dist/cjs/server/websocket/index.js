@@ -15,63 +15,51 @@ exports.SocketRequestError = SocketRequestError;
 const addWebsocketServer = (env) => {
     // TODO: Allow using uWebSockets.js server instead of Socket.IO
     const serverManager = (0, socket_io_1.createServer)(env);
-    const getClientBySocketId = (socket, dbName, event) => {
-        let client = env.clients.get(`${dbName}_${socket.id}`);
-        if (!client && socket.connected) {
-            client = new clients_1.ConnectedClient(socket, dbName);
-            env.clients.set(`${client.dbName}_${client.id}`, client);
-            env.debug.warn(`New socket connected, total: ${env.clients.size}`);
-            serverManager.send(socket, "welcome");
-            client = env.clients.get(`${dbName}_${socket.id}`);
+    const getClientBySocketId = (id, event) => {
+        const client = env.clients.get(id);
+        if (!client) {
+            env.debug.error(`Cannot find client "${id}" for socket event "${event}"`);
         }
-        if (!client || client.disconnected) {
-            env.debug.error(`Cannot find client "${socket.id}" for socket event "${event}"`);
-        }
-        return (client === null || client === void 0 ? void 0 : client.disconnected) ? undefined : client;
-    };
-    const connect = (socket, dbName) => {
-        const client = new clients_1.ConnectedClient(socket, dbName);
-        env.clients.set(`${client.dbName}_${client.id}`, client);
-        env.debug.warn(`New socket connected, total: ${env.clients.size}`);
-        serverManager.send(socket, "welcome");
-        return getClientBySocketId(socket, dbName, "connect");
+        return !client || client.disconnected ? undefined : client;
     };
     serverManager.on("connect", (event) => {
-        const client = new clients_1.ConnectedClient(event.socket, event.dbName);
-        env.clients.set(`${client.dbName}_${client.id}`, client);
+        const client = new clients_1.ConnectedClient(event.socket);
+        env.clients.set(client.id, client);
         env.debug.warn(`New socket connected, total: ${env.clients.size}`);
         serverManager.send(event.socket, "welcome");
     });
     serverManager.on("disconnect", (event) => {
         // We lost one
-        const client = getClientBySocketId(event.socket, event.dbName, "disconnect");
+        const client = getClientBySocketId(event.socket_id, "disconnect");
         if (!client) {
             return;
         } // Disconnected a client we did not know? Don't crash, just ignore.
         client.disconnected = true;
-        const subscribedPaths = Object.keys(client.subscriptions);
-        if (subscribedPaths.length > 0) {
-            // TODO: Substitute the original callbacks to cache them
-            // if the client then reconnects within a certain time,
-            // we can send the missed notifications
-            //
-            // subscribedPaths.forEach(path => {
-            //     client.subscriptions[path].forEach(subscr => {
-            //         subscr.callback
-            //     })
-            // });
-            const remove = [];
-            subscribedPaths.forEach((path) => {
-                remove.push(...client.subscriptions[path]);
-            });
-            remove.forEach((subscr) => {
-                // Unsubscribe them at db level and remove from our list
-                env.db(event.dbName).storage.unsubscribe(subscr.path, subscr.event, subscr.callback); //db.ref(subscr.path).off(subscr.event, subscr.callback);
-                const pathSubs = client.subscriptions[subscr.path];
-                pathSubs.splice(pathSubs.indexOf(subscr), 1);
-            });
+        for (const dbName in client.subscriptions) {
+            const subscribedPaths = Object.keys(client.subscriptions[dbName]);
+            if (subscribedPaths.length > 0) {
+                // TODO: Substitute the original callbacks to cache them
+                // if the client then reconnects within a certain time,
+                // we can send the missed notifications
+                //
+                // subscribedPaths.forEach(path => {
+                //     client.subscriptions[path].forEach(subscr => {
+                //         subscr.callback
+                //     })
+                // });
+                const remove = [];
+                subscribedPaths.forEach((path) => {
+                    remove.push(...client.subscriptions[dbName][path]);
+                });
+                remove.forEach((subscr) => {
+                    // Unsubscribe them at db level and remove from our list
+                    env.db(dbName).storage.unsubscribe(subscr.path, subscr.event, subscr.callback); //db.ref(subscr.path).off(subscr.event, subscr.callback);
+                    const pathSubs = client.subscriptions[dbName][subscr.path];
+                    pathSubs.splice(pathSubs.indexOf(subscr), 1);
+                });
+            }
         }
-        env.clients.delete(`${client.dbName}_${client.id}`);
+        env.clients.delete(client.id);
         env.debug.verbose(`Socket disconnected, total: ${env.clients.size}`);
     });
     serverManager.on("signin", (event) => {
@@ -79,19 +67,31 @@ const addWebsocketServer = (env) => {
         // client sends this request once user has been signed in, binds the user to the socket,
         // deprecated since client v0.9.4, which sends client_id with signin api call
         // const client = clients.get(socket.id);
-        const client = getClientBySocketId(event.socket, event.dbName, "signin");
+        const client = getClientBySocketId(event.socket_id, "signin");
         if (!client) {
             return;
         }
         try {
-            if (!event.data || !event.data.accessToken) {
+            if (!event.data) {
+                throw new SocketRequestError("missing_data", "Missing data");
+            }
+            if (!event.data.accessToken) {
                 throw new SocketRequestError("missing_access_token", "Missing access token");
             }
             if (!env.tokenSalt) {
                 throw new SocketRequestError("missing_token_salt", "Missing token salt");
             }
+            if (!event.data.dbName) {
+                throw new SocketRequestError("missing_db_name", "Missing database name");
+            }
             const uid = (0, tokens_1.decodePublicAccessToken)(event.data.accessToken, env.tokenSalt).uid;
-            client.user = (_a = env.authCache.get(uid)) !== null && _a !== void 0 ? _a : undefined;
+            const user = (_a = env.authCache.get(uid)) !== null && _a !== void 0 ? _a : undefined;
+            if (user) {
+                client.user.set(event.data.dbName, user);
+            }
+            else {
+                client.user.delete(event.data.dbName);
+            }
         }
         catch (err) {
             if (event.data && event.data.accessToken) {
@@ -105,11 +105,11 @@ const addWebsocketServer = (env) => {
     serverManager.on("signout", (event) => {
         // deprecated since client v0.9.4, which sends client_id with signout api call
         // const client = clients.get(socket.id);
-        const client = getClientBySocketId(event.socket, event.dbName, "signout");
-        if (!client) {
+        const client = getClientBySocketId(event.socket_id, "signout");
+        if (!client || !event.data) {
             return;
         }
-        client.user = undefined;
+        client.user.delete(event.data.dbName);
     });
     const acknowledgeRequest = (socket, requestId) => {
         // Send acknowledgement
@@ -127,23 +127,24 @@ const addWebsocketServer = (env) => {
         });
     };
     serverManager.on("subscribe", async (event) => {
-        var _a, _b, _c;
+        var _a, _b, _c, _d;
         // Client wants to subscribe to events on a node
-        const client = getClientBySocketId(event.socket, event.dbName, "subscribe");
+        const client = getClientBySocketId(event.socket_id, "subscribe");
         if (!client || !event.data) {
             return;
         }
         const eventName = event.data.event;
         const subscriptionPath = event.data.path;
+        const dbName = event.data.dbName;
         env.debug.verbose(`Client ${event.socket_id} subscribes to event "${eventName}" on path "/${subscriptionPath}"`);
-        const isSubscribed = () => subscriptionPath in client.subscriptions && client.subscriptions[subscriptionPath].some((s) => s.event === eventName);
+        const isSubscribed = () => client.subscriptions[dbName] && subscriptionPath in client.subscriptions[dbName] && client.subscriptions[dbName][subscriptionPath].some((s) => s.event === eventName);
         if (isSubscribed()) {
             return acknowledgeRequest(event.socket, event.data.req_id);
         }
         // Get client
         // const client = clients.get(socket.id);
-        if (!(await env.rules(event.dbName).isOperationAllowed((_a = client.user) !== null && _a !== void 0 ? _a : {}, subscriptionPath, "get"))) {
-            env.log.error("event.subscribe", "access_denied", { uid: (_c = (_b = client.user) === null || _b === void 0 ? void 0 : _b.uid) !== null && _c !== void 0 ? _c : "anonymous", path: subscriptionPath });
+        if (!(await env.rules(dbName).isOperationAllowed((_a = client.user.get(dbName)) !== null && _a !== void 0 ? _a : {}, subscriptionPath, "get"))) {
+            env.log.error("event.subscribe", "access_denied", { uid: (_c = (_b = client.user.get(dbName)) === null || _b === void 0 ? void 0 : _b.uid) !== null && _c !== void 0 ? _c : "anonymous", path: subscriptionPath });
             return failRequest(event.socket, event.data.req_id, "access_denied");
         }
         const callback = async (err, path, currentValue, previousValue, context) => {
@@ -152,10 +153,10 @@ const addWebsocketServer = (env) => {
                 // Not subscribed anymore. Cancel sending
                 return;
             }
-            if (err) {
+            if (err || !event.data) {
                 return;
             }
-            if (!(await env.rules(event.dbName).isOperationAllowed((_a = client.user) !== null && _a !== void 0 ? _a : {}, path, "get", { value: currentValue, context }))) {
+            if (!(await env.rules(dbName).isOperationAllowed((_a = client.user.get(dbName)) !== null && _a !== void 0 ? _a : {}, path, "get", { value: currentValue, context }))) {
                 // 'event', { eventName, subscriptionPath, currentValue, previousValue, context })
                 if (!subscriptionPath.includes("*") && !subscriptionPath.includes("$")) {
                     // Could potentially be very many callbacks, so
@@ -179,26 +180,28 @@ const addWebsocketServer = (env) => {
                 context,
             });
         };
-        let pathSubs = client.subscriptions[subscriptionPath];
+        let pathSubs = (_d = client.subscriptions[dbName]) === null || _d === void 0 ? void 0 : _d[subscriptionPath];
         if (!pathSubs) {
-            pathSubs = client.subscriptions[subscriptionPath] = [];
+            pathSubs = client.subscriptions[dbName][subscriptionPath] = [];
         }
         const subscr = { path: subscriptionPath, event: eventName, callback };
         pathSubs.push(subscr);
-        env.db(client.dbName).storage.subscribe(subscriptionPath, eventName, callback);
+        env.db(dbName).storage.subscribe(subscriptionPath, eventName, callback);
         acknowledgeRequest(event.socket, event.data.req_id);
     });
     serverManager.on("unsubscribe", (event) => {
+        var _a;
         // Client unsubscribes from events on a node
-        const client = getClientBySocketId(event.socket, event.dbName, "unsubscribe");
+        const client = getClientBySocketId(event.socket_id, "unsubscribe");
         if (!client || !event.data) {
             return;
         }
         const eventName = event.data.event;
         const subscriptionPath = event.data.path;
+        const dbName = event.data.dbName;
         env.debug.verbose(`Client ${event.socket_id} is unsubscribing from event "${eventName || "(any)"}" on path "/${subscriptionPath}"`);
         // const client = clients.get(socket.id);
-        const pathSubs = client.subscriptions[subscriptionPath];
+        const pathSubs = (_a = client.subscriptions[dbName]) === null || _a === void 0 ? void 0 : _a[subscriptionPath];
         if (!pathSubs) {
             // We have no knowledge of any active subscriptions on this path
             return acknowledgeRequest(event.socket, event.data.req_id);
@@ -209,9 +212,12 @@ const addWebsocketServer = (env) => {
             remove = pathSubs.filter((subscr) => subscr.event === eventName);
         }
         remove.forEach((subscr) => {
+            if (!event.data) {
+                return;
+            }
             // Unsubscribe them at db level and remove from our list
             //this.debug.verbose(`   - unsubscribing from event ${subscr.event} with${subscr.callback ? "" : "out"} callback on path "${data.path}"`);
-            env.db(client.dbName).storage.unsubscribe(subscr.path, subscr.event, subscr.callback); //db.api.unsubscribe(data.path, subscr.event, subscr.callback);
+            env.db(dbName).storage.unsubscribe(subscr.path, subscr.event, subscr.callback); //db.api.unsubscribe(data.path, subscr.event, subscr.callback);
             pathSubs.splice(pathSubs.indexOf(subscr), 1);
         });
         if (pathSubs.length === 0) {
@@ -222,13 +228,16 @@ const addWebsocketServer = (env) => {
     });
     serverManager.on("query-unsubscribe", (event) => {
         // Client unsubscribing from realtime query events
-        const client = getClientBySocketId(event.socket, event.dbName, "query-unsubscribe");
+        const client = getClientBySocketId(event.socket_id, "query-unsubscribe");
         if (!client || !event.data) {
             return;
         }
+        const dbName = event.data.dbName;
         env.debug.verbose(`Client ${event.socket_id} is unsubscribing from realtime query "${event.data.query_id}"`);
         // const client = clients.get(socket.id);
-        delete client.realtimeQueries[event.data.query_id];
+        if (dbName in client.realtimeQueries && event.data.query_id in client.realtimeQueries[dbName]) {
+            delete client.realtimeQueries[dbName][event.data.query_id];
+        }
         acknowledgeRequest(event.socket, event.data.req_id);
     });
     return serverManager;

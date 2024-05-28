@@ -47,24 +47,15 @@ const createServer = (env) => {
     const manager = new SocketIOManager();
     server.sockets.on("connection", (socket) => {
         const { protocol, host, port } = socket.request.headers;
-        socket.on("database", (dbName) => {
-            if (!env.hasDatabase(dbName)) {
-                socket.emit("disconnect", { socket, socket_id: socket.id, error: { code: "not_found", message: `Database '${dbName}' not found` } });
-                socket.disconnect(true);
-                return;
-            }
-            // Notify manager of new connection
-            manager.emit("connect", { socket, socket_id: socket.id, dbName });
-        });
-        // Pass any events to manager
-        socket.on("disconnect", (reason) => { var _a; return manager.emit("disconnect", { socket, socket_id: socket.id, dbName: (_a = reason === null || reason === void 0 ? void 0 : reason.dbName) !== null && _a !== void 0 ? _a : "", data: reason }); });
-        socket.on("reconnect", (data) => { var _a; return manager.emit("connect", { socket, socket_id: socket.id, dbName: (_a = data === null || data === void 0 ? void 0 : data.dbName) !== null && _a !== void 0 ? _a : "", data }); });
-        socket.on("signin", (data) => { var _a; return manager.emit("signin", { socket, socket_id: socket.id, dbName: (_a = data === null || data === void 0 ? void 0 : data.dbName) !== null && _a !== void 0 ? _a : "", data }); });
-        socket.on("signout", (data) => { var _a; return manager.emit("signout", { socket, socket_id: socket.id, dbName: (_a = data === null || data === void 0 ? void 0 : data.dbName) !== null && _a !== void 0 ? _a : "", data }); });
-        socket.on("subscribe", (data) => { var _a; return manager.emit("subscribe", { socket, socket_id: socket.id, dbName: (_a = data === null || data === void 0 ? void 0 : data.dbName) !== null && _a !== void 0 ? _a : "", data }); });
-        socket.on("unsubscribe", (data) => { var _a; return manager.emit("unsubscribe", { socket, socket_id: socket.id, dbName: (_a = data === null || data === void 0 ? void 0 : data.dbName) !== null && _a !== void 0 ? _a : "", data }); });
-        socket.on("query-unsubscribe", (data) => { var _a; return manager.emit("query-unsubscribe", { socket, socket_id: socket.id, dbName: (_a = data === null || data === void 0 ? void 0 : data.dbName) !== null && _a !== void 0 ? _a : "", data }); });
-        socket.on("query_unsubscribe", (data) => { var _a; return manager.emit("query-unsubscribe", { socket, socket_id: socket.id, dbName: (_a = data === null || data === void 0 ? void 0 : data.dbName) !== null && _a !== void 0 ? _a : "", data }); });
+        manager.emit("connect", { socket, socket_id: socket.id });
+        socket.on("disconnect", (reason) => manager.emit("disconnect", { socket, socket_id: socket.id, data: reason }));
+        socket.on("reconnect", (data) => manager.emit("connect", { socket, socket_id: socket.id, data }));
+        socket.on("signin", (data) => manager.emit("signin", { socket, socket_id: socket.id, data }));
+        socket.on("signout", (data) => manager.emit("signout", { socket, socket_id: socket.id, data }));
+        socket.on("subscribe", (data) => manager.emit("subscribe", { socket, socket_id: socket.id, data }));
+        socket.on("unsubscribe", (data) => manager.emit("unsubscribe", { socket, socket_id: socket.id, data }));
+        socket.on("query-unsubscribe", (data) => manager.emit("query-unsubscribe", { socket, socket_id: socket.id, data }));
+        socket.on("query_unsubscribe", (data) => manager.emit("query-unsubscribe", { socket, socket_id: socket.id, data }));
     });
     return manager;
 };

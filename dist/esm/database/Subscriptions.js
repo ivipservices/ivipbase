@@ -6,6 +6,16 @@ export class Subscriptions {
     constructor() {
         this._eventSubscriptions = {};
     }
+    forEach(callback) {
+        Object.keys(this._eventSubscriptions).forEach((path) => {
+            this._eventSubscriptions[path].forEach((sub) => {
+                callback(sub.type, path, sub.callback);
+            });
+        });
+    }
+    countByPath(path) {
+        return (this._eventSubscriptions[path] || []).length;
+    }
     /**
      * Adiciona uma assinatura a um nó
      * @param path Caminho para o nó ao qual adicionar a assinatura

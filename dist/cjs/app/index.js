@@ -14,6 +14,7 @@ const database_1 = require("../database");
 const request_1 = __importDefault(require("../controller/request"));
 const socket_io_client_1 = require("socket.io-client");
 const utils_1 = require("../utils");
+const error_1 = require("../controller/request/error");
 const CONNECTION_STATE_DISCONNECTED = "disconnected";
 const CONNECTION_STATE_CONNECTING = "connecting";
 const CONNECTION_STATE_CONNECTED = "connected";
@@ -40,15 +41,9 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         this.on("ready", () => {
             this._ready = true;
         });
-        if (!this.isServer) {
-            this.on("disconnect", () => {
-                setTimeout(() => {
-                    this.reconnect();
-                }, 10000);
-            });
-        }
     }
     async initialize() {
+        var _a;
         if (!this._ready) {
             if (!this.isServer && (typeof this.settings.database === "string" || (Array.isArray(this.settings.database) && this.settings.database.length > 0))) {
                 await new Promise((resolve) => {
@@ -66,13 +61,17 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
                 const dbList = Array.isArray(this.settings.dbname) ? this.settings.dbname : [this.settings.dbname];
                 await this.storage.ready();
                 if (this.isServer) {
-                    this.server = new server_1.LocalServer(this, this.settings.server);
+                    if (!this.server) {
+                        this.server = new server_1.LocalServer(this, this.settings.server);
+                    }
                     await this.server.ready();
                 }
                 for (const dbName of dbList) {
-                    const db = new database_1.DataBase(dbName, this);
+                    const db = (_a = this.databases.get(dbName)) !== null && _a !== void 0 ? _a : new database_1.DataBase(dbName, this);
                     await db.ready();
-                    this.databases.set(dbName, db);
+                    if (!this.databases.has(dbName)) {
+                        this.databases.set(dbName, db);
+                    }
                 }
             }
             this.emit("ready");
@@ -101,6 +100,40 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
     }
     get socket() {
         return this._socket;
+    }
+    async onConnect(callback, isOnce = false) {
+        let count = 0;
+        const event = () => {
+            if (this._ready && this.isConnected) {
+                count++;
+                if (count > 1 && isOnce) {
+                    return;
+                }
+                callback(this.socket);
+                if (isOnce) {
+                    this.off("connect", event);
+                }
+                return;
+            }
+            if (!this._ready) {
+                this.ready(() => {
+                    event();
+                });
+            }
+        };
+        if (!this.isServer && (typeof this.settings.database === "string" || (Array.isArray(this.settings.database) && this.settings.database.length > 0))) {
+            this.on("connect", event);
+            event();
+            return {
+                stop: () => {
+                    this.off("connect", event);
+                },
+            };
+        }
+        event();
+        return {
+            stop: () => { },
+        };
     }
     get isReady() {
         return this._ready;
@@ -143,6 +176,55 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
             }
         });
     }
+    websocketRequest(socket, event, data, dbName) {
+        var _a, _b;
+        if (!socket) {
+            throw new Error(`Cannot send request because websocket connection is not open`);
+        }
+        const requestId = ivipbase_core_1.ID.generate();
+        const accessToken = (_b = (_a = this.auth.get(dbName)) === null || _a === void 0 ? void 0 : _a.currentUser) === null || _b === void 0 ? void 0 : _b.accessToken;
+        // const request = data;
+        // request.req_id = requestId;
+        // request.access_token = accessToken;
+        const request = Object.assign(Object.assign({}, data), { req_id: requestId, access_token: accessToken, dbName });
+        return new Promise((resolve, reject) => {
+            const checkConnection = () => {
+                if (!(socket === null || socket === void 0 ? void 0 : socket.connected)) {
+                    return reject(new error_1.RequestError(request, null, "websocket", "No open websocket connection"));
+                }
+            };
+            checkConnection();
+            let timeout;
+            const send = (retry = 0) => {
+                checkConnection();
+                socket.emit(event, request);
+                timeout = setTimeout(() => {
+                    if (retry < 2) {
+                        return send(retry + 1);
+                    }
+                    socket.off("result", handle);
+                    const err = new error_1.RequestError(request, null, "timeout", `Server did not respond to "${event}" request after ${retry + 1} tries`);
+                    reject(err);
+                }, 1000);
+            };
+            const handle = (response) => {
+                if (response.req_id === requestId) {
+                    clearTimeout(timeout);
+                    socket.off("result", handle);
+                    if (response.success) {
+                        return resolve(response);
+                    }
+                    // Access denied?
+                    const code = typeof response.reason === "object" ? response.reason.code : response.reason;
+                    const message = typeof response.reason === "object" ? response.reason.message : `request failed: ${code}`;
+                    const err = new error_1.RequestError(request, response, code, message);
+                    reject(err);
+                }
+            };
+            socket.on("result", handle);
+            send();
+        });
+    }
     async projects() {
         return this.request({ route: "projects" });
     }
@@ -178,7 +260,6 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
             this._socket.on("reconnect_failed", () => {
                 this._connectionState = CONNECTION_STATE_DISCONNECTED;
                 this.emit("reconnect_failed");
-                this.emit("disconnect");
             });
             return;
         }
@@ -200,16 +281,16 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         this._socket = null;
     }
     async reset(options) {
+        await this.destroy();
         this._connectionState = CONNECTION_STATE_DISCONNECTED;
         this._socket = null;
         this._ready = false;
         this.isDeleted = false;
-        await this.destroy();
         this.settings = new settings_1.IvipBaseSettings((0, utils_1.joinObjects)(this.settings.options, options));
         this.storage = (0, verifyStorage_1.applySettings)(this.settings.dbname, this.settings.storage);
         this.isServer = typeof this.settings.server === "object";
-        this.databases.clear();
         this.auth.clear();
+        this.databases.clear();
         this.emit("reset");
         await this.initialize();
     }

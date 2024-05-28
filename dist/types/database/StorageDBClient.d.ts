@@ -3,9 +3,7 @@ import { Api, Types } from "ivipbase-core";
 import type { DataBase } from ".";
 export declare class StorageDBClient extends Api {
     readonly db: DataBase;
-    cache: {
-        [path: string]: any;
-    };
+    private _realtimeQueries;
     readonly url: string;
     private readonly app;
     private readonly auth;
@@ -18,8 +16,8 @@ export declare class StorageDBClient extends Api {
     private _request;
     connect(retry?: boolean): void;
     disconnect(): void;
-    subscribe(path: string, event: string, callback: Types.EventSubscriptionCallback, settings?: Types.EventSubscriptionSettings): void;
-    unsubscribe(path: string, event?: string, callback?: Types.EventSubscriptionCallback): void;
+    subscribe(path: string, event: string, callback: Types.EventSubscriptionCallback, settings?: Types.EventSubscriptionSettings): Promise<void>;
+    unsubscribe(path: string, event?: string, callback?: Types.EventSubscriptionCallback): Promise<void>;
     getInfo(): Promise<{
         dbname: string;
         version: string;

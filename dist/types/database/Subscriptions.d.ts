@@ -1,6 +1,8 @@
 import { Types } from "ivipbase-core";
 export declare class Subscriptions {
     private _eventSubscriptions;
+    forEach(callback: (event: string, path: string, callback: Types.EventSubscriptionCallback) => void): void;
+    countByPath(path: string): number;
     /**
      * Adiciona uma assinatura a um nó
      * @param path Caminho para o nó ao qual adicionar a assinatura

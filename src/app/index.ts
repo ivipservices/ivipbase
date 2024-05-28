@@ -1,4 +1,4 @@
-import { SimpleEventEmitter, Types, Utils } from "ivipbase-core";
+import { ID, SimpleEventEmitter, Types, Utils } from "ivipbase-core";
 import { DEFAULT_ENTRY_NAME, _apps } from "./internal";
 import { AppError, ERROR_FACTORY } from "../controller/erros";
 
@@ -10,6 +10,7 @@ import { Auth } from "../auth";
 import _request from "../controller/request";
 import { connect as connectSocket } from "socket.io-client";
 import { joinObjects } from "../utils";
+import { RequestError } from "../controller/request/error";
 
 type IOWebSocket = ReturnType<typeof connectSocket>;
 
@@ -61,14 +62,6 @@ export class IvipBaseApp extends SimpleEventEmitter {
 		this.on("ready", () => {
 			this._ready = true;
 		});
-
-		if (!this.isServer) {
-			this.on("disconnect", () => {
-				setTimeout(() => {
-					this.reconnect();
-				}, 10000);
-			});
-		}
 	}
 
 	async initialize() {
@@ -94,14 +87,19 @@ export class IvipBaseApp extends SimpleEventEmitter {
 				await this.storage.ready();
 
 				if (this.isServer) {
-					this.server = new LocalServer(this, this.settings.server);
+					if (!this.server) {
+						this.server = new LocalServer(this, this.settings.server);
+					}
+
 					await this.server.ready();
 				}
 
 				for (const dbName of dbList) {
-					const db = new DataBase(dbName, this);
+					const db = this.databases.get(dbName) ?? new DataBase(dbName, this);
 					await db.ready();
-					this.databases.set(dbName, db);
+					if (!this.databases.has(dbName)) {
+						this.databases.set(dbName, db);
+					}
 				}
 			}
 
@@ -136,6 +134,48 @@ export class IvipBaseApp extends SimpleEventEmitter {
 
 	get socket() {
 		return this._socket;
+	}
+
+	async onConnect(callback: (socket: IOWebSocket | null) => void, isOnce: boolean = false) {
+		let count = 0;
+		const event = () => {
+			if (this._ready && this.isConnected) {
+				count++;
+
+				if (count > 1 && isOnce) {
+					return;
+				}
+
+				callback(this.socket);
+				if (isOnce) {
+					this.off("connect", event);
+				}
+
+				return;
+			}
+
+			if (!this._ready) {
+				this.ready(() => {
+					event();
+				});
+			}
+		};
+
+		if (!this.isServer && (typeof this.settings.database === "string" || (Array.isArray(this.settings.database) && this.settings.database.length > 0))) {
+			this.on("connect", event);
+			event();
+
+			return {
+				stop: () => {
+					this.off("connect", event);
+				},
+			};
+		}
+
+		event();
+		return {
+			stop: () => {},
+		};
 	}
 
 	get isReady() {
@@ -217,6 +257,65 @@ export class IvipBaseApp extends SimpleEventEmitter {
 		});
 	}
 
+	websocketRequest<ResponseType = Record<string, any>>(socket: IOWebSocket | null, event: string, data: any, dbName: string) {
+		if (!socket) {
+			throw new Error(`Cannot send request because websocket connection is not open`);
+		}
+		const requestId = ID.generate();
+		const accessToken = this.auth.get(dbName)?.currentUser?.accessToken;
+		// const request = data;
+		// request.req_id = requestId;
+		// request.access_token = accessToken;
+		const request = { ...data, req_id: requestId, access_token: accessToken, dbName };
+
+		type T = ResponseType & {
+			req_id: string;
+			success: boolean;
+			reason?: string | { code: string; message: string };
+		};
+		return new Promise<T>((resolve, reject) => {
+			const checkConnection = () => {
+				if (!socket?.connected) {
+					return reject(new RequestError(request, null, "websocket", "No open websocket connection"));
+				}
+			};
+			checkConnection();
+
+			let timeout: NodeJS.Timeout;
+
+			const send = (retry = 0) => {
+				checkConnection();
+				socket.emit(event, request);
+				timeout = setTimeout(() => {
+					if (retry < 2) {
+						return send(retry + 1);
+					}
+					socket.off("result", handle);
+					const err = new RequestError(request, null, "timeout", `Server did not respond to "${event}" request after ${retry + 1} tries`);
+					reject(err);
+				}, 1000);
+			};
+
+			const handle = (response: T) => {
+				if (response.req_id === requestId) {
+					clearTimeout(timeout);
+					socket.off("result", handle);
+					if (response.success) {
+						return resolve(response);
+					}
+					// Access denied?
+					const code = typeof response.reason === "object" ? response.reason.code : response.reason;
+					const message = typeof response.reason === "object" ? response.reason.message : `request failed: ${code}`;
+					const err = new RequestError(request, response, code, message);
+					reject(err);
+				}
+			};
+
+			socket.on("result", handle);
+			send();
+		});
+	}
+
 	async projects(): Promise<
 		{
 			name: string;
@@ -265,7 +364,6 @@ export class IvipBaseApp extends SimpleEventEmitter {
 			this._socket.on("reconnect_failed", () => {
 				this._connectionState = CONNECTION_STATE_DISCONNECTED;
 				this.emit("reconnect_failed");
-				this.emit("disconnect");
 			});
 
 			return;
@@ -291,12 +389,11 @@ export class IvipBaseApp extends SimpleEventEmitter {
 	}
 
 	async reset(options: IvipBaseSettingsOptions) {
+		await this.destroy();
 		this._connectionState = CONNECTION_STATE_DISCONNECTED;
 		this._socket = null;
 		this._ready = false;
 		this.isDeleted = false;
-
-		await this.destroy();
 
 		this.settings = new IvipBaseSettings(joinObjects(this.settings.options, options));
 
@@ -304,8 +401,8 @@ export class IvipBaseApp extends SimpleEventEmitter {
 
 		this.isServer = typeof this.settings.server === "object";
 
-		this.databases.clear();
 		this.auth.clear();
+		this.databases.clear();
 
 		this.emit("reset");
 

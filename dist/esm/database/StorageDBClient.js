@@ -1,4 +1,4 @@
-import { Api, SchemaDefinition, Transport } from "ivipbase-core";
+import { Api, ID, SchemaDefinition, Transport } from "ivipbase-core";
 import { NOT_CONNECTED_ERROR_MESSAGE } from "../controller/request/error.js";
 import { getAuth } from "../auth/index.js";
 class PromiseTimeoutError extends Error {
@@ -17,21 +17,67 @@ export class StorageDBClient extends Api {
     constructor(db) {
         super();
         this.db = db;
-        this.cache = {};
-        this.auth = () => {
-            return getAuth(this.db.database);
-        };
+        this._realtimeQueries = {};
+        this.auth = getAuth(this.db.database);
         this.app = db.app;
         this.url = this.app.url.replace(/\/+$/, "");
         this.initialize();
+        this.app.onConnect(async (socket) => {
+            const subscribePromises = [];
+            this.db.subscriptions.forEach((event, path) => {
+                subscribePromises.push(new Promise(async (resolve, reject) => {
+                    try {
+                        await this.app.websocketRequest(socket, "subscribe", { path: path, event: event }, this.db.name);
+                    }
+                    catch (err) {
+                        if (err.code === "access_denied" && !this.db.accessToken) {
+                            this.db.debug.error(`Could not subscribe to event "${event}" on path "${path}" because you are not signed in. If you added this event while offline and have a user access token, you can prevent this by using client.auth.setAccessToken(token) to automatically try signing in after connecting`);
+                        }
+                        else {
+                            this.db.debug.error(err);
+                        }
+                    }
+                }));
+            });
+            await Promise.all(subscribePromises);
+        });
+        this.app.ready(() => {
+            this.app.socket?.on("data-event", (data) => {
+                const val = Transport.deserialize(data.val);
+                const context = data.context ?? {};
+                context.acebase_event_source = "server";
+                const isValid = this.db.subscriptions.hasValueSubscribersForPath(data.subscr_path);
+                if (!isValid) {
+                    return;
+                }
+                this.db.subscriptions.trigger(data.event, data.subscr_path, data.path, val.previous, val.current, context);
+            });
+            this.app.socket?.on("query-event", (data) => {
+                data = Transport.deserialize(data);
+                const query = this._realtimeQueries[data.query_id];
+                let keepMonitoring = true;
+                try {
+                    keepMonitoring = query.options.eventHandler(data);
+                }
+                catch (err) {
+                    keepMonitoring = false;
+                }
+                if (keepMonitoring === false) {
+                    delete this._realtimeQueries[data.query_id];
+                    this.app.socket?.emit("query-unsubscribe", { query_id: data.query_id });
+                }
+            });
+        });
     }
     get serverPingUrl() {
         return `/ping/${this.db.database}`;
     }
     async initialize() {
-        await getAuth(this.db.database).ready();
-        await this.db.app.request({ route: this.serverPingUrl });
-        this.db.emit("ready");
+        this.app.onConnect(async () => {
+            await this.auth.ready();
+            await this.app.request({ route: this.serverPingUrl });
+            this.db.emit("ready");
+        }, true);
     }
     get isConnected() {
         return this.app.isConnected;
@@ -45,15 +91,14 @@ export class StorageDBClient extends Api {
     async _request(options) {
         if (this.isConnected || options.ignoreConnectionState === true) {
             try {
-                const user = this.auth().currentUser;
-                const accessToken = user ? await user.getIdToken() : undefined;
+                const accessToken = this.auth?.currentUser?.accessToken;
                 return await this.db.app.request({
                     ...options,
                     accessToken,
                 });
             }
             catch (err) {
-                this.auth().currentUser?.reload();
+                this.auth.currentUser?.reload();
                 if (this.isConnected && err.isNetworkError) {
                     // This is a network error, but the websocket thinks we are still connected.
                     this.db.debug.warn(`A network error occurred loading ${options.route}`);
@@ -84,11 +129,23 @@ export class StorageDBClient extends Api {
     }
     connect(retry = true) { }
     disconnect() { }
-    subscribe(path, event, callback, settings) {
-        this.db.subscriptions.add(path, event, callback);
+    async subscribe(path, event, callback, settings) {
+        try {
+            this.db.subscriptions.add(path, event, callback);
+            await this.app.websocketRequest(this.app.socket, "subscribe", { path: path, event: event }, this.db.name);
+        }
+        catch (err) {
+            this.db.debug.error(err);
+        }
     }
-    unsubscribe(path, event, callback) {
-        this.db.subscriptions.remove(path, event, callback);
+    async unsubscribe(path, event, callback) {
+        try {
+            this.db.subscriptions.remove(path, event, callback);
+            await this.app.websocketRequest(this.app.socket, "unsubscribe", { path: path, event: event }, this.db.name);
+        }
+        catch (err) {
+            this.db.debug.error(err);
+        }
     }
     async getInfo() {
         return await this._request({ route: `/info/${this.db.database}` });
@@ -129,16 +186,33 @@ export class StorageDBClient extends Api {
     exists(path) {
         return this._request({ route: `/exists/${this.db.database}/${path}` });
     }
-    async query(path, query, options = { snapshots: false }) {
+    async query(path, query, options = { snapshots: false, monitor: { add: false, change: false, remove: false } }) {
         const request = {
             query,
             options,
         };
+        if (options.monitor === true || (typeof options.monitor === "object" && (options.monitor.add || options.monitor.change || options.monitor.remove))) {
+            console.assert(typeof options.eventHandler === "function", `no eventHandler specified to handle realtime changes`);
+            if (!this.app.socket) {
+                throw new Error(`Cannot create realtime query because websocket is not connected. Check your AceBaseClient network.realtime setting`);
+            }
+            request.query_id = ID.generate();
+            request.client_id = this.app.socket.id;
+            this._realtimeQueries[request.query_id] = { query, options };
+        }
         const reqData = JSON.stringify(Transport.serialize(request));
-        const { data, context } = await this._request({ method: "POST", route: `/query/${this.db.database}/${path}`, data: reqData, includeContext: true });
-        const results = Transport.deserialize(data);
-        const stop = () => Promise.resolve();
-        return { results: results.list, context, stop };
+        try {
+            const { data, context } = await this._request({ method: "POST", route: `/query/${this.db.database}/${path}`, data: reqData, includeContext: true });
+            const results = Transport.deserialize(data);
+            const stop = async () => {
+                delete this._realtimeQueries[request.query_id];
+                await this.app.websocketRequest(this.app.socket, "query-unsubscribe", { query_id: request.query_id }, this.db.name);
+            };
+            return { results: results.list, context, stop };
+        }
+        catch (err) {
+            throw err;
+        }
     }
     reflect(path, type, args) {
         let route = `/reflect/${this.db.database}/${path}?type=${type}`;

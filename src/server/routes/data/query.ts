@@ -68,16 +68,21 @@ export const addRoutes = (env: LocalServer) => {
 		if (typeof options.monitor === "object" && (options.monitor.add || options.monitor.change || options.monitor.remove)) {
 			const queryId = data.query_id;
 			const clientId = data.client_id;
-			const client = env.clients.get(`${dbName}_${clientId}`);
-			if (client) client.realtimeQueries[queryId] = { path, query, options };
+			const client = env.clients.get(clientId);
+			if (client) {
+				if (!(dbName in client.realtimeQueries)) {
+					client.realtimeQueries[dbName] = {};
+				}
+				client.realtimeQueries[dbName][queryId] = { path, query, options };
+			}
 
 			const sendEvent = async (event: any) => {
 				try {
-					const client = env.clients.get(`${dbName}_${clientId}`);
+					const client = env.clients.get(clientId);
 					if (!client) {
 						return cancelSubscription?.();
 					} // Not connected, stop subscription
-					if (!(await env.rules(dbName).isOperationAllowed(client.user ?? ({} as any), event.path, "get", { context: req.context, value: event.value })).allow) {
+					if (!(await env.rules(dbName).isOperationAllowed(client.user.get(dbName) ?? ({} as any), event.path, "get", { context: req.context, value: event.value })).allow) {
 						return cancelSubscription?.(); // Access denied, stop subscription
 					}
 					event.query_id = queryId;

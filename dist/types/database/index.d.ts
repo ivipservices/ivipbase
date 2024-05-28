@@ -12,6 +12,7 @@ export declare class DataBase extends DataBaseCore {
     readonly debug: DebugLogger;
     readonly storage: StorageDBServer | StorageDBClient;
     constructor(database: string, app: IvipBaseApp, options?: Partial<DataBaseSettings>);
+    get accessToken(): string | undefined;
     connect(retry?: boolean): void;
     disconnect(): void;
     getInfo(): Promise<{

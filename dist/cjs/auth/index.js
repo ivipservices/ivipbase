@@ -44,7 +44,7 @@ class AuthUser {
         this.created = (_b = user.created) !== null && _b !== void 0 ? _b : new Date(0).toISOString();
         this.settings = (_c = user.settings) !== null && _c !== void 0 ? _c : {};
         this._accessToken = access_token;
-        this._lastAccessTokenRefresh = typeof access_token === "string" ? Date.now() : 0;
+        this._lastAccessTokenRefresh = 0;
     }
     get accessToken() {
         return this._accessToken;
@@ -166,6 +166,7 @@ class AuthUser {
         const now = Date.now();
         forceRefresh = forceRefresh || now - this._lastAccessTokenRefresh > 1000 * 60 * 15; // 15 minutes
         if (this._accessToken && forceRefresh) {
+            this._lastAccessTokenRefresh = Date.now();
             try {
                 const result = await this.auth.app.request({
                     method: "POST",
@@ -174,10 +175,10 @@ class AuthUser {
                 });
                 Object.assign(this, (_a = result.user) !== null && _a !== void 0 ? _a : {});
                 this._accessToken = result.access_token;
-                this._lastAccessTokenRefresh = Date.now();
                 this.auth.emit("signin", this);
             }
             catch (_c) {
+                this._lastAccessTokenRefresh = 0;
                 const access_token = this._accessToken;
                 this._accessToken = undefined;
                 this.auth.emit("signout", access_token);
@@ -198,11 +199,11 @@ class AuthUser {
      * Atualiza o usuário atual, se estiver conectado.
      * @returns Uma promise que é resolvida com o usuário atual após uma possível atualização do token.
      */
-    async reload() {
+    async reload(forceRefresh = true) {
         if (!this._accessToken) {
             throw new Error(AUTH_USER_LOGIN_ERROR_MESSAGE);
         }
-        await this.getIdToken(true);
+        await this.getIdToken(forceRefresh);
     }
     /**
      * Retorna uma representação JSON serializável deste objeto.
@@ -253,10 +254,10 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
          */
         this._user = null;
         this.isValidAuth = app.isServer || !app.settings.isValidClient ? false : true;
-        app.once("connect", () => {
-            var _a, _b;
-            if ((_a = this._user) === null || _a === void 0 ? void 0 : _a.accessToken) {
-                (_b = this.app.socket) === null || _b === void 0 ? void 0 : _b.emit("signin", { dbName: this.database, accessToken: this._user.accessToken });
+        app.onConnect((socket) => {
+            var _a;
+            if (((_a = this._user) === null || _a === void 0 ? void 0 : _a.accessToken) && socket) {
+                socket.emit("signin", { dbName: this.database, accessToken: this._user.accessToken });
             }
         });
         this.on("ready", () => {
@@ -297,22 +298,27 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
         this.initialize();
     }
     async initialize() {
-        try {
-            if (!this._user) {
-                const user = localStorage_1.default.getItem(`[${this.database}][auth_user]`);
-                if (user) {
-                    this._user = AuthUser.fromJSON(this, JSON.parse(base64_1.default.decode(user)));
-                    await this._user.reload();
+        this.app.onConnect(async () => {
+            if (this._ready) {
+                return;
+            }
+            try {
+                if (!this._user) {
+                    const user = localStorage_1.default.getItem(`[${this.database}][auth_user]`);
+                    if (user) {
+                        this._user = AuthUser.fromJSON(this, JSON.parse(base64_1.default.decode(user)));
+                        await this._user.reload(false);
+                    }
                 }
             }
-        }
-        catch (_a) {
-            this._user = null;
-            localStorage_1.default.removeItem(`[${this.database}][auth_user]`);
-            if (!this._ready) {
-                this.emit("ready");
+            catch (_a) {
+                this._user = null;
+                localStorage_1.default.removeItem(`[${this.database}][auth_user]`);
+                if (!this._ready) {
+                    this.emit("ready");
+                }
             }
-        }
+        }, true);
     }
     /**
      * Aguarda até que o módulo Auth esteja pronto.
@@ -661,10 +667,10 @@ function getAuth(...args) {
     if (!(0, database_1.hasDatabase)(dbName)) {
         throw new Error(`Database "${dbName}" does not exist`);
     }
-    if (dbName && app.auth.has(dbName)) {
+    if (app.auth.has(dbName)) {
         return app.auth.get(dbName);
     }
-    const auth = new Auth((Array.isArray(database) ? database : [database])[0], app);
+    const auth = new Auth(dbName, app);
     app.auth.set(dbName, auth);
     return auth;
 }

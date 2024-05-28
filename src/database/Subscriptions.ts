@@ -7,6 +7,18 @@ SUPPORTED_EVENTS.push(...SUPPORTED_EVENTS.map((event) => `notify_${event}`));
 export class Subscriptions {
 	private _eventSubscriptions = {} as { [path: string]: Array<{ created: number; type: string; callback: Types.EventSubscriptionCallback }> };
 
+	forEach(callback: (event: string, path: string, callback: Types.EventSubscriptionCallback) => void) {
+		Object.keys(this._eventSubscriptions).forEach((path) => {
+			this._eventSubscriptions[path].forEach((sub) => {
+				callback(sub.type, path, sub.callback);
+			});
+		});
+	}
+
+	countByPath(path: string) {
+		return (this._eventSubscriptions[path] || []).length;
+	}
+
 	/**
 	 * Adiciona uma assinatura a um nó
 	 * @param path Caminho para o nó ao qual adicionar a assinatura
