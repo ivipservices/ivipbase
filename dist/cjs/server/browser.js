@@ -3,8 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.LocalServer = exports.AbstractLocalServer = exports.isPossiblyServer = exports.ServerSettings = exports.ServerAuthenticationSettings = exports.DataBaseServerTransactionSettings = exports.AUTH_ACCESS_DEFAULT = exports.ExternalServerError = exports.ServerNotReadyError = void 0;
 const ivipbase_core_1 = require("ivipbase-core");
 const database_1 = require("../database");
-const rules_1 = require("./services/rules");
-const utils_1 = require("../utils");
 class ServerNotReadyError extends Error {
     constructor() {
         super("O servidor ainda não está pronto");
@@ -144,8 +142,8 @@ class ServerSettings {
             this.serverVersion = options.serverVersion;
         }
         this.transactions = new DataBaseServerTransactionSettings((_c = options.transactions) !== null && _c !== void 0 ? _c : {});
-        if (typeof options.rulesData === "object") {
-            this.rulesData = options.rulesData;
+        if (typeof options.defineRules === "object") {
+            this.defineRules = options.defineRules;
         }
     }
 }
@@ -156,7 +154,6 @@ class AbstractLocalServer extends ivipbase_core_1.SimpleEventEmitter {
         super();
         this.localApp = localApp;
         this._ready = false;
-        this.rules_db = new Map();
         this.securityRef = (dbName) => {
             return this.db(dbName).ref("__auth__/security");
         };
@@ -184,22 +181,7 @@ class AbstractLocalServer extends ivipbase_core_1.SimpleEventEmitter {
         this.db = (dbName) => (0, database_1.getDatabase)(dbName, localApp);
         this.hasDatabase = (dbName) => (0, database_1.hasDatabase)(dbName);
         this.rules = (dbName) => {
-            var _a, _b;
-            if (this.rules_db.has(dbName)) {
-                return this.rules_db.get(dbName);
-            }
-            const db = this.db(dbName);
-            const dbInfo = (Array.isArray(this.localApp.settings.database) ? this.localApp.settings.database : [this.localApp.settings.database]).find((d) => d.name === dbName);
-            const mainRules = (_a = this.settings.rulesData) !== null && _a !== void 0 ? _a : { rules: {} };
-            const dbRules = (_b = dbInfo === null || dbInfo === void 0 ? void 0 : dbInfo.rulesData) !== null && _b !== void 0 ? _b : { rules: {} };
-            const rules = new rules_1.PathBasedRules(this.settings.auth.defaultAccessRule, {
-                debug: this.debug,
-                db,
-                authEnabled: this.settings.auth.enabled,
-                rules: (0, utils_1.joinObjects)({ rules: {} }, mainRules.rules, dbRules.rules),
-            });
-            this.rules_db.set(dbName, rules);
-            return rules;
+            return this.db(dbName).rules;
         };
         this.debug = new ivipbase_core_1.DebugLogger(this.settings.logLevel, `[SERVER]`);
         this.log = this.debug;

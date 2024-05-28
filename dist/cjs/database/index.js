@@ -6,9 +6,11 @@ const app_1 = require("../app");
 const StorageDBServer_1 = require("./StorageDBServer");
 const StorageDBClient_1 = require("./StorageDBClient");
 const Subscriptions_1 = require("./Subscriptions");
+const rules_1 = require("./services/rules");
+const utils_1 = require("../utils");
 class DataBase extends ivipbase_core_1.DataBase {
     constructor(database, app, options) {
-        var _a, _b, _c;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
         super(database, options);
         this.database = database;
         this.app = app;
@@ -21,8 +23,18 @@ class DataBase extends ivipbase_core_1.DataBase {
                 name: database,
                 description: (_b = app.settings.description) !== null && _b !== void 0 ? _b : "iVipBase database",
             }).description) !== null && _c !== void 0 ? _c : "iVipBase database";
-        this.storage = app.isServer || !app.settings.isValidClient ? new StorageDBServer_1.StorageDBServer(this) : new StorageDBClient_1.StorageDBClient(this);
         this.debug = new ivipbase_core_1.DebugLogger(app.settings.logLevel, `[${database}]`);
+        const dbInfo = (Array.isArray(this.app.settings.database) ? this.app.settings.database : [this.app.settings.database]).find((d) => d.name === this.name);
+        const defaultRules = (_e = (_d = this.app.settings) === null || _d === void 0 ? void 0 : _d.defaultRules) !== null && _e !== void 0 ? _e : { rules: {} };
+        const mainRules = (_h = (_g = (_f = this.app.settings) === null || _f === void 0 ? void 0 : _f.server) === null || _g === void 0 ? void 0 : _g.defineRules) !== null && _h !== void 0 ? _h : { rules: {} };
+        const dbRules = (_j = dbInfo === null || dbInfo === void 0 ? void 0 : dbInfo.defineRules) !== null && _j !== void 0 ? _j : { rules: {} };
+        this._rules = new rules_1.PathBasedRules((_m = (_l = (_k = this.app.settings) === null || _k === void 0 ? void 0 : _k.server) === null || _l === void 0 ? void 0 : _l.auth.defaultAccessRule) !== null && _m !== void 0 ? _m : "allow", {
+            debug: this.debug,
+            db: this,
+            authEnabled: (_q = (_p = (_o = this.app.settings) === null || _o === void 0 ? void 0 : _o.server) === null || _p === void 0 ? void 0 : _p.auth.enabled) !== null && _q !== void 0 ? _q : false,
+            rules: (0, utils_1.joinObjects)({ rules: {} }, defaultRules.rules, mainRules.rules, dbRules.rules),
+        });
+        this.storage = !app.settings.isConnectionDefined || app.isServer || !app.settings.isValidClient ? new StorageDBServer_1.StorageDBServer(this) : new StorageDBClient_1.StorageDBClient(this);
         app.storage.on("add", (e) => {
             //console.log(e);
             this.subscriptions.triggerAllEvents(e.path, null, e.value);
@@ -42,6 +54,9 @@ class DataBase extends ivipbase_core_1.DataBase {
         var _a, _b;
         return (_b = (_a = this.app.auth.get(this.name)) === null || _a === void 0 ? void 0 : _a.currentUser) === null || _b === void 0 ? void 0 : _b.accessToken;
     }
+    get rules() {
+        return this._rules;
+    }
     connect(retry = true) {
         if (this.storage instanceof StorageDBClient_1.StorageDBClient) {
             return this.storage.connect(retry);
@@ -60,6 +75,12 @@ class DataBase extends ivipbase_core_1.DataBase {
     async getPerformance() {
         const { data } = await this.storage.getInfo();
         return data !== null && data !== void 0 ? data : [];
+    }
+    applyRules(rules) {
+        return this._rules.applyRules(rules);
+    }
+    setRule(rulePaths, ruleTypes, callback) {
+        return this._rules.add(rulePaths, ruleTypes, callback);
     }
 }
 exports.DataBase = DataBase;

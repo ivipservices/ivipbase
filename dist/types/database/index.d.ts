@@ -3,6 +3,7 @@ import { IvipBaseApp } from "../app";
 import { StorageDBServer } from "./StorageDBServer";
 import { StorageDBClient } from "./StorageDBClient";
 import { Subscriptions } from "./Subscriptions";
+import { PathBasedRules, PathRuleFunction, PathRuleType, RulesData } from "./services/rules";
 export declare class DataBase extends DataBaseCore {
     readonly database: string;
     readonly app: IvipBaseApp;
@@ -11,8 +12,10 @@ export declare class DataBase extends DataBaseCore {
     readonly subscriptions: Subscriptions;
     readonly debug: DebugLogger;
     readonly storage: StorageDBServer | StorageDBClient;
+    private _rules;
     constructor(database: string, app: IvipBaseApp, options?: Partial<DataBaseSettings>);
     get accessToken(): string | undefined;
+    get rules(): PathBasedRules;
     connect(retry?: boolean): void;
     disconnect(): void;
     getInfo(): Promise<{
@@ -66,6 +69,8 @@ export declare class DataBase extends DataBaseCore {
         };
         timestamp: number;
     }[]>;
+    applyRules(rules: RulesData): void;
+    setRule(rulePaths: string | string[], ruleTypes: PathRuleType | PathRuleType[], callback: PathRuleFunction): void;
 }
 export declare function getDatabase(): DataBase;
 export declare function getDatabase(app: string | IvipBaseApp | undefined): DataBase;

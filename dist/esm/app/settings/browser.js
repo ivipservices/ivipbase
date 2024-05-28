@@ -36,7 +36,9 @@ export class IvipBaseSettings {
         this.host = "localhost";
         this.isServer = false;
         this.isValidClient = true;
+        this.isConnectionDefined = false;
         this.bootable = true;
+        this.defaultRules = { rules: {} };
         this.reset(options);
     }
     reset(options = {}) {
@@ -71,10 +73,12 @@ export class IvipBaseSettings {
             this.storage = options.storage;
         }
         const [_, _protocol, protocol, host, _host, _port, port] = (typeof options.host === "string" ? options.host : "").match(hostnameRegex) ?? [];
+        this.isConnectionDefined = !!host;
         this.protocol = ["https", "http"].includes(protocol) ? protocol : options.protocol === "https" ? "https" : "http";
         this.host = host ?? "localhost";
         this.port = port ? parseInt(port) : options.port;
         this.bootable = options.bootable ?? true;
+        this.defaultRules = options.defaultRules ?? { rules: {} };
     }
 }
 //# sourceMappingURL=browser.js.map

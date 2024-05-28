@@ -1,10 +1,10 @@
 import { DebugLogger, SimpleEventEmitter } from "ivipbase-core";
 import { DataBase } from "../database";
 import type { IvipBaseApp } from "../app";
-import { PathBasedRules } from "./services/rules";
 import { DbUserAccountDetails } from "./schema/user";
 import { EmailRequest } from "../app/settings/browser";
-import type { RulesData } from "./services/rules";
+import type { RulesData } from "../database/services/rules";
+import { PathBasedRules } from "../database/services/rules";
 export declare class ServerNotReadyError extends Error {
     constructor();
 }
@@ -105,7 +105,7 @@ export type ServerInitialSettings<LocalServer = any> = Partial<{
      * Configurações de registro de transações. Aviso: estágio BETA, NÃO use em produção ainda
      */
     transactions: Partial<DataBaseServerTransactionSettings>;
-    rulesData: RulesData;
+    defineRules: RulesData;
 }>;
 export declare class ServerSettings<LocalServer = any> {
     logLevel: "verbose" | "log" | "warn" | "error";
@@ -119,7 +119,7 @@ export declare class ServerSettings<LocalServer = any> {
     init?: (server: LocalServer) => Promise<void>;
     serverVersion: string;
     transactions: DataBaseServerTransactionSettings;
-    rulesData?: RulesData;
+    defineRules?: RulesData;
     constructor(options?: ServerInitialSettings<LocalServer>);
 }
 export declare const isPossiblyServer = false;
@@ -132,7 +132,6 @@ export declare abstract class AbstractLocalServer<LocalServer = any> extends Sim
     readonly db: (dbName: string) => DataBase;
     readonly hasDatabase: (dbName: string) => boolean;
     readonly rules: (dbName: string) => PathBasedRules;
-    private rules_db;
     readonly securityRef: (dbName: string) => any;
     readonly authRef: (dbName: string) => any;
     readonly send_email: (dbName: string, request: EmailRequest) => Promise<unknown>;

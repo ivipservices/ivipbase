@@ -3,6 +3,8 @@ import { IvipBaseApp, getApp, getFirstApp, getAppsName } from "../app/index.js";
 import { StorageDBServer } from "./StorageDBServer.js";
 import { StorageDBClient } from "./StorageDBClient.js";
 import { Subscriptions } from "./Subscriptions.js";
+import { PathBasedRules } from "./services/rules.js";
+import { joinObjects } from "../utils/index.js";
 export class DataBase extends DataBaseCore {
     constructor(database, app, options) {
         super(database, options);
@@ -17,8 +19,18 @@ export class DataBase extends DataBaseCore {
                 name: database,
                 description: app.settings.description ?? "iVipBase database",
             }).description ?? "iVipBase database";
-        this.storage = app.isServer || !app.settings.isValidClient ? new StorageDBServer(this) : new StorageDBClient(this);
         this.debug = new DebugLogger(app.settings.logLevel, `[${database}]`);
+        const dbInfo = (Array.isArray(this.app.settings.database) ? this.app.settings.database : [this.app.settings.database]).find((d) => d.name === this.name);
+        const defaultRules = this.app.settings?.defaultRules ?? { rules: {} };
+        const mainRules = this.app.settings?.server?.defineRules ?? { rules: {} };
+        const dbRules = dbInfo?.defineRules ?? { rules: {} };
+        this._rules = new PathBasedRules(this.app.settings?.server?.auth.defaultAccessRule ?? "allow", {
+            debug: this.debug,
+            db: this,
+            authEnabled: this.app.settings?.server?.auth.enabled ?? false,
+            rules: joinObjects({ rules: {} }, defaultRules.rules, mainRules.rules, dbRules.rules),
+        });
+        this.storage = !app.settings.isConnectionDefined || app.isServer || !app.settings.isValidClient ? new StorageDBServer(this) : new StorageDBClient(this);
         app.storage.on("add", (e) => {
             //console.log(e);
             this.subscriptions.triggerAllEvents(e.path, null, e.value);
@@ -36,6 +48,9 @@ export class DataBase extends DataBaseCore {
     }
     get accessToken() {
         return this.app.auth.get(this.name)?.currentUser?.accessToken;
+    }
+    get rules() {
+        return this._rules;
     }
     connect(retry = true) {
         if (this.storage instanceof StorageDBClient) {
@@ -55,6 +70,12 @@ export class DataBase extends DataBaseCore {
     async getPerformance() {
         const { data } = await this.storage.getInfo();
         return data ?? [];
+    }
+    applyRules(rules) {
+        return this._rules.applyRules(rules);
+    }
+    setRule(rulePaths, ruleTypes, callback) {
+        return this._rules.add(rulePaths, ruleTypes, callback);
     }
 }
 export function getDatabase(...args) {

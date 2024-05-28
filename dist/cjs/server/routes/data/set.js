@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.addRoutes = exports.SetDataError = void 0;
 const ivipbase_core_1 = require("ivipbase-core");
 const error_1 = require("../../shared/error");
-const rules_1 = require("../../services/rules");
+const rules_1 = require("../../../database/services/rules");
 const database_1 = require("../../../database");
 class SetDataError extends Error {
     constructor(code, message) {

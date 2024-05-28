@@ -1,5 +1,5 @@
 import { ID, Transport } from "ivipbase-core";
-import { AccessRuleValidationError } from "../../services/rules.js";
+import { AccessRuleValidationError } from "../../../database/services/rules.js";
 import { sendBadRequestError, sendError, sendUnauthorizedError, sendUnexpectedError } from "../../shared/error.js";
 import { SchemaValidationError } from "../../../database/index.js";
 export const TRANSACTION_TIMEOUT_MS = 10000; // 10s to finish a started transaction

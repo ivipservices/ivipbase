@@ -1,6 +1,6 @@
 import { Types } from "ivipbase-core";
 import type { LocalServer, RouteRequest } from "../../";
-import { RuleValidationFailCode } from "../../services/rules";
+import { RuleValidationFailCode } from "../../../database/services/rules";
 export declare class UpdateDataError extends Error {
     code: "invalid_serialized_value";
     constructor(code: "invalid_serialized_value", message: string);

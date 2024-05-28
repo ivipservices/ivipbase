@@ -1,5 +1,5 @@
 import { Transport } from "ivipbase-core";
-import { AccessRuleValidationError } from "../../services/rules.js";
+import { AccessRuleValidationError } from "../../../database/services/rules.js";
 import { sendBadRequestError, sendError, sendUnauthorizedError } from "../../shared/error.js";
 import { SchemaValidationError } from "../../../database/index.js";
 export class UpdateDataError extends Error {

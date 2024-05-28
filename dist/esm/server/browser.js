@@ -1,7 +1,5 @@
 import { DebugLogger, SimpleEventEmitter } from "ivipbase-core";
 import { getDatabase, getDatabasesNames, hasDatabase } from "../database/index.js";
-import { PathBasedRules } from "./services/rules.js";
-import { joinObjects } from "../utils/index.js";
 export class ServerNotReadyError extends Error {
     constructor() {
         super("O servidor ainda não está pronto");
@@ -136,8 +134,8 @@ export class ServerSettings {
             this.serverVersion = options.serverVersion;
         }
         this.transactions = new DataBaseServerTransactionSettings(options.transactions ?? {});
-        if (typeof options.rulesData === "object") {
-            this.rulesData = options.rulesData;
+        if (typeof options.defineRules === "object") {
+            this.defineRules = options.defineRules;
         }
     }
 }
@@ -147,7 +145,6 @@ export class AbstractLocalServer extends SimpleEventEmitter {
         super();
         this.localApp = localApp;
         this._ready = false;
-        this.rules_db = new Map();
         this.securityRef = (dbName) => {
             return this.db(dbName).ref("__auth__/security");
         };
@@ -175,21 +172,7 @@ export class AbstractLocalServer extends SimpleEventEmitter {
         this.db = (dbName) => getDatabase(dbName, localApp);
         this.hasDatabase = (dbName) => hasDatabase(dbName);
         this.rules = (dbName) => {
-            if (this.rules_db.has(dbName)) {
-                return this.rules_db.get(dbName);
-            }
-            const db = this.db(dbName);
-            const dbInfo = (Array.isArray(this.localApp.settings.database) ? this.localApp.settings.database : [this.localApp.settings.database]).find((d) => d.name === dbName);
-            const mainRules = this.settings.rulesData ?? { rules: {} };
-            const dbRules = dbInfo?.rulesData ?? { rules: {} };
-            const rules = new PathBasedRules(this.settings.auth.defaultAccessRule, {
-                debug: this.debug,
-                db,
-                authEnabled: this.settings.auth.enabled,
-                rules: joinObjects({ rules: {} }, mainRules.rules, dbRules.rules),
-            });
-            this.rules_db.set(dbName, rules);
-            return rules;
+            return this.db(dbName).rules;
         };
         this.debug = new DebugLogger(this.settings.logLevel, `[SERVER]`);
         this.log = this.debug;

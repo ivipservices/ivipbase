@@ -40,11 +40,13 @@ class IvipBaseSettings {
         this.host = "localhost";
         this.isServer = false;
         this.isValidClient = true;
+        this.isConnectionDefined = false;
         this.bootable = true;
+        this.defaultRules = { rules: {} };
         this.reset(options);
     }
     reset(options = {}) {
-        var _a, _b, _c;
+        var _a, _b, _c, _d;
         if (typeof options.name === "string") {
             this.name = options.name;
         }
@@ -76,10 +78,12 @@ class IvipBaseSettings {
             this.storage = options.storage;
         }
         const [_, _protocol, protocol, host, _host, _port, port] = (_b = (typeof options.host === "string" ? options.host : "").match(hostnameRegex)) !== null && _b !== void 0 ? _b : [];
+        this.isConnectionDefined = !!host;
         this.protocol = ["https", "http"].includes(protocol) ? protocol : options.protocol === "https" ? "https" : "http";
         this.host = host !== null && host !== void 0 ? host : "localhost";
         this.port = port ? parseInt(port) : options.port;
         this.bootable = (_c = options.bootable) !== null && _c !== void 0 ? _c : true;
+        this.defaultRules = (_d = options.defaultRules) !== null && _d !== void 0 ? _d : { rules: {} };
     }
 }
 exports.IvipBaseSettings = IvipBaseSettings;

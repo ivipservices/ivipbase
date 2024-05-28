@@ -1,4 +1,4 @@
-import type { RulesData } from "../../server/services/rules";
+import type { RulesData } from "../../database/services/rules";
 import { StorageSettings } from "../verifyStorage";
 export interface EmailRequestType {
     /** email request type */
@@ -73,7 +73,7 @@ export declare class ServerEmailSettings {
 export interface DatabaseSettings {
     name: string;
     description?: string;
-    rulesData?: RulesData;
+    defineRules?: RulesData;
 }
 export declare class IvipBaseSettings {
     readonly options: Partial<Omit<IvipBaseSettings, "isServer" | "isValidClient">>;
@@ -88,7 +88,9 @@ export declare class IvipBaseSettings {
     port?: number;
     isServer: boolean;
     isValidClient: boolean;
+    isConnectionDefined: boolean;
     bootable: boolean;
+    defaultRules: RulesData;
     constructor(options?: Partial<Omit<IvipBaseSettings, "isServer" | "isValidClient">>);
     reset(options?: Partial<Omit<IvipBaseSettings, "isServer" | "isValidClient">>): void;
 }

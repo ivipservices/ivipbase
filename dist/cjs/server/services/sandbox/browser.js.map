@@ -1,1 +1,0 @@
-{"version":3,"file":"browser.js","sourceRoot":"","sources":["../../../../../src/server/services/sandbox/browser.ts"],"names":[],"mappings":";;;AAAO,KAAK,UAAU,gBAAgB,CAAC,IAAY,EAAE,GAAQ;IAC5D,OAAO,IAAI,CAAC;AACb,CAAC;AAFD,4CAEC;AAED,SAAgB,UAAU,CAAC,IAAY;IACtC,OAAO,+BAA+B,CAAC,IAAI,CAAC,IAAI,CAAC,CAAC,CAAC,kEAAkE;AACtH,CAAC;AAFD,gCAEC"}
