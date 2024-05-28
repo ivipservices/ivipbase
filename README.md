@@ -1245,12 +1245,12 @@ const auth = getAuth(app);
 const user = auth.currentUser; // Obtém o usuário atualmente autenticado
 ```
 
-Neste exemplo, o `getDatabase` considera a aplicação padrão ou a primeira aplicação criada com um nome definido.
+Neste exemplo, o `getAuth` considera a aplicação padrão ou a primeira aplicação criada com um nome definido.
 
 ```typescript
 import { getAuth } from "ivipbase";
 
-const auth = getAuth(app);
+const auth = getAuth();
 const user = auth.currentUser; // Obtém o usuário atualmente autenticado
 ```
 

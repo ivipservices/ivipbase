@@ -75,7 +75,17 @@ export class IvipBaseApp extends SimpleEventEmitter {
 						this._socket = null;
 					}
 
-					this.once("connect", () => {
+					const fn = () => resolve();
+
+					this.once("connect", fn);
+
+					this.on("reset", () => {
+						this.off("connect", fn);
+						resolve();
+					});
+
+					this.on("destroyed", () => {
+						this.off("connect", fn);
 						resolve();
 					});
 
@@ -83,7 +93,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 				});
 			}
 
-			if (this.settings.bootable) {
+			if (this.settings.bootable && this.id === id) {
 				const dbList: string[] = Array.isArray(this.settings.dbname) ? this.settings.dbname : [this.settings.dbname];
 
 				await this.storage.ready();

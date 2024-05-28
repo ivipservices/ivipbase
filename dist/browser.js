@@ -54,13 +54,20 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
                         this.disconnect();
                         this._socket = null;
                     }
-                    this.once("connect", () => {
+                    const fn = () => resolve();
+                    this.once("connect", fn);
+                    this.on("reset", () => {
+                        this.off("connect", fn);
+                        resolve();
+                    });
+                    this.on("destroyed", () => {
+                        this.off("connect", fn);
                         resolve();
                     });
                     this.connect();
                 });
             }
-            if (this.settings.bootable) {
+            if (this.settings.bootable && this.id === id) {
                 const dbList = Array.isArray(this.settings.dbname) ? this.settings.dbname : [this.settings.dbname];
                 await this.storage.ready();
                 if (this.isServer) {
