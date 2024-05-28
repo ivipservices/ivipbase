@@ -1887,8 +1887,8 @@ const configuracoesApp = {
         description: "Banco de dados de desenvolvedor",
         defineRules: {
             "rules": {
-                ".read": "true",
-                ".write": "true"
+                ".read": true,
+                ".write": true
             }
         }
     }, {
@@ -1984,8 +1984,8 @@ As regras acima impõem:
 * Nenhum acesso de _leitura_ ou _escrita_ ao nó raiz ou qualquer filho para qualquer pessoa. (Nenhuma regra foi definida para esses nós, o acesso será negado)
 * Acesso de _leitura_ para os próprios dados de um usuário autenticado em "users/$uid", incluindo todos os dados filhos
 * Nenhum acesso de _leitura_ para usuários não autenticados e/ou outros usuários a "users/$uid", acesso de _leitura_ não decidido (`'cascade'`) para caminhos filhos. Observe que `auth?.uid` precisa do `?.` para permitir que usuários não autenticados possam cascatear - se a execução da regra falhar, SEMPRE negará o acesso.
-* Acesso de _leitura_ para todos em "users/$uid/public" (se `users/$uid/.read` cascatear, `users/$uid/public/.read` será `true`)
-* Acesso de _escrita_ para os próprios dados de um usuário autenticado em "users/$uid" e todos os dados filhos (a regra `".write"` é definida como `"auth.uid === $uid"`)
+* Acesso de _leitura_ para todos em "users/\$uid/public" (se `users/$uid/.read` cascatear, `users/$uid/public/.read` será `true`)
+* Acesso de _escrita_ para os próprios dados de um usuário autenticado em "users\/\$uid" e todos os dados filhos (a regra `".write"` é definida como `"auth.uid === $uid"`)
 
 NOTA: `"allow"` pode ser retornado de uma função de regra em vez de `true`, e `"deny"` em vez de `false`, `undefined` ou outros valores _falsos_.
 
