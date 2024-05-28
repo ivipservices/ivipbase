@@ -6,7 +6,6 @@ export declare class StorageDBClient extends Api {
     private _realtimeQueries;
     readonly url: string;
     private readonly app;
-    private readonly auth;
     constructor(db: DataBase);
     get serverPingUrl(): string;
     private initialize;

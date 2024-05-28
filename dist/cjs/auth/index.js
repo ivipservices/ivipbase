@@ -299,9 +299,6 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
     }
     async initialize() {
         this.app.onConnect(async () => {
-            if (this._ready) {
-                return;
-            }
             try {
                 if (!this._user) {
                     const user = localStorage_1.default.getItem(`[${this.database}][auth_user]`);

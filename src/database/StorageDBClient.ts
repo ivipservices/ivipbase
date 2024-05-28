@@ -21,7 +21,6 @@ export class StorageDBClient extends Api {
 	private _realtimeQueries: any = {};
 	readonly url: string;
 	private readonly app: IvipBaseApp;
-	private readonly auth = getAuth(this.db.database);
 
 	constructor(readonly db: DataBase) {
 		super();
@@ -91,7 +90,7 @@ export class StorageDBClient extends Api {
 
 	private async initialize() {
 		this.app.onConnect(async () => {
-			await this.auth.ready();
+			await getAuth(this.db.database).initialize();
 			await this.app.request({ route: this.serverPingUrl });
 			this.db.emit("ready");
 		}, true);
@@ -141,14 +140,15 @@ export class StorageDBClient extends Api {
 		includeContext?: boolean;
 	}): Promise<any | { context: any; data: any }> {
 		if (this.isConnected || options.ignoreConnectionState === true) {
+			const auth = this.app.auth.get(this.db.database);
 			try {
-				const accessToken = this.auth?.currentUser?.accessToken;
+				const accessToken = auth?.currentUser?.accessToken;
 				return await this.db.app.request({
 					...options,
 					accessToken,
 				});
 			} catch (err: any) {
-				this.auth.currentUser?.reload();
+				auth?.currentUser?.reload();
 				if (this.isConnected && err.isNetworkError) {
 					// This is a network error, but the websocket thinks we are still connected.
 					this.db.debug.warn(`A network error occurred loading ${options.route}`);

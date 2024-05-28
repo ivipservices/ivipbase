@@ -21,7 +21,6 @@ class StorageDBClient extends ivipbase_core_1.Api {
         super();
         this.db = db;
         this._realtimeQueries = {};
-        this.auth = (0, auth_1.getAuth)(this.db.database);
         this.app = db.app;
         this.url = this.app.url.replace(/\/+$/, "");
         this.initialize();
@@ -80,7 +79,7 @@ class StorageDBClient extends ivipbase_core_1.Api {
     }
     async initialize() {
         this.app.onConnect(async () => {
-            await this.auth.ready();
+            await (0, auth_1.getAuth)(this.db.database).initialize();
             await this.app.request({ route: this.serverPingUrl });
             this.db.emit("ready");
         }, true);
@@ -95,14 +94,15 @@ class StorageDBClient extends ivipbase_core_1.Api {
         return this.app.connectionState;
     }
     async _request(options) {
-        var _a, _b, _c;
+        var _a, _b;
         if (this.isConnected || options.ignoreConnectionState === true) {
+            const auth = this.app.auth.get(this.db.database);
             try {
-                const accessToken = (_b = (_a = this.auth) === null || _a === void 0 ? void 0 : _a.currentUser) === null || _b === void 0 ? void 0 : _b.accessToken;
+                const accessToken = (_a = auth === null || auth === void 0 ? void 0 : auth.currentUser) === null || _a === void 0 ? void 0 : _a.accessToken;
                 return await this.db.app.request(Object.assign(Object.assign({}, options), { accessToken }));
             }
             catch (err) {
-                (_c = this.auth.currentUser) === null || _c === void 0 ? void 0 : _c.reload();
+                (_b = auth === null || auth === void 0 ? void 0 : auth.currentUser) === null || _b === void 0 ? void 0 : _b.reload();
                 if (this.isConnected && err.isNetworkError) {
                     // This is a network error, but the websocket thinks we are still connected.
                     this.db.debug.warn(`A network error occurred loading ${options.route}`);

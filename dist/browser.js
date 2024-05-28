@@ -103,8 +103,11 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         return this._socket;
     }
     async onConnect(callback, isOnce = false) {
-        let count = 0;
+        let count = 0, isReset = false;
         const event = () => {
+            if (isReset) {
+                return;
+            }
             if (this._ready && this.isConnected) {
                 count++;
                 if (count > 1 && isOnce) {
@@ -124,16 +127,16 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         };
         if (!this.isServer && (typeof this.settings.database === "string" || (Array.isArray(this.settings.database) && this.settings.database.length > 0))) {
             this.on("connect", event);
-            event();
-            return {
-                stop: () => {
-                    this.off("connect", event);
-                },
-            };
         }
         event();
+        this.on("reset", () => {
+            isReset = true;
+            this.off("connect", event);
+        });
         return {
-            stop: () => { },
+            stop: () => {
+                this.off("connect", event);
+            },
         };
     }
     get isReady() {
@@ -290,7 +293,7 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         this.settings = new settings_1.IvipBaseSettings((0, utils_1.joinObjects)(this.settings.options, options));
         this.storage = (0, verifyStorage_1.applySettings)(this.settings.dbname, this.settings.storage);
         this.isServer = typeof this.settings.server === "object";
-        this.auth.clear();
+        // this.auth.clear();
         this.databases.clear();
         this.emit("reset");
         await this.initialize();
@@ -780,9 +783,6 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
     }
     async initialize() {
         this.app.onConnect(async () => {
-            if (this._ready) {
-                return;
-            }
             try {
                 if (!this._user) {
                     const user = localStorage_1.default.getItem(`[${this.database}][auth_user]`);
@@ -3280,7 +3280,6 @@ class StorageDBClient extends ivipbase_core_1.Api {
         super();
         this.db = db;
         this._realtimeQueries = {};
-        this.auth = (0, auth_1.getAuth)(this.db.database);
         this.app = db.app;
         this.url = this.app.url.replace(/\/+$/, "");
         this.initialize();
@@ -3339,7 +3338,7 @@ class StorageDBClient extends ivipbase_core_1.Api {
     }
     async initialize() {
         this.app.onConnect(async () => {
-            await this.auth.ready();
+            await (0, auth_1.getAuth)(this.db.database).initialize();
             await this.app.request({ route: this.serverPingUrl });
             this.db.emit("ready");
         }, true);
@@ -3354,14 +3353,15 @@ class StorageDBClient extends ivipbase_core_1.Api {
         return this.app.connectionState;
     }
     async _request(options) {
-        var _a, _b, _c;
+        var _a, _b;
         if (this.isConnected || options.ignoreConnectionState === true) {
+            const auth = this.app.auth.get(this.db.database);
             try {
-                const accessToken = (_b = (_a = this.auth) === null || _a === void 0 ? void 0 : _a.currentUser) === null || _b === void 0 ? void 0 : _b.accessToken;
+                const accessToken = (_a = auth === null || auth === void 0 ? void 0 : auth.currentUser) === null || _a === void 0 ? void 0 : _a.accessToken;
                 return await this.db.app.request(Object.assign(Object.assign({}, options), { accessToken }));
             }
             catch (err) {
-                (_c = this.auth.currentUser) === null || _c === void 0 ? void 0 : _c.reload();
+                (_b = auth === null || auth === void 0 ? void 0 : auth.currentUser) === null || _b === void 0 ? void 0 : _b.reload();
                 if (this.isConnected && err.isNetworkError) {
                     // This is a network error, but the websocket thinks we are still connected.
                     this.db.debug.warn(`A network error occurred loading ${options.route}`);

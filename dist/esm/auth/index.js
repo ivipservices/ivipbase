@@ -272,9 +272,6 @@ export class Auth extends SimpleEventEmitter {
     }
     async initialize() {
         this.app.onConnect(async () => {
-            if (this._ready) {
-                return;
-            }
             try {
                 if (!this._user) {
                     const user = localStorage.getItem(`[${this.database}][auth_user]`);

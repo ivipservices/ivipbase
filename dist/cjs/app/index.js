@@ -102,8 +102,11 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         return this._socket;
     }
     async onConnect(callback, isOnce = false) {
-        let count = 0;
+        let count = 0, isReset = false;
         const event = () => {
+            if (isReset) {
+                return;
+            }
             if (this._ready && this.isConnected) {
                 count++;
                 if (count > 1 && isOnce) {
@@ -123,16 +126,16 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         };
         if (!this.isServer && (typeof this.settings.database === "string" || (Array.isArray(this.settings.database) && this.settings.database.length > 0))) {
             this.on("connect", event);
-            event();
-            return {
-                stop: () => {
-                    this.off("connect", event);
-                },
-            };
         }
         event();
+        this.on("reset", () => {
+            isReset = true;
+            this.off("connect", event);
+        });
         return {
-            stop: () => { },
+            stop: () => {
+                this.off("connect", event);
+            },
         };
     }
     get isReady() {
@@ -289,7 +292,7 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         this.settings = new settings_1.IvipBaseSettings((0, utils_1.joinObjects)(this.settings.options, options));
         this.storage = (0, verifyStorage_1.applySettings)(this.settings.dbname, this.settings.storage);
         this.isServer = typeof this.settings.server === "object";
-        this.auth.clear();
+        // this.auth.clear();
         this.databases.clear();
         this.emit("reset");
         await this.initialize();

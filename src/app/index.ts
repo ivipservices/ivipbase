@@ -137,8 +137,13 @@ export class IvipBaseApp extends SimpleEventEmitter {
 	}
 
 	async onConnect(callback: (socket: IOWebSocket | null) => void, isOnce: boolean = false) {
-		let count = 0;
+		let count = 0,
+			isReset = false;
 		const event = () => {
+			if (isReset) {
+				return;
+			}
+
 			if (this._ready && this.isConnected) {
 				count++;
 
@@ -163,18 +168,19 @@ export class IvipBaseApp extends SimpleEventEmitter {
 
 		if (!this.isServer && (typeof this.settings.database === "string" || (Array.isArray(this.settings.database) && this.settings.database.length > 0))) {
 			this.on("connect", event);
-			event();
-
-			return {
-				stop: () => {
-					this.off("connect", event);
-				},
-			};
 		}
 
 		event();
+
+		this.on("reset", () => {
+			isReset = true;
+			this.off("connect", event);
+		});
+
 		return {
-			stop: () => {},
+			stop: () => {
+				this.off("connect", event);
+			},
 		};
 	}
 
@@ -401,7 +407,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 
 		this.isServer = typeof this.settings.server === "object";
 
-		this.auth.clear();
+		// this.auth.clear();
 		this.databases.clear();
 
 		this.emit("reset");

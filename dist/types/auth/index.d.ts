@@ -244,7 +244,7 @@ export declare class Auth extends SimpleEventEmitter {
      */
     private _user;
     constructor(database: string, app: IvipBaseApp);
-    private initialize;
+    initialize(): Promise<void>;
     /**
      * Aguarda até que o módulo Auth esteja pronto.
      * @param callback Uma função de retorno de chamada que será chamada quando o módulo Auth estiver pronto.
