@@ -4,7 +4,6 @@ import _request from "../controller/request";
 import { NOT_CONNECTED_ERROR_MESSAGE } from "../controller/request/error";
 import { IvipBaseApp } from "../app";
 import { getAuth } from "../auth";
-import { PathBasedRules, PathRuleFunction, PathRuleType } from "./services/rules";
 
 class PromiseTimeoutError extends Error {}
 function promiseTimeout<T = any>(promise: Promise<T>, ms: number, comment?: string) {

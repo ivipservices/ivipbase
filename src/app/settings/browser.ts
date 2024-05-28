@@ -125,6 +125,7 @@ export class IvipBaseSettings {
 
 	public isServer: boolean = false;
 	public isValidClient: boolean = true;
+	public isConnectionDefined: boolean = false;
 	public bootable: boolean = true;
 
 	public defaultRules: RulesData = { rules: {} };
@@ -175,6 +176,8 @@ export class IvipBaseSettings {
 		}
 
 		const [_, _protocol, protocol, host, _host, _port, port] = (typeof options.host === "string" ? options.host : "").match(hostnameRegex) ?? [];
+
+		this.isConnectionDefined = !!host;
 
 		this.protocol = ["https", "http"].includes(protocol) ? (protocol as any) : options.protocol === "https" ? "https" : "http";
 		this.host = host ?? "localhost";
