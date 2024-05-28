@@ -28,6 +28,7 @@ O iVipBase é fácil de configurar e pode ser executado em qualquer lugar: na nu
       - [Opções do Objeto `options.email`](#opções-do-objeto-optionsemail)
       - [Opções do Objeto `options.email.server`](#opções-do-objeto-optionsemailserver)
     - [Opções do Objeto `options.authentication`](#opções-do-objeto-optionsauthentication)
+    - [Multiplos bancos de dados](#multiplos-bancos-de-dados)
 - [`getDatabase` - API banco de dados](#getdatabase---api-banco-de-dados)
   - [`get` - Carregando dados](#get---carregando-dados)
   - [`set` - Armazenando dados](#set---armazenando-dados)
@@ -95,6 +96,12 @@ O iVipBase é fácil de configurar e pode ser executado em qualquer lugar: na nu
   - [Arquivo local JSON (`JsonFileStorageSettings`)](#arquivo-local-json-jsonfilestoragesettings)
   - [Armazenamento SQLite (`SqliteStorageSettings`)](#armazenamento-sqlite-sqlitestoragesettings)
   - [Conexão Sequelize (`SequelizeStorageSettings`)](#conexão-sequelize-sequelizestoragesettings)
+- [`Rules` - Regras de segurança](#rules---regras-de-segurança)
+  - [Configuração de Regras de Autorização](#configuração-de-regras-de-autorização)
+  - [Variáveis de Ambiente e Funções de Regras](#variáveis-de-ambiente-e-funções-de-regras)
+  - [Validação dos Dados sendo Escritos](#validação-dos-dados-sendo-escritos)
+  - [Validação de Esquema](#validação-de-esquema)
+  - [Codificação de suas regras](#codificação-de-suas-regras)
 
 ## Começando
 
@@ -209,7 +216,7 @@ As configurações no contexto de aplicação cliente são permitidas apenas par
 | Propriedade | Tipo                                     | Descrição                                                                                                                                                |
 | ----------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | name        | `string`                                 | O nome do aplicativo.                                                                                                                                    |
-| dbname      | `string`                                 | O nome do banco de dados.                                                                                                                                |
+| dbname      | `string` \| `Array<string>`              | O nome do banco de dados ou uma lista de nomes de multiplos bancos de dados                                                                              |
 | logLevel    | `"log" \| "warn" \| "error"`             | O nível de log para o aplicativo.                                                                                                                        |
 | storage     | `CustomStorage` \| `DataStorageSettings` | Configurações de armazenamento para o aplicativo. Consulte [armazenamento presonalizado com `CustomStorage`](#armazenamento-personalizado-customstorage) |
 | host        | `string \| undefined`                    | O endereço do host, se aplicável.                                                                                                                        |
@@ -254,7 +261,8 @@ Para o contexto de uma aplicação servidor, é necessário definir opções ass
 | trustProxy     | `boolean`                                                                                  | Quando atrás de um servidor de proxy confiável, req.ip e req.hostname serão definidos corretamente.                                                                                                                                                                                             |
 | authentication | `object`                                                                                   | Configurações que definem se e como a autenticação é utilizada.                                                                                                                                                                                                                                 |
 | init           | `(server: any) => Promise<void>`                                                           | Função de inicialização que é executada antes do servidor adicionar o middleware 404 e começar a ouvir chamadas recebidas. Utilize esta função de retorno de chamada para estender o servidor com rotas personalizadas, adicionar regras de validação de dados, aguardar eventos externos, etc. |
-| rulesData      | `object`                                                                                   | Dados iniciais para regras de acesso de banco de dados.                                                                                                                                                                                                                                         |
+| defineRules    | `object`                                                                                   | Dados iniciais para regras de acesso de banco de dados.                                                                                                                                                                                                                                         |
+| database       | `Array<{ name: string; description: string; defineRules?: Object }>`                       | Configurações para múltiplos bancos de dados.                                                                                                                                                                                                                                                   |
 
 #### Opções do Objeto `options.email`
 
@@ -316,6 +324,30 @@ app.ready(()=>{
 
 NOTA: A opção `logLevel` especifica quanto de informação deve ser gravado nos logs do console. Os valores possíveis são: `'verbose'`, `'log'` (padrão), `'warn'` e `'error'` (apenas erros são registrados)
 
+### Multiplos bancos de dados
+
+No **IVIPBASE** também é possível criar múltiplos bancos de dados em uma única instância do servidor. Para isso, basta definir uma série de configurações para cada banco de dados que deseja criar na definição `options.database`. Abaixo, segue um exemplo de como criar múltiplos bancos de dados:
+
+```typescript
+import { initializeApp } from "ivipbase";
+
+const configuracoesApp = {
+    isServer: true,
+    host: "0.0.0.0",
+    port: 8080,
+    // ... outras opções
+    database: [{
+        name: "developer",
+        description: "Banco de dados de desenvolvedor"
+    }, {
+        name: "production",
+        description: "Banco de dados de produção"
+    }]
+};
+
+const app = initializeApp(configuracoesApp);
+```
+
 # `getDatabase` - API banco de dados
 
 A API é semelhante à do banco de dados em tempo real do Firebase e AceBase, com adições. Para utilizá-la, será necessário empregar a função `getDatabase`. Essa função é responsável por configurar a API de consumo com as predefinições no `initializeApp`. Requer um parâmetro, no qual você pode inserir a instância obtida por meio da função `initializeApp`, criando uma instância da classe `IvipBaseApp` ou uma string do nome da aplicação específica. Caso o parâmetro não seja fornecido, o `getDatabase` considerará a primeira aplicação criada ou a aplicação padrão, se houver. Abaixo, seguem dois exemplos de uso do `getDatabase`:
@@ -345,6 +377,19 @@ db.ready(() => {
     // o banco de dados está pronto para uso!
 });
 ```
+
+Em caso de multiplos bancos de dados, você pode especificar o nome do banco de dados que deseja acessar:
+
+```typescript
+import { getDatabase } from "ivipbase";
+
+const db = getDatabase("developer");
+db.ready(() => {
+    // o banco de dados está pronto para uso!
+});
+```
+
+Nota: Nesse caso, só funcionará se você tiver definido e/ou criado um banco de dados com o nome "developer" ou "production" ao inicializar o aplicativo. Caso contrário, o primeiro banco de dados criado será considerado.
 
 ## `get` - Carregando dados
 
@@ -1763,3 +1808,389 @@ user.fromJSON(json);
 ## Armazenamento SQLite (`SqliteStorageSettings`)
 
 ## Conexão Sequelize (`SequelizeStorageSettings`)
+
+# `Rules` - Regras de segurança
+
+As regras de segurança do **IVIPBASE** são escritas em JavaScript e são usadas para proteger seus dados, determinando quem tem acesso de _leitura_ e/ou _escrita_ ao banco de dados, como os dados são estruturados e quais índices são definidos. As regras de segurança são executadas apenas no servidor e são aplicadas a todas as operações de _leitura_ e/ou _escrita_. As solicitações de _leitura_ e/ou _escrita_ só serão concluídas se as regras permitirem. Por padrão, suas regras não concedem acesso ao banco de dados. A finalidade é proteger o banco de dados contra uso indevido até que você personalize as regras ou configure a autenticação.
+
+Para definir as regras nas definições do seu servidor, você pode seguir o exemplo abaixo:
+
+```js
+import { initializeApp } from "ivipbase";
+
+const configuracoesApp = {
+    isServer: true,
+    host: "0.0.0.0",
+    port: 8080,
+    // ... outras opções
+    defineRules: {
+        "rules": {
+            ".read": "auth !== null",
+            ".write": "auth !== null"
+        }
+    }
+};
+
+const app = initializeApp(configuracoesApp);
+```
+
+Porém, ao definir as regras nas definições iniciais do servidor, essas regras serão aplicadas a todos os bancos de dados ligados. Para definir em uma banco de dados específico, você pode definí-los diretamente no `getDatabase`: 
+
+```js
+import { getDatabase } from "ivipbase";
+
+getDatabase().applyRules({
+    "rules": {
+        ".read": "auth !== null",
+        ".write": "auth !== null"
+    }
+});
+```
+
+Ou definições iniciais do banco de dados:
+
+```js
+import { initializeApp } from "ivipbase";
+
+const configuracoesApp = {
+    isServer: true,
+    host: "0.0.0.0",
+    port: 8080,
+    // ... outras opções
+    database: {
+        name: "root",
+        description: "Banco de dados raiz",
+        defineRules: {
+            "rules": {
+                ".read": "auth !== null",
+                ".write": "auth !== null"
+            }
+        }
+    }
+};
+
+const app = initializeApp(configuracoesApp);
+```
+
+Em definições de multiplos bancos de dados, você pode definir regras para cada banco de dados separadamente, como no exemplo abaixo:
+
+```js
+import { initializeApp } from "ivipbase";
+
+const configuracoesApp = {
+    isServer: true,
+    host: "0.0.0.0",
+    port: 8080,
+    // ... outras opções
+    database: [{
+        name: "developer",
+        description: "Banco de dados de desenvolvedor",
+        defineRules: {
+            "rules": {
+                ".read": "true",
+                ".write": "true"
+            }
+        }
+    }, {
+        name: "production",
+        description: "Banco de dados de produção",
+        defineRules: {
+            "rules": {
+                ".read": "auth !== null",
+                ".write": "auth !== null"
+            }
+        }
+    }]
+};
+
+const app = initializeApp(configuracoesApp);
+```
+
+## Configuração de Regras de Autorização
+
+Se você habilitou a autenticação, também pode definir regras de acesso para seus dados. Utilizando regras, você pode permitir ou negar a usuários específicos (ou anônimos) acesso de _leitura_ e/ou _escrita_ aos seus dados. Essas regras são semelhantes às usadas pelo [Firebase](https://firebase.google.com/docs/database/security/), mas não são idênticas. O **IVIPBASE** possui regras ".schema" que permitem uma forma fácil e limpa de validar os dados que estão sendo escritos, enquanto as regras ".validate" permitem verificar os dados existentes e usar lógica de negócios mais avançada. As regras ".validate" são codificadas em JavaScript (veja [Codificando suas regras](#codificação-de-suas-regras)). As regras padrão são determinadas pela configuração `defaultAccessRule` durante o primeiro lançamento do servidor com `authentication` habilitado.
+
+O conteúdo padrão é baseado no valor da configuração `defaultAccessRule`, cujos valores possíveis são:
+ * `"auth"`: Permitir apenas usuários autenticados a ler/gravar no banco de dados
+ * `"allow"`: Permitir que qualquer pessoa (incluindo usuários anônimos) leia/grave no banco de dados
+ * `"deny"`: Negar a qualquer pessoa (exceto o usuário administrador) a ler/gravar no banco de dados
+
+Quando `defaultAccessRule: "auth"` é usado, as regras geradas serão o seguinte:
+```json
+{
+    "rules": {
+        ".read": "auth !== null",
+        ".write": "auth !== null"
+    }
+}
+```
+
+Quando `"allow"` ou `"deny"` é usado, as propriedades `".read"` e `".write"` serão definidas como `true` ou `false`, respectivamente.
+
+Se você quiser restringir ainda mais quais dados os usuários podem _ler_ e/ou _escrever_ (RECOMENDADO!), você pode definir as regras dessa forma, concedendo aos usuários acesso de _leitura_/_escrita_ ao seu próprio nó de usuário:
+```json
+{
+    "rules": {
+        "users": {
+            "$uid": {
+                ".read": "auth.uid === $uid",
+                ".write": "auth.uid === $uid"
+            }
+        }
+    }
+}
+```
+
+NOTA: Assim como no Firebase, o acesso é negado por padrão se nenhuma regra for encontrada para um caminho de destino. Se uma regra de acesso for encontrada em qualquer local no caminho, ela será usada para qualquer caminho filho, A MENOS que sua regra retorne "cascade". Isso significa que, diferentemente do Firebase, o acesso de _leitura_ e/ou _escrita_ para caminhos filhos/pais pode ser substituído se necessário. "Cascade" simplesmente instrui o analisador de regras a adiar a tomada de decisão se a solicitação for feita em um caminho filho, o que é essencialmente como se não houvesse nenhuma regra definida para o caminho atual. No entanto, se a solicitação for feita no próprio caminho da regra, "cascade" negará o acesso porque é a última regra a ser executada e nenhum acesso foi concedido.
+
+Por exemplo, se você quiser permitir aos usuários acesso de _leitura_ a um caminho e acesso de _escrita_ apenas para caminhos filhos específicos, use as seguintes regras:
+
+```json
+{
+    "rules": {
+        "shop_reviews": {
+            "$shopId": {
+                ".read": true,
+                "$uid": {
+                    ".write": "auth.uid === $uid"
+                }
+            }
+        }
+    }
+}
+```
+As regras acima impõem:
+* Nenhum acesso de _leitura_ ou _escrita_ ao nó raiz ou qualquer filho para qualquer pessoa. (Nenhuma regra foi definida para esses nós, o acesso será negado)
+* Acesso de _leitura_ a todas as avaliações de lojas específicas ('shop_reviews/shop1', 'shop_reviews/shop2') para qualquer pessoa, incluindo clientes não autenticados (a regra `".read"` é definida como `true`)
+* Acesso de _escrita_ à própria avaliação de um usuário autenticado para qualquer loja (a regra `".write"` é definida como `"auth.uid === $uid"`)
+
+Se você quiser permitir a um usuário específico acesso de _leitura_/_escrita_ a um caminho, e apenas acesso de _leitura_ a um caminho filho específico para todos os outros usuários:
+```json
+{
+    "rules": {
+        "users": {
+            "$uid": {
+                ".read": "auth?.uid === $uid ? 'allow' : 'cascade'",
+                ".write": "auth.uid === $uid",
+                "public": {
+                    ".read": true
+                }
+            }
+        }
+    }
+}
+```
+As regras acima impõem:
+* Nenhum acesso de _leitura_ ou _escrita_ ao nó raiz ou qualquer filho para qualquer pessoa. (Nenhuma regra foi definida para esses nós, o acesso será negado)
+* Acesso de _leitura_ para os próprios dados de um usuário autenticado em "users/$uid", incluindo todos os dados filhos
+* Nenhum acesso de _leitura_ para usuários não autenticados e/ou outros usuários a "users/$uid", acesso de _leitura_ não decidido (`'cascade'`) para caminhos filhos. Observe que `auth?.uid` precisa do `?.` para permitir que usuários não autenticados possam cascatear - se a execução da regra falhar, SEMPRE negará o acesso.
+* Acesso de _leitura_ para todos em "users/$uid/public" (se `users/$uid/.read` cascatear, `users/$uid/public/.read` será `true`)
+* Acesso de _escrita_ para os próprios dados de um usuário autenticado em "users/$uid" e todos os dados filhos (a regra `".write"` é definida como `"auth.uid === $uid"`)
+
+NOTA: `"allow"` pode ser retornado de uma função de regra em vez de `true`, e `"deny"` em vez de `false`, `undefined` ou outros valores _falsos_.
+
+## Variáveis de Ambiente e Funções de Regras
+
+Além da variável `auth` usada nos exemplos anteriores, existem outras variáveis e funções que você pode utilizar nas suas definições de regras. Você pode usar essas variáveis e funções para determinar se os dados a serem lidos ou escritos estão em conformidade com a sua lógica de negócios. As seguintes variáveis e funções estão disponíveis nas suas regras `.read` e `.write`:
+* `auth`: O usuário atualmente autenticado (ou `null` para acesso anônimo)
+* `now`: um `número` com a hora atual em ms (você também pode usar `Date.now()`)
+* `path`: uma `string` contendo o caminho atual sendo lido/escrito
+* `operation`: um dos seguintes valores:
+    * operações de _leitura_ `'get'`, `'reflect'`, `'exists'`, `'query'`, `'export'`
+    * operações de _escrita_ `'update'`, `'set'`, `'delete'`, `'transact'`, `'import'`
+* `data`: dados sendo escritos no destino, disponível apenas nas regras `.validate` para operações de _escrita_ `'update'` e `'set'`. Leia mais sobre as regras `'.validate'` [aqui](#validação-dos-dados-sendo-escritos)
+* `context`: dados contextuais que foram passados junto com as operações de _escrita_ no código do cliente.
+* `value`: uma função assíncrona que obtém um valor do banco de dados em um caminho relativo (`./property`, `../other/property`) ou absoluto (`/collection/item`). Você pode usar isso para verificar qualquer dado existente no banco de dados para determinar se a operação é permitida. Por exemplo, use `await value('./locked') !== true` para verificar se a propriedade `locked` do caminho de destino atual não está definida como `true`. É possível carregar dados seletivamente do caminho fornecido passando um argumento adicional `include`: `const contributors = await value('invoices', ['*/paid']); const allow = Object.keys(invoices).every(id => invoices[id].paid === true); return allow;`: isso só permite acesso se todas as `invoices` vinculadas tiverem sido pagas.
+* `exists`: uma função assíncrona que verifica se o valor de um caminho relativo (`./property`) ou absoluto (`/collection/item`) existe atualmente no banco de dados. Por exemplo, você pode usar `await exists('./authors/' + auth.uid)` para verificar se o usuário atual é um dos autores de um item sendo escrito.
+* `$variable`: o valor de uma variável no caminho das suas regras. Se a regra está definida no caminho `posts/$postId` e o caminho sendo atualizado é `posts/lcoq4mnp000008mkaqk9hx9d`, então `$postId` será `lcoq4mnp000008mkaqk9hx9d`.
+
+Note que em vez de usar a variável `operation`, você também pode especificar regras específicas para cada operação: as regras `".write": "true", ".set": "auth.uid !== null"` permitem que todos os usuários escrevam dados em caminhos aninhados, mas restringem a operação de `set` apenas para usuários autenticados. O mesmo pode ser feito com uma única regra `write`: `".write": "operation !== 'set' || auth.uid !== null"` ou mais verboso: `".write": "if (operation !== 'set') { return true; } else { return auth.uid !== null }"`
+
+Lembre-se que as regras acima cascateiam para caminhos filhos, e são portanto aplicadas a todos os dados sendo lidos ou escritos em caminhos filhos/descendentes - uma vez que uma regra permite ou nega o acesso, isso não pode ser substituído por regras definidas em caminhos filhos aninhados. A única exceção a isso são as regras `.validate` que são avaliadas nos caminhos de destino sendo lidos ou escritos. Se uma regra pai `.write` permite o acesso, uma regra `.validate` no caminho de destino ainda pode negar o acesso.
+
+## Validação dos Dados sendo Escritos
+
+Além das regras de leitura/escrita explicadas acima, o **IVIPBASE** também suporta a definição de regras `.validate`. Ao contrário das regras `.read` e `.write`, as regras `.validate` não cascateiam e são aplicadas apenas no caminho de destino. Isso permite validar os dados que estão sendo escritos em caminhos específicos. As regras `.validate` são executadas após verificar se uma regra `.write` concede acesso. Elas suportam totalmente JavaScript, para que você possa usar as mesmas verificações que usaria no código do lado do cliente para validar seus dados. Como regra geral, use regras `.validate` apenas se você precisar realizar verificações que as regras `.schema` não podem lidar, como usar dados atuais no banco de dados ou verificações de tipo avançadas, como comprimento de string.
+
+As seguintes variáveis adicionais estão disponíveis para regras `'.validate'`:
+* `data`: dados sendo escritos no destino para operações de _escrita_ `'update'` e `'set'`. Operações `'transact'` são executadas em 2 etapas: uma operação de _leitura_ `'get'`, seguida de uma operação de _escrita_ `'set'`. Note que operações `'import'` usam atualizações em streaming e seus dados não podem ser validados com regras `'.validate'` antes de serem armazenados no banco de dados; use regras `'.schema'` para validar dados sendo importados, ou negue importações completamente usando `if (operation === 'import') { return 'deny' }` na sua regra `.write`, ou simplesmente definindo `{ ".import": false }`.
+
+NOTA: lembre-se de que o `value` para operações `'update'` são objetos parciais para atualizar o valor armazenado existente. Se sua regra `.validate` verifica a existência de propriedades ou seus valores, certifique-se de permitir propriedades ausentes se a operação for `'update'` (ou use uma regra `.schema` em vez disso).
+
+Exemplo: validar gravações em _/widget_
+```json
+{
+    "rules": {
+        "widget": {
+            ".write": true,
+            // um widget válido deve ter os atributos "color" e "size", mas ignorar operações de atualização (objetos parciais!)
+            ".validate": "operation === 'update' || ('color' in data && 'size' in data)",
+            "size": {
+                // o valor de "size" deve ser um número entre 0 e 99
+                ".validate": "typeof data === 'number' && data >= 0 && data <= 99"
+            },
+            "color": {
+                // o valor de "color" deve existir como uma chave em /valid_colors (ex: /valid_colors/black)
+                ".validate": "typeof data === 'string' && await exists(`/valid_colors/${data}`)"
+            }
+        }
+    }
+}
+```
+
+O exemplo acima pode ser combinado com regras `.schema` para facilitar essas verificações. Veja [Validação de Esquema](#validação-de-esquema) abaixo para mais informações.
+```json
+{
+    "rules": {
+        "widget": {
+            ".write": true,
+            // adicionar tipos obrigatórios "color" e "size" à definição do esquema
+            ".schema": "{ color: string; size: number }",
+            "size": {
+                // o valor de "size" deve ser um número entre 0 e 99
+                ".validate": "data >= 0 && data <= 99"
+            },
+            "color": {
+                // o valor de "color" deve existir como uma chave em /valid_colors (ex: /valid_colors/black)
+                ".validate": "await exists(`/valid_colors/${data}`)"
+            }
+        }
+    }
+}
+```
+
+## Validação de Esquema
+
+O servidor **IVIPBASE** suporta definições de esquema semelhantes ao *TypeScript* e validação. Depois de definir um esquema para um caminho, todos os dados sendo escritos devem aderir ao esquema definido. Os dados a serem armazenados/atualizados serão validados contra o esquema e serão permitidos ou negados conforme apropriado.
+
+<!-- Existem 2 maneiras de adicionar esquemas:
+- No seu arquivo `rules.json`, veja abaixo.
+- Programaticamente através de `db.schema.set`. Veja a [documentação do AceBase](https://github.com/appy-one/acebase#adding-schemas-to-enforce-data-rules) para mais informações. -->
+
+Para garantir que todos os usuários tenham um `name` (string), `email` (string) e `language` (holandês, inglês, alemão, francês ou espanhol), opcionalmente um `birthdate` (Date) e `address` (definição de objeto personalizada), adicione o seguinte esquema:
+```json
+{
+    "rules": {
+        "users": {
+            "$uid": {
+                ".read": "auth.uid === $uid",
+                ".write": "auth.uid === $uid",
+                ".schema": {
+                    "name": "string",
+                    "email": "string",
+                    "language": "'nl'|'en'|'de'|'fr'|'es'",
+                    "birthdate?": "Date",
+                    "address?": {
+                        "street": "string",
+                        "city": "string",
+                        "country": "string",
+                        "geo?": {
+                            "lat": "number",
+                            "lon": "number"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+Você também pode optar por dividir o esquema em vários níveis:
+```json
+{
+    "rules": {
+        "users": {
+            "$uid": {
+                ".read": "auth.uid === $uid",
+                ".write": "auth.uid === $uid",
+
+                ".schema": {
+                    "name": "string",
+                    "email": "string",
+                    "language": "'nl'|'en'|'de'|'fr'|'es'",
+                    "birthdate?": "Date",
+                    "address?": "Object"
+                },
+
+                "address": {
+                    ".schema": {
+                        "street": "string",
+                        "city": "string",
+                        "country": "string",
+                        "geo?": "Object"
+                    },
+
+                    "geo": {
+                        ".schema": {
+                            "lat": "number",
+                            "lon": "number"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+E, se preferir, as definições de esquema podem ser definidas como strings:
+```json
+{
+    "address": {
+        ".schema": "{ street: string, city: string, country: string, geo?: { lat: number, lon: number } }"
+    }
+}
+```
+
+## Codificação de suas regras
+
+Em vez de definir suas regras diretamente da cinfiguração do seu servidor, também é possível configurá-las no seu código (apenas para servidor). Qualquer regra definida com código substituirá ou aumentará as regras existentes encontradas nas definições iniciais, permitindo que você use ambos. Codificar suas regras oferece várias vantagens:
+* Você pode usar as mesmas definições de regras e funções em vários caminhos sem copiar/colar
+* Você pode codificá-las no seu editor favorito
+* Você pode usar valores do servidor em execução e dados em cache nas suas regras, como `process.env` e variáveis como `maintenanceMode`
+* As regras se tornam depuráveis!
+
+Para adicionar uma regra no seu código, use a seguinte sintaxe:
+```js
+import { getDatabase } from "ivipbase";
+
+const db = getDatabase();
+db.setRule(path, ruleTypes, async (env) => { /* seu código de regra */ });
+```
+onde:
+* `path` é o caminho exato do banco de dados para definir a regra, como `'users/$uid'`, ou um array de caminhos.
+* `ruleTypes` é um tipo de regra, como `read`, ou múltiplos em um array como `['read', 'write']`
+
+A função de callback é uma função `async` que recebe todas as variáveis de ambiente disponíveis no argumento `env`: `env.auth` conterá o objeto `auth`, `env.vars` o objeto `vars`, etc. Se você usar a sintaxe de desestruturação ES6, pode usar a mesma sintaxe de regra do seu arquivo `rules.json`: `async ({ auth }) => auth !== null`
+
+É melhor configurar suas regras enquanto o **IVIPBASE Server** está iniciando, antes de aceitar conexões. Para fazer isso, você pode passar uma função de callback `init` para as configurações do servidor que é executada logo antes do servidor http ser iniciado:
+
+```js
+import { initializeApp, getDatabase } from "ivipbase";
+
+const configuracoesApp = {
+    isServer: true,
+    host: "0.0.0.0",
+    port: 8080,
+    // ... outras opções
+    async init() {
+        const db = getDatabase();
+
+        // Permitir acesso de leitura e gravação aos próprios dados dos usuários
+        db.setRule('users/$uid', ['read', 'write'], ({ auth, vars }) => auth.uid === vars.$uid);
+
+        // Limitar o status do usuário a 'online' ou 'offline'
+        db.setRule('users/$uid/status', 'validate', ({ data }) => ['online', 'offline'].includes(data));
+
+        // Permitir seguir apenas usuários existentes
+        db.setRule('users/$uid/following/$otherUid', 'validate', async ({ vars, exists }) => await exists(`/users/${vars.$otherUid}`));
+    }
+};
+
+const app = initializeApp(configuracoesApp);
+```
+
+NOTE que você pode usar o objeto `env.vars` para acessar os valores de curingas nomeados nos caminhos do seu banco de dados. Os valores também são expostos como `env.$name`, mas você não pode usá-los dessa forma no TypeScript porque eles não podem ser predefinidos no tipo `env`.
+
+NOTE que agora este método `init` está disponível, é recomendável também mover qualquer chamada de `server.extend`, `server.db.schema.set`, `server.configAuthProvider` e `server.router.get` etc para cá!

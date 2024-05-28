@@ -34,14 +34,15 @@ export class DataBase extends DataBaseCore {
 
 		const dbInfo = (Array.isArray(this.app.settings.database) ? this.app.settings.database : [this.app.settings.database]).find((d) => d.name === this.name);
 
-		const mainRules: RulesData = this.app.settings?.server?.rulesData ?? { rules: {} };
-		const dbRules: RulesData = dbInfo?.rulesData ?? { rules: {} };
+		const defaultRules = this.app.settings?.defaultRules ?? { rules: {} };
+		const mainRules: RulesData = this.app.settings?.server?.defineRules ?? { rules: {} };
+		const dbRules: RulesData = dbInfo?.defineRules ?? { rules: {} };
 
 		this._rules = new PathBasedRules(this.app.settings?.server?.auth.defaultAccessRule ?? "allow", {
 			debug: this.debug,
 			db: this,
 			authEnabled: this.app.settings?.server?.auth.enabled ?? false,
-			rules: joinObjects({ rules: {} }, mainRules.rules, dbRules.rules),
+			rules: joinObjects({ rules: {} }, defaultRules.rules, mainRules.rules, dbRules.rules),
 		});
 
 		this.storage = app.isServer || !app.settings.isValidClient ? new StorageDBServer(this) : new StorageDBClient(this);

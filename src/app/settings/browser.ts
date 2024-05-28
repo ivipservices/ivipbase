@@ -103,7 +103,7 @@ const hostnameRegex = /^((https?):\/\/)?(localhost|([\da-z\.-]+\.[a-z\.]{2,6}|[\
 export interface DatabaseSettings {
 	name: string;
 	description?: string;
-	rulesData?: RulesData;
+	defineRules?: RulesData;
 }
 
 export class IvipBaseSettings {
@@ -126,6 +126,8 @@ export class IvipBaseSettings {
 	public isServer: boolean = false;
 	public isValidClient: boolean = true;
 	public bootable: boolean = true;
+
+	public defaultRules: RulesData = { rules: {} };
 
 	constructor(readonly options: Partial<Omit<IvipBaseSettings, "isServer" | "isValidClient">> = {}) {
 		this.reset(options);
@@ -179,5 +181,7 @@ export class IvipBaseSettings {
 		this.port = port ? parseInt(port) : options.port;
 
 		this.bootable = options.bootable ?? true;
+
+		this.defaultRules = options.defaultRules ?? { rules: {} };
 	}
 }

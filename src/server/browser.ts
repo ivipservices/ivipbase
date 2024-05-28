@@ -179,7 +179,7 @@ export type ServerInitialSettings<LocalServer = any> = Partial<{
 	 */
 	transactions: Partial<DataBaseServerTransactionSettings>;
 
-	rulesData: RulesData;
+	defineRules: RulesData;
 }>;
 
 export class ServerSettings<LocalServer = any> {
@@ -194,7 +194,7 @@ export class ServerSettings<LocalServer = any> {
 	public init?: (server: LocalServer) => Promise<void>;
 	public serverVersion: string = "1.0.0";
 	public transactions: DataBaseServerTransactionSettings;
-	public rulesData?: RulesData;
+	public defineRules?: RulesData;
 
 	constructor(options: ServerInitialSettings<LocalServer> = {}) {
 		if (typeof options.logLevel === "string" && ["verbose", "log", "warn", "error"].includes(options.logLevel)) {
@@ -233,8 +233,8 @@ export class ServerSettings<LocalServer = any> {
 
 		this.transactions = new DataBaseServerTransactionSettings(options.transactions ?? {});
 
-		if (typeof options.rulesData === "object") {
-			this.rulesData = options.rulesData;
+		if (typeof options.defineRules === "object") {
+			this.defineRules = options.defineRules;
 		}
 	}
 }

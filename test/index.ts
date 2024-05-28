@@ -31,7 +31,7 @@ const app = initializeApp({
 		enabled: true,
 		defaultAdminPassword: "admin",
 	},
-	rulesData: {
+	defineRules: {
 		rules: {
 			users: {
 				$uid: {
