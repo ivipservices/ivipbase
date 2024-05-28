@@ -2062,11 +2062,7 @@ O exemplo acima pode ser combinado com regras `.schema` para facilitar essas ver
 
 ## Validação de Esquema
 
-O servidor **IVIPBASE** suporta definições de esquema semelhantes ao *TypeScript* e validação. Depois de definir um esquema para um caminho, todos os dados sendo escritos devem aderir ao esquema definido. Os dados a serem armazenados/atualizados serão validados contra o esquema e serão permitidos ou negados conforme apropriado.
-
-<!-- Existem 2 maneiras de adicionar esquemas:
-- No seu arquivo `rules.json`, veja abaixo.
-- Programaticamente através de `db.schema.set`. Veja a [documentação do AceBase](https://github.com/appy-one/acebase#adding-schemas-to-enforce-data-rules) para mais informações. -->
+O servidor **IVIPBASE** suporta definições de esquema semelhantes ao *TypeScript* e validação. Depois de definir um esquema para um caminho, todos os dados sendo escritos devem aderir ao esquema definido. Os dados a serem armazenados/atualizados serão validados contra o esquema e serão permitidos ou negados conforme apropriado. Isso é útil para garantir que os dados armazenados no banco de dados estejam em um formato específico e evita erros de dados. As definições de esquema são definidas em regras `.schema` e são executadas antes das regras `.validate`. As regras `.schema` são executadas em todos os caminhos descendentes do caminho de destino, portanto, se você definir um esquema em `users/\$uid`, ele será aplicado a todos os dados sendo escritos em `users/\$uid` e seus descendentes.
 
 Para garantir que todos os usuários tenham um `name` (string), `email` (string) e `language` (holandês, inglês, alemão, francês ou espanhol), opcionalmente um `birthdate` (Date) e `address` (definição de objeto personalizada), adicione o seguinte esquema:
 ```json
@@ -2193,5 +2189,3 @@ const app = initializeApp(configuracoesApp);
 ```
 
 NOTE que você pode usar o objeto `env.vars` para acessar os valores de curingas nomeados nos caminhos do seu banco de dados. Os valores também são expostos como `env.$name`, mas você não pode usá-los dessa forma no TypeScript porque eles não podem ser predefinidos no tipo `env`.
-
-NOTE que agora este método `init` está disponível, é recomendável também mover qualquer chamada de `server.extend`, `server.db.schema.set`, `server.configAuthProvider` e `server.router.get` etc para cá!
