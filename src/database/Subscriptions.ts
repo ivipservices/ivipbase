@@ -1,10 +1,10 @@
-import { Types, PathInfo, Utils } from "ivipbase-core";
+import { Types, PathInfo, Utils, SimpleEventEmitter } from "ivipbase-core";
 import { assert, pathValueToObject } from "../utils";
 
 const SUPPORTED_EVENTS = ["value", "child_added", "child_changed", "child_removed", "mutated", "mutations"];
 SUPPORTED_EVENTS.push(...SUPPORTED_EVENTS.map((event) => `notify_${event}`));
 
-export class Subscriptions {
+export class Subscriptions extends SimpleEventEmitter {
 	private _eventSubscriptions = {} as { [path: string]: Array<{ created: number; type: string; callback: Types.EventSubscriptionCallback }> };
 
 	forEach(callback: (event: string, path: string, callback: Types.EventSubscriptionCallback) => void) {
@@ -37,7 +37,7 @@ export class Subscriptions {
 		//     storage.debug.warn(`Identical subscription of type ${type} on path "${path}" being added`);
 		// }
 		pathSubs.push({ created: Date.now(), type, callback });
-		//this.emit('subscribe', { path, event: type, callback });
+		this.emit("subscribe", { path, event: type, callback });
 	}
 
 	/**
@@ -56,7 +56,7 @@ export class Subscriptions {
 		while ((i = next()) >= 0) {
 			pathSubs.splice(i, 1);
 		}
-		//this.emit('unsubscribe', { path, event: type, callback });
+		this.emit("unsubscribe", { path, event: type, callback });
 	}
 
 	/**

@@ -15,6 +15,7 @@ const request_1 = __importDefault(require("../controller/request"));
 const socket_io_client_1 = require("socket.io-client");
 const utils_1 = require("../utils");
 const error_1 = require("../controller/request/error");
+const ipc_1 = require("../ipc");
 const CONNECTION_STATE_DISCONNECTED = "disconnected";
 const CONNECTION_STATE_CONNECTING = "connecting";
 const CONNECTION_STATE_CONNECTED = "connected";
@@ -29,6 +30,7 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         this.databases = new Map();
         this.auth = new Map();
         this._socket = null;
+        this._ipc = null;
         this._connectionState = CONNECTION_STATE_DISCONNECTED;
         if (typeof options.name === "string") {
             this.name = options.name;
@@ -39,6 +41,7 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         }
         this.storage = (0, verifyStorage_1.applySettings)(this.settings.dbname, this.settings.storage);
         this.isServer = typeof this.settings.server === "object";
+        this._ipc = (0, ipc_1.getIPCPeer)(this.name);
         this.on("ready", () => {
             this._ready = true;
         });
@@ -111,6 +114,12 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
     }
     get socket() {
         return this._socket;
+    }
+    get ipc() {
+        if (this._ipc instanceof ipc_1.IPCPeer === false) {
+            this._ipc = (0, ipc_1.getIPCPeer)(this.name);
+        }
+        return this._ipc;
     }
     async onConnect(callback, isOnce = false) {
         let count = 0, isReset = false;

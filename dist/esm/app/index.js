@@ -9,6 +9,7 @@ import _request from "../controller/request/index.js";
 import { connect as connectSocket } from "socket.io-client";
 import { joinObjects } from "../utils/index.js";
 import { RequestError } from "../controller/request/error.js";
+import { IPCPeer, getIPCPeer } from "../ipc/index.js";
 const CONNECTION_STATE_DISCONNECTED = "disconnected";
 const CONNECTION_STATE_CONNECTING = "connecting";
 const CONNECTION_STATE_CONNECTED = "connected";
@@ -23,6 +24,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
         this.databases = new Map();
         this.auth = new Map();
         this._socket = null;
+        this._ipc = null;
         this._connectionState = CONNECTION_STATE_DISCONNECTED;
         if (typeof options.name === "string") {
             this.name = options.name;
@@ -33,6 +35,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
         }
         this.storage = applySettings(this.settings.dbname, this.settings.storage);
         this.isServer = typeof this.settings.server === "object";
+        this._ipc = getIPCPeer(this.name);
         this.on("ready", () => {
             this._ready = true;
         });
@@ -104,6 +107,12 @@ export class IvipBaseApp extends SimpleEventEmitter {
     }
     get socket() {
         return this._socket;
+    }
+    get ipc() {
+        if (this._ipc instanceof IPCPeer === false) {
+            this._ipc = getIPCPeer(this.name);
+        }
+        return this._ipc;
     }
     async onConnect(callback, isOnce = false) {
         let count = 0, isReset = false;

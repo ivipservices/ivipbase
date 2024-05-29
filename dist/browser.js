@@ -16,6 +16,7 @@ const request_1 = __importDefault(require("../controller/request"));
 const socket_io_client_1 = require("socket.io-client");
 const utils_1 = require("../utils");
 const error_1 = require("../controller/request/error");
+const ipc_1 = require("../ipc");
 const CONNECTION_STATE_DISCONNECTED = "disconnected";
 const CONNECTION_STATE_CONNECTING = "connecting";
 const CONNECTION_STATE_CONNECTED = "connected";
@@ -30,6 +31,7 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         this.databases = new Map();
         this.auth = new Map();
         this._socket = null;
+        this._ipc = null;
         this._connectionState = CONNECTION_STATE_DISCONNECTED;
         if (typeof options.name === "string") {
             this.name = options.name;
@@ -40,6 +42,7 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         }
         this.storage = (0, verifyStorage_1.applySettings)(this.settings.dbname, this.settings.storage);
         this.isServer = typeof this.settings.server === "object";
+        this._ipc = (0, ipc_1.getIPCPeer)(this.name);
         this.on("ready", () => {
             this._ready = true;
         });
@@ -112,6 +115,12 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
     }
     get socket() {
         return this._socket;
+    }
+    get ipc() {
+        if (this._ipc instanceof ipc_1.IPCPeer === false) {
+            this._ipc = (0, ipc_1.getIPCPeer)(this.name);
+        }
+        return this._ipc;
     }
     async onConnect(callback, isOnce = false) {
         let count = 0, isReset = false;
@@ -378,7 +387,7 @@ function deleteApp(app) {
 }
 exports.deleteApp = deleteApp;
 
-},{"../controller/erros":7,"../controller/request":10,"../controller/request/error":11,"../database":24,"../server":27,"../utils":29,"./internal":2,"./settings":3,"./verifyStorage":4,"ivipbase-core":94,"socket.io-client":99}],2:[function(require,module,exports){
+},{"../controller/erros":7,"../controller/request":10,"../controller/request/error":11,"../database":24,"../ipc":28,"../server":31,"../utils":33,"./internal":2,"./settings":3,"./verifyStorage":4,"ivipbase-core":98,"socket.io-client":103}],2:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports._apps = exports.DEFAULT_ENTRY_NAME = void 0;
@@ -1178,7 +1187,7 @@ function getAuth(...args) {
 }
 exports.getAuth = getAuth;
 
-},{"../app":1,"../database":24,"../utils":29,"../utils/base64":28,"../utils/localStorage":30,"ivipbase-core":94}],6:[function(require,module,exports){
+},{"../app":1,"../database":24,"../utils":33,"../utils/base64":32,"../utils/localStorage":34,"ivipbase-core":98}],6:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -1202,6 +1211,7 @@ Object.defineProperty(exports, "DataStorageSettings", { enumerable: true, get: f
 __exportStar(require("./app"), exports);
 __exportStar(require("./database"), exports);
 __exportStar(require("./auth"), exports);
+__exportStar(require("./ipc"), exports);
 var ivipbase_core_1 = require("ivipbase-core");
 Object.defineProperty(exports, "PathInfo", { enumerable: true, get: function () { return ivipbase_core_1.PathInfo; } });
 Object.defineProperty(exports, "SimpleEventEmitter", { enumerable: true, get: function () { return ivipbase_core_1.SimpleEventEmitter; } });
@@ -1211,7 +1221,7 @@ Object.defineProperty(exports, "PathReference", { enumerable: true, get: functio
 Object.defineProperty(exports, "ascii85", { enumerable: true, get: function () { return ivipbase_core_1.ascii85; } });
 Object.defineProperty(exports, "ID", { enumerable: true, get: function () { return ivipbase_core_1.ID; } });
 
-},{"./app":1,"./auth":5,"./controller/storage":20,"./database":24,"ivipbase-core":94}],7:[function(require,module,exports){
+},{"./app":1,"./auth":5,"./controller/storage":20,"./database":24,"./ipc":28,"ivipbase-core":98}],7:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ERROR_FACTORY = void 0;
@@ -1474,7 +1484,7 @@ async function executeQuery(api, database, path, query, options = { snapshots: f
 exports.executeQuery = executeQuery;
 exports.default = executeQuery;
 
-},{"./storage/MDE/utils":19,"ivip-utils":67,"ivipbase-core":94}],10:[function(require,module,exports){
+},{"./storage/MDE/utils":19,"ivip-utils":71,"ivipbase-core":98}],10:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const error_1 = require("./error");
@@ -1687,7 +1697,7 @@ class CustomStorage extends MDE_1.default {
 }
 exports.CustomStorage = CustomStorage;
 
-},{"../erros":7,"./MDE":16,"ivipbase-core":94}],13:[function(require,module,exports){
+},{"../erros":7,"./MDE":16,"ivipbase-core":98}],13:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DataStorage = exports.DataStorageSettings = void 0;
@@ -1741,7 +1751,7 @@ class DataStorage extends CustomStorage_1.CustomStorage {
 }
 exports.DataStorage = DataStorage;
 
-},{"../erros":7,"./CustomStorage":12,"ivipbase-core":94}],14:[function(require,module,exports){
+},{"../erros":7,"./CustomStorage":12,"ivipbase-core":98}],14:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CustomStorageNodeInfo = exports.NodeInfo = exports.NodeAddress = void 0;
@@ -1816,7 +1826,7 @@ class CustomStorageNodeInfo extends NodeInfo {
 }
 exports.CustomStorageNodeInfo = CustomStorageNodeInfo;
 
-},{"./utils":19,"ivipbase-core":94}],15:[function(require,module,exports){
+},{"./utils":19,"ivipbase-core":98}],15:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const ivipbase_core_1 = require("ivipbase-core");
@@ -1951,7 +1961,7 @@ function destructureData(type, path, data, options = {}) {
 }
 exports.default = destructureData;
 
-},{"../../../utils":29,"./utils":19,"ivipbase-core":94}],16:[function(require,module,exports){
+},{"../../../utils":33,"./utils":19,"ivipbase-core":98}],16:[function(require,module,exports){
 "use strict";
 var __rest = (this && this.__rest) || function (s, e) {
     var t = {};
@@ -2704,7 +2714,7 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
 }
 exports.default = MDE;
 
-},{"../../../utils":29,"./NodeInfo":14,"./destructureData":15,"./prepareMergeNodes":17,"./structureNodes":18,"./utils":19,"ivipbase-core":94}],17:[function(require,module,exports){
+},{"../../../utils":33,"./NodeInfo":14,"./destructureData":15,"./prepareMergeNodes":17,"./structureNodes":18,"./utils":19,"ivipbase-core":98}],17:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const ivipbase_core_1 = require("ivipbase-core");
@@ -2827,7 +2837,7 @@ function prepareMergeNodes(path, nodes, comparison) {
 }
 exports.default = prepareMergeNodes;
 
-},{"./utils":19,"ivipbase-core":94}],18:[function(require,module,exports){
+},{"./utils":19,"ivipbase-core":98}],18:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const ivipbase_core_1 = require("ivipbase-core");
@@ -2884,7 +2894,7 @@ function structureNodes(path, nodes, options = {}) {
 }
 exports.default = structureNodes;
 
-},{"./utils":19,"ivipbase-core":94}],19:[function(require,module,exports){
+},{"./utils":19,"ivipbase-core":98}],19:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getTypeFromStoredValue = exports.processReadNodeValue = exports.getTypedChildValue = exports.valueFitsInline = exports.promiseState = exports.getValueType = exports.getNodeValueType = exports.getValueTypeDefault = exports.getValueTypeName = exports.VALUE_TYPES = exports.nodeValueTypes = void 0;
@@ -3257,7 +3267,7 @@ const getTypeFromStoredValue = (val) => {
 };
 exports.getTypeFromStoredValue = getTypeFromStoredValue;
 
-},{"ivip-utils":67,"ivipbase-core":94}],20:[function(require,module,exports){
+},{"ivip-utils":71,"ivipbase-core":98}],20:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -3553,7 +3563,7 @@ class StorageDBClient extends ivipbase_core_1.Api {
 }
 exports.StorageDBClient = StorageDBClient;
 
-},{"../auth":5,"../controller/request/error":11,"ivipbase-core":94}],22:[function(require,module,exports){
+},{"../auth":5,"../controller/request/error":11,"ivipbase-core":98}],22:[function(require,module,exports){
 (function (process){(function (){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
@@ -3775,7 +3785,7 @@ class StorageDBServer extends ivipbase_core_1.Api {
 exports.StorageDBServer = StorageDBServer;
 
 }).call(this)}).call(this,require('_process'))
-},{"../controller/executeQuery":9,"../controller/storage/MDE":16,"../utils":29,"_process":97,"ivipbase-core":94}],23:[function(require,module,exports){
+},{"../controller/executeQuery":9,"../controller/storage/MDE":16,"../utils":33,"_process":101,"ivipbase-core":98}],23:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Subscriptions = void 0;
@@ -3783,8 +3793,9 @@ const ivipbase_core_1 = require("ivipbase-core");
 const utils_1 = require("../utils");
 const SUPPORTED_EVENTS = ["value", "child_added", "child_changed", "child_removed", "mutated", "mutations"];
 SUPPORTED_EVENTS.push(...SUPPORTED_EVENTS.map((event) => `notify_${event}`));
-class Subscriptions {
+class Subscriptions extends ivipbase_core_1.SimpleEventEmitter {
     constructor() {
+        super(...arguments);
         this._eventSubscriptions = {};
     }
     forEach(callback) {
@@ -3815,7 +3826,7 @@ class Subscriptions {
         //     storage.debug.warn(`Identical subscription of type ${type} on path "${path}" being added`);
         // }
         pathSubs.push({ created: Date.now(), type, callback });
-        //this.emit('subscribe', { path, event: type, callback });
+        this.emit("subscribe", { path, event: type, callback });
     }
     /**
      * Remove 1 ou mais assinaturas de um nó
@@ -3833,7 +3844,7 @@ class Subscriptions {
         while ((i = next()) >= 0) {
             pathSubs.splice(i, 1);
         }
-        //this.emit('unsubscribe', { path, event: type, callback });
+        this.emit("unsubscribe", { path, event: type, callback });
     }
     /**
      * Verifica se existem assinantes no caminho fornecido que precisam do valor anterior do nó quando uma alteração é acionada
@@ -4260,7 +4271,7 @@ class Subscriptions {
 }
 exports.Subscriptions = Subscriptions;
 
-},{"../utils":29,"ivipbase-core":94}],24:[function(require,module,exports){
+},{"../utils":33,"ivipbase-core":98}],24:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SchemaValidationError = exports.hasDatabase = exports.getDatabasesNames = exports.getDatabase = exports.DataBase = void 0;
@@ -4278,6 +4289,7 @@ class DataBase extends ivipbase_core_1.DataBase {
         this.database = database;
         this.app = app;
         this.subscriptions = new Subscriptions_1.Subscriptions();
+        this._ipc = null;
         this.name = database;
         this.description =
             (_c = ((_a = (Array.isArray(app.settings.database) ? app.settings.database : [app.settings.database]).find(({ name }) => {
@@ -4298,6 +4310,7 @@ class DataBase extends ivipbase_core_1.DataBase {
             rules: (0, utils_1.joinObjects)({ rules: {} }, defaultRules.rules, mainRules.rules, dbRules.rules),
         });
         this.storage = !app.settings.isConnectionDefined || app.isServer || !app.settings.isValidClient ? new StorageDBServer_1.StorageDBServer(this) : new StorageDBClient_1.StorageDBClient(this);
+        app.ipc.addDatabase(this);
         app.storage.on("add", (e) => {
             //console.log(e);
             this.subscriptions.triggerAllEvents(e.path, null, e.value);
@@ -4388,7 +4401,7 @@ class SchemaValidationError extends Error {
 }
 exports.SchemaValidationError = SchemaValidationError;
 
-},{"../app":1,"../utils":29,"./StorageDBClient":21,"./StorageDBServer":22,"./Subscriptions":23,"./services/rules":25,"ivipbase-core":94}],25:[function(require,module,exports){
+},{"../app":1,"../utils":33,"./StorageDBClient":21,"./StorageDBServer":22,"./Subscriptions":23,"./services/rules":25,"ivipbase-core":98}],25:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PathBasedRules = exports.AccessRuleValidationError = void 0;
@@ -4752,7 +4765,7 @@ class PathBasedRules extends ivipbase_core_1.SimpleEventEmitter {
 }
 exports.PathBasedRules = PathBasedRules;
 
-},{"../../server/browser":27,"../../utils":29,"./sandbox":26,"ivipbase-core":94}],26:[function(require,module,exports){
+},{"../../server/browser":31,"../../utils":33,"./sandbox":26,"ivipbase-core":98}],26:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.isCodeSafe = exports.executeSandboxed = void 0;
@@ -4770,7 +4783,473 @@ function isCodeSafe(code) {
 }
 exports.isCodeSafe = isCodeSafe;
 
-},{"vm":107}],27:[function(require,module,exports){
+},{"vm":111}],27:[function(require,module,exports){
+(function (process){(function (){
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var _a;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.IPCPeer = void 0;
+const Cluster = __importStar(require("cluster"));
+const ipc_1 = require("../ipc");
+const cluster = (_a = Cluster.default) !== null && _a !== void 0 ? _a : Cluster; // ESM and CJS compatible approach
+const masterPeerId = "[master]";
+class IPCPeer extends ipc_1.IvipBaseIPCPeer {
+    constructor(name) {
+        var _a, _b;
+        const pm2id = ((_a = process.env) === null || _a === void 0 ? void 0 : _a.NODE_APP_INSTANCE) || ((_b = process.env) === null || _b === void 0 ? void 0 : _b.pm_id);
+        if (typeof pm2id === "string" && pm2id !== "0") {
+            throw new Error(`To use AceBase with pm2 in cluster mode, use an AceBase IPC server to enable interprocess communication.`);
+        }
+        const peerId = cluster.isMaster ? masterPeerId : cluster.worker.id.toString();
+        super(peerId, name);
+        this.name = name;
+        this.masterPeerId = masterPeerId;
+        this.ipcType = "node.cluster";
+        /** Adds an event handler to a Node.js EventEmitter that is automatically removed upon IPC exit */
+        const bindEventHandler = (target, event, handler) => {
+            target.addListener(event, handler);
+            this.on("exit", () => target.removeListener(event, handler));
+        };
+        // Setup process exit handler
+        bindEventHandler(process, "SIGINT", () => {
+            this.exit();
+        });
+        if (cluster.isMaster) {
+            bindEventHandler(cluster, "online", (worker) => {
+                // A new worker is started
+                // Do not add yet, wait for "hello" message - a forked process might not use the same db
+                bindEventHandler(worker, "error", (err) => {
+                    this.debug.error(`Caught worker error:`, err);
+                });
+            });
+            bindEventHandler(cluster, "exit", (worker) => {
+                // A worker has shut down
+                if (this.peers.find((peer) => peer.id === worker.id.toString())) {
+                    const dbs = Array.from(this.ipcDatabases.keys());
+                    for (const dbname of dbs) {
+                        // Worker apparently did not have time to say goodbye,
+                        // remove the peer ourselves
+                        this.removePeer(dbname, worker.id.toString());
+                        // Send "bye" message on their behalf
+                        this.sayGoodbye(dbname, worker.id.toString());
+                    }
+                }
+            });
+        }
+        const handleMessage = (message) => {
+            if (typeof message !== "object") {
+                // Ignore non-object IPC messages
+                return;
+            }
+            if (!this.ipcDatabases.has(message.dbname)) {
+                // Ignore, message not meant for this database
+                return;
+            }
+            if (cluster.isMaster && message.to !== masterPeerId) {
+                // Message is meant for others (or all). Forward it
+                this.sendMessage(message.dbname, message);
+            }
+            if (message.to && message.to !== this.id) {
+                // Message is for somebody else. Ignore
+                return;
+            }
+            return super.handleMessage(message);
+        };
+        if (cluster.isMaster) {
+            bindEventHandler(cluster, "message", (worker, message) => handleMessage(message));
+        }
+        else {
+            bindEventHandler(cluster.worker, "message", handleMessage);
+        }
+        // if (!cluster.isMaster) {
+        //     // Add master peer. Do we have to?
+        //     this.addPeer(masterPeerId, false, false);
+        // }
+    }
+    sendMessage(dbname, message) {
+        var _a;
+        message.dbname = dbname;
+        if (cluster.isMaster) {
+            // If we are the master, send the message to the target worker(s)
+            this.peers
+                .filter((p) => p.id !== message.from && (!message.to || p.id === message.to))
+                .forEach((peer) => {
+                var _a;
+                const worker = (_a = cluster.workers) === null || _a === void 0 ? void 0 : _a[peer.id];
+                worker && worker.send(message); // When debugging, worker might have stopped in the meantime
+            });
+        }
+        else {
+            // Send the message to the master who will forward it to the target worker(s)
+            (_a = process === null || process === void 0 ? void 0 : process.send) === null || _a === void 0 ? void 0 : _a.call(process, message);
+        }
+    }
+    async exit(code = 0) {
+        await super.exit(code);
+    }
+}
+exports.IPCPeer = IPCPeer;
+
+}).call(this)}).call(this,require('_process'))
+},{"../ipc":30,"_process":101,"cluster":36}],28:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getIPCPeer = exports.IPCPeer = void 0;
+const IPCPeer_1 = require("./IPCPeer");
+Object.defineProperty(exports, "IPCPeer", { enumerable: true, get: function () { return IPCPeer_1.IPCPeer; } });
+const internal_1 = require("./internal");
+function getIPCPeer(name = internal_1.DEFAULT_ENTRY_NAME) {
+    if (internal_1._ipcs.has(name)) {
+        return internal_1._ipcs.get(name);
+    }
+    const ipc = new IPCPeer_1.IPCPeer(name);
+    internal_1._ipcs.set(name, ipc);
+    return ipc;
+}
+exports.getIPCPeer = getIPCPeer;
+
+},{"./IPCPeer":27,"./internal":29}],29:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports._ipcs = exports.DEFAULT_ENTRY_NAME = void 0;
+exports.DEFAULT_ENTRY_NAME = "[DEFAULT]";
+/**
+ * @internal
+ */
+exports._ipcs = new Map();
+
+},{}],30:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.IvipBaseIPCPeer = exports.AIvipBaseIPCPeerExitingError = void 0;
+const ivipbase_core_1 = require("ivipbase-core");
+const masterPeerId = "[master]";
+class AIvipBaseIPCPeerExitingError extends Error {
+    constructor(message) {
+        super(`Exiting: ${message}`);
+    }
+}
+exports.AIvipBaseIPCPeerExitingError = AIvipBaseIPCPeerExitingError;
+class IvipBaseIPCPeer extends ivipbase_core_1.SimpleEventEmitter {
+    get isMaster() {
+        return this.masterPeerId === this.id;
+    }
+    constructor(id, name) {
+        super();
+        this.id = id;
+        this.name = name;
+        this.masterPeerId = masterPeerId;
+        this.ipcType = "ipc";
+        this.ipcDatabases = new Map();
+        this.ourSubscriptions = {};
+        this.remoteSubscriptions = {};
+        this.peers = [];
+        this._exiting = false;
+        this._eventsEnabled = true;
+        this._requests = new Map();
+        this.debug = new ivipbase_core_1.DebugLogger("verbose", `[${name}]`);
+    }
+    addDatabase(db) {
+        if (this.ipcDatabases.has(db.name)) {
+            return;
+        }
+        const dbname = db.name;
+        this.ipcDatabases.set(dbname, db);
+        // Setup db event listeners
+        db.subscriptions.on("subscribe", (subscription) => {
+            // Subscription was added to db
+            var _a, _b, _c;
+            db.debug.verbose(`database subscription being added on peer ${this.id}`);
+            const remoteSubscription = (_a = this.remoteSubscriptions[dbname]) === null || _a === void 0 ? void 0 : _a.find((sub) => sub.callback === subscription.callback);
+            if (remoteSubscription) {
+                // Send ack
+                // return sendMessage({ type: 'subscribe_ack', from: tabId, to: remoteSubscription.for, data: { path: subscription.path, event: subscription.event } });
+                return;
+            }
+            const othersAlreadyNotifying = (_b = this.ourSubscriptions[dbname]) === null || _b === void 0 ? void 0 : _b.some((sub) => sub.event === subscription.event && sub.path === subscription.path);
+            // Add subscription
+            (_c = this.ourSubscriptions[dbname]) === null || _c === void 0 ? void 0 : _c.push(subscription);
+            if (othersAlreadyNotifying) {
+                // Same subscription as other previously added. Others already know we want to be notified
+                return;
+            }
+            // Request other tabs to keep us updated of this event
+            const message = { type: "subscribe", from: this.id, data: { path: subscription.path, event: subscription.event }, dbname };
+            this.sendMessage(dbname, message);
+        });
+        db.subscriptions.on("unsubscribe", (subscription) => {
+            // Subscription was removed from db
+            var _a, _b, _c, _d;
+            const remoteSubscription = (_a = this.remoteSubscriptions[dbname]) === null || _a === void 0 ? void 0 : _a.find((sub) => sub.callback === subscription.callback);
+            if (remoteSubscription) {
+                // Remove
+                (_b = this.remoteSubscriptions[dbname]) === null || _b === void 0 ? void 0 : _b.splice((_c = this.remoteSubscriptions[dbname]) === null || _c === void 0 ? void 0 : _c.indexOf(remoteSubscription), 1);
+                // Send ack
+                // return sendMessage({ type: 'unsubscribe_ack', from: tabId, to: remoteSubscription.for, data: { path: subscription.path, event: subscription.event } });
+                return;
+            }
+            (_d = this.ourSubscriptions[dbname]) === null || _d === void 0 ? void 0 : _d.filter((sub) => sub.path === subscription.path && (!subscription.event || sub.event === subscription.event) && (!subscription.callback || sub.callback === subscription.callback)).forEach((sub) => {
+                var _a, _b;
+                // Remove from our subscriptions
+                (_a = this.ourSubscriptions[dbname]) === null || _a === void 0 ? void 0 : _a.splice((_b = this.ourSubscriptions[dbname]) === null || _b === void 0 ? void 0 : _b.indexOf(sub), 1);
+                // Request other tabs to stop notifying
+                const message = { type: "unsubscribe", from: this.id, data: { path: sub.path, event: sub.event }, dbname };
+                this.sendMessage(dbname, message);
+            });
+        });
+        // Send hello to other peers
+        const helloMsg = { type: "hello", from: this.id, data: undefined, dbname };
+        this.sendMessage(dbname, helloMsg);
+    }
+    /**
+     * Requests the peer to shut down. Resolves once its locks are cleared and 'exit' event has been emitted.
+     * Has to be overridden by the IPC implementation to perform custom shutdown tasks
+     * @param code optional exit code (eg one provided by SIGINT event)
+     */
+    async exit(code = 0) {
+        if (this._exiting) {
+            // Already exiting...
+            return this.once("exit");
+        }
+        this._exiting = true;
+        this.debug.warn(`Received ${this.isMaster ? "master" : "worker " + this.id} process exit request`);
+        // Send "bye"
+        const dbnames = Array.from(this.ipcDatabases.keys());
+        for (const dbname of dbnames) {
+            this.sayGoodbye(dbname, this.id);
+        }
+        this.debug.warn(`${this.isMaster ? "Master" : "Worker " + this.id} will now exit`);
+        this.emitOnce("exit", code);
+    }
+    sayGoodbye(dbname, forPeerId) {
+        // Send "bye" message on their behalf
+        const bye = { type: "bye", from: forPeerId, data: undefined, dbname };
+        this.sendMessage(dbname, bye);
+    }
+    addPeer(dbname, id, sendReply = true) {
+        var _a;
+        if (this._exiting) {
+            return;
+        }
+        const peer = this.peers.find((w) => w.id === id && w.dbname === dbname);
+        if (!peer) {
+            this.peers.push({ id, lastSeen: Date.now(), dbname });
+        }
+        if (sendReply) {
+            // Send hello back to sender
+            const helloMessage = { type: "hello", from: this.id, to: id, data: undefined, dbname };
+            this.sendMessage(dbname, helloMessage);
+            // Send our active subscriptions through
+            (_a = this.ourSubscriptions[dbname]) === null || _a === void 0 ? void 0 : _a.forEach((sub) => {
+                // Request to keep us updated
+                const message = { type: "subscribe", from: this.id, to: id, data: { path: sub.path, event: sub.event }, dbname };
+                this.sendMessage(dbname, message);
+            });
+        }
+    }
+    removePeer(dbname, id, ignoreUnknown = false) {
+        var _a;
+        if (this._exiting) {
+            return;
+        }
+        const peer = this.peers.find((peer) => peer.id === id && peer.dbname === dbname);
+        if (!peer) {
+            if (!ignoreUnknown) {
+                throw new Error(`We are supposed to know this peer!`);
+            }
+            return;
+        }
+        this.peers.splice(this.peers.indexOf(peer), 1);
+        const db = this.ipcDatabases.get(dbname);
+        // Remove their subscriptions
+        const subscriptions = (_a = this.remoteSubscriptions[dbname]) === null || _a === void 0 ? void 0 : _a.filter((sub) => sub.for === id);
+        subscriptions.forEach((sub) => {
+            if (Array.isArray(this.remoteSubscriptions[dbname])) {
+                this.remoteSubscriptions[dbname].splice(this.remoteSubscriptions[dbname].indexOf(sub), 1);
+            }
+            db === null || db === void 0 ? void 0 : db.subscriptions.remove(sub.path, sub.event, sub.callback);
+        });
+    }
+    addRemoteSubscription(dbname, peerId, details) {
+        if (this._exiting) {
+            return;
+        }
+        // this.storage.debug.log(`remote subscription being added`);
+        if (Array.isArray(this.remoteSubscriptions[dbname]) && this.remoteSubscriptions[dbname].some((sub) => sub.for === peerId && sub.event === details.event && sub.path === details.path)) {
+            // We're already serving this event for the other peer. Ignore
+            return;
+        }
+        // Add remote subscription
+        const subscribeCallback = (err, path, val, previous, context) => {
+            // db triggered an event, send notification to remote subscriber
+            const eventMessage = {
+                type: "event",
+                from: this.id,
+                to: peerId,
+                path: details.path,
+                event: details.event,
+                data: {
+                    path,
+                    val,
+                    previous,
+                    context,
+                },
+                dbname,
+            };
+            this.sendMessage(dbname, eventMessage);
+        };
+        if (!Array.isArray(this.remoteSubscriptions[dbname])) {
+            this.remoteSubscriptions[dbname] = [];
+        }
+        this.remoteSubscriptions[dbname].push({ for: peerId, event: details.event, path: details.path, callback: subscribeCallback });
+        const db = this.ipcDatabases.get(dbname);
+        db === null || db === void 0 ? void 0 : db.subscriptions.add(details.path, details.event, subscribeCallback);
+    }
+    cancelRemoteSubscription(dbname, peerId, details) {
+        var _a;
+        // Other tab requests to remove previously subscribed event
+        const sub = (_a = this.remoteSubscriptions[dbname]) === null || _a === void 0 ? void 0 : _a.find((sub) => sub.for === peerId && sub.event === details.event && sub.path === details.event);
+        if (!sub) {
+            // We don't know this subscription so we weren't notifying in the first place. Ignore
+            return;
+        }
+        // Stop subscription
+        const db = this.ipcDatabases.get(dbname);
+        db === null || db === void 0 ? void 0 : db.subscriptions.remove(details.path, details.event, sub.callback);
+    }
+    async handleMessage(message) {
+        var _a;
+        const dbname = message.dbname;
+        switch (message.type) {
+            case "hello":
+                return this.addPeer(dbname, message.from, message.to !== this.id);
+            case "bye":
+                return this.removePeer(dbname, message.from, true);
+            case "subscribe":
+                return this.addRemoteSubscription(dbname, message.from, message.data);
+            case "unsubscribe":
+                return this.cancelRemoteSubscription(dbname, message.from, message.data);
+            case "event": {
+                if (!this._eventsEnabled) {
+                    // IPC event handling is disabled for this client. Ignore message.
+                    break;
+                }
+                const eventMessage = message;
+                const context = eventMessage.data.context || {};
+                context.database_ipc = { type: this.ipcType, origin: eventMessage.from }; // Add IPC details
+                // Other peer raised an event we are monitoring
+                const subscriptions = (_a = this.ourSubscriptions[dbname]) === null || _a === void 0 ? void 0 : _a.filter((sub) => sub.event === eventMessage.event && sub.path === eventMessage.path);
+                subscriptions.forEach((sub) => {
+                    sub.callback(null, eventMessage.data.path, eventMessage.data.val, eventMessage.data.previous, context);
+                });
+                break;
+            }
+            case "notification": {
+                // Custom notification received - raise event
+                return this.emit("notification", message);
+            }
+            case "request": {
+                // Custom message received - raise event
+                return this.emit("request", message);
+            }
+            case "result": {
+                // Result of custom request received - raise event
+                const result = message;
+                const request = this._requests.get(result.id);
+                if (typeof request !== "object") {
+                    throw new Error(`Result of unknown request received`);
+                }
+                if (result.ok) {
+                    request.resolve(result.data);
+                }
+                else {
+                    request.reject(new Error(result.reason));
+                }
+            }
+        }
+    }
+    async request(req) {
+        // Send request, return result promise
+        let resolve, reject;
+        const promise = new Promise((rs, rj) => {
+            resolve = (result) => {
+                this._requests.delete(req.id);
+                rs(result);
+            };
+            reject = (err) => {
+                this._requests.delete(req.id);
+                rj(err);
+            };
+        });
+        this._requests.set(req.id, { resolve, reject, request: req });
+        this.sendMessage(req.dbname, req);
+        return promise;
+    }
+    /**
+     * Sends a custom request to the IPC master
+     * @param request
+     * @returns
+     */
+    sendRequest(dbname, request) {
+        const req = { type: "request", from: this.id, to: this.masterPeerId, id: ivipbase_core_1.ID.generate(), data: request, dbname };
+        return this.request(req).catch((err) => {
+            this.debug.error(err);
+            throw err;
+        });
+    }
+    replyRequest(dbname, requestMessage, result) {
+        const reply = { type: "result", id: requestMessage.id, ok: true, from: this.id, to: requestMessage.from, data: result, dbname };
+        this.sendMessage(dbname, reply);
+    }
+    /**
+     * Sends a custom notification to all IPC peers
+     * @param notification
+     * @returns
+     */
+    sendNotification(dbname, notification) {
+        const msg = { type: "notification", from: this.id, data: notification, dbname };
+        this.sendMessage(dbname, msg);
+    }
+    /**
+     * If ipc event handling is currently enabled
+     */
+    get eventsEnabled() {
+        return this._eventsEnabled;
+    }
+    /**
+     * Enables or disables ipc event handling. When disabled, incoming event messages will be ignored.
+     */
+    set eventsEnabled(enabled) {
+        this.debug.log(`ipc events ${enabled ? "enabled" : "disabled"}`);
+        this._eventsEnabled = enabled;
+    }
+}
+exports.IvipBaseIPCPeer = IvipBaseIPCPeer;
+
+},{"ivipbase-core":98}],31:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LocalServer = exports.AbstractLocalServer = exports.isPossiblyServer = exports.ServerSettings = exports.ServerAuthenticationSettings = exports.DataBaseServerTransactionSettings = exports.AUTH_ACCESS_DEFAULT = exports.ExternalServerError = exports.ServerNotReadyError = void 0;
@@ -5018,7 +5497,7 @@ class LocalServer extends AbstractLocalServer {
 }
 exports.LocalServer = LocalServer;
 
-},{"../database":24,"ivipbase-core":94}],28:[function(require,module,exports){
+},{"../database":24,"ivipbase-core":98}],32:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.decode = exports.encode = void 0;
@@ -5035,7 +5514,7 @@ exports.default = {
     decode,
 };
 
-},{}],29:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -5142,13 +5621,13 @@ function sanitizeEmailPrefix(email) {
 }
 exports.sanitizeEmailPrefix = sanitizeEmailPrefix;
 
-},{"./base64":28,"ivipbase-core":94}],30:[function(require,module,exports){
+},{"./base64":32,"ivipbase-core":98}],34:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const localStorage = window.localStorage;
 exports.default = localStorage;
 
-},{}],31:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -5326,9 +5805,9 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],32:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 
-},{}],33:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 /**
  * cuid.js
  * Collision-resistant UID generator for browsers and node.
@@ -5414,7 +5893,7 @@ cuid.fingerprint = fingerprint;
 
 module.exports = cuid;
 
-},{"./lib/fingerprint.js":34,"./lib/getRandomValue.js":35,"./lib/pad.js":36}],34:[function(require,module,exports){
+},{"./lib/fingerprint.js":38,"./lib/getRandomValue.js":39,"./lib/pad.js":40}],38:[function(require,module,exports){
 var pad = require('./pad.js');
 
 var env = typeof window === 'object' ? window : self;
@@ -5428,7 +5907,7 @@ module.exports = function fingerprint () {
   return clientId;
 };
 
-},{"./pad.js":36}],35:[function(require,module,exports){
+},{"./pad.js":40}],39:[function(require,module,exports){
 
 var getRandomValue;
 
@@ -5448,13 +5927,13 @@ if (crypto) {
 
 module.exports = getRandomValue;
 
-},{}],36:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 module.exports = function pad (num, size) {
   var s = '000000000' + num;
   return s.substr(s.length - size);
 };
 
-},{}],37:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
 
@@ -5727,7 +6206,7 @@ formatters.j = function (v) {
 };
 
 }).call(this)}).call(this,require('_process'))
-},{"./common":38,"_process":97}],38:[function(require,module,exports){
+},{"./common":42,"_process":101}],42:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -6003,7 +6482,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":96}],39:[function(require,module,exports){
+},{"ms":100}],43:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.hasCORS = void 0;
@@ -6019,7 +6498,7 @@ catch (err) {
 }
 exports.hasCORS = value;
 
-},{}],40:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 "use strict";
 // imported from https://github.com/galkn/querystring
 /**
@@ -6060,7 +6539,7 @@ function decode(qs) {
 }
 exports.decode = decode;
 
-},{}],41:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.parse = void 0;
@@ -6130,7 +6609,7 @@ function queryKey(uri, query) {
     return data;
 }
 
-},{}],42:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 // imported from https://github.com/unshiftio/yeast
 'use strict';
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -6187,7 +6666,7 @@ exports.yeast = yeast;
 for (; i < length; i++)
     map[alphabet[i]] = i;
 
-},{}],43:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.globalThisShim = void 0;
@@ -6203,7 +6682,7 @@ exports.globalThisShim = (() => {
     }
 })();
 
-},{}],44:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.nextTick = exports.parse = exports.installTimerFunctions = exports.transports = exports.TransportError = exports.Transport = exports.protocol = exports.Socket = void 0;
@@ -6222,7 +6701,7 @@ Object.defineProperty(exports, "parse", { enumerable: true, get: function () { r
 var websocket_constructor_js_1 = require("./transports/websocket-constructor.js");
 Object.defineProperty(exports, "nextTick", { enumerable: true, get: function () { return websocket_constructor_js_1.nextTick; } });
 
-},{"./contrib/parseuri.js":41,"./socket.js":45,"./transport.js":46,"./transports/index.js":47,"./transports/websocket-constructor.js":49,"./util.js":53}],45:[function(require,module,exports){
+},{"./contrib/parseuri.js":45,"./socket.js":49,"./transport.js":50,"./transports/index.js":51,"./transports/websocket-constructor.js":53,"./util.js":57}],49:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -6850,7 +7329,7 @@ class Socket extends component_emitter_1.Emitter {
 exports.Socket = Socket;
 Socket.protocol = engine_io_parser_1.protocol;
 
-},{"./contrib/parseqs.js":40,"./contrib/parseuri.js":41,"./transports/index.js":47,"./transports/websocket-constructor.js":49,"./util.js":53,"@socket.io/component-emitter":31,"debug":37,"engine.io-parser":58}],46:[function(require,module,exports){
+},{"./contrib/parseqs.js":44,"./contrib/parseuri.js":45,"./transports/index.js":51,"./transports/websocket-constructor.js":53,"./util.js":57,"@socket.io/component-emitter":35,"debug":41,"engine.io-parser":62}],50:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -7004,7 +7483,7 @@ class Transport extends component_emitter_1.Emitter {
 }
 exports.Transport = Transport;
 
-},{"./contrib/parseqs.js":40,"./util.js":53,"@socket.io/component-emitter":31,"debug":37,"engine.io-parser":58}],47:[function(require,module,exports){
+},{"./contrib/parseqs.js":44,"./util.js":57,"@socket.io/component-emitter":35,"debug":41,"engine.io-parser":62}],51:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.transports = void 0;
@@ -7017,7 +7496,7 @@ exports.transports = {
     polling: polling_js_1.Polling,
 };
 
-},{"./polling.js":48,"./websocket.js":50,"./webtransport.js":51}],48:[function(require,module,exports){
+},{"./polling.js":52,"./websocket.js":54,"./webtransport.js":55}],52:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -7433,7 +7912,7 @@ function unloadHandler() {
     }
 }
 
-},{"../contrib/yeast.js":42,"../globalThis.js":43,"../transport.js":46,"../util.js":53,"./xmlhttprequest.js":52,"@socket.io/component-emitter":31,"debug":37,"engine.io-parser":58}],49:[function(require,module,exports){
+},{"../contrib/yeast.js":46,"../globalThis.js":47,"../transport.js":50,"../util.js":57,"./xmlhttprequest.js":56,"@socket.io/component-emitter":35,"debug":41,"engine.io-parser":62}],53:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.defaultBinaryType = exports.usingBrowserWebSocket = exports.WebSocket = exports.nextTick = void 0;
@@ -7451,7 +7930,7 @@ exports.WebSocket = globalThis_js_1.globalThisShim.WebSocket || globalThis_js_1.
 exports.usingBrowserWebSocket = true;
 exports.defaultBinaryType = "arraybuffer";
 
-},{"../globalThis.js":43}],50:[function(require,module,exports){
+},{"../globalThis.js":47}],54:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
@@ -7617,7 +8096,7 @@ class WS extends transport_js_1.Transport {
 exports.WS = WS;
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"../contrib/yeast.js":42,"../transport.js":46,"../util.js":53,"./websocket-constructor.js":49,"buffer":32,"debug":37,"engine.io-parser":58}],51:[function(require,module,exports){
+},{"../contrib/yeast.js":46,"../transport.js":50,"../util.js":57,"./websocket-constructor.js":53,"buffer":36,"debug":41,"engine.io-parser":62}],55:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -7704,7 +8183,7 @@ class WT extends transport_js_1.Transport {
 }
 exports.WT = WT;
 
-},{"../transport.js":46,"./websocket-constructor.js":49,"debug":37,"engine.io-parser":58}],52:[function(require,module,exports){
+},{"../transport.js":50,"./websocket-constructor.js":53,"debug":41,"engine.io-parser":62}],56:[function(require,module,exports){
 "use strict";
 // browser shim for xmlhttprequest module
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -7731,7 +8210,7 @@ exports.XHR = XHR;
 function createCookieJar() { }
 exports.createCookieJar = createCookieJar;
 
-},{"../contrib/has-cors.js":39,"../globalThis.js":43}],53:[function(require,module,exports){
+},{"../contrib/has-cors.js":43,"../globalThis.js":47}],57:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.byteLength = exports.installTimerFunctions = exports.pick = void 0;
@@ -7791,7 +8270,7 @@ function utf8Length(str) {
     return length;
 }
 
-},{"./globalThis.js":43}],54:[function(require,module,exports){
+},{"./globalThis.js":47}],58:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ERROR_PACKET = exports.PACKET_TYPES_REVERSE = exports.PACKET_TYPES = void 0;
@@ -7812,7 +8291,7 @@ Object.keys(PACKET_TYPES).forEach(key => {
 const ERROR_PACKET = { type: "error", data: "parser error" };
 exports.ERROR_PACKET = ERROR_PACKET;
 
-},{}],55:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.decode = exports.encode = void 0;
@@ -7862,7 +8341,7 @@ const decode = (base64) => {
 };
 exports.decode = decode;
 
-},{}],56:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.decodePacket = void 0;
@@ -7930,7 +8409,7 @@ const mapBinary = (data, binaryType) => {
     }
 };
 
-},{"./commons.js":54,"./contrib/base64-arraybuffer.js":55}],57:[function(require,module,exports){
+},{"./commons.js":58,"./contrib/base64-arraybuffer.js":59}],61:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.encodePacket = exports.encodePacketToBinary = void 0;
@@ -8007,7 +8486,7 @@ function encodePacketToBinary(packet, callback) {
 }
 exports.encodePacketToBinary = encodePacketToBinary;
 
-},{"./commons.js":54}],58:[function(require,module,exports){
+},{"./commons.js":58}],62:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.decodePayload = exports.decodePacket = exports.encodePayload = exports.encodePacket = exports.protocol = exports.createPacketDecoderStream = exports.createPacketEncoderStream = void 0;
@@ -8173,7 +8652,7 @@ function createPacketDecoderStream(maxPayload, binaryType) {
 exports.createPacketDecoderStream = createPacketDecoderStream;
 exports.protocol = 4;
 
-},{"./commons.js":54,"./decodePacket.js":56,"./encodePacket.js":57}],59:[function(require,module,exports){
+},{"./commons.js":58,"./decodePacket.js":60,"./encodePacket.js":61}],63:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 function c(input, length, result) {
@@ -8253,7 +8732,7 @@ const ascii85 = {
 };
 exports.default = ascii85;
 
-},{}],60:[function(require,module,exports){
+},{}],64:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 class Base64 {
@@ -8362,7 +8841,7 @@ class Base64 {
 }
 exports.default = Base64;
 
-},{}],61:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const A = (a, b) => {
@@ -8930,7 +9409,7 @@ class BezierEasing {
 }
 exports.default = BezierEasing;
 
-},{}],62:[function(require,module,exports){
+},{}],66:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.infoColor = exports.hslDistance = exports.negative = exports.growing = exports.watershed = exports.colorScale = exports.grayScale = exports.lighten = exports.darken = exports.blend = exports.hwbToRgb = exports.cmykToRgb = exports.hsvToRgb = exports.hslToRgb = exports.rgbToHwb = exports.rgbToCmyk = exports.rgbToHsv = exports.rgbToHsl = exports.rgbToHex = exports.hexToRgb = exports.colorNames = void 0;
@@ -9602,7 +10081,7 @@ class Color {
 }
 exports.default = Color;
 
-},{}],63:[function(require,module,exports){
+},{}],67:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const validation_1 = require("./validation");
@@ -9660,7 +10139,7 @@ const JSONStringify = (obj) => {
 };
 exports.default = JSONStringify;
 
-},{"./validation":71}],64:[function(require,module,exports){
+},{"./validation":75}],68:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 function runCallback(callback, data) {
@@ -9753,7 +10232,7 @@ class SimpleEventEmitter {
 }
 exports.default = SimpleEventEmitter;
 
-},{}],65:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -9782,7 +10261,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.mat4 = void 0;
 exports.mat4 = __importStar(require("./mat4"));
 
-},{"./mat4":66}],66:[function(require,module,exports){
+},{"./mat4":70}],70:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.transpose = exports.translate = exports.str = exports.scale = exports.rotateZ = exports.rotateY = exports.rotateX = exports.rotate = exports.perspectiveFromFieldOfView = exports.perspective = exports.ortho = exports.multiply = exports.lookAt = exports.invert = exports.identity = exports.frustum = exports.fromZRotation = exports.fromYRotation = exports.fromXRotation = exports.fromTranslation = exports.fromScaling = exports.fromRotationTranslation = exports.fromRotation = exports.fromQuat = exports.determinant = exports.create = exports.copy = exports.clone = exports.adjoint = void 0;
@@ -10813,7 +11292,7 @@ const transpose = (out, a) => {
 };
 exports.transpose = transpose;
 
-},{}],67:[function(require,module,exports){
+},{}],71:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -10866,7 +11345,7 @@ Object.defineProperty(exports, "Ascii85", { enumerable: true, get: function () {
 var SimpleEventEmitter_1 = require("./SimpleEventEmitter");
 Object.defineProperty(exports, "SimpleEventEmitter", { enumerable: true, get: function () { return __importDefault(SimpleEventEmitter_1).default; } });
 
-},{"./Ascii85":59,"./Base64":60,"./BezierEasing":61,"./Color":62,"./JSONStringify":63,"./SimpleEventEmitter":64,"./gl":65,"./mergeClasses":68,"./mimeTypeFromBuffer":69,"./utils":70,"./validation":71}],68:[function(require,module,exports){
+},{"./Ascii85":63,"./Base64":64,"./BezierEasing":65,"./Color":66,"./JSONStringify":67,"./SimpleEventEmitter":68,"./gl":69,"./mergeClasses":72,"./mimeTypeFromBuffer":73,"./utils":74,"./validation":75}],72:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const findProtoNames = (i) => {
@@ -10920,7 +11399,7 @@ const mergeClasses = (a, b) => {
 };
 exports.default = mergeClasses;
 
-},{}],69:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.mimeTypeFromBuffer = void 0;
@@ -11086,7 +11565,7 @@ const mimeTypeFromBuffer = (buffer) => {
 };
 exports.mimeTypeFromBuffer = mimeTypeFromBuffer;
 
-},{}],70:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
 (function (process,global,Buffer){(function (){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -11403,7 +11882,7 @@ function objectToUrlParams(obj) {
 exports.objectToUrlParams = objectToUrlParams;
 
 }).call(this)}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"./validation":71,"_process":97,"buffer":32}],71:[function(require,module,exports){
+},{"./validation":75,"_process":101,"buffer":36}],75:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.isEmpty = exports.isUrlValid = exports.isPhoneValid = exports.isPasswordValid = exports.isEmailValid = exports.isBuffer = exports.isSymbol = exports.isFunction = exports.isUndefined = exports.isDate = exports.isInfinity = exports.isNotNumber = exports.isNull = exports.isFloat = exports.isInt = exports.isNumberValid = exports.isNumber = exports.isBoolean = exports.isString = exports.isJson = exports.isObject = exports.isTypedArray = exports.isArray = void 0;
@@ -11534,7 +12013,7 @@ function isEmpty(obj) {
 }
 exports.isEmpty = isEmpty;
 
-},{}],72:[function(require,module,exports){
+},{}],76:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -11616,7 +12095,7 @@ class Api extends SimpleEventEmitter_1.default {
 }
 exports.default = Api;
 
-},{"../Lib/SimpleEventEmitter":86}],73:[function(require,module,exports){
+},{"../Lib/SimpleEventEmitter":90}],77:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -11732,7 +12211,7 @@ class DataBase extends SimpleEventEmitter_1.default {
 exports.DataBase = DataBase;
 exports.default = DataBase;
 
-},{"../Lib/DebugLogger":78,"../Lib/SimpleEventEmitter":86,"../Lib/TypeMappings":90,"./reference":74}],74:[function(require,module,exports){
+},{"../Lib/DebugLogger":82,"../Lib/SimpleEventEmitter":90,"../Lib/TypeMappings":94,"./reference":78}],78:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -12839,7 +13318,7 @@ class DataReferenceQuery {
 }
 exports.DataReferenceQuery = DataReferenceQuery;
 
-},{"../Lib/ID":79,"../Lib/OptionalObservable":81,"../Lib/PathInfo":83,"../Lib/Subscription":88,"./snapshot":75}],75:[function(require,module,exports){
+},{"../Lib/ID":83,"../Lib/OptionalObservable":85,"../Lib/PathInfo":87,"../Lib/Subscription":92,"./snapshot":79}],79:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -12998,7 +13477,7 @@ class MutationsDataSnapshot extends DataSnapshot {
 }
 exports.MutationsDataSnapshot = MutationsDataSnapshot;
 
-},{"../Lib/PathInfo":83}],76:[function(require,module,exports){
+},{"../Lib/PathInfo":87}],80:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ascii85 = void 0;
@@ -13079,7 +13558,7 @@ exports.ascii85 = {
 };
 exports.default = exports.ascii85;
 
-},{}],77:[function(require,module,exports){
+},{}],81:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.assert = void 0;
@@ -13095,7 +13574,7 @@ function assert(condition, error) {
 }
 exports.assert = assert;
 
-},{}],78:[function(require,module,exports){
+},{}],82:[function(require,module,exports){
 (function (process){(function (){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -13127,7 +13606,7 @@ class DebugLogger {
 exports.default = DebugLogger;
 
 }).call(this)}).call(this,require('_process'))
-},{"_process":97}],79:[function(require,module,exports){
+},{"_process":101}],83:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -13155,7 +13634,7 @@ class ID {
 }
 exports.default = ID;
 
-},{"cuid":33}],80:[function(require,module,exports){
+},{"cuid":37}],84:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -13210,7 +13689,7 @@ class ObjectCollection {
 }
 exports.ObjectCollection = ObjectCollection;
 
-},{"./ID":79}],81:[function(require,module,exports){
+},{"./ID":83}],85:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -13285,7 +13764,7 @@ function setObservable(Observable) {
 }
 exports.setObservable = setObservable;
 
-},{"./SimpleObservable":87,"./Utils":91,"rxjs":32}],82:[function(require,module,exports){
+},{"./SimpleObservable":91,"./Utils":95,"rxjs":36}],86:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PartialArray = void 0;
@@ -13308,7 +13787,7 @@ class PartialArray {
 }
 exports.PartialArray = PartialArray;
 
-},{}],83:[function(require,module,exports){
+},{}],87:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PathInfo = exports.PathReference = void 0;
@@ -13646,7 +14125,7 @@ class PathInfo {
 exports.PathInfo = PathInfo;
 exports.default = PathInfo;
 
-},{}],84:[function(require,module,exports){
+},{}],88:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SchemaDefinition = void 0;
@@ -14022,7 +14501,7 @@ class SchemaDefinition {
 }
 exports.SchemaDefinition = SchemaDefinition;
 
-},{}],85:[function(require,module,exports){
+},{}],89:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SimpleCache = void 0;
@@ -14121,9 +14600,9 @@ class SimpleCache {
 }
 exports.SimpleCache = SimpleCache;
 
-},{"./Utils":91}],86:[function(require,module,exports){
-arguments[4][64][0].apply(exports,arguments)
-},{"dup":64}],87:[function(require,module,exports){
+},{"./Utils":95}],90:[function(require,module,exports){
+arguments[4][68][0].apply(exports,arguments)
+},{"dup":68}],91:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 /**
@@ -14170,7 +14649,7 @@ class SimpleObservable {
 }
 exports.default = SimpleObservable;
 
-},{}],88:[function(require,module,exports){
+},{}],92:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EventStream = exports.EventPublisher = exports.EventSubscription = void 0;
@@ -14355,7 +14834,7 @@ class EventStream {
 }
 exports.EventStream = EventStream;
 
-},{}],89:[function(require,module,exports){
+},{}],93:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -14716,7 +15195,7 @@ const deserialize2 = (data) => {
 };
 exports.deserialize2 = deserialize2;
 
-},{"./Ascii85":76,"./PartialArray":82,"./PathInfo":83,"./Utils":91}],90:[function(require,module,exports){
+},{"./Ascii85":80,"./PartialArray":86,"./PathInfo":87,"./Utils":95}],94:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -15054,7 +15533,7 @@ class TypeMappings {
 }
 exports.default = TypeMappings;
 
-},{"../DataBase/reference":74,"../DataBase/snapshot":75,"./PathInfo":83,"./Utils":91}],91:[function(require,module,exports){
+},{"../DataBase/reference":78,"../DataBase/snapshot":79,"./PathInfo":87,"./Utils":95}],95:[function(require,module,exports){
 (function (global,Buffer){(function (){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
@@ -15615,18 +16094,18 @@ function uuidv4() {
 exports.uuidv4 = uuidv4;
 
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"../process":95,"./PartialArray":82,"./PathInfo":83,"buffer":32}],92:[function(require,module,exports){
+},{"../process":99,"./PartialArray":86,"./PathInfo":87,"buffer":36}],96:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.assert = void 0;
 var Assert_1 = require("./Assert");
 Object.defineProperty(exports, "assert", { enumerable: true, get: function () { return Assert_1.assert; } });
 
-},{"./Assert":77}],93:[function(require,module,exports){
+},{"./Assert":81}],97:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 
-},{}],94:[function(require,module,exports){
+},{}],98:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -15705,7 +16184,7 @@ Object.defineProperty(exports, "PartialArray", { enumerable: true, get: function
 var ObjectCollection_1 = require("./Lib/ObjectCollection");
 Object.defineProperty(exports, "ObjectCollection", { enumerable: true, get: function () { return ObjectCollection_1.ObjectCollection; } });
 
-},{"./DataBase":73,"./DataBase/api":72,"./DataBase/reference":74,"./DataBase/snapshot":75,"./Lib":92,"./Lib/Ascii85":76,"./Lib/DebugLogger":78,"./Lib/ID":79,"./Lib/ObjectCollection":80,"./Lib/PartialArray":82,"./Lib/PathInfo":83,"./Lib/Schema":84,"./Lib/SimpleCache":85,"./Lib/SimpleEventEmitter":86,"./Lib/SimpleObservable":87,"./Lib/Subscription":88,"./Lib/Transport":89,"./Lib/TypeMappings":90,"./Lib/Utils":91,"./Types":93}],95:[function(require,module,exports){
+},{"./DataBase":77,"./DataBase/api":76,"./DataBase/reference":78,"./DataBase/snapshot":79,"./Lib":96,"./Lib/Ascii85":80,"./Lib/DebugLogger":82,"./Lib/ID":83,"./Lib/ObjectCollection":84,"./Lib/PartialArray":86,"./Lib/PathInfo":87,"./Lib/Schema":88,"./Lib/SimpleCache":89,"./Lib/SimpleEventEmitter":90,"./Lib/SimpleObservable":91,"./Lib/Subscription":92,"./Lib/Transport":93,"./Lib/TypeMappings":94,"./Lib/Utils":95,"./Types":97}],99:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = {
@@ -15715,7 +16194,7 @@ exports.default = {
     },
 };
 
-},{}],96:[function(require,module,exports){
+},{}],100:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -15879,7 +16358,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],97:[function(require,module,exports){
+},{}],101:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -16065,7 +16544,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],98:[function(require,module,exports){
+},{}],102:[function(require,module,exports){
 "use strict";
 /**
  * Initialize backoff timer with `opts`.
@@ -16137,7 +16616,7 @@ Backoff.prototype.setJitter = function (jitter) {
     this.jitter = jitter;
 };
 
-},{}],99:[function(require,module,exports){
+},{}],103:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -16208,7 +16687,7 @@ Object.defineProperty(exports, "protocol", { enumerable: true, get: function () 
 
 module.exports = lookup;
 
-},{"./manager.js":100,"./socket.js":102,"./url.js":103,"debug":37,"socket.io-parser":105}],100:[function(require,module,exports){
+},{"./manager.js":104,"./socket.js":106,"./url.js":107,"debug":41,"socket.io-parser":109}],104:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -16613,7 +17092,7 @@ class Manager extends component_emitter_1.Emitter {
 }
 exports.Manager = Manager;
 
-},{"./contrib/backo2.js":98,"./on.js":101,"./socket.js":102,"@socket.io/component-emitter":31,"debug":37,"engine.io-client":44,"socket.io-parser":105}],101:[function(require,module,exports){
+},{"./contrib/backo2.js":102,"./on.js":105,"./socket.js":106,"@socket.io/component-emitter":35,"debug":41,"engine.io-client":48,"socket.io-parser":109}],105:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.on = void 0;
@@ -16625,7 +17104,7 @@ function on(obj, ev, fn) {
 }
 exports.on = on;
 
-},{}],102:[function(require,module,exports){
+},{}],106:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -17537,7 +18016,7 @@ class Socket extends component_emitter_1.Emitter {
 }
 exports.Socket = Socket;
 
-},{"./on.js":101,"@socket.io/component-emitter":31,"debug":37,"socket.io-parser":105}],103:[function(require,module,exports){
+},{"./on.js":105,"@socket.io/component-emitter":35,"debug":41,"socket.io-parser":109}],107:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -17609,7 +18088,7 @@ function url(uri, path = "", loc) {
 }
 exports.url = url;
 
-},{"debug":37,"engine.io-client":44}],104:[function(require,module,exports){
+},{"debug":41,"engine.io-client":48}],108:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.reconstructPacket = exports.deconstructPacket = void 0;
@@ -17699,7 +18178,7 @@ function _reconstructPacket(data, buffers) {
     return data;
 }
 
-},{"./is-binary.js":106}],105:[function(require,module,exports){
+},{"./is-binary.js":110}],109:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Decoder = exports.Encoder = exports.PacketType = exports.protocol = void 0;
@@ -18022,7 +18501,7 @@ class BinaryReconstructor {
     }
 }
 
-},{"./binary.js":104,"./is-binary.js":106,"@socket.io/component-emitter":31,"debug":37}],106:[function(require,module,exports){
+},{"./binary.js":108,"./is-binary.js":110,"@socket.io/component-emitter":35,"debug":41}],110:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.hasBinary = exports.isBinary = void 0;
@@ -18079,7 +18558,7 @@ function hasBinary(obj, toJSON) {
 }
 exports.hasBinary = hasBinary;
 
-},{}],107:[function(require,module,exports){
+},{}],111:[function(require,module,exports){
 var indexOf = function (xs, item) {
     if (xs.indexOf) return xs.indexOf(item);
     else for (var i = 0; i < xs.length; i++) {

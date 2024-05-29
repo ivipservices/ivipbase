@@ -5,8 +5,9 @@ const ivipbase_core_1 = require("ivipbase-core");
 const utils_1 = require("../utils");
 const SUPPORTED_EVENTS = ["value", "child_added", "child_changed", "child_removed", "mutated", "mutations"];
 SUPPORTED_EVENTS.push(...SUPPORTED_EVENTS.map((event) => `notify_${event}`));
-class Subscriptions {
+class Subscriptions extends ivipbase_core_1.SimpleEventEmitter {
     constructor() {
+        super(...arguments);
         this._eventSubscriptions = {};
     }
     forEach(callback) {
@@ -37,7 +38,7 @@ class Subscriptions {
         //     storage.debug.warn(`Identical subscription of type ${type} on path "${path}" being added`);
         // }
         pathSubs.push({ created: Date.now(), type, callback });
-        //this.emit('subscribe', { path, event: type, callback });
+        this.emit("subscribe", { path, event: type, callback });
     }
     /**
      * Remove 1 ou mais assinaturas de um nó
@@ -55,7 +56,7 @@ class Subscriptions {
         while ((i = next()) >= 0) {
             pathSubs.splice(i, 1);
         }
-        //this.emit('unsubscribe', { path, event: type, callback });
+        this.emit("unsubscribe", { path, event: type, callback });
     }
     /**
      * Verifica se existem assinantes no caminho fornecido que precisam do valor anterior do nó quando uma alteração é acionada

@@ -15,6 +15,7 @@ class DataBase extends ivipbase_core_1.DataBase {
         this.database = database;
         this.app = app;
         this.subscriptions = new Subscriptions_1.Subscriptions();
+        this._ipc = null;
         this.name = database;
         this.description =
             (_c = ((_a = (Array.isArray(app.settings.database) ? app.settings.database : [app.settings.database]).find(({ name }) => {
@@ -35,6 +36,7 @@ class DataBase extends ivipbase_core_1.DataBase {
             rules: (0, utils_1.joinObjects)({ rules: {} }, defaultRules.rules, mainRules.rules, dbRules.rules),
         });
         this.storage = !app.settings.isConnectionDefined || app.isServer || !app.settings.isValidClient ? new StorageDBServer_1.StorageDBServer(this) : new StorageDBClient_1.StorageDBClient(this);
+        app.ipc.addDatabase(this);
         app.storage.on("add", (e) => {
             //console.log(e);
             this.subscriptions.triggerAllEvents(e.path, null, e.value);

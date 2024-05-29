@@ -11,6 +11,7 @@ export class DataBase extends DataBaseCore {
         this.database = database;
         this.app = app;
         this.subscriptions = new Subscriptions();
+        this._ipc = null;
         this.name = database;
         this.description =
             ((Array.isArray(app.settings.database) ? app.settings.database : [app.settings.database]).find(({ name }) => {
@@ -31,6 +32,7 @@ export class DataBase extends DataBaseCore {
             rules: joinObjects({ rules: {} }, defaultRules.rules, mainRules.rules, dbRules.rules),
         });
         this.storage = !app.settings.isConnectionDefined || app.isServer || !app.settings.isValidClient ? new StorageDBServer(this) : new StorageDBClient(this);
+        app.ipc.addDatabase(this);
         app.storage.on("add", (e) => {
             //console.log(e);
             this.subscriptions.triggerAllEvents(e.path, null, e.value);

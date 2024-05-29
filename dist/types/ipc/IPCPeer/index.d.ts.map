@@ -1,0 +1,1 @@
+{"version":3,"file":"index.d.ts","sourceRoot":"","sources":["../../../../src/ipc/IPCPeer/index.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,QAAQ,EAAE,eAAe,EAAE,MAAM,QAAQ,CAAC;AAUnD,qBAAa,OAAQ,SAAQ,eAAe;IAC/B,SAAS,CAAC,IAAI,EAAE,MAAM;gBAAZ,IAAI,EAAE,MAAM;IAmF3B,WAAW,CAAC,MAAM,EAAE,MAAM,EAAE,OAAO,EAAE,QAAQ;IAiBvC,IAAI,CAAC,IAAI,SAAI;CAG1B"}

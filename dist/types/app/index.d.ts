@@ -5,6 +5,7 @@ import { IvipBaseSettings, IvipBaseSettingsOptions } from "./settings";
 import { DataBase } from "../database";
 import { Auth } from "../auth";
 import { connect as connectSocket } from "socket.io-client";
+import { IPCPeer } from "../ipc";
 type IOWebSocket = ReturnType<typeof connectSocket>;
 export declare class IvipBaseApp extends SimpleEventEmitter {
     _ready: boolean;
@@ -19,6 +20,7 @@ export declare class IvipBaseApp extends SimpleEventEmitter {
     readonly auth: Map<string, Auth>;
     private _connectionState;
     private _socket;
+    private _ipc;
     constructor(options: Partial<IvipBaseApp>);
     initialize(): Promise<void>;
     /**
@@ -31,6 +33,7 @@ export declare class IvipBaseApp extends SimpleEventEmitter {
     get isConnecting(): boolean;
     get connectionState(): "connected" | "disconnected" | "connecting" | "disconnecting";
     get socket(): import("socket.io-client").Socket<import("@socket.io/component-emitter").DefaultEventsMap, import("@socket.io/component-emitter").DefaultEventsMap> | null;
+    get ipc(): IPCPeer;
     onConnect(callback: (socket: IOWebSocket | null) => void, isOnce?: boolean): Promise<{
         stop: () => void;
     }>;

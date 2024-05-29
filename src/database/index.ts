@@ -5,6 +5,7 @@ import { StorageDBClient } from "./StorageDBClient";
 import { Subscriptions } from "./Subscriptions";
 import { PathBasedRules, PathRuleFunction, PathRuleType, RulesData } from "./services/rules";
 import { joinObjects } from "../utils";
+import { IPCPeer, getIPCPeer } from "../ipc";
 
 export class DataBase extends DataBaseCore {
 	readonly name: string;
@@ -15,6 +16,7 @@ export class DataBase extends DataBaseCore {
 	readonly storage: StorageDBServer | StorageDBClient;
 
 	private _rules: PathBasedRules;
+	private _ipc: IPCPeer | null = null;
 
 	constructor(readonly database: string, readonly app: IvipBaseApp, options?: Partial<DataBaseSettings>) {
 		super(database, options);
@@ -46,6 +48,8 @@ export class DataBase extends DataBaseCore {
 		});
 
 		this.storage = !app.settings.isConnectionDefined || app.isServer || !app.settings.isValidClient ? new StorageDBServer(this) : new StorageDBClient(this);
+
+		app.ipc.addDatabase(this);
 
 		app.storage.on("add", (e: { name: string; path: string; value: any }) => {
 			//console.log(e);

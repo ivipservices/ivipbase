@@ -1,5 +1,5 @@
-import { Types } from "ivipbase-core";
-export declare class Subscriptions {
+import { Types, SimpleEventEmitter } from "ivipbase-core";
+export declare class Subscriptions extends SimpleEventEmitter {
     private _eventSubscriptions;
     forEach(callback: (event: string, path: string, callback: Types.EventSubscriptionCallback) => void): void;
     countByPath(path: string): number;
