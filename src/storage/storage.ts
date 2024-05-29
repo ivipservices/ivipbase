@@ -10,7 +10,7 @@ export class StorageReference extends SimpleEventEmitter {
 		readonly key: string | number;
 	};
 
-	constructor(protected storage: Api, path: string) {
+	constructor(protected storage: Storage, path: string) {
 		super();
 
 		if (!path) {
@@ -123,7 +123,7 @@ export class StorageReference extends SimpleEventEmitter {
 	}
 }
 
-export abstract class Api {
+export class Storage {
 	constructor(protected app: IvipBaseApp, protected database: DataBase) {}
 
 	/**
@@ -135,11 +135,17 @@ export abstract class Api {
 		return new StorageReference(this, path);
 	}
 
-	abstract put(ref: StorageReference, data: File | Blob | Uint8Array, metadata?: { contentType: string }): Promise<string>;
+	put(ref: StorageReference, data: File | Blob | Uint8Array, metadata?: { contentType: string }): Promise<string> {
+		return Promise.resolve("");
+	}
 
-	abstract putString(ref: StorageReference, data: string, type?: "base64" | "base64url" | "data_url" | "raw" | "text"): Promise<string>;
+	putString(ref: StorageReference, data: string, type?: "base64" | "base64url" | "data_url" | "raw" | "text"): Promise<string> {
+		return Promise.resolve("");
+	}
 
-	abstract delete(ef: StorageReference): Promise<void>;
+	delete(ef: StorageReference): Promise<void> {
+		return Promise.resolve();
+	}
 
 	async getDownloadURL(ref: StorageReference): Promise<string | null> {
 		const { path, isFile } = await this.database
