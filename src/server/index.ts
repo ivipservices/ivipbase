@@ -2,7 +2,7 @@ import { AbstractLocalServer, ServerSettings, ServerInitialSettings, ServerNotRe
 import type { Socket } from "socket.io";
 import type { Express, Request, Response } from "express";
 import * as express from "express";
-import { addMetadataRoutes, addDataRoutes, addAuthenticionRoutes, addWebManagerRoutes } from "./routes";
+import { addMetadataRoutes, addDataRoutes, addAuthenticionRoutes, addWebManagerRoutes, addStorageRoutes } from "./routes";
 import { Server, createServer } from "http";
 import { DbUserAccountDetails } from "./schema/user";
 import { add404Middleware, addCacheMiddleware, addCorsMiddleware } from "./middleware";
@@ -11,6 +11,10 @@ import { ConnectedClient } from "./shared/clients";
 import { setupAuthentication } from "./services/auth";
 import { SimpleCache } from "ivipbase-core";
 import { addWebsocketServer } from "./websocket";
+import formData from "express-form-data";
+import path from "path";
+import fs from "fs";
+
 const createExpress = (express as any).default ?? express;
 
 export { ServerSettings, ServerInitialSettings };
@@ -77,6 +81,22 @@ export class LocalServer extends AbstractLocalServer<LocalServer> {
 		// Analisa os corpos de solicitação JSON
 		this.app.use(express.json({ limit: this.settings.maxPayloadSize })); // , extended: true ?
 
+		const dir_temp = path.join(this.settings.localPath, "./temp");
+		if (!fs.existsSync(dir_temp)) {
+			fs.mkdirSync(dir_temp);
+		}
+
+		this.app.use(
+			formData.parse({
+				uploadDir: path.resolve(this.settings.localPath, "./temp"),
+				autoClean: true,
+			}),
+		);
+
+		this.app.use(formData.format());
+		this.app.use(formData.stream());
+		this.app.use(formData.union());
+
 		this.app.use(`/${this.settings.rootPath}`, this.router);
 
 		// Adiciona middleware de CORS
@@ -106,6 +126,8 @@ export class LocalServer extends AbstractLocalServer<LocalServer> {
 		}
 
 		addDataRoutes(this);
+
+		addStorageRoutes(this);
 
 		addWebManagerRoutes(this);
 

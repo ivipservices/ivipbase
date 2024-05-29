@@ -1,6 +1,7 @@
 import { PathInfo } from "ivipbase-core";
 
 export * from "./base64";
+export * as Mime from "./Mime";
 
 /**
  * Substituição para console.assert, lança um erro se a condição não for atendida.
@@ -95,3 +96,12 @@ export function sanitizeEmailPrefix(email: string): string {
 
 	return sanitizedPrefix;
 }
+
+export const getExtension = (filename: string): string => {
+	try {
+		const i = filename.lastIndexOf(".");
+		return i < 0 ? "" : filename.substr(i);
+	} catch {
+		return "";
+	}
+};

@@ -71,8 +71,10 @@
 		"@types/memory-cache": "^0.2.5",
 		"@types/nodemailer": "^6.4.14",
 		"@types/os-utils": "^0.0.4",
+		"data-urls": "^5.0.0",
 		"dotenv": "^16.0.3",
 		"express": "^4.17.1",
+		"express-form-data": "^2.0.23",
 		"ivip-utils": "^1.1.71",
 		"ivipbase-core": "^1.6.96",
 		"juice": "^10.0.0",
@@ -90,7 +92,9 @@
 		"unidecode": "^0.1.8"
 	},
 	"devDependencies": {
+		"@types/data-urls": "^3.0.4",
 		"@types/express": "^4.17.17",
+		"@types/express-form-data": "^2.0.5",
 		"@types/node": "^18.15.5",
 		"@types/proper-lockfile": "^4.1.2",
 		"@types/socket.io": "^3.0.2",
