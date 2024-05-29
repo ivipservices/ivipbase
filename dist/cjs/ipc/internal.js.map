@@ -1,1 +1,1 @@
-{"version":3,"file":"internal.js","sourceRoot":"","sources":["../../../src/ipc/internal.ts"],"names":[],"mappings":";;;AAEa,QAAA,kBAAkB,GAAG,WAAW,CAAC;AAE9C;;GAEG;AACU,QAAA,KAAK,GAAG,IAAI,GAAG,EAAmB,CAAC"}
+{"version":3,"file":"internal.js","sourceRoot":"","sources":["../../../src/ipc/internal.ts"],"names":[],"mappings":";;;AACA,4CAAqD;AAA5C,8GAAA,kBAAkB,OAAA;AAE3B;;GAEG;AACU,QAAA,KAAK,GAAG,IAAI,GAAG,EAAmB,CAAC"}

@@ -1,6 +1,5 @@
 import { IPCPeer } from "./IPCPeer";
-
-export const DEFAULT_ENTRY_NAME = "[DEFAULT]";
+export { DEFAULT_ENTRY_NAME } from "../app/internal";
 
 /**
  * @internal
