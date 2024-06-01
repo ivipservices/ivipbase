@@ -241,15 +241,15 @@ export default class MDE extends SimpleEventEmitter {
 			pathsLike.forEach((exp) => pathsLike.push(`${exp}/%`));
 		} else if (typeof allHeirs === "number") {
 			pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1,${allHeirs}})`));
-			pathsLike.forEach((exp) => querys.push(`LIKE '${exp}/%'`));
-			pathsLike.forEach((exp) => pathsLike.push(`${exp}/%`));
-			// const p = pathsLike;
-			// let m = "/%";
-			// for (let i = 0; i < allHeirs; i++) {
-			// 	p.forEach((exp) => querys.push(`LIKE '${exp}${m}'`));
-			// 	p.forEach((exp) => pathsLike.push(`${exp}${m}`));
-			// 	m += "/%";
-			// }
+			// pathsLike.forEach((exp) => querys.push(`LIKE '${exp}/%'`));
+			// pathsLike.forEach((exp) => pathsLike.push(`${exp}/%`));
+			const p = pathsLike;
+			let m = "/%";
+			for (let i = 0; i < allHeirs; i++) {
+				p.forEach((exp) => querys.push(`LIKE '${exp}${m}'`));
+				p.forEach((exp) => pathsLike.push(`${exp}${m}`));
+				m += "/%";
+			}
 		}
 
 		let parent = PathInfo.get(path).parent;
