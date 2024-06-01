@@ -15,7 +15,10 @@ export declare class SqliteStorage extends CustomStorage {
     private _getOne;
     private _exec;
     private _getByRegex;
-    getMultiple(database: string, expression: RegExp, simplifyValues?: boolean): Promise<StorageNodeInfo[]>;
+    getMultiple(database: string, { regex, query }: {
+        regex: RegExp;
+        query: string[];
+    }, simplifyValues?: boolean): Promise<StorageNodeInfo[]>;
     setNode(database: string, path: string, content: StorageNode): Promise<void>;
     removeNode(database: string, path: string): Promise<void>;
 }

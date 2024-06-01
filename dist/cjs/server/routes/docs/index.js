@@ -71,6 +71,10 @@ const addRoute = (env) => {
                     name: "metadata",
                     description: "Pontos de extremidade de metadados",
                 },
+                {
+                    name: "storage",
+                    description: "Pontos de extremidade de armazenamento de arquivos e objetos binários",
+                },
             ],
             components: {
                 securitySchemes: {

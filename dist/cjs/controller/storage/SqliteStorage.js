@@ -142,12 +142,17 @@ class SqliteStorage extends CustomStorage_1.CustomStorage {
         });
         return await Promise.all(promises);
     }
-    async getMultiple(database, expression, simplifyValues = false) {
+    async getMultiple(database, { regex, query }, simplifyValues = false) {
         if (!(database in this.pending)) {
             throw erros_1.ERROR_FACTORY.create("db-not-found" /* AppError.DB_NOT_FOUND */, { dbName: database });
         }
-        const pendingList = Array.from(this.pending[database].values()).filter((row) => expression.test(row.path));
-        const list = await this._getByRegex(database, "path", expression, simplifyValues);
+        const pendingList = Array.from(this.pending[database].values()).filter((row) => regex.test(row.path));
+        const sql = `SELECT path, type, text_value, binary_value, json_value, revision, revision_nr, created, modified FROM ${database} WHERE ${query.map((p) => `path LIKE '${p}'`).join(" OR ")}`;
+        const rows = await this._get(sql);
+        const list = rows.filter((row) => "path" in row && regex.test(row["path"]));
+        console.log("patterns", query);
+        console.log("regex", regex);
+        console.log("list", rows.length, list.length);
         const result = pendingList
             .concat(list)
             .filter((row, i, l) => {

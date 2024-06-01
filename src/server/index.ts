@@ -41,6 +41,19 @@ export interface RouteRequestEnvironment {
 
 export type RouteRequest<ReqQuery = any, ReqBody = any, ResBody = any> = Request<any, ResBody, ReqBody, ReqQuery> & Partial<RouteRequestEnvironment>;
 
+/**
+ * Cria pastas de acordo com um caminho especificado, se não existirem.
+ *
+ * @param {string} dirPath - O caminho das pastas a serem criadas.
+ */
+const createDirectories = (dirPath: string) => {
+	// Usa path.resolve para garantir um caminho absoluto.
+	const absolutePath = path.resolve(dirPath);
+
+	// Usa fs.mkdirSync com { recursive: true } para criar todas as pastas necessárias.
+	fs.mkdirSync(absolutePath, { recursive: true });
+};
+
 export class LocalServer extends AbstractLocalServer<LocalServer> {
 	// Setup pause and resume methods
 	protected paused: boolean = false;
@@ -82,9 +95,7 @@ export class LocalServer extends AbstractLocalServer<LocalServer> {
 		this.app.use(express.json({ limit: this.settings.maxPayloadSize })); // , extended: true ?
 
 		const dir_temp = path.join(this.settings.localPath, "./temp");
-		if (!fs.existsSync(dir_temp)) {
-			fs.mkdirSync(dir_temp);
-		}
+		createDirectories(dir_temp);
 
 		this.app.use(
 			formData.parse({

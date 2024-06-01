@@ -963,9 +963,9 @@ const other = {
 export const types = new Map<string, string>();
 export const extensions = new Map<string, string>();
 
-export const define = (typeMap, force?: boolean) => {
+export const define = (typeMap: { [k: string]: string[] }, force?: boolean) => {
 	for (let type in typeMap) {
-		let exts = typeMap[type].map(function (t) {
+		let exts = typeMap[type].map(function (t: string) {
 			return t.toLowerCase();
 		});
 		type = type.toLowerCase();

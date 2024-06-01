@@ -387,7 +387,7 @@ function deleteApp(app) {
 }
 exports.deleteApp = deleteApp;
 
-},{"../controller/erros":7,"../controller/request":10,"../controller/request/error":11,"../database":24,"../ipc":28,"../server":31,"../utils":33,"./internal":2,"./settings":3,"./verifyStorage":4,"ivipbase-core":98,"socket.io-client":103}],2:[function(require,module,exports){
+},{"../controller/erros":7,"../controller/request":10,"../controller/request/error":11,"../database":24,"../ipc":28,"../server":31,"../utils":34,"./internal":2,"./settings":3,"./verifyStorage":4,"ivipbase-core":99,"socket.io-client":104}],2:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports._apps = exports.DEFAULT_ENTRY_NAME = void 0;
@@ -1187,7 +1187,7 @@ function getAuth(...args) {
 }
 exports.getAuth = getAuth;
 
-},{"../app":1,"../database":24,"../utils":33,"../utils/base64":32,"../utils/localStorage":34,"ivipbase-core":98}],6:[function(require,module,exports){
+},{"../app":1,"../database":24,"../utils":34,"../utils/base64":33,"../utils/localStorage":35,"ivipbase-core":99}],6:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -1221,7 +1221,7 @@ Object.defineProperty(exports, "PathReference", { enumerable: true, get: functio
 Object.defineProperty(exports, "ascii85", { enumerable: true, get: function () { return ivipbase_core_1.ascii85; } });
 Object.defineProperty(exports, "ID", { enumerable: true, get: function () { return ivipbase_core_1.ID; } });
 
-},{"./app":1,"./auth":5,"./controller/storage":20,"./database":24,"./ipc":28,"ivipbase-core":98}],7:[function(require,module,exports){
+},{"./app":1,"./auth":5,"./controller/storage":20,"./database":24,"./ipc":28,"ivipbase-core":99}],7:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ERROR_FACTORY = void 0;
@@ -1484,7 +1484,7 @@ async function executeQuery(api, database, path, query, options = { snapshots: f
 exports.executeQuery = executeQuery;
 exports.default = executeQuery;
 
-},{"./storage/MDE/utils":19,"ivip-utils":71,"ivipbase-core":98}],10:[function(require,module,exports){
+},{"./storage/MDE/utils":19,"ivip-utils":72,"ivipbase-core":99}],10:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const error_1 = require("./error");
@@ -1697,7 +1697,7 @@ class CustomStorage extends MDE_1.default {
 }
 exports.CustomStorage = CustomStorage;
 
-},{"../erros":7,"./MDE":16,"ivipbase-core":98}],13:[function(require,module,exports){
+},{"../erros":7,"./MDE":16,"ivipbase-core":99}],13:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DataStorage = exports.DataStorageSettings = void 0;
@@ -1722,13 +1722,13 @@ class DataStorage extends CustomStorage_1.CustomStorage {
         });
         this.emit("ready");
     }
-    async getMultiple(database, expression) {
+    async getMultiple(database, { regex }) {
         if (!this.data[database]) {
             throw erros_1.ERROR_FACTORY.create("db-not-found" /* AppError.DB_NOT_FOUND */, { dbName: database });
         }
         const list = [];
         this.data[database].forEach((content, path) => {
-            if (expression.test(path)) {
+            if (regex.test(path)) {
                 if (content) {
                     list.push(ivipbase_core_1.Utils.cloneObject({ path, content }));
                 }
@@ -1751,7 +1751,7 @@ class DataStorage extends CustomStorage_1.CustomStorage {
 }
 exports.DataStorage = DataStorage;
 
-},{"../erros":7,"./CustomStorage":12,"ivipbase-core":98}],14:[function(require,module,exports){
+},{"../erros":7,"./CustomStorage":12,"ivipbase-core":99}],14:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CustomStorageNodeInfo = exports.NodeInfo = exports.NodeAddress = void 0;
@@ -1826,7 +1826,7 @@ class CustomStorageNodeInfo extends NodeInfo {
 }
 exports.CustomStorageNodeInfo = CustomStorageNodeInfo;
 
-},{"./utils":19,"ivipbase-core":98}],15:[function(require,module,exports){
+},{"./utils":19,"ivipbase-core":99}],15:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const ivipbase_core_1 = require("ivipbase-core");
@@ -1961,7 +1961,7 @@ function destructureData(type, path, data, options = {}) {
 }
 exports.default = destructureData;
 
-},{"../../../utils":33,"./utils":19,"ivipbase-core":98}],16:[function(require,module,exports){
+},{"../../../utils":34,"./utils":19,"ivipbase-core":99}],16:[function(require,module,exports){
 "use strict";
 var __rest = (this && this.__rest) || function (s, e) {
     var t = {};
@@ -2029,7 +2029,7 @@ class MDESettings {
         /**
          * Uma função que realiza um get/pesquisa de dados na base de dados com base em uma expressão regular resultada da propriedade pathToRegex em MDE.
          *
-         * @type {((expression: RegExp) => Promise<StorageNodeInfo[]> | StorageNodeInfo[]) | undefined}
+         * @type {((database: database: string, expression: {regex: RegExp, query: string[] }, simplifyValues?: boolean) => Promise<StorageNodeInfo[]> | StorageNodeInfo[]) | undefined}
          * @default undefined
          */
         this.getMultiple = () => [];
@@ -2125,15 +2125,16 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         callback === null || callback === void 0 ? void 0 : callback();
     }
     /**
-     * Converte um caminho em uma expressão regular.
+     * Converte um caminho em uma consulta de expressão regular e SQL LIKE pattern.
      *
-     * @param {string} path - O caminho a ser convertido em expressão regular.
+     * @param {string} path - O caminho a ser convertido.
      * @param {boolean} [onlyChildren=false] - Se verdadeiro, exporta apenas os filhos do node especificado.
      * @param {boolean} [allHeirs=false] - Se verdadeiro, exporta todos os descendentes em relação ao path especificado.
-     * @returns {RegExp} - A expressão regular resultante.
+     * @returns {{regex: RegExp, query: string[]}} - O objeto contendo a expressão regular e a query resultante.
      */
-    pathToRegex(path, onlyChildren = false, allHeirs = false, includeAncestor = false) {
+    preparePathQuery(path, onlyChildren = false, allHeirs = false, includeAncestor = false) {
         const pathsRegex = [];
+        const pathsLike = [];
         /**
          * Substitui o caminho por uma expressão regular.
          * @param path - O caminho a ser convertido em expressão regular.
@@ -2145,31 +2146,58 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
             path = path.replace(/\[(\d+)\]/g, "\\[$1\\]");
             return path;
         };
+        /**
+         * Substitui o caminho por um padrão SQL LIKE.
+         * @param path - O caminho a ser convertido em um padrão SQL LIKE.
+         * @returns {string} O caminho convertido em um padrão SQL LIKE.
+         */
+        const replacePathToLike = (path) => {
+            path = path.replace(/\/((\*)|(\$[^/\$]*))/g, "/%");
+            path = path.replace(/\[\*\]/g, "[%]");
+            path = path.replace(/\[(\d+)\]/g, "[$1]");
+            return path;
+        };
         // Adiciona a expressão regular do caminho principal ao array.
         pathsRegex.push(replasePathToRegex(path));
+        // Adiciona o padrão SQL LIKE do caminho principal ao array.
+        pathsLike.push(replacePathToLike(path));
         if (onlyChildren) {
             pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1})`));
+            pathsLike.forEach((exp) => pathsLike.push(`${exp}/%`));
         }
         else if (allHeirs === true) {
             pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1,})`));
+            pathsLike.forEach((exp) => pathsLike.push(`${exp}%`));
         }
         else if (typeof allHeirs === "number") {
             pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1,${allHeirs}})`));
+            pathsLike.forEach((exp) => {
+                let heirsPattern = exp;
+                for (let i = 0; i < allHeirs; i++) {
+                    heirsPattern += "/%";
+                }
+                pathsLike.push(heirsPattern);
+            });
         }
         let parent = ivipbase_core_1.PathInfo.get(path).parent;
         // Obtém o caminho pai e adiciona a expressão regular correspondente ao array.
         if (includeAncestor) {
             while (parent) {
                 pathsRegex.push(replasePathToRegex(parent.path));
+                pathsLike.push(replacePathToLike(parent.path));
                 parent = parent.parent;
             }
         }
         else if (parent) {
             pathsRegex.push(replasePathToRegex(parent.path));
+            pathsLike.push(replacePathToLike(parent.path));
         }
         // Cria a expressão regular completa combinando as expressões individuais no array.
         const fullRegex = new RegExp(`^(${pathsRegex.map((e) => e.replace(/\/$/gi, "/?")).join("$)|(")}$)`);
-        return fullRegex;
+        return {
+            regex: fullRegex,
+            query: pathsLike,
+        };
     }
     /**
      * Verifica se um caminho específico existe no nó.
@@ -2210,11 +2238,11 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
      * @throws {Error} - Lança um erro se ocorrer algum problema durante a busca assíncrona.
      */
     async getNodesBy(database, path, onlyChildren = false, allHeirs = false, includeAncestor = false, simplifyValues = false) {
-        const reg = this.pathToRegex(path, onlyChildren, allHeirs, includeAncestor);
+        const expression = this.preparePathQuery(path, onlyChildren, allHeirs, includeAncestor);
         // console.log("getNodesBy::1::", reg.source);
         let result = [];
         try {
-            result = await this.settings.getMultiple(database, reg, simplifyValues);
+            result = await this.settings.getMultiple(database, expression, simplifyValues);
         }
         catch (_a) { }
         // console.log("getNodesBy::2::", JSON.stringify(result, null, 4));
@@ -2714,7 +2742,7 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
 }
 exports.default = MDE;
 
-},{"../../../utils":33,"./NodeInfo":14,"./destructureData":15,"./prepareMergeNodes":17,"./structureNodes":18,"./utils":19,"ivipbase-core":98}],17:[function(require,module,exports){
+},{"../../../utils":34,"./NodeInfo":14,"./destructureData":15,"./prepareMergeNodes":17,"./structureNodes":18,"./utils":19,"ivipbase-core":99}],17:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const ivipbase_core_1 = require("ivipbase-core");
@@ -2837,7 +2865,7 @@ function prepareMergeNodes(path, nodes, comparison) {
 }
 exports.default = prepareMergeNodes;
 
-},{"./utils":19,"ivipbase-core":98}],18:[function(require,module,exports){
+},{"./utils":19,"ivipbase-core":99}],18:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const ivipbase_core_1 = require("ivipbase-core");
@@ -2894,7 +2922,7 @@ function structureNodes(path, nodes, options = {}) {
 }
 exports.default = structureNodes;
 
-},{"./utils":19,"ivipbase-core":98}],19:[function(require,module,exports){
+},{"./utils":19,"ivipbase-core":99}],19:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getTypeFromStoredValue = exports.processReadNodeValue = exports.getTypedChildValue = exports.valueFitsInline = exports.promiseState = exports.getValueType = exports.getNodeValueType = exports.getValueTypeDefault = exports.getValueTypeName = exports.VALUE_TYPES = exports.nodeValueTypes = void 0;
@@ -3267,7 +3295,7 @@ const getTypeFromStoredValue = (val) => {
 };
 exports.getTypeFromStoredValue = getTypeFromStoredValue;
 
-},{"ivip-utils":71,"ivipbase-core":98}],20:[function(require,module,exports){
+},{"ivip-utils":72,"ivipbase-core":99}],20:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -3563,7 +3591,7 @@ class StorageDBClient extends ivipbase_core_1.Api {
 }
 exports.StorageDBClient = StorageDBClient;
 
-},{"../auth":5,"../controller/request/error":11,"ivipbase-core":98}],22:[function(require,module,exports){
+},{"../auth":5,"../controller/request/error":11,"ivipbase-core":99}],22:[function(require,module,exports){
 (function (process){(function (){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
@@ -3785,7 +3813,7 @@ class StorageDBServer extends ivipbase_core_1.Api {
 exports.StorageDBServer = StorageDBServer;
 
 }).call(this)}).call(this,require('_process'))
-},{"../controller/executeQuery":9,"../controller/storage/MDE":16,"../utils":33,"_process":101,"ivipbase-core":98}],23:[function(require,module,exports){
+},{"../controller/executeQuery":9,"../controller/storage/MDE":16,"../utils":34,"_process":102,"ivipbase-core":99}],23:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Subscriptions = void 0;
@@ -4271,7 +4299,7 @@ class Subscriptions extends ivipbase_core_1.SimpleEventEmitter {
 }
 exports.Subscriptions = Subscriptions;
 
-},{"../utils":33,"ivipbase-core":98}],24:[function(require,module,exports){
+},{"../utils":34,"ivipbase-core":99}],24:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SchemaValidationError = exports.hasDatabase = exports.getDatabasesNames = exports.getDatabase = exports.DataBase = void 0;
@@ -4401,7 +4429,7 @@ class SchemaValidationError extends Error {
 }
 exports.SchemaValidationError = SchemaValidationError;
 
-},{"../app":1,"../utils":33,"./StorageDBClient":21,"./StorageDBServer":22,"./Subscriptions":23,"./services/rules":25,"ivipbase-core":98}],25:[function(require,module,exports){
+},{"../app":1,"../utils":34,"./StorageDBClient":21,"./StorageDBServer":22,"./Subscriptions":23,"./services/rules":25,"ivipbase-core":99}],25:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PathBasedRules = exports.AccessRuleValidationError = void 0;
@@ -4765,7 +4793,7 @@ class PathBasedRules extends ivipbase_core_1.SimpleEventEmitter {
 }
 exports.PathBasedRules = PathBasedRules;
 
-},{"../../server/browser":31,"../../utils":33,"./sandbox":26,"ivipbase-core":98}],26:[function(require,module,exports){
+},{"../../server/browser":31,"../../utils":34,"./sandbox":26,"ivipbase-core":99}],26:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.isCodeSafe = exports.executeSandboxed = void 0;
@@ -4783,138 +4811,141 @@ function isCodeSafe(code) {
 }
 exports.isCodeSafe = isCodeSafe;
 
-},{"vm":111}],27:[function(require,module,exports){
-(function (process){(function (){
+},{"vm":112}],27:[function(require,module,exports){
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IPCPeer = void 0;
-const Cluster = __importStar(require("cluster"));
+const ivipbase_core_1 = require("ivipbase-core");
 const ipc_1 = require("../ipc");
-const cluster = (_a = Cluster.default) !== null && _a !== void 0 ? _a : Cluster; // ESM and CJS compatible approach
-const masterPeerId = "[master]";
+/**
+ * Browser tabs IPC. Database changes and events will be synchronized automatically.
+ * Locking of resources will be done by the election of a single locking master:
+ * the one with the lowest id.
+ */
 class IPCPeer extends ipc_1.IvipBaseIPCPeer {
     constructor(name) {
-        var _a, _b;
-        const pm2id = ((_a = process.env) === null || _a === void 0 ? void 0 : _a.NODE_APP_INSTANCE) || ((_b = process.env) === null || _b === void 0 ? void 0 : _b.pm_id);
-        if (typeof pm2id === "string" && pm2id !== "0") {
-            throw new Error(`To use AceBase with pm2 in cluster mode, use an AceBase IPC server to enable interprocess communication.`);
-        }
-        const peerId = cluster.isMaster ? masterPeerId : cluster.worker.id.toString();
-        super(peerId, name);
+        super("browser", name);
         this.name = name;
-        this.masterPeerId = masterPeerId;
-        this.ipcType = "node.cluster";
-        /** Adds an event handler to a Node.js EventEmitter that is automatically removed upon IPC exit */
-        const bindEventHandler = (target, event, handler) => {
-            target.addListener(event, handler);
-            this.on("exit", () => target.removeListener(event, handler));
-        };
+        this.masterPeerId = this.id; // We don't know who the master is yet...
+        this.ipcType = "browser.bcc";
         // Setup process exit handler
-        bindEventHandler(process, "SIGINT", () => {
+        // Monitor onbeforeunload event to say goodbye when the window is closed
+        addEventListener("beforeunload", () => {
             this.exit();
         });
-        if (cluster.isMaster) {
-            bindEventHandler(cluster, "online", (worker) => {
-                // A new worker is started
-                // Do not add yet, wait for "hello" message - a forked process might not use the same db
-                bindEventHandler(worker, "error", (err) => {
-                    this.debug.error(`Caught worker error:`, err);
-                });
-            });
-            bindEventHandler(cluster, "exit", (worker) => {
-                // A worker has shut down
-                if (this.peers.find((peer) => peer.id === worker.id.toString())) {
-                    const dbs = Array.from(this.ipcDatabases.keys());
-                    for (const dbname of dbs) {
-                        // Worker apparently did not have time to say goodbye,
-                        // remove the peer ourselves
-                        this.removePeer(dbname, worker.id.toString());
-                        // Send "bye" message on their behalf
-                        this.sayGoodbye(dbname, worker.id.toString());
+        // Create BroadcastChannel to allow multi-tab communication
+        // This allows other tabs to make changes to the database, notifying us of those changes.
+        if (typeof BroadcastChannel !== "undefined") {
+            this.channel = new BroadcastChannel(`ivipbase:${name}`);
+        }
+        else if (typeof localStorage !== "undefined") {
+            // Use localStorage as polyfill for Safari & iOS WebKit
+            const listeners = []; // first callback reserved for onmessage handler
+            const notImplemented = () => {
+                throw new Error("Not implemented");
+            };
+            this.channel = {
+                name: `ivipbase:${name}`,
+                postMessage: (message) => {
+                    const messageId = ivipbase_core_1.ID.generate(), key = `ivipbase:${name}:${this.id}:${messageId}`, payload = JSON.stringify(ivipbase_core_1.Transport.serialize(message));
+                    // Store message, triggers 'storage' event in other tabs
+                    localStorage.setItem(key, payload);
+                    // Remove after 10ms
+                    setTimeout(() => localStorage.removeItem(key), 10);
+                },
+                set onmessage(handler) {
+                    listeners[0] = handler;
+                },
+                set onmessageerror(handler) {
+                    notImplemented();
+                },
+                close() {
+                    notImplemented();
+                },
+                addEventListener(event, callback) {
+                    if (event !== "message") {
+                        notImplemented();
                     }
+                    listeners.push(callback);
+                },
+                removeEventListener(event, callback) {
+                    const i = listeners.indexOf(callback);
+                    i >= 1 && listeners.splice(i, 1);
+                },
+                dispatchEvent(event) {
+                    listeners.forEach((callback) => {
+                        try {
+                            callback && callback(event);
+                        }
+                        catch (err) {
+                            console.error(err);
+                        }
+                    });
+                    return true;
+                },
+            };
+            // Listen for storage events to intercept possible messages
+            addEventListener("storage", (event) => {
+                var _a;
+                if (!event || !event.key) {
+                    return;
                 }
+                const [ivipbase, name, peerId, messageId] = event.key.split(":");
+                if (ivipbase !== "ivipbase" || name !== this.name || peerId === this.id || event.newValue === null) {
+                    return;
+                }
+                const message = ivipbase_core_1.Transport.deserialize(JSON.parse(event.newValue));
+                (_a = this.channel) === null || _a === void 0 ? void 0 : _a.dispatchEvent({ data: message });
             });
         }
-        const handleMessage = (message) => {
-            if (typeof message !== "object") {
-                // Ignore non-object IPC messages
-                return;
-            }
-            if (!this.ipcDatabases.has(message.dbname)) {
-                // Ignore, message not meant for this database
-                return;
-            }
-            if (cluster.isMaster && message.to !== masterPeerId) {
-                // Message is meant for others (or all). Forward it
-                this.sendMessage(message.dbname, message);
-            }
+        else {
+            // No localStorage either, this is probably an old browser running in a webworker
+            this.debug.warn(`[BroadcastChannel] not supported`);
+            this.sendMessage = () => {
+                /* No OP */
+            };
+            return;
+        }
+        // Monitor incoming messages
+        this.channel.addEventListener("message", async (event) => {
+            const message = event.data;
             if (message.to && message.to !== this.id) {
                 // Message is for somebody else. Ignore
                 return;
             }
-            return super.handleMessage(message);
-        };
-        if (cluster.isMaster) {
-            bindEventHandler(cluster, "message", (worker, message) => handleMessage(message));
-        }
-        else {
-            bindEventHandler(cluster.worker, "message", handleMessage);
-        }
-        // if (!cluster.isMaster) {
-        //     // Add master peer. Do we have to?
-        //     this.addPeer(masterPeerId, false, false);
-        // }
+            this.debug.verbose(`[BroadcastChannel] received: `, message);
+            if (message.type === "hello" && message.from < this.masterPeerId) {
+                // This peer was created before other peer we thought was the master
+                this.masterPeerId = message.from;
+                this.debug.log(`[BroadcastChannel] Tab ${this.masterPeerId} is the master.`);
+            }
+            else if (message.type === "bye" && message.from === this.masterPeerId) {
+                // The master tab is leaving
+                this.debug.log(`[BroadcastChannel] Master tab ${this.masterPeerId} is leaving`);
+                // Elect new master
+                const allPeerIds = this.peers
+                    .map((peer) => peer.id)
+                    .concat(this.id)
+                    .filter((id) => id !== this.masterPeerId); // All peers, including us, excluding the leaving master peer
+                this.masterPeerId = allPeerIds.sort()[0];
+            }
+            return this.handleMessage(message);
+        });
+        // // Schedule periodic "pulse" to let others know we're still around
+        // setInterval(() => {
+        //     sendMessage(<IPulseMessage>{ from: tabId, type: 'pulse' });
+        // }, 30000);
     }
     sendMessage(dbname, message) {
         var _a;
         message.dbname = dbname;
-        if (cluster.isMaster) {
-            // If we are the master, send the message to the target worker(s)
-            this.peers
-                .filter((p) => p.id !== message.from && (!message.to || p.id === message.to))
-                .forEach((peer) => {
-                var _a;
-                const worker = (_a = cluster.workers) === null || _a === void 0 ? void 0 : _a[peer.id];
-                worker && worker.send(message); // When debugging, worker might have stopped in the meantime
-            });
-        }
-        else {
-            // Send the message to the master who will forward it to the target worker(s)
-            (_a = process === null || process === void 0 ? void 0 : process.send) === null || _a === void 0 ? void 0 : _a.call(process, message);
-        }
-    }
-    async exit(code = 0) {
-        await super.exit(code);
+        this.debug.verbose(`[BroadcastChannel] sending: `, message);
+        (_a = this.channel) === null || _a === void 0 ? void 0 : _a.postMessage(message);
     }
 }
 exports.IPCPeer = IPCPeer;
 
-}).call(this)}).call(this,require('_process'))
-},{"../ipc":30,"_process":101,"cluster":36}],28:[function(require,module,exports){
+},{"../ipc":30,"ivipbase-core":99}],28:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getIPCPeer = exports.IPCPeer = void 0;
@@ -5250,7 +5281,7 @@ class IvipBaseIPCPeer extends ivipbase_core_1.SimpleEventEmitter {
 }
 exports.IvipBaseIPCPeer = IvipBaseIPCPeer;
 
-},{"ivipbase-core":98}],31:[function(require,module,exports){
+},{"ivipbase-core":99}],31:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LocalServer = exports.AbstractLocalServer = exports.isPossiblyServer = exports.ServerSettings = exports.ServerAuthenticationSettings = exports.DataBaseServerTransactionSettings = exports.AUTH_ACCESS_DEFAULT = exports.ExternalServerError = exports.ServerNotReadyError = void 0;
@@ -5369,6 +5400,7 @@ class ServerSettings {
         this.allowOrigin = "*";
         this.trustProxy = true;
         this.serverVersion = "1.0.0";
+        this.localPath = "./data";
         if (typeof options.logLevel === "string" && ["verbose", "log", "warn", "error"].includes(options.logLevel)) {
             this.logLevel = options.logLevel;
         }
@@ -5397,6 +5429,9 @@ class ServerSettings {
         this.transactions = new DataBaseServerTransactionSettings((_c = options.transactions) !== null && _c !== void 0 ? _c : {});
         if (typeof options.defineRules === "object") {
             this.defineRules = options.defineRules;
+        }
+        if (typeof options.localPath === "string") {
+            this.localPath = options.localPath;
         }
     }
 }
@@ -5498,7 +5533,1024 @@ class LocalServer extends AbstractLocalServer {
 }
 exports.LocalServer = LocalServer;
 
-},{"../database":24,"ivipbase-core":98}],32:[function(require,module,exports){
+},{"../database":24,"ivipbase-core":99}],32:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getExtension = exports.getType = exports.define = exports.extensions = exports.types = void 0;
+const standard = {
+    "application/andrew-inset": ["ez"],
+    "application/applixware": ["aw"],
+    "application/atom+xml": ["atom"],
+    "application/atomcat+xml": ["atomcat"],
+    "application/atomdeleted+xml": ["atomdeleted"],
+    "application/atomsvc+xml": ["atomsvc"],
+    "application/atsc-dwd+xml": ["dwd"],
+    "application/atsc-held+xml": ["held"],
+    "application/atsc-rsat+xml": ["rsat"],
+    "application/bdoc": ["bdoc"],
+    "application/calendar+xml": ["xcs"],
+    "application/ccxml+xml": ["ccxml"],
+    "application/cdfx+xml": ["cdfx"],
+    "application/cdmi-capability": ["cdmia"],
+    "application/cdmi-container": ["cdmic"],
+    "application/cdmi-domain": ["cdmid"],
+    "application/cdmi-object": ["cdmio"],
+    "application/cdmi-queue": ["cdmiq"],
+    "application/cu-seeme": ["cu"],
+    "application/dash+xml": ["mpd"],
+    "application/davmount+xml": ["davmount"],
+    "application/docbook+xml": ["dbk"],
+    "application/dssc+der": ["dssc"],
+    "application/dssc+xml": ["xdssc"],
+    "application/ecmascript": ["es", "ecma"],
+    "application/emma+xml": ["emma"],
+    "application/emotionml+xml": ["emotionml"],
+    "application/epub+zip": ["epub"],
+    "application/exi": ["exi"],
+    "application/express": ["exp"],
+    "application/fdt+xml": ["fdt"],
+    "application/font-tdpfr": ["pfr"],
+    "application/geo+json": ["geojson"],
+    "application/gml+xml": ["gml"],
+    "application/gpx+xml": ["gpx"],
+    "application/gxf": ["gxf"],
+    "application/gzip": ["gz"],
+    "application/hjson": ["hjson"],
+    "application/hyperstudio": ["stk"],
+    "application/inkml+xml": ["ink", "inkml"],
+    "application/ipfix": ["ipfix"],
+    "application/its+xml": ["its"],
+    "application/java-archive": ["jar", "war", "ear"],
+    "application/java-serialized-object": ["ser"],
+    "application/java-vm": ["class"],
+    "application/javascript": ["js", "mjs"],
+    "application/json": ["json", "map"],
+    "application/json5": ["json5"],
+    "application/jsonml+json": ["jsonml"],
+    "application/ld+json": ["jsonld"],
+    "application/lgr+xml": ["lgr"],
+    "application/lost+xml": ["lostxml"],
+    "application/mac-binhex40": ["hqx"],
+    "application/mac-compactpro": ["cpt"],
+    "application/mads+xml": ["mads"],
+    "application/manifest+json": ["webmanifest"],
+    "application/marc": ["mrc"],
+    "application/marcxml+xml": ["mrcx"],
+    "application/mathematica": ["ma", "nb", "mb"],
+    "application/mathml+xml": ["mathml"],
+    "application/mbox": ["mbox"],
+    "application/mediaservercontrol+xml": ["mscml"],
+    "application/metalink+xml": ["metalink"],
+    "application/metalink4+xml": ["meta4"],
+    "application/mets+xml": ["mets"],
+    "application/mmt-aei+xml": ["maei"],
+    "application/mmt-usd+xml": ["musd"],
+    "application/mods+xml": ["mods"],
+    "application/mp21": ["m21", "mp21"],
+    "application/mp4": ["mp4s", "m4p"],
+    "application/msword": ["doc", "dot"],
+    "application/mxf": ["mxf"],
+    "application/n-quads": ["nq"],
+    "application/n-triples": ["nt"],
+    "application/node": ["cjs"],
+    "application/octet-stream": ["bin", "dms", "lrf", "mar", "so", "dist", "distz", "pkg", "bpk", "dump", "elc", "deploy", "exe", "dll", "deb", "dmg", "iso", "img", "msi", "msp", "msm", "buffer"],
+    "application/oda": ["oda"],
+    "application/oebps-package+xml": ["opf"],
+    "application/ogg": ["ogx"],
+    "application/omdoc+xml": ["omdoc"],
+    "application/onenote": ["onetoc", "onetoc2", "onetmp", "onepkg"],
+    "application/oxps": ["oxps"],
+    "application/p2p-overlay+xml": ["relo"],
+    "application/patch-ops-error+xml": ["xer"],
+    "application/pdf": ["pdf"],
+    "application/pgp-encrypted": ["pgp"],
+    "application/pgp-signature": ["asc", "sig"],
+    "application/pics-rules": ["prf"],
+    "application/pkcs10": ["p10"],
+    "application/pkcs7-mime": ["p7m", "p7c"],
+    "application/pkcs7-signature": ["p7s"],
+    "application/pkcs8": ["p8"],
+    "application/pkix-attr-cert": ["ac"],
+    "application/pkix-cert": ["cer"],
+    "application/pkix-crl": ["crl"],
+    "application/pkix-pkipath": ["pkipath"],
+    "application/pkixcmp": ["pki"],
+    "application/pls+xml": ["pls"],
+    "application/postscript": ["ai", "eps", "ps"],
+    "application/provenance+xml": ["provx"],
+    "application/pskc+xml": ["pskcxml"],
+    "application/raml+yaml": ["raml"],
+    "application/rdf+xml": ["rdf", "owl"],
+    "application/reginfo+xml": ["rif"],
+    "application/relax-ng-compact-syntax": ["rnc"],
+    "application/resource-lists+xml": ["rl"],
+    "application/resource-lists-diff+xml": ["rld"],
+    "application/rls-services+xml": ["rs"],
+    "application/route-apd+xml": ["rapd"],
+    "application/route-s-tsid+xml": ["sls"],
+    "application/route-usd+xml": ["rusd"],
+    "application/rpki-ghostbusters": ["gbr"],
+    "application/rpki-manifest": ["mft"],
+    "application/rpki-roa": ["roa"],
+    "application/rsd+xml": ["rsd"],
+    "application/rss+xml": ["rss"],
+    "application/rtf": ["rtf"],
+    "application/sbml+xml": ["sbml"],
+    "application/scvp-cv-request": ["scq"],
+    "application/scvp-cv-response": ["scs"],
+    "application/scvp-vp-request": ["spq"],
+    "application/scvp-vp-response": ["spp"],
+    "application/sdp": ["sdp"],
+    "application/senml+xml": ["senmlx"],
+    "application/sensml+xml": ["sensmlx"],
+    "application/set-payment-initiation": ["setpay"],
+    "application/set-registration-initiation": ["setreg"],
+    "application/shf+xml": ["shf"],
+    "application/sieve": ["siv", "sieve"],
+    "application/smil+xml": ["smi", "smil"],
+    "application/sparql-query": ["rq"],
+    "application/sparql-results+xml": ["srx"],
+    "application/srgs": ["gram"],
+    "application/srgs+xml": ["grxml"],
+    "application/sru+xml": ["sru"],
+    "application/ssdl+xml": ["ssdl"],
+    "application/ssml+xml": ["ssml"],
+    "application/swid+xml": ["swidtag"],
+    "application/tei+xml": ["tei", "teicorpus"],
+    "application/thraud+xml": ["tfi"],
+    "application/timestamped-data": ["tsd"],
+    "application/toml": ["toml"],
+    "application/trig": ["trig"],
+    "application/ttml+xml": ["ttml"],
+    "application/ubjson": ["ubj"],
+    "application/urc-ressheet+xml": ["rsheet"],
+    "application/urc-targetdesc+xml": ["td"],
+    "application/voicexml+xml": ["vxml"],
+    "application/wasm": ["wasm"],
+    "application/widget": ["wgt"],
+    "application/winhlp": ["hlp"],
+    "application/wsdl+xml": ["wsdl"],
+    "application/wspolicy+xml": ["wspolicy"],
+    "application/xaml+xml": ["xaml"],
+    "application/xcap-att+xml": ["xav"],
+    "application/xcap-caps+xml": ["xca"],
+    "application/xcap-diff+xml": ["xdf"],
+    "application/xcap-el+xml": ["xel"],
+    "application/xcap-ns+xml": ["xns"],
+    "application/xenc+xml": ["xenc"],
+    "application/xhtml+xml": ["xhtml", "xht"],
+    "application/xliff+xml": ["xlf"],
+    "application/xml": ["xml", "xsl", "xsd", "rng"],
+    "application/xml-dtd": ["dtd"],
+    "application/xop+xml": ["xop"],
+    "application/xproc+xml": ["xpl"],
+    "application/xslt+xml": ["*xsl", "xslt"],
+    "application/xspf+xml": ["xspf"],
+    "application/xv+xml": ["mxml", "xhvml", "xvml", "xvm"],
+    "application/yang": ["yang"],
+    "application/yin+xml": ["yin"],
+    "application/zip": ["zip"],
+    "audio/3gpp": ["*3gpp"],
+    "audio/adpcm": ["adp"],
+    "audio/amr": ["amr"],
+    "audio/basic": ["au", "snd"],
+    "audio/midi": ["mid", "midi", "kar", "rmi"],
+    "audio/mobile-xmf": ["mxmf"],
+    "audio/mp3": ["*mp3"],
+    "audio/mp4": ["m4a", "mp4a"],
+    "audio/mpeg": ["mpga", "mp2", "mp2a", "mp3", "m2a", "m3a"],
+    "audio/ogg": ["oga", "ogg", "spx", "opus"],
+    "audio/s3m": ["s3m"],
+    "audio/silk": ["sil"],
+    "audio/wav": ["wav"],
+    "audio/wave": ["*wav"],
+    "audio/webm": ["weba"],
+    "audio/xm": ["xm"],
+    "font/collection": ["ttc"],
+    "font/otf": ["otf"],
+    "font/ttf": ["ttf"],
+    "font/woff": ["woff"],
+    "font/woff2": ["woff2"],
+    "image/aces": ["exr"],
+    "image/apng": ["apng"],
+    "image/avif": ["avif"],
+    "image/bmp": ["bmp"],
+    "image/cgm": ["cgm"],
+    "image/dicom-rle": ["drle"],
+    "image/emf": ["emf"],
+    "image/fits": ["fits"],
+    "image/g3fax": ["g3"],
+    "image/gif": ["gif"],
+    "image/heic": ["heic"],
+    "image/heic-sequence": ["heics"],
+    "image/heif": ["heif"],
+    "image/heif-sequence": ["heifs"],
+    "image/hej2k": ["hej2"],
+    "image/hsj2": ["hsj2"],
+    "image/ief": ["ief"],
+    "image/jls": ["jls"],
+    "image/jp2": ["jp2", "jpg2"],
+    "image/jpeg": ["jpeg", "jpg", "jpe"],
+    "image/jph": ["jph"],
+    "image/jphc": ["jhc"],
+    "image/jpm": ["jpm"],
+    "image/jpx": ["jpx", "jpf"],
+    "image/jxr": ["jxr"],
+    "image/jxra": ["jxra"],
+    "image/jxrs": ["jxrs"],
+    "image/jxs": ["jxs"],
+    "image/jxsc": ["jxsc"],
+    "image/jxsi": ["jxsi"],
+    "image/jxss": ["jxss"],
+    "image/ktx": ["ktx"],
+    "image/ktx2": ["ktx2"],
+    "image/png": ["png"],
+    "image/sgi": ["sgi"],
+    "image/svg+xml": ["svg", "svgz"],
+    "image/t38": ["t38"],
+    "image/tiff": ["tif", "tiff"],
+    "image/tiff-fx": ["tfx"],
+    "image/webp": ["webp"],
+    "image/wmf": ["wmf"],
+    "message/disposition-notification": ["disposition-notification"],
+    "message/global": ["u8msg"],
+    "message/global-delivery-status": ["u8dsn"],
+    "message/global-disposition-notification": ["u8mdn"],
+    "message/global-headers": ["u8hdr"],
+    "message/rfc822": ["eml", "mime"],
+    "model/3mf": ["3mf"],
+    "model/gltf+json": ["gltf"],
+    "model/gltf-binary": ["glb"],
+    "model/iges": ["igs", "iges"],
+    "model/mesh": ["msh", "mesh", "silo"],
+    "model/mtl": ["mtl"],
+    "model/obj": ["obj"],
+    "model/step+xml": ["stpx"],
+    "model/step+zip": ["stpz"],
+    "model/step-xml+zip": ["stpxz"],
+    "model/stl": ["stl"],
+    "model/vrml": ["wrl", "vrml"],
+    "model/x3d+binary": ["*x3db", "x3dbz"],
+    "model/x3d+fastinfoset": ["x3db"],
+    "model/x3d+vrml": ["*x3dv", "x3dvz"],
+    "model/x3d+xml": ["x3d", "x3dz"],
+    "model/x3d-vrml": ["x3dv"],
+    "text/cache-manifest": ["appcache", "manifest"],
+    "text/calendar": ["ics", "ifb"],
+    "text/coffeescript": ["coffee", "litcoffee"],
+    "text/css": ["css"],
+    "text/csv": ["csv"],
+    "text/html": ["html", "htm", "shtml"],
+    "text/jade": ["jade"],
+    "text/jsx": ["jsx"],
+    "text/less": ["less"],
+    "text/markdown": ["markdown", "md"],
+    "text/mathml": ["mml"],
+    "text/mdx": ["mdx"],
+    "text/n3": ["n3"],
+    "text/plain": ["txt", "text", "conf", "def", "list", "log", "in", "ini"],
+    "text/richtext": ["rtx"],
+    "text/rtf": ["*rtf"],
+    "text/sgml": ["sgml", "sgm"],
+    "text/shex": ["shex"],
+    "text/slim": ["slim", "slm"],
+    "text/spdx": ["spdx"],
+    "text/stylus": ["stylus", "styl"],
+    "text/tab-separated-values": ["tsv"],
+    "text/troff": ["t", "tr", "roff", "man", "me", "ms"],
+    "text/turtle": ["ttl"],
+    "text/uri-list": ["uri", "uris", "urls"],
+    "text/vcard": ["vcard"],
+    "text/vtt": ["vtt"],
+    "text/xml": ["*xml"],
+    "text/yaml": ["yaml", "yml"],
+    "video/3gpp": ["3gp", "3gpp"],
+    "video/3gpp2": ["3g2"],
+    "video/h261": ["h261"],
+    "video/h263": ["h263"],
+    "video/h264": ["h264"],
+    "video/iso.segment": ["m4s"],
+    "video/jpeg": ["jpgv"],
+    "video/jpm": ["*jpm", "jpgm"],
+    "video/mj2": ["mj2", "mjp2"],
+    "video/mp2t": ["ts"],
+    "video/mp4": ["mp4", "mp4v", "mpg4"],
+    "video/mpeg": ["mpeg", "mpg", "mpe", "m1v", "m2v"],
+    "video/ogg": ["ogv"],
+    "video/quicktime": ["qt", "mov"],
+    "video/webm": ["webm"],
+};
+const other = {
+    "application/prs.cww": ["cww"],
+    "application/vnd.1000minds.decision-model+xml": ["1km"],
+    "application/vnd.3gpp.pic-bw-large": ["plb"],
+    "application/vnd.3gpp.pic-bw-small": ["psb"],
+    "application/vnd.3gpp.pic-bw-var": ["pvb"],
+    "application/vnd.3gpp2.tcap": ["tcap"],
+    "application/vnd.3m.post-it-notes": ["pwn"],
+    "application/vnd.accpac.simply.aso": ["aso"],
+    "application/vnd.accpac.simply.imp": ["imp"],
+    "application/vnd.acucobol": ["acu"],
+    "application/vnd.acucorp": ["atc", "acutc"],
+    "application/vnd.adobe.air-application-installer-package+zip": ["air"],
+    "application/vnd.adobe.formscentral.fcdt": ["fcdt"],
+    "application/vnd.adobe.fxp": ["fxp", "fxpl"],
+    "application/vnd.adobe.xdp+xml": ["xdp"],
+    "application/vnd.adobe.xfdf": ["xfdf"],
+    "application/vnd.ahead.space": ["ahead"],
+    "application/vnd.airzip.filesecure.azf": ["azf"],
+    "application/vnd.airzip.filesecure.azs": ["azs"],
+    "application/vnd.amazon.ebook": ["azw"],
+    "application/vnd.americandynamics.acc": ["acc"],
+    "application/vnd.amiga.ami": ["ami"],
+    "application/vnd.android.package-archive": ["apk"],
+    "application/vnd.anser-web-certificate-issue-initiation": ["cii"],
+    "application/vnd.anser-web-funds-transfer-initiation": ["fti"],
+    "application/vnd.antix.game-component": ["atx"],
+    "application/vnd.apple.installer+xml": ["mpkg"],
+    "application/vnd.apple.keynote": ["key"],
+    "application/vnd.apple.mpegurl": ["m3u8"],
+    "application/vnd.apple.numbers": ["numbers"],
+    "application/vnd.apple.pages": ["pages"],
+    "application/vnd.apple.pkpass": ["pkpass"],
+    "application/vnd.aristanetworks.swi": ["swi"],
+    "application/vnd.astraea-software.iota": ["iota"],
+    "application/vnd.audiograph": ["aep"],
+    "application/vnd.balsamiq.bmml+xml": ["bmml"],
+    "application/vnd.blueice.multipass": ["mpm"],
+    "application/vnd.bmi": ["bmi"],
+    "application/vnd.businessobjects": ["rep"],
+    "application/vnd.chemdraw+xml": ["cdxml"],
+    "application/vnd.chipnuts.karaoke-mmd": ["mmd"],
+    "application/vnd.cinderella": ["cdy"],
+    "application/vnd.citationstyles.style+xml": ["csl"],
+    "application/vnd.claymore": ["cla"],
+    "application/vnd.cloanto.rp9": ["rp9"],
+    "application/vnd.clonk.c4group": ["c4g", "c4d", "c4f", "c4p", "c4u"],
+    "application/vnd.cluetrust.cartomobile-config": ["c11amc"],
+    "application/vnd.cluetrust.cartomobile-config-pkg": ["c11amz"],
+    "application/vnd.commonspace": ["csp"],
+    "application/vnd.contact.cmsg": ["cdbcmsg"],
+    "application/vnd.cosmocaller": ["cmc"],
+    "application/vnd.crick.clicker": ["clkx"],
+    "application/vnd.crick.clicker.keyboard": ["clkk"],
+    "application/vnd.crick.clicker.palette": ["clkp"],
+    "application/vnd.crick.clicker.template": ["clkt"],
+    "application/vnd.crick.clicker.wordbank": ["clkw"],
+    "application/vnd.criticaltools.wbs+xml": ["wbs"],
+    "application/vnd.ctc-posml": ["pml"],
+    "application/vnd.cups-ppd": ["ppd"],
+    "application/vnd.curl.car": ["car"],
+    "application/vnd.curl.pcurl": ["pcurl"],
+    "application/vnd.dart": ["dart"],
+    "application/vnd.data-vision.rdz": ["rdz"],
+    "application/vnd.dbf": ["dbf"],
+    "application/vnd.dece.data": ["uvf", "uvvf", "uvd", "uvvd"],
+    "application/vnd.dece.ttml+xml": ["uvt", "uvvt"],
+    "application/vnd.dece.unspecified": ["uvx", "uvvx"],
+    "application/vnd.dece.zip": ["uvz", "uvvz"],
+    "application/vnd.denovo.fcselayout-link": ["fe_launch"],
+    "application/vnd.dna": ["dna"],
+    "application/vnd.dolby.mlp": ["mlp"],
+    "application/vnd.dpgraph": ["dpg"],
+    "application/vnd.dreamfactory": ["dfac"],
+    "application/vnd.ds-keypoint": ["kpxx"],
+    "application/vnd.dvb.ait": ["ait"],
+    "application/vnd.dvb.service": ["svc"],
+    "application/vnd.dynageo": ["geo"],
+    "application/vnd.ecowin.chart": ["mag"],
+    "application/vnd.enliven": ["nml"],
+    "application/vnd.epson.esf": ["esf"],
+    "application/vnd.epson.msf": ["msf"],
+    "application/vnd.epson.quickanime": ["qam"],
+    "application/vnd.epson.salt": ["slt"],
+    "application/vnd.epson.ssf": ["ssf"],
+    "application/vnd.eszigno3+xml": ["es3", "et3"],
+    "application/vnd.ezpix-album": ["ez2"],
+    "application/vnd.ezpix-package": ["ez3"],
+    "application/vnd.fdf": ["fdf"],
+    "application/vnd.fdsn.mseed": ["mseed"],
+    "application/vnd.fdsn.seed": ["seed", "dataless"],
+    "application/vnd.flographit": ["gph"],
+    "application/vnd.fluxtime.clip": ["ftc"],
+    "application/vnd.framemaker": ["fm", "frame", "maker", "book"],
+    "application/vnd.frogans.fnc": ["fnc"],
+    "application/vnd.frogans.ltf": ["ltf"],
+    "application/vnd.fsc.weblaunch": ["fsc"],
+    "application/vnd.fujitsu.oasys": ["oas"],
+    "application/vnd.fujitsu.oasys2": ["oa2"],
+    "application/vnd.fujitsu.oasys3": ["oa3"],
+    "application/vnd.fujitsu.oasysgp": ["fg5"],
+    "application/vnd.fujitsu.oasysprs": ["bh2"],
+    "application/vnd.fujixerox.ddd": ["ddd"],
+    "application/vnd.fujixerox.docuworks": ["xdw"],
+    "application/vnd.fujixerox.docuworks.binder": ["xbd"],
+    "application/vnd.fuzzysheet": ["fzs"],
+    "application/vnd.genomatix.tuxedo": ["txd"],
+    "application/vnd.geogebra.file": ["ggb"],
+    "application/vnd.geogebra.tool": ["ggt"],
+    "application/vnd.geometry-explorer": ["gex", "gre"],
+    "application/vnd.geonext": ["gxt"],
+    "application/vnd.geoplan": ["g2w"],
+    "application/vnd.geospace": ["g3w"],
+    "application/vnd.gmx": ["gmx"],
+    "application/vnd.google-apps.document": ["gdoc"],
+    "application/vnd.google-apps.presentation": ["gslides"],
+    "application/vnd.google-apps.spreadsheet": ["gsheet"],
+    "application/vnd.google-earth.kml+xml": ["kml"],
+    "application/vnd.google-earth.kmz": ["kmz"],
+    "application/vnd.grafeq": ["gqf", "gqs"],
+    "application/vnd.groove-account": ["gac"],
+    "application/vnd.groove-help": ["ghf"],
+    "application/vnd.groove-identity-message": ["gim"],
+    "application/vnd.groove-injector": ["grv"],
+    "application/vnd.groove-tool-message": ["gtm"],
+    "application/vnd.groove-tool-template": ["tpl"],
+    "application/vnd.groove-vcard": ["vcg"],
+    "application/vnd.hal+xml": ["hal"],
+    "application/vnd.handheld-entertainment+xml": ["zmm"],
+    "application/vnd.hbci": ["hbci"],
+    "application/vnd.hhe.lesson-player": ["les"],
+    "application/vnd.hp-hpgl": ["hpgl"],
+    "application/vnd.hp-hpid": ["hpid"],
+    "application/vnd.hp-hps": ["hps"],
+    "application/vnd.hp-jlyt": ["jlt"],
+    "application/vnd.hp-pcl": ["pcl"],
+    "application/vnd.hp-pclxl": ["pclxl"],
+    "application/vnd.hydrostatix.sof-data": ["sfd-hdstx"],
+    "application/vnd.ibm.minipay": ["mpy"],
+    "application/vnd.ibm.modcap": ["afp", "listafp", "list3820"],
+    "application/vnd.ibm.rights-management": ["irm"],
+    "application/vnd.ibm.secure-container": ["sc"],
+    "application/vnd.iccprofile": ["icc", "icm"],
+    "application/vnd.igloader": ["igl"],
+    "application/vnd.immervision-ivp": ["ivp"],
+    "application/vnd.immervision-ivu": ["ivu"],
+    "application/vnd.insors.igm": ["igm"],
+    "application/vnd.intercon.formnet": ["xpw", "xpx"],
+    "application/vnd.intergeo": ["i2g"],
+    "application/vnd.intu.qbo": ["qbo"],
+    "application/vnd.intu.qfx": ["qfx"],
+    "application/vnd.ipunplugged.rcprofile": ["rcprofile"],
+    "application/vnd.irepository.package+xml": ["irp"],
+    "application/vnd.is-xpr": ["xpr"],
+    "application/vnd.isac.fcs": ["fcs"],
+    "application/vnd.jam": ["jam"],
+    "application/vnd.jcp.javame.midlet-rms": ["rms"],
+    "application/vnd.jisp": ["jisp"],
+    "application/vnd.joost.joda-archive": ["joda"],
+    "application/vnd.kahootz": ["ktz", "ktr"],
+    "application/vnd.kde.karbon": ["karbon"],
+    "application/vnd.kde.kchart": ["chrt"],
+    "application/vnd.kde.kformula": ["kfo"],
+    "application/vnd.kde.kivio": ["flw"],
+    "application/vnd.kde.kontour": ["kon"],
+    "application/vnd.kde.kpresenter": ["kpr", "kpt"],
+    "application/vnd.kde.kspread": ["ksp"],
+    "application/vnd.kde.kword": ["kwd", "kwt"],
+    "application/vnd.kenameaapp": ["htke"],
+    "application/vnd.kidspiration": ["kia"],
+    "application/vnd.kinar": ["kne", "knp"],
+    "application/vnd.koan": ["skp", "skd", "skt", "skm"],
+    "application/vnd.kodak-descriptor": ["sse"],
+    "application/vnd.las.las+xml": ["lasxml"],
+    "application/vnd.llamagraphics.life-balance.desktop": ["lbd"],
+    "application/vnd.llamagraphics.life-balance.exchange+xml": ["lbe"],
+    "application/vnd.lotus-1-2-3": ["123"],
+    "application/vnd.lotus-approach": ["apr"],
+    "application/vnd.lotus-freelance": ["pre"],
+    "application/vnd.lotus-notes": ["nsf"],
+    "application/vnd.lotus-organizer": ["org"],
+    "application/vnd.lotus-screencam": ["scm"],
+    "application/vnd.lotus-wordpro": ["lwp"],
+    "application/vnd.macports.portpkg": ["portpkg"],
+    "application/vnd.mapbox-vector-tile": ["mvt"],
+    "application/vnd.mcd": ["mcd"],
+    "application/vnd.medcalcdata": ["mc1"],
+    "application/vnd.mediastation.cdkey": ["cdkey"],
+    "application/vnd.mfer": ["mwf"],
+    "application/vnd.mfmp": ["mfm"],
+    "application/vnd.micrografx.flo": ["flo"],
+    "application/vnd.micrografx.igx": ["igx"],
+    "application/vnd.mif": ["mif"],
+    "application/vnd.mobius.daf": ["daf"],
+    "application/vnd.mobius.dis": ["dis"],
+    "application/vnd.mobius.mbk": ["mbk"],
+    "application/vnd.mobius.mqy": ["mqy"],
+    "application/vnd.mobius.msl": ["msl"],
+    "application/vnd.mobius.plc": ["plc"],
+    "application/vnd.mobius.txf": ["txf"],
+    "application/vnd.mophun.application": ["mpn"],
+    "application/vnd.mophun.certificate": ["mpc"],
+    "application/vnd.mozilla.xul+xml": ["xul"],
+    "application/vnd.ms-artgalry": ["cil"],
+    "application/vnd.ms-cab-compressed": ["cab"],
+    "application/vnd.ms-excel": ["xls", "xlm", "xla", "xlc", "xlt", "xlw"],
+    "application/vnd.ms-excel.addin.macroenabled.12": ["xlam"],
+    "application/vnd.ms-excel.sheet.binary.macroenabled.12": ["xlsb"],
+    "application/vnd.ms-excel.sheet.macroenabled.12": ["xlsm"],
+    "application/vnd.ms-excel.template.macroenabled.12": ["xltm"],
+    "application/vnd.ms-fontobject": ["eot"],
+    "application/vnd.ms-htmlhelp": ["chm"],
+    "application/vnd.ms-ims": ["ims"],
+    "application/vnd.ms-lrm": ["lrm"],
+    "application/vnd.ms-officetheme": ["thmx"],
+    "application/vnd.ms-outlook": ["msg"],
+    "application/vnd.ms-pki.seccat": ["cat"],
+    "application/vnd.ms-pki.stl": ["*stl"],
+    "application/vnd.ms-powerpoint": ["ppt", "pps", "pot"],
+    "application/vnd.ms-powerpoint.addin.macroenabled.12": ["ppam"],
+    "application/vnd.ms-powerpoint.presentation.macroenabled.12": ["pptm"],
+    "application/vnd.ms-powerpoint.slide.macroenabled.12": ["sldm"],
+    "application/vnd.ms-powerpoint.slideshow.macroenabled.12": ["ppsm"],
+    "application/vnd.ms-powerpoint.template.macroenabled.12": ["potm"],
+    "application/vnd.ms-project": ["mpp", "mpt"],
+    "application/vnd.ms-word.document.macroenabled.12": ["docm"],
+    "application/vnd.ms-word.template.macroenabled.12": ["dotm"],
+    "application/vnd.ms-works": ["wps", "wks", "wcm", "wdb"],
+    "application/vnd.ms-wpl": ["wpl"],
+    "application/vnd.ms-xpsdocument": ["xps"],
+    "application/vnd.mseq": ["mseq"],
+    "application/vnd.musician": ["mus"],
+    "application/vnd.muvee.style": ["msty"],
+    "application/vnd.mynfc": ["taglet"],
+    "application/vnd.neurolanguage.nlu": ["nlu"],
+    "application/vnd.nitf": ["ntf", "nitf"],
+    "application/vnd.noblenet-directory": ["nnd"],
+    "application/vnd.noblenet-sealer": ["nns"],
+    "application/vnd.noblenet-web": ["nnw"],
+    "application/vnd.nokia.n-gage.ac+xml": ["*ac"],
+    "application/vnd.nokia.n-gage.data": ["ngdat"],
+    "application/vnd.nokia.n-gage.symbian.install": ["n-gage"],
+    "application/vnd.nokia.radio-preset": ["rpst"],
+    "application/vnd.nokia.radio-presets": ["rpss"],
+    "application/vnd.novadigm.edm": ["edm"],
+    "application/vnd.novadigm.edx": ["edx"],
+    "application/vnd.novadigm.ext": ["ext"],
+    "application/vnd.oasis.opendocument.chart": ["odc"],
+    "application/vnd.oasis.opendocument.chart-template": ["otc"],
+    "application/vnd.oasis.opendocument.database": ["odb"],
+    "application/vnd.oasis.opendocument.formula": ["odf"],
+    "application/vnd.oasis.opendocument.formula-template": ["odft"],
+    "application/vnd.oasis.opendocument.graphics": ["odg"],
+    "application/vnd.oasis.opendocument.graphics-template": ["otg"],
+    "application/vnd.oasis.opendocument.image": ["odi"],
+    "application/vnd.oasis.opendocument.image-template": ["oti"],
+    "application/vnd.oasis.opendocument.presentation": ["odp"],
+    "application/vnd.oasis.opendocument.presentation-template": ["otp"],
+    "application/vnd.oasis.opendocument.spreadsheet": ["ods"],
+    "application/vnd.oasis.opendocument.spreadsheet-template": ["ots"],
+    "application/vnd.oasis.opendocument.text": ["odt"],
+    "application/vnd.oasis.opendocument.text-master": ["odm"],
+    "application/vnd.oasis.opendocument.text-template": ["ott"],
+    "application/vnd.oasis.opendocument.text-web": ["oth"],
+    "application/vnd.olpc-sugar": ["xo"],
+    "application/vnd.oma.dd2+xml": ["dd2"],
+    "application/vnd.openblox.game+xml": ["obgx"],
+    "application/vnd.openofficeorg.extension": ["oxt"],
+    "application/vnd.openstreetmap.data+xml": ["osm"],
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": ["pptx"],
+    "application/vnd.openxmlformats-officedocument.presentationml.slide": ["sldx"],
+    "application/vnd.openxmlformats-officedocument.presentationml.slideshow": ["ppsx"],
+    "application/vnd.openxmlformats-officedocument.presentationml.template": ["potx"],
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ["xlsx"],
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.template": ["xltx"],
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ["docx"],
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.template": ["dotx"],
+    "application/vnd.osgeo.mapguide.package": ["mgp"],
+    "application/vnd.osgi.dp": ["dp"],
+    "application/vnd.osgi.subsystem": ["esa"],
+    "application/vnd.palm": ["pdb", "pqa", "oprc"],
+    "application/vnd.pawaafile": ["paw"],
+    "application/vnd.pg.format": ["str"],
+    "application/vnd.pg.osasli": ["ei6"],
+    "application/vnd.picsel": ["efif"],
+    "application/vnd.pmi.widget": ["wg"],
+    "application/vnd.pocketlearn": ["plf"],
+    "application/vnd.powerbuilder6": ["pbd"],
+    "application/vnd.previewsystems.box": ["box"],
+    "application/vnd.proteus.magazine": ["mgz"],
+    "application/vnd.publishare-delta-tree": ["qps"],
+    "application/vnd.pvi.ptid1": ["ptid"],
+    "application/vnd.quark.quarkxpress": ["qxd", "qxt", "qwd", "qwt", "qxl", "qxb"],
+    "application/vnd.rar": ["rar"],
+    "application/vnd.realvnc.bed": ["bed"],
+    "application/vnd.recordare.musicxml": ["mxl"],
+    "application/vnd.recordare.musicxml+xml": ["musicxml"],
+    "application/vnd.rig.cryptonote": ["cryptonote"],
+    "application/vnd.rim.cod": ["cod"],
+    "application/vnd.rn-realmedia": ["rm"],
+    "application/vnd.rn-realmedia-vbr": ["rmvb"],
+    "application/vnd.route66.link66+xml": ["link66"],
+    "application/vnd.sailingtracker.track": ["st"],
+    "application/vnd.seemail": ["see"],
+    "application/vnd.sema": ["sema"],
+    "application/vnd.semd": ["semd"],
+    "application/vnd.semf": ["semf"],
+    "application/vnd.shana.informed.formdata": ["ifm"],
+    "application/vnd.shana.informed.formtemplate": ["itp"],
+    "application/vnd.shana.informed.interchange": ["iif"],
+    "application/vnd.shana.informed.package": ["ipk"],
+    "application/vnd.simtech-mindmapper": ["twd", "twds"],
+    "application/vnd.smaf": ["mmf"],
+    "application/vnd.smart.teacher": ["teacher"],
+    "application/vnd.software602.filler.form+xml": ["fo"],
+    "application/vnd.solent.sdkm+xml": ["sdkm", "sdkd"],
+    "application/vnd.spotfire.dxp": ["dxp"],
+    "application/vnd.spotfire.sfs": ["sfs"],
+    "application/vnd.stardivision.calc": ["sdc"],
+    "application/vnd.stardivision.draw": ["sda"],
+    "application/vnd.stardivision.impress": ["sdd"],
+    "application/vnd.stardivision.math": ["smf"],
+    "application/vnd.stardivision.writer": ["sdw", "vor"],
+    "application/vnd.stardivision.writer-global": ["sgl"],
+    "application/vnd.stepmania.package": ["smzip"],
+    "application/vnd.stepmania.stepchart": ["sm"],
+    "application/vnd.sun.wadl+xml": ["wadl"],
+    "application/vnd.sun.xml.calc": ["sxc"],
+    "application/vnd.sun.xml.calc.template": ["stc"],
+    "application/vnd.sun.xml.draw": ["sxd"],
+    "application/vnd.sun.xml.draw.template": ["std"],
+    "application/vnd.sun.xml.impress": ["sxi"],
+    "application/vnd.sun.xml.impress.template": ["sti"],
+    "application/vnd.sun.xml.math": ["sxm"],
+    "application/vnd.sun.xml.writer": ["sxw"],
+    "application/vnd.sun.xml.writer.global": ["sxg"],
+    "application/vnd.sun.xml.writer.template": ["stw"],
+    "application/vnd.sus-calendar": ["sus", "susp"],
+    "application/vnd.svd": ["svd"],
+    "application/vnd.symbian.install": ["sis", "sisx"],
+    "application/vnd.syncml+xml": ["xsm"],
+    "application/vnd.syncml.dm+wbxml": ["bdm"],
+    "application/vnd.syncml.dm+xml": ["xdm"],
+    "application/vnd.syncml.dmddf+xml": ["ddf"],
+    "application/vnd.tao.intent-module-archive": ["tao"],
+    "application/vnd.tcpdump.pcap": ["pcap", "cap", "dmp"],
+    "application/vnd.tmobile-livetv": ["tmo"],
+    "application/vnd.trid.tpt": ["tpt"],
+    "application/vnd.triscape.mxs": ["mxs"],
+    "application/vnd.trueapp": ["tra"],
+    "application/vnd.ufdl": ["ufd", "ufdl"],
+    "application/vnd.uiq.theme": ["utz"],
+    "application/vnd.umajin": ["umj"],
+    "application/vnd.unity": ["unityweb"],
+    "application/vnd.uoml+xml": ["uoml"],
+    "application/vnd.vcx": ["vcx"],
+    "application/vnd.visio": ["vsd", "vst", "vss", "vsw"],
+    "application/vnd.visionary": ["vis"],
+    "application/vnd.vsf": ["vsf"],
+    "application/vnd.wap.wbxml": ["wbxml"],
+    "application/vnd.wap.wmlc": ["wmlc"],
+    "application/vnd.wap.wmlscriptc": ["wmlsc"],
+    "application/vnd.webturbo": ["wtb"],
+    "application/vnd.wolfram.player": ["nbp"],
+    "application/vnd.wordperfect": ["wpd"],
+    "application/vnd.wqd": ["wqd"],
+    "application/vnd.wt.stf": ["stf"],
+    "application/vnd.xara": ["xar"],
+    "application/vnd.xfdl": ["xfdl"],
+    "application/vnd.yamaha.hv-dic": ["hvd"],
+    "application/vnd.yamaha.hv-script": ["hvs"],
+    "application/vnd.yamaha.hv-voice": ["hvp"],
+    "application/vnd.yamaha.openscoreformat": ["osf"],
+    "application/vnd.yamaha.openscoreformat.osfpvg+xml": ["osfpvg"],
+    "application/vnd.yamaha.smaf-audio": ["saf"],
+    "application/vnd.yamaha.smaf-phrase": ["spf"],
+    "application/vnd.yellowriver-custom-menu": ["cmp"],
+    "application/vnd.zul": ["zir", "zirz"],
+    "application/vnd.zzazz.deck+xml": ["zaz"],
+    "application/x-7z-compressed": ["7z"],
+    "application/x-abiword": ["abw"],
+    "application/x-ace-compressed": ["ace"],
+    "application/x-apple-diskimage": ["*dmg"],
+    "application/x-arj": ["arj"],
+    "application/x-authorware-bin": ["aab", "x32", "u32", "vox"],
+    "application/x-authorware-map": ["aam"],
+    "application/x-authorware-seg": ["aas"],
+    "application/x-bcpio": ["bcpio"],
+    "application/x-bdoc": ["*bdoc"],
+    "application/x-bittorrent": ["torrent"],
+    "application/x-blorb": ["blb", "blorb"],
+    "application/x-bzip": ["bz"],
+    "application/x-bzip2": ["bz2", "boz"],
+    "application/x-cbr": ["cbr", "cba", "cbt", "cbz", "cb7"],
+    "application/x-cdlink": ["vcd"],
+    "application/x-cfs-compressed": ["cfs"],
+    "application/x-chat": ["chat"],
+    "application/x-chess-pgn": ["pgn"],
+    "application/x-chrome-extension": ["crx"],
+    "application/x-cocoa": ["cco"],
+    "application/x-conference": ["nsc"],
+    "application/x-cpio": ["cpio"],
+    "application/x-csh": ["csh"],
+    "application/x-debian-package": ["*deb", "udeb"],
+    "application/x-dgc-compressed": ["dgc"],
+    "application/x-director": ["dir", "dcr", "dxr", "cst", "cct", "cxt", "w3d", "fgd", "swa"],
+    "application/x-doom": ["wad"],
+    "application/x-dtbncx+xml": ["ncx"],
+    "application/x-dtbook+xml": ["dtb"],
+    "application/x-dtbresource+xml": ["res"],
+    "application/x-dvi": ["dvi"],
+    "application/x-envoy": ["evy"],
+    "application/x-eva": ["eva"],
+    "application/x-font-bdf": ["bdf"],
+    "application/x-font-ghostscript": ["gsf"],
+    "application/x-font-linux-psf": ["psf"],
+    "application/x-font-pcf": ["pcf"],
+    "application/x-font-snf": ["snf"],
+    "application/x-font-type1": ["pfa", "pfb", "pfm", "afm"],
+    "application/x-freearc": ["arc"],
+    "application/x-futuresplash": ["spl"],
+    "application/x-gca-compressed": ["gca"],
+    "application/x-glulx": ["ulx"],
+    "application/x-gnumeric": ["gnumeric"],
+    "application/x-gramps-xml": ["gramps"],
+    "application/x-gtar": ["gtar"],
+    "application/x-hdf": ["hdf"],
+    "application/x-httpd-php": ["php"],
+    "application/x-install-instructions": ["install"],
+    "application/x-iso9660-image": ["*iso"],
+    "application/x-iwork-keynote-sffkey": ["*key"],
+    "application/x-iwork-numbers-sffnumbers": ["*numbers"],
+    "application/x-iwork-pages-sffpages": ["*pages"],
+    "application/x-java-archive-diff": ["jardiff"],
+    "application/x-java-jnlp-file": ["jnlp"],
+    "application/x-keepass2": ["kdbx"],
+    "application/x-latex": ["latex"],
+    "application/x-lua-bytecode": ["luac"],
+    "application/x-lzh-compressed": ["lzh", "lha"],
+    "application/x-makeself": ["run"],
+    "application/x-mie": ["mie"],
+    "application/x-mobipocket-ebook": ["prc", "mobi"],
+    "application/x-ms-application": ["application"],
+    "application/x-ms-shortcut": ["lnk"],
+    "application/x-ms-wmd": ["wmd"],
+    "application/x-ms-wmz": ["wmz"],
+    "application/x-ms-xbap": ["xbap"],
+    "application/x-msaccess": ["mdb"],
+    "application/x-msbinder": ["obd"],
+    "application/x-mscardfile": ["crd"],
+    "application/x-msclip": ["clp"],
+    "application/x-msdos-program": ["*exe"],
+    "application/x-msdownload": ["*exe", "*dll", "com", "bat", "*msi"],
+    "application/x-msmediaview": ["mvb", "m13", "m14"],
+    "application/x-msmetafile": ["*wmf", "*wmz", "*emf", "emz"],
+    "application/x-msmoney": ["mny"],
+    "application/x-mspublisher": ["pub"],
+    "application/x-msschedule": ["scd"],
+    "application/x-msterminal": ["trm"],
+    "application/x-mswrite": ["wri"],
+    "application/x-netcdf": ["nc", "cdf"],
+    "application/x-ns-proxy-autoconfig": ["pac"],
+    "application/x-nzb": ["nzb"],
+    "application/x-perl": ["pl", "pm"],
+    "application/x-pilot": ["*prc", "*pdb"],
+    "application/x-pkcs12": ["p12", "pfx"],
+    "application/x-pkcs7-certificates": ["p7b", "spc"],
+    "application/x-pkcs7-certreqresp": ["p7r"],
+    "application/x-rar-compressed": ["*rar"],
+    "application/x-redhat-package-manager": ["rpm"],
+    "application/x-research-info-systems": ["ris"],
+    "application/x-sea": ["sea"],
+    "application/x-sh": ["sh"],
+    "application/x-shar": ["shar"],
+    "application/x-shockwave-flash": ["swf"],
+    "application/x-silverlight-app": ["xap"],
+    "application/x-sql": ["sql"],
+    "application/x-stuffit": ["sit"],
+    "application/x-stuffitx": ["sitx"],
+    "application/x-subrip": ["srt"],
+    "application/x-sv4cpio": ["sv4cpio"],
+    "application/x-sv4crc": ["sv4crc"],
+    "application/x-t3vm-image": ["t3"],
+    "application/x-tads": ["gam"],
+    "application/x-tar": ["tar"],
+    "application/x-tcl": ["tcl", "tk"],
+    "application/x-tex": ["tex"],
+    "application/x-tex-tfm": ["tfm"],
+    "application/x-texinfo": ["texinfo", "texi"],
+    "application/x-tgif": ["*obj"],
+    "application/x-ustar": ["ustar"],
+    "application/x-virtualbox-hdd": ["hdd"],
+    "application/x-virtualbox-ova": ["ova"],
+    "application/x-virtualbox-ovf": ["ovf"],
+    "application/x-virtualbox-vbox": ["vbox"],
+    "application/x-virtualbox-vbox-extpack": ["vbox-extpack"],
+    "application/x-virtualbox-vdi": ["vdi"],
+    "application/x-virtualbox-vhd": ["vhd"],
+    "application/x-virtualbox-vmdk": ["vmdk"],
+    "application/x-wais-source": ["src"],
+    "application/x-web-app-manifest+json": ["webapp"],
+    "application/x-x509-ca-cert": ["der", "crt", "pem"],
+    "application/x-xfig": ["fig"],
+    "application/x-xliff+xml": ["*xlf"],
+    "application/x-xpinstall": ["xpi"],
+    "application/x-xz": ["xz"],
+    "application/x-zmachine": ["z1", "z2", "z3", "z4", "z5", "z6", "z7", "z8"],
+    "audio/vnd.dece.audio": ["uva", "uvva"],
+    "audio/vnd.digital-winds": ["eol"],
+    "audio/vnd.dra": ["dra"],
+    "audio/vnd.dts": ["dts"],
+    "audio/vnd.dts.hd": ["dtshd"],
+    "audio/vnd.lucent.voice": ["lvp"],
+    "audio/vnd.ms-playready.media.pya": ["pya"],
+    "audio/vnd.nuera.ecelp4800": ["ecelp4800"],
+    "audio/vnd.nuera.ecelp7470": ["ecelp7470"],
+    "audio/vnd.nuera.ecelp9600": ["ecelp9600"],
+    "audio/vnd.rip": ["rip"],
+    "audio/x-aac": ["aac"],
+    "audio/x-aiff": ["aif", "aiff", "aifc"],
+    "audio/x-caf": ["caf"],
+    "audio/x-flac": ["flac"],
+    "audio/x-m4a": ["*m4a"],
+    "audio/x-matroska": ["mka"],
+    "audio/x-mpegurl": ["m3u"],
+    "audio/x-ms-wax": ["wax"],
+    "audio/x-ms-wma": ["wma"],
+    "audio/x-pn-realaudio": ["ram", "ra"],
+    "audio/x-pn-realaudio-plugin": ["rmp"],
+    "audio/x-realaudio": ["*ra"],
+    "audio/x-wav": ["*wav"],
+    "chemical/x-cdx": ["cdx"],
+    "chemical/x-cif": ["cif"],
+    "chemical/x-cmdf": ["cmdf"],
+    "chemical/x-cml": ["cml"],
+    "chemical/x-csml": ["csml"],
+    "chemical/x-xyz": ["xyz"],
+    "image/prs.btif": ["btif"],
+    "image/prs.pti": ["pti"],
+    "image/vnd.adobe.photoshop": ["psd"],
+    "image/vnd.airzip.accelerator.azv": ["azv"],
+    "image/vnd.dece.graphic": ["uvi", "uvvi", "uvg", "uvvg"],
+    "image/vnd.djvu": ["djvu", "djv"],
+    "image/vnd.dvb.subtitle": ["*sub"],
+    "image/vnd.dwg": ["dwg"],
+    "image/vnd.dxf": ["dxf"],
+    "image/vnd.fastbidsheet": ["fbs"],
+    "image/vnd.fpx": ["fpx"],
+    "image/vnd.fst": ["fst"],
+    "image/vnd.fujixerox.edmics-mmr": ["mmr"],
+    "image/vnd.fujixerox.edmics-rlc": ["rlc"],
+    "image/vnd.microsoft.icon": ["ico"],
+    "image/vnd.ms-dds": ["dds"],
+    "image/vnd.ms-modi": ["mdi"],
+    "image/vnd.ms-photo": ["wdp"],
+    "image/vnd.net-fpx": ["npx"],
+    "image/vnd.pco.b16": ["b16"],
+    "image/vnd.tencent.tap": ["tap"],
+    "image/vnd.valve.source.texture": ["vtf"],
+    "image/vnd.wap.wbmp": ["wbmp"],
+    "image/vnd.xiff": ["xif"],
+    "image/vnd.zbrush.pcx": ["pcx"],
+    "image/x-3ds": ["3ds"],
+    "image/x-cmu-raster": ["ras"],
+    "image/x-cmx": ["cmx"],
+    "image/x-freehand": ["fh", "fhc", "fh4", "fh5", "fh7"],
+    "image/x-icon": ["*ico"],
+    "image/x-jng": ["jng"],
+    "image/x-mrsid-image": ["sid"],
+    "image/x-ms-bmp": ["*bmp"],
+    "image/x-pcx": ["*pcx"],
+    "image/x-pict": ["pic", "pct"],
+    "image/x-portable-anymap": ["pnm"],
+    "image/x-portable-bitmap": ["pbm"],
+    "image/x-portable-graymap": ["pgm"],
+    "image/x-portable-pixmap": ["ppm"],
+    "image/x-rgb": ["rgb"],
+    "image/x-tga": ["tga"],
+    "image/x-xbitmap": ["xbm"],
+    "image/x-xpixmap": ["xpm"],
+    "image/x-xwindowdump": ["xwd"],
+    "message/vnd.wfa.wsc": ["wsc"],
+    "model/vnd.collada+xml": ["dae"],
+    "model/vnd.dwf": ["dwf"],
+    "model/vnd.gdl": ["gdl"],
+    "model/vnd.gtw": ["gtw"],
+    "model/vnd.mts": ["mts"],
+    "model/vnd.opengex": ["ogex"],
+    "model/vnd.parasolid.transmit.binary": ["x_b"],
+    "model/vnd.parasolid.transmit.text": ["x_t"],
+    "model/vnd.sap.vds": ["vds"],
+    "model/vnd.usdz+zip": ["usdz"],
+    "model/vnd.valve.source.compiled-map": ["bsp"],
+    "model/vnd.vtu": ["vtu"],
+    "text/prs.lines.tag": ["dsc"],
+    "text/vnd.curl": ["curl"],
+    "text/vnd.curl.dcurl": ["dcurl"],
+    "text/vnd.curl.mcurl": ["mcurl"],
+    "text/vnd.curl.scurl": ["scurl"],
+    "text/vnd.dvb.subtitle": ["sub"],
+    "text/vnd.fly": ["fly"],
+    "text/vnd.fmi.flexstor": ["flx"],
+    "text/vnd.graphviz": ["gv"],
+    "text/vnd.in3d.3dml": ["3dml"],
+    "text/vnd.in3d.spot": ["spot"],
+    "text/vnd.sun.j2me.app-descriptor": ["jad"],
+    "text/vnd.wap.wml": ["wml"],
+    "text/vnd.wap.wmlscript": ["wmls"],
+    "text/x-asm": ["s", "asm"],
+    "text/x-c": ["c", "cc", "cxx", "cpp", "h", "hh", "dic"],
+    "text/x-component": ["htc"],
+    "text/x-fortran": ["f", "for", "f77", "f90"],
+    "text/x-handlebars-template": ["hbs"],
+    "text/x-java-source": ["java"],
+    "text/x-lua": ["lua"],
+    "text/x-markdown": ["mkd"],
+    "text/x-nfo": ["nfo"],
+    "text/x-opml": ["opml"],
+    "text/x-org": ["*org"],
+    "text/x-pascal": ["p", "pas"],
+    "text/x-processing": ["pde"],
+    "text/x-sass": ["sass"],
+    "text/x-scss": ["scss"],
+    "text/x-setext": ["etx"],
+    "text/x-sfv": ["sfv"],
+    "text/x-suse-ymp": ["ymp"],
+    "text/x-uuencode": ["uu"],
+    "text/x-vcalendar": ["vcs"],
+    "text/x-vcard": ["vcf"],
+    "video/vnd.dece.hd": ["uvh", "uvvh"],
+    "video/vnd.dece.mobile": ["uvm", "uvvm"],
+    "video/vnd.dece.pd": ["uvp", "uvvp"],
+    "video/vnd.dece.sd": ["uvs", "uvvs"],
+    "video/vnd.dece.video": ["uvv", "uvvv"],
+    "video/vnd.dvb.file": ["dvb"],
+    "video/vnd.fvt": ["fvt"],
+    "video/vnd.mpegurl": ["mxu", "m4u"],
+    "video/vnd.ms-playready.media.pyv": ["pyv"],
+    "video/vnd.uvvu.mp4": ["uvu", "uvvu"],
+    "video/vnd.vivo": ["viv"],
+    "video/x-f4v": ["f4v"],
+    "video/x-fli": ["fli"],
+    "video/x-flv": ["flv"],
+    "video/x-m4v": ["m4v"],
+    "video/x-matroska": ["mkv", "mk3d", "mks"],
+    "video/x-mng": ["mng"],
+    "video/x-ms-asf": ["asf", "asx"],
+    "video/x-ms-vob": ["vob"],
+    "video/x-ms-wm": ["wm"],
+    "video/x-ms-wmv": ["wmv"],
+    "video/x-ms-wmx": ["wmx"],
+    "video/x-ms-wvx": ["wvx"],
+    "video/x-msvideo": ["avi"],
+    "video/x-sgi-movie": ["movie"],
+    "video/x-smv": ["smv"],
+    "x-conference/x-cooltalk": ["ice"],
+};
+exports.types = new Map();
+exports.extensions = new Map();
+const define = (typeMap, force) => {
+    for (let type in typeMap) {
+        let exts = typeMap[type].map(function (t) {
+            return t.toLowerCase();
+        });
+        type = type.toLowerCase();
+        for (let i = 0; i < exts.length; i++) {
+            const ext = exts[i];
+            if (ext[0] === "*") {
+                continue;
+            }
+            if (!force && exports.types.has(ext)) {
+                throw new Error('Attempt to change mapping for "' +
+                    ext +
+                    '" extension from "' +
+                    exports.types.get(ext) +
+                    '" to "' +
+                    type +
+                    '". Pass `force=true` to allow this, otherwise remove "' +
+                    ext +
+                    '" from the list of extensions for "' +
+                    type +
+                    '".');
+            }
+            exports.types.set(ext, type);
+        }
+        if (force || !exports.extensions.has(type)) {
+            const ext = exts[0];
+            exports.extensions.set(type, ext[0] !== "*" ? ext : ext.substr(1));
+        }
+    }
+};
+exports.define = define;
+(0, exports.define)(standard);
+(0, exports.define)(other);
+const getType = (path) => {
+    path = String(path);
+    let last = path.replace(/^.*[/\\]/, "").toLowerCase();
+    let ext = last.replace(/^.*\./, "").toLowerCase();
+    let hasPath = last.length < path.length;
+    let hasDot = ext.length < last.length - 1;
+    return ((hasDot || !hasPath) && exports.types.get(ext)) || "application/octet-binary";
+};
+exports.getType = getType;
+const getExtension = (type) => {
+    // type = /^\s*([^;\s]*)/.test(type) && RegExp.$1;
+    const t = /^\s*([^;\s]*)/.test(type);
+    return (t && exports.extensions.get(type.toLowerCase())) || null;
+};
+exports.getExtension = getExtension;
+
+},{}],33:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.decode = exports.encode = void 0;
@@ -5515,7 +6567,7 @@ exports.default = {
     decode,
 };
 
-},{}],33:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -5528,13 +6580,26 @@ var __createBinding = (this && this.__createBinding) || (Object.create ? (functi
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
 }));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
 var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sanitizeEmailPrefix = exports.replaceUndefined = exports.joinObjects = exports.removeNulls = exports.pathValueToObject = exports.assert = void 0;
+exports.getExtension = exports.sanitizeEmailPrefix = exports.replaceUndefined = exports.joinObjects = exports.removeNulls = exports.pathValueToObject = exports.assert = exports.Mime = void 0;
 const ivipbase_core_1 = require("ivipbase-core");
 __exportStar(require("./base64"), exports);
+exports.Mime = __importStar(require("./Mime"));
 /**
  * Substituição para console.assert, lança um erro se a condição não for atendida.
  * @param condition Condição 'truthy'
@@ -5621,14 +6686,24 @@ function sanitizeEmailPrefix(email) {
     return sanitizedPrefix;
 }
 exports.sanitizeEmailPrefix = sanitizeEmailPrefix;
+const getExtension = (filename) => {
+    try {
+        const i = filename.lastIndexOf(".");
+        return i < 0 ? "" : filename.substr(i);
+    }
+    catch (_a) {
+        return "";
+    }
+};
+exports.getExtension = getExtension;
 
-},{"./base64":32,"ivipbase-core":98}],34:[function(require,module,exports){
+},{"./Mime":32,"./base64":33,"ivipbase-core":99}],35:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const localStorage = window.localStorage;
 exports.default = localStorage;
 
-},{}],35:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -5806,9 +6881,9 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],36:[function(require,module,exports){
-
 },{}],37:[function(require,module,exports){
+
+},{}],38:[function(require,module,exports){
 /**
  * cuid.js
  * Collision-resistant UID generator for browsers and node.
@@ -5894,7 +6969,7 @@ cuid.fingerprint = fingerprint;
 
 module.exports = cuid;
 
-},{"./lib/fingerprint.js":38,"./lib/getRandomValue.js":39,"./lib/pad.js":40}],38:[function(require,module,exports){
+},{"./lib/fingerprint.js":39,"./lib/getRandomValue.js":40,"./lib/pad.js":41}],39:[function(require,module,exports){
 var pad = require('./pad.js');
 
 var env = typeof window === 'object' ? window : self;
@@ -5908,7 +6983,7 @@ module.exports = function fingerprint () {
   return clientId;
 };
 
-},{"./pad.js":40}],39:[function(require,module,exports){
+},{"./pad.js":41}],40:[function(require,module,exports){
 
 var getRandomValue;
 
@@ -5928,13 +7003,13 @@ if (crypto) {
 
 module.exports = getRandomValue;
 
-},{}],40:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 module.exports = function pad (num, size) {
   var s = '000000000' + num;
   return s.substr(s.length - size);
 };
 
-},{}],41:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
 
@@ -6207,7 +7282,7 @@ formatters.j = function (v) {
 };
 
 }).call(this)}).call(this,require('_process'))
-},{"./common":42,"_process":101}],42:[function(require,module,exports){
+},{"./common":43,"_process":102}],43:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -6483,7 +7558,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":100}],43:[function(require,module,exports){
+},{"ms":101}],44:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.hasCORS = void 0;
@@ -6499,7 +7574,7 @@ catch (err) {
 }
 exports.hasCORS = value;
 
-},{}],44:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 "use strict";
 // imported from https://github.com/galkn/querystring
 /**
@@ -6540,7 +7615,7 @@ function decode(qs) {
 }
 exports.decode = decode;
 
-},{}],45:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.parse = void 0;
@@ -6610,7 +7685,7 @@ function queryKey(uri, query) {
     return data;
 }
 
-},{}],46:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 // imported from https://github.com/unshiftio/yeast
 'use strict';
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -6667,7 +7742,7 @@ exports.yeast = yeast;
 for (; i < length; i++)
     map[alphabet[i]] = i;
 
-},{}],47:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.globalThisShim = void 0;
@@ -6683,7 +7758,7 @@ exports.globalThisShim = (() => {
     }
 })();
 
-},{}],48:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.nextTick = exports.parse = exports.installTimerFunctions = exports.transports = exports.TransportError = exports.Transport = exports.protocol = exports.Socket = void 0;
@@ -6702,7 +7777,7 @@ Object.defineProperty(exports, "parse", { enumerable: true, get: function () { r
 var websocket_constructor_js_1 = require("./transports/websocket-constructor.js");
 Object.defineProperty(exports, "nextTick", { enumerable: true, get: function () { return websocket_constructor_js_1.nextTick; } });
 
-},{"./contrib/parseuri.js":45,"./socket.js":49,"./transport.js":50,"./transports/index.js":51,"./transports/websocket-constructor.js":53,"./util.js":57}],49:[function(require,module,exports){
+},{"./contrib/parseuri.js":46,"./socket.js":50,"./transport.js":51,"./transports/index.js":52,"./transports/websocket-constructor.js":54,"./util.js":58}],50:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -7330,7 +8405,7 @@ class Socket extends component_emitter_1.Emitter {
 exports.Socket = Socket;
 Socket.protocol = engine_io_parser_1.protocol;
 
-},{"./contrib/parseqs.js":44,"./contrib/parseuri.js":45,"./transports/index.js":51,"./transports/websocket-constructor.js":53,"./util.js":57,"@socket.io/component-emitter":35,"debug":41,"engine.io-parser":62}],50:[function(require,module,exports){
+},{"./contrib/parseqs.js":45,"./contrib/parseuri.js":46,"./transports/index.js":52,"./transports/websocket-constructor.js":54,"./util.js":58,"@socket.io/component-emitter":36,"debug":42,"engine.io-parser":63}],51:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -7484,7 +8559,7 @@ class Transport extends component_emitter_1.Emitter {
 }
 exports.Transport = Transport;
 
-},{"./contrib/parseqs.js":44,"./util.js":57,"@socket.io/component-emitter":35,"debug":41,"engine.io-parser":62}],51:[function(require,module,exports){
+},{"./contrib/parseqs.js":45,"./util.js":58,"@socket.io/component-emitter":36,"debug":42,"engine.io-parser":63}],52:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.transports = void 0;
@@ -7497,7 +8572,7 @@ exports.transports = {
     polling: polling_js_1.Polling,
 };
 
-},{"./polling.js":52,"./websocket.js":54,"./webtransport.js":55}],52:[function(require,module,exports){
+},{"./polling.js":53,"./websocket.js":55,"./webtransport.js":56}],53:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -7913,7 +8988,7 @@ function unloadHandler() {
     }
 }
 
-},{"../contrib/yeast.js":46,"../globalThis.js":47,"../transport.js":50,"../util.js":57,"./xmlhttprequest.js":56,"@socket.io/component-emitter":35,"debug":41,"engine.io-parser":62}],53:[function(require,module,exports){
+},{"../contrib/yeast.js":47,"../globalThis.js":48,"../transport.js":51,"../util.js":58,"./xmlhttprequest.js":57,"@socket.io/component-emitter":36,"debug":42,"engine.io-parser":63}],54:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.defaultBinaryType = exports.usingBrowserWebSocket = exports.WebSocket = exports.nextTick = void 0;
@@ -7931,7 +9006,7 @@ exports.WebSocket = globalThis_js_1.globalThisShim.WebSocket || globalThis_js_1.
 exports.usingBrowserWebSocket = true;
 exports.defaultBinaryType = "arraybuffer";
 
-},{"../globalThis.js":47}],54:[function(require,module,exports){
+},{"../globalThis.js":48}],55:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
@@ -8097,7 +9172,7 @@ class WS extends transport_js_1.Transport {
 exports.WS = WS;
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"../contrib/yeast.js":46,"../transport.js":50,"../util.js":57,"./websocket-constructor.js":53,"buffer":36,"debug":41,"engine.io-parser":62}],55:[function(require,module,exports){
+},{"../contrib/yeast.js":47,"../transport.js":51,"../util.js":58,"./websocket-constructor.js":54,"buffer":37,"debug":42,"engine.io-parser":63}],56:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -8184,7 +9259,7 @@ class WT extends transport_js_1.Transport {
 }
 exports.WT = WT;
 
-},{"../transport.js":50,"./websocket-constructor.js":53,"debug":41,"engine.io-parser":62}],56:[function(require,module,exports){
+},{"../transport.js":51,"./websocket-constructor.js":54,"debug":42,"engine.io-parser":63}],57:[function(require,module,exports){
 "use strict";
 // browser shim for xmlhttprequest module
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -8211,7 +9286,7 @@ exports.XHR = XHR;
 function createCookieJar() { }
 exports.createCookieJar = createCookieJar;
 
-},{"../contrib/has-cors.js":43,"../globalThis.js":47}],57:[function(require,module,exports){
+},{"../contrib/has-cors.js":44,"../globalThis.js":48}],58:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.byteLength = exports.installTimerFunctions = exports.pick = void 0;
@@ -8271,7 +9346,7 @@ function utf8Length(str) {
     return length;
 }
 
-},{"./globalThis.js":47}],58:[function(require,module,exports){
+},{"./globalThis.js":48}],59:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ERROR_PACKET = exports.PACKET_TYPES_REVERSE = exports.PACKET_TYPES = void 0;
@@ -8292,7 +9367,7 @@ Object.keys(PACKET_TYPES).forEach(key => {
 const ERROR_PACKET = { type: "error", data: "parser error" };
 exports.ERROR_PACKET = ERROR_PACKET;
 
-},{}],59:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.decode = exports.encode = void 0;
@@ -8342,7 +9417,7 @@ const decode = (base64) => {
 };
 exports.decode = decode;
 
-},{}],60:[function(require,module,exports){
+},{}],61:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.decodePacket = void 0;
@@ -8410,7 +9485,7 @@ const mapBinary = (data, binaryType) => {
     }
 };
 
-},{"./commons.js":58,"./contrib/base64-arraybuffer.js":59}],61:[function(require,module,exports){
+},{"./commons.js":59,"./contrib/base64-arraybuffer.js":60}],62:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.encodePacket = exports.encodePacketToBinary = void 0;
@@ -8487,7 +9562,7 @@ function encodePacketToBinary(packet, callback) {
 }
 exports.encodePacketToBinary = encodePacketToBinary;
 
-},{"./commons.js":58}],62:[function(require,module,exports){
+},{"./commons.js":59}],63:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.decodePayload = exports.decodePacket = exports.encodePayload = exports.encodePacket = exports.protocol = exports.createPacketDecoderStream = exports.createPacketEncoderStream = void 0;
@@ -8653,7 +9728,7 @@ function createPacketDecoderStream(maxPayload, binaryType) {
 exports.createPacketDecoderStream = createPacketDecoderStream;
 exports.protocol = 4;
 
-},{"./commons.js":58,"./decodePacket.js":60,"./encodePacket.js":61}],63:[function(require,module,exports){
+},{"./commons.js":59,"./decodePacket.js":61,"./encodePacket.js":62}],64:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 function c(input, length, result) {
@@ -8733,7 +9808,7 @@ const ascii85 = {
 };
 exports.default = ascii85;
 
-},{}],64:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 class Base64 {
@@ -8842,7 +9917,7 @@ class Base64 {
 }
 exports.default = Base64;
 
-},{}],65:[function(require,module,exports){
+},{}],66:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const A = (a, b) => {
@@ -9410,7 +10485,7 @@ class BezierEasing {
 }
 exports.default = BezierEasing;
 
-},{}],66:[function(require,module,exports){
+},{}],67:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.infoColor = exports.hslDistance = exports.negative = exports.growing = exports.watershed = exports.colorScale = exports.grayScale = exports.lighten = exports.darken = exports.blend = exports.hwbToRgb = exports.cmykToRgb = exports.hsvToRgb = exports.hslToRgb = exports.rgbToHwb = exports.rgbToCmyk = exports.rgbToHsv = exports.rgbToHsl = exports.rgbToHex = exports.hexToRgb = exports.colorNames = void 0;
@@ -10082,7 +11157,7 @@ class Color {
 }
 exports.default = Color;
 
-},{}],67:[function(require,module,exports){
+},{}],68:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const validation_1 = require("./validation");
@@ -10140,7 +11215,7 @@ const JSONStringify = (obj) => {
 };
 exports.default = JSONStringify;
 
-},{"./validation":75}],68:[function(require,module,exports){
+},{"./validation":76}],69:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 function runCallback(callback, data) {
@@ -10233,7 +11308,7 @@ class SimpleEventEmitter {
 }
 exports.default = SimpleEventEmitter;
 
-},{}],69:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -10262,7 +11337,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.mat4 = void 0;
 exports.mat4 = __importStar(require("./mat4"));
 
-},{"./mat4":70}],70:[function(require,module,exports){
+},{"./mat4":71}],71:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.transpose = exports.translate = exports.str = exports.scale = exports.rotateZ = exports.rotateY = exports.rotateX = exports.rotate = exports.perspectiveFromFieldOfView = exports.perspective = exports.ortho = exports.multiply = exports.lookAt = exports.invert = exports.identity = exports.frustum = exports.fromZRotation = exports.fromYRotation = exports.fromXRotation = exports.fromTranslation = exports.fromScaling = exports.fromRotationTranslation = exports.fromRotation = exports.fromQuat = exports.determinant = exports.create = exports.copy = exports.clone = exports.adjoint = void 0;
@@ -11293,7 +12368,7 @@ const transpose = (out, a) => {
 };
 exports.transpose = transpose;
 
-},{}],71:[function(require,module,exports){
+},{}],72:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -11346,7 +12421,7 @@ Object.defineProperty(exports, "Ascii85", { enumerable: true, get: function () {
 var SimpleEventEmitter_1 = require("./SimpleEventEmitter");
 Object.defineProperty(exports, "SimpleEventEmitter", { enumerable: true, get: function () { return __importDefault(SimpleEventEmitter_1).default; } });
 
-},{"./Ascii85":63,"./Base64":64,"./BezierEasing":65,"./Color":66,"./JSONStringify":67,"./SimpleEventEmitter":68,"./gl":69,"./mergeClasses":72,"./mimeTypeFromBuffer":73,"./utils":74,"./validation":75}],72:[function(require,module,exports){
+},{"./Ascii85":64,"./Base64":65,"./BezierEasing":66,"./Color":67,"./JSONStringify":68,"./SimpleEventEmitter":69,"./gl":70,"./mergeClasses":73,"./mimeTypeFromBuffer":74,"./utils":75,"./validation":76}],73:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const findProtoNames = (i) => {
@@ -11400,7 +12475,7 @@ const mergeClasses = (a, b) => {
 };
 exports.default = mergeClasses;
 
-},{}],73:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.mimeTypeFromBuffer = void 0;
@@ -11566,7 +12641,7 @@ const mimeTypeFromBuffer = (buffer) => {
 };
 exports.mimeTypeFromBuffer = mimeTypeFromBuffer;
 
-},{}],74:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
 (function (process,global,Buffer){(function (){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -11883,7 +12958,7 @@ function objectToUrlParams(obj) {
 exports.objectToUrlParams = objectToUrlParams;
 
 }).call(this)}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"./validation":75,"_process":101,"buffer":36}],75:[function(require,module,exports){
+},{"./validation":76,"_process":102,"buffer":37}],76:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.isEmpty = exports.isUrlValid = exports.isPhoneValid = exports.isPasswordValid = exports.isEmailValid = exports.isBuffer = exports.isSymbol = exports.isFunction = exports.isUndefined = exports.isDate = exports.isInfinity = exports.isNotNumber = exports.isNull = exports.isFloat = exports.isInt = exports.isNumberValid = exports.isNumber = exports.isBoolean = exports.isString = exports.isJson = exports.isObject = exports.isTypedArray = exports.isArray = void 0;
@@ -12014,7 +13089,7 @@ function isEmpty(obj) {
 }
 exports.isEmpty = isEmpty;
 
-},{}],76:[function(require,module,exports){
+},{}],77:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -12096,7 +13171,7 @@ class Api extends SimpleEventEmitter_1.default {
 }
 exports.default = Api;
 
-},{"../Lib/SimpleEventEmitter":90}],77:[function(require,module,exports){
+},{"../Lib/SimpleEventEmitter":91}],78:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -12212,7 +13287,7 @@ class DataBase extends SimpleEventEmitter_1.default {
 exports.DataBase = DataBase;
 exports.default = DataBase;
 
-},{"../Lib/DebugLogger":82,"../Lib/SimpleEventEmitter":90,"../Lib/TypeMappings":94,"./reference":78}],78:[function(require,module,exports){
+},{"../Lib/DebugLogger":83,"../Lib/SimpleEventEmitter":91,"../Lib/TypeMappings":95,"./reference":79}],79:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -13319,7 +14394,7 @@ class DataReferenceQuery {
 }
 exports.DataReferenceQuery = DataReferenceQuery;
 
-},{"../Lib/ID":83,"../Lib/OptionalObservable":85,"../Lib/PathInfo":87,"../Lib/Subscription":92,"./snapshot":79}],79:[function(require,module,exports){
+},{"../Lib/ID":84,"../Lib/OptionalObservable":86,"../Lib/PathInfo":88,"../Lib/Subscription":93,"./snapshot":80}],80:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -13478,7 +14553,7 @@ class MutationsDataSnapshot extends DataSnapshot {
 }
 exports.MutationsDataSnapshot = MutationsDataSnapshot;
 
-},{"../Lib/PathInfo":87}],80:[function(require,module,exports){
+},{"../Lib/PathInfo":88}],81:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ascii85 = void 0;
@@ -13559,7 +14634,7 @@ exports.ascii85 = {
 };
 exports.default = exports.ascii85;
 
-},{}],81:[function(require,module,exports){
+},{}],82:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.assert = void 0;
@@ -13575,7 +14650,7 @@ function assert(condition, error) {
 }
 exports.assert = assert;
 
-},{}],82:[function(require,module,exports){
+},{}],83:[function(require,module,exports){
 (function (process){(function (){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -13607,7 +14682,7 @@ class DebugLogger {
 exports.default = DebugLogger;
 
 }).call(this)}).call(this,require('_process'))
-},{"_process":101}],83:[function(require,module,exports){
+},{"_process":102}],84:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -13635,7 +14710,7 @@ class ID {
 }
 exports.default = ID;
 
-},{"cuid":37}],84:[function(require,module,exports){
+},{"cuid":38}],85:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -13690,7 +14765,7 @@ class ObjectCollection {
 }
 exports.ObjectCollection = ObjectCollection;
 
-},{"./ID":83}],85:[function(require,module,exports){
+},{"./ID":84}],86:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -13765,7 +14840,7 @@ function setObservable(Observable) {
 }
 exports.setObservable = setObservable;
 
-},{"./SimpleObservable":91,"./Utils":95,"rxjs":36}],86:[function(require,module,exports){
+},{"./SimpleObservable":92,"./Utils":96,"rxjs":37}],87:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PartialArray = void 0;
@@ -13788,7 +14863,7 @@ class PartialArray {
 }
 exports.PartialArray = PartialArray;
 
-},{}],87:[function(require,module,exports){
+},{}],88:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PathInfo = exports.PathReference = void 0;
@@ -14126,7 +15201,7 @@ class PathInfo {
 exports.PathInfo = PathInfo;
 exports.default = PathInfo;
 
-},{}],88:[function(require,module,exports){
+},{}],89:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SchemaDefinition = void 0;
@@ -14502,7 +15577,7 @@ class SchemaDefinition {
 }
 exports.SchemaDefinition = SchemaDefinition;
 
-},{}],89:[function(require,module,exports){
+},{}],90:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SimpleCache = void 0;
@@ -14601,9 +15676,9 @@ class SimpleCache {
 }
 exports.SimpleCache = SimpleCache;
 
-},{"./Utils":95}],90:[function(require,module,exports){
-arguments[4][68][0].apply(exports,arguments)
-},{"dup":68}],91:[function(require,module,exports){
+},{"./Utils":96}],91:[function(require,module,exports){
+arguments[4][69][0].apply(exports,arguments)
+},{"dup":69}],92:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 /**
@@ -14650,7 +15725,7 @@ class SimpleObservable {
 }
 exports.default = SimpleObservable;
 
-},{}],92:[function(require,module,exports){
+},{}],93:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EventStream = exports.EventPublisher = exports.EventSubscription = void 0;
@@ -14835,7 +15910,7 @@ class EventStream {
 }
 exports.EventStream = EventStream;
 
-},{}],93:[function(require,module,exports){
+},{}],94:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -15196,7 +16271,7 @@ const deserialize2 = (data) => {
 };
 exports.deserialize2 = deserialize2;
 
-},{"./Ascii85":80,"./PartialArray":86,"./PathInfo":87,"./Utils":95}],94:[function(require,module,exports){
+},{"./Ascii85":81,"./PartialArray":87,"./PathInfo":88,"./Utils":96}],95:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -15534,7 +16609,7 @@ class TypeMappings {
 }
 exports.default = TypeMappings;
 
-},{"../DataBase/reference":78,"../DataBase/snapshot":79,"./PathInfo":87,"./Utils":95}],95:[function(require,module,exports){
+},{"../DataBase/reference":79,"../DataBase/snapshot":80,"./PathInfo":88,"./Utils":96}],96:[function(require,module,exports){
 (function (global,Buffer){(function (){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
@@ -16095,18 +17170,18 @@ function uuidv4() {
 exports.uuidv4 = uuidv4;
 
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"../process":99,"./PartialArray":86,"./PathInfo":87,"buffer":36}],96:[function(require,module,exports){
+},{"../process":100,"./PartialArray":87,"./PathInfo":88,"buffer":37}],97:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.assert = void 0;
 var Assert_1 = require("./Assert");
 Object.defineProperty(exports, "assert", { enumerable: true, get: function () { return Assert_1.assert; } });
 
-},{"./Assert":81}],97:[function(require,module,exports){
+},{"./Assert":82}],98:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 
-},{}],98:[function(require,module,exports){
+},{}],99:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -16185,7 +17260,7 @@ Object.defineProperty(exports, "PartialArray", { enumerable: true, get: function
 var ObjectCollection_1 = require("./Lib/ObjectCollection");
 Object.defineProperty(exports, "ObjectCollection", { enumerable: true, get: function () { return ObjectCollection_1.ObjectCollection; } });
 
-},{"./DataBase":77,"./DataBase/api":76,"./DataBase/reference":78,"./DataBase/snapshot":79,"./Lib":96,"./Lib/Ascii85":80,"./Lib/DebugLogger":82,"./Lib/ID":83,"./Lib/ObjectCollection":84,"./Lib/PartialArray":86,"./Lib/PathInfo":87,"./Lib/Schema":88,"./Lib/SimpleCache":89,"./Lib/SimpleEventEmitter":90,"./Lib/SimpleObservable":91,"./Lib/Subscription":92,"./Lib/Transport":93,"./Lib/TypeMappings":94,"./Lib/Utils":95,"./Types":97}],99:[function(require,module,exports){
+},{"./DataBase":78,"./DataBase/api":77,"./DataBase/reference":79,"./DataBase/snapshot":80,"./Lib":97,"./Lib/Ascii85":81,"./Lib/DebugLogger":83,"./Lib/ID":84,"./Lib/ObjectCollection":85,"./Lib/PartialArray":87,"./Lib/PathInfo":88,"./Lib/Schema":89,"./Lib/SimpleCache":90,"./Lib/SimpleEventEmitter":91,"./Lib/SimpleObservable":92,"./Lib/Subscription":93,"./Lib/Transport":94,"./Lib/TypeMappings":95,"./Lib/Utils":96,"./Types":98}],100:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = {
@@ -16195,7 +17270,7 @@ exports.default = {
     },
 };
 
-},{}],100:[function(require,module,exports){
+},{}],101:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -16359,7 +17434,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],101:[function(require,module,exports){
+},{}],102:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -16545,7 +17620,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],102:[function(require,module,exports){
+},{}],103:[function(require,module,exports){
 "use strict";
 /**
  * Initialize backoff timer with `opts`.
@@ -16617,7 +17692,7 @@ Backoff.prototype.setJitter = function (jitter) {
     this.jitter = jitter;
 };
 
-},{}],103:[function(require,module,exports){
+},{}],104:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -16688,7 +17763,7 @@ Object.defineProperty(exports, "protocol", { enumerable: true, get: function () 
 
 module.exports = lookup;
 
-},{"./manager.js":104,"./socket.js":106,"./url.js":107,"debug":41,"socket.io-parser":109}],104:[function(require,module,exports){
+},{"./manager.js":105,"./socket.js":107,"./url.js":108,"debug":42,"socket.io-parser":110}],105:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -17093,7 +18168,7 @@ class Manager extends component_emitter_1.Emitter {
 }
 exports.Manager = Manager;
 
-},{"./contrib/backo2.js":102,"./on.js":105,"./socket.js":106,"@socket.io/component-emitter":35,"debug":41,"engine.io-client":48,"socket.io-parser":109}],105:[function(require,module,exports){
+},{"./contrib/backo2.js":103,"./on.js":106,"./socket.js":107,"@socket.io/component-emitter":36,"debug":42,"engine.io-client":49,"socket.io-parser":110}],106:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.on = void 0;
@@ -17105,7 +18180,7 @@ function on(obj, ev, fn) {
 }
 exports.on = on;
 
-},{}],106:[function(require,module,exports){
+},{}],107:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -18017,7 +19092,7 @@ class Socket extends component_emitter_1.Emitter {
 }
 exports.Socket = Socket;
 
-},{"./on.js":105,"@socket.io/component-emitter":35,"debug":41,"socket.io-parser":109}],107:[function(require,module,exports){
+},{"./on.js":106,"@socket.io/component-emitter":36,"debug":42,"socket.io-parser":110}],108:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -18089,7 +19164,7 @@ function url(uri, path = "", loc) {
 }
 exports.url = url;
 
-},{"debug":41,"engine.io-client":48}],108:[function(require,module,exports){
+},{"debug":42,"engine.io-client":49}],109:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.reconstructPacket = exports.deconstructPacket = void 0;
@@ -18179,7 +19254,7 @@ function _reconstructPacket(data, buffers) {
     return data;
 }
 
-},{"./is-binary.js":110}],109:[function(require,module,exports){
+},{"./is-binary.js":111}],110:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Decoder = exports.Encoder = exports.PacketType = exports.protocol = void 0;
@@ -18502,7 +19577,7 @@ class BinaryReconstructor {
     }
 }
 
-},{"./binary.js":108,"./is-binary.js":110,"@socket.io/component-emitter":35,"debug":41}],110:[function(require,module,exports){
+},{"./binary.js":109,"./is-binary.js":111,"@socket.io/component-emitter":36,"debug":42}],111:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.hasBinary = exports.isBinary = void 0;
@@ -18559,7 +19634,7 @@ function hasBinary(obj, toJSON) {
 }
 exports.hasBinary = hasBinary;
 
-},{}],111:[function(require,module,exports){
+},{}],112:[function(require,module,exports){
 var indexOf = function (xs, item) {
     if (xs.indexOf) return xs.indexOf(item);
     else for (var i = 0; i < xs.length; i++) {

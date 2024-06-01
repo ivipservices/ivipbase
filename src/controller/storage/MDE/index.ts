@@ -52,10 +52,17 @@ export class MDESettings {
 	/**
 	 * Uma função que realiza um get/pesquisa de dados na base de dados com base em uma expressão regular resultada da propriedade pathToRegex em MDE.
 	 *
-	 * @type {((expression: RegExp) => Promise<StorageNodeInfo[]> | StorageNodeInfo[]) | undefined}
+	 * @type {((database: database: string, expression: {regex: RegExp, query: string[] }, simplifyValues?: boolean) => Promise<StorageNodeInfo[]> | StorageNodeInfo[]) | undefined}
 	 * @default undefined
 	 */
-	getMultiple: (database: string, expression: RegExp, simplifyValues?: boolean) => Promise<StorageNodeInfo[]> | StorageNodeInfo[] = () => [];
+	getMultiple: (
+		database: string,
+		expression: {
+			regex: RegExp;
+			query: string[];
+		},
+		simplifyValues?: boolean,
+	) => Promise<StorageNodeInfo[]> | StorageNodeInfo[] = () => [];
 
 	/**
 	 * Uma função que realiza um set de um node na base de dados com base em um path especificado.
@@ -181,15 +188,17 @@ export default class MDE extends SimpleEventEmitter {
 	}
 
 	/**
-	 * Converte um caminho em uma expressão regular.
+	 * Converte um caminho em uma consulta de expressão regular e SQL LIKE pattern.
 	 *
-	 * @param {string} path - O caminho a ser convertido em expressão regular.
+	 * @param {string} path - O caminho a ser convertido.
 	 * @param {boolean} [onlyChildren=false] - Se verdadeiro, exporta apenas os filhos do node especificado.
 	 * @param {boolean} [allHeirs=false] - Se verdadeiro, exporta todos os descendentes em relação ao path especificado.
-	 * @returns {RegExp} - A expressão regular resultante.
+	 * @returns {{regex: RegExp, query: string[]}} - O objeto contendo a expressão regular e a query resultante.
 	 */
-	private pathToRegex(path: string, onlyChildren: boolean = false, allHeirs: boolean | number = false, includeAncestor: boolean = false): RegExp {
+	private preparePathQuery(path: string, onlyChildren: boolean = false, allHeirs: boolean | number = false, includeAncestor: boolean = false): { regex: RegExp; query: string[] } {
 		const pathsRegex: string[] = [];
+		const querys: string[] = [];
+		const pathsLike: string[] = [];
 
 		/**
 		 * Substitui o caminho por uma expressão regular.
@@ -203,15 +212,44 @@ export default class MDE extends SimpleEventEmitter {
 			return path;
 		};
 
+		/**
+		 * Substitui o caminho por um padrão SQL LIKE.
+		 * @param path - O caminho a ser convertido em um padrão SQL LIKE.
+		 * @returns {string} O caminho convertido em um padrão SQL LIKE.
+		 */
+		const replacePathToLike = (path: string): string => {
+			path = path.replace(/\/((\*)|(\$[^/\$]*))/g, "/%");
+			path = path.replace(/\[\*\]/g, "[%]");
+			path = path.replace(/\[(\d+)\]/g, "[$1]");
+			return path;
+		};
+
 		// Adiciona a expressão regular do caminho principal ao array.
 		pathsRegex.push(replasePathToRegex(path));
 
+		// Adiciona o padrão SQL LIKE do caminho principal ao array.
+		pathsLike.push(replacePathToLike(path).replace(/\/$/gi, ""));
+		querys.push(`LIKE '${replacePathToLike(path).replace(/\/$/gi, "")}'`);
+
 		if (onlyChildren) {
 			pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1})`));
+			pathsLike.forEach((exp) => querys.push(`LIKE '${exp}/%'`));
+			pathsLike.forEach((exp) => pathsLike.push(`${exp}/%`));
 		} else if (allHeirs === true) {
 			pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1,})`));
+			pathsLike.forEach((exp) => querys.push(`LIKE '${exp}/%'`));
+			pathsLike.forEach((exp) => pathsLike.push(`${exp}/%`));
 		} else if (typeof allHeirs === "number") {
 			pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1,${allHeirs}})`));
+			pathsLike.forEach((exp) => querys.push(`LIKE '${exp}/%'`));
+			pathsLike.forEach((exp) => pathsLike.push(`${exp}/%`));
+			// const p = pathsLike;
+			// let m = "/%";
+			// for (let i = 0; i < allHeirs; i++) {
+			// 	p.forEach((exp) => querys.push(`LIKE '${exp}${m}'`));
+			// 	p.forEach((exp) => pathsLike.push(`${exp}${m}`));
+			// 	m += "/%";
+			// }
 		}
 
 		let parent = PathInfo.get(path).parent;
@@ -220,16 +258,23 @@ export default class MDE extends SimpleEventEmitter {
 		if (includeAncestor) {
 			while (parent) {
 				pathsRegex.push(replasePathToRegex(parent.path));
+				pathsLike.push(replacePathToLike(parent.path).replace(/\/$/gi, ""));
+				querys.push(`LIKE '${replacePathToLike(parent.path).replace(/\/$/gi, "")}'`);
 				parent = parent.parent;
 			}
 		} else if (parent) {
 			pathsRegex.push(replasePathToRegex(parent.path));
+			pathsLike.push(replacePathToLike(parent.path).replace(/\/$/gi, ""));
+			querys.push(`LIKE '${replacePathToLike(parent.path).replace(/\/$/gi, "")}'`);
 		}
 
 		// Cria a expressão regular completa combinando as expressões individuais no array.
 		const fullRegex: RegExp = new RegExp(`^(${pathsRegex.map((e) => e.replace(/\/$/gi, "/?")).join("$)|(")}$)`);
 
-		return fullRegex;
+		return {
+			regex: fullRegex,
+			query: querys.filter((e, i, l) => l.indexOf(e) === i && e !== ""),
+		};
 	}
 
 	/**
@@ -283,14 +328,14 @@ export default class MDE extends SimpleEventEmitter {
 		includeAncestor: boolean = false,
 		simplifyValues: boolean = false,
 	): Promise<StorageNodeInfo[]> {
-		const reg = this.pathToRegex(path, onlyChildren, allHeirs, includeAncestor);
+		const expression = this.preparePathQuery(path, onlyChildren, allHeirs, includeAncestor);
 
 		// console.log("getNodesBy::1::", reg.source);
 
 		let result: StorageNodeInfo[] = [];
 
 		try {
-			result = await this.settings.getMultiple(database, reg, simplifyValues);
+			result = await this.settings.getMultiple(database, expression, simplifyValues);
 		} catch {}
 
 		// console.log("getNodesBy::2::", JSON.stringify(result, null, 4));

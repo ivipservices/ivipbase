@@ -145,20 +145,20 @@ export class SequelizeStorage extends CustomStorage {
 		}
 	}
 
-	async getMultiple(database: string, expression: RegExp, simplifyValues: boolean = false): Promise<StorageNodeInfo[]> {
+	async getMultiple(database: string, { regex }: { regex: RegExp; query: string[] }, simplifyValues: boolean = false): Promise<StorageNodeInfo[]> {
 		if (!(database in this.sequelize.models && database in this.pending)) {
 			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
 		}
 
 		try {
-			const pendingList: any[] = Array.from(this.pending[database].values()).filter((row) => expression.test(row.path));
+			const pendingList: any[] = Array.from(this.pending[database].values()).filter((row) => regex.test(row.path));
 
 			const rows = await this.sequelize.models[database]
 				.findAll({
 					attributes: ["path", "type", "text_value", "json_value", "revision", "revision_nr", "created", "modified"],
 				})
 				.then((rows) => {
-					return Promise.resolve(rows.filter((row) => "path" in row && typeof row["path"] === "string" && expression.test(row["path"])));
+					return Promise.resolve(rows.filter((row) => "path" in row && typeof row["path"] === "string" && regex.test(row["path"])));
 				});
 
 			const list = await Promise.all(

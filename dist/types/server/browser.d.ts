@@ -106,6 +106,7 @@ export type ServerInitialSettings<LocalServer = any> = Partial<{
      */
     transactions: Partial<DataBaseServerTransactionSettings>;
     defineRules: RulesData;
+    localPath: string;
 }>;
 export declare class ServerSettings<LocalServer = any> {
     logLevel: "verbose" | "log" | "warn" | "error";
@@ -120,6 +121,7 @@ export declare class ServerSettings<LocalServer = any> {
     serverVersion: string;
     transactions: DataBaseServerTransactionSettings;
     defineRules?: RulesData;
+    localPath: string;
     constructor(options?: ServerInitialSettings<LocalServer>);
 }
 export declare const isPossiblyServer = false;

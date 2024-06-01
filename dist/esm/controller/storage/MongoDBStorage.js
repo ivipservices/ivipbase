@@ -92,13 +92,13 @@ export class MongodbStorage extends CustomStorage {
         }
         return uri;
     }
-    async getMultiple(database, expression) {
+    async getMultiple(database, { regex }) {
         if (!this.isConnected || !this.database[database] || !this.database[database].collection) {
             throw ERROR_FACTORY.create("db-not-found" /* AppError.DB_NOT_FOUND */, { dbName: database });
         }
         const query = {
             path: {
-                $regex: expression,
+                $regex: regex,
             },
         };
         return await this.database[database].collection.find(query).toArray();

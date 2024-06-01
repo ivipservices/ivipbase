@@ -108,6 +108,7 @@ export class ServerSettings {
         this.allowOrigin = "*";
         this.trustProxy = true;
         this.serverVersion = "1.0.0";
+        this.localPath = "./data";
         if (typeof options.logLevel === "string" && ["verbose", "log", "warn", "error"].includes(options.logLevel)) {
             this.logLevel = options.logLevel;
         }
@@ -136,6 +137,9 @@ export class ServerSettings {
         this.transactions = new DataBaseServerTransactionSettings(options.transactions ?? {});
         if (typeof options.defineRules === "object") {
             this.defineRules = options.defineRules;
+        }
+        if (typeof options.localPath === "string") {
+            this.localPath = options.localPath;
         }
     }
 }

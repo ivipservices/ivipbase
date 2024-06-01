@@ -13,7 +13,10 @@ export declare abstract class CustomStorage extends MDE {
     get dbName(): string;
     set dbName(value: string);
     get debug(): DebugLogger;
-    abstract getMultiple(database: string, expression: RegExp): Promise<StorageNodeInfo[]>;
+    abstract getMultiple(database: string, expression: {
+        regex: RegExp;
+        query: string[];
+    }): Promise<StorageNodeInfo[]>;
     abstract setNode(database: string, path: string, content: StorageNode, node: StorageNodeInfo): Promise<any>;
     abstract removeNode(database: string, path: string, content: StorageNode, node: StorageNodeInfo): Promise<any>;
 }

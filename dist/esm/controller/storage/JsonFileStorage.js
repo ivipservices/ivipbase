@@ -45,13 +45,13 @@ export class JsonFileStorage extends CustomStorage {
             }
         });
     }
-    async getMultiple(database, expression) {
+    async getMultiple(database, { regex }) {
         if (!this.data[database]) {
             throw ERROR_FACTORY.create("db-not-found" /* AppError.DB_NOT_FOUND */, { dbName: database });
         }
         const list = [];
         this.data[database].forEach((content, path) => {
-            if (expression.test(path)) {
+            if (regex.test(path)) {
                 if (content) {
                     list.push({ path, content });
                 }

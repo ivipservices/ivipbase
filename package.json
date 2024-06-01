@@ -23,6 +23,7 @@
 		"./dist/esm/server/index.js": "./dist/esm/server/browser.js",
 		"./dist/cjs/database/services/sandbox/index.ts": "./dist/cjs/database/services/sandbox/browser.ts",
 		"./dist/esm/database/services/sandbox/index.ts": "./dist/esm/database/services/sandbox/browser.ts",
+		"./dist/cjs/ipc/IPCPeer/index.ts": "./dist/cjs/ipc/IPCPeer/browser.ts",
 		"./dist/esm/ipc/IPCPeer/index.ts": "./dist/esm/ipc/IPCPeer/browser.ts",
 		"./dist/cjs/app/settings/index.js": "./dist/cjs/app/settings/browser.js",
 		"./dist/esm/app/settings/index.js": "./dist/esm/app/settings/browser.js",

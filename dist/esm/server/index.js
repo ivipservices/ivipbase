@@ -1,14 +1,28 @@
 import { AbstractLocalServer, ServerSettings, ServerNotReadyError } from "./browser.js";
 import * as express from "express";
-import { addMetadataRoutes, addDataRoutes, addAuthenticionRoutes, addWebManagerRoutes } from "./routes/index.js";
+import { addMetadataRoutes, addDataRoutes, addAuthenticionRoutes, addWebManagerRoutes, addStorageRoutes } from "./routes/index.js";
 import { createServer } from "http";
 import { add404Middleware, addCacheMiddleware, addCorsMiddleware } from "./middleware/index.js";
 import { setupAuthentication } from "./services/auth.js";
 import { SimpleCache } from "ivipbase-core";
 import { addWebsocketServer } from "./websocket/index.js";
+import formData from "express-form-data";
+import path from "path";
+import fs from "fs";
 const createExpress = express.default ?? express;
 export { ServerSettings };
 export const isPossiblyServer = true;
+/**
+ * Cria pastas de acordo com um caminho especificado, se não existirem.
+ *
+ * @param {string} dirPath - O caminho das pastas a serem criadas.
+ */
+const createDirectories = (dirPath) => {
+    // Usa path.resolve para garantir um caminho absoluto.
+    const absolutePath = path.resolve(dirPath);
+    // Usa fs.mkdirSync com { recursive: true } para criar todas as pastas necessárias.
+    fs.mkdirSync(absolutePath, { recursive: true });
+};
 export class LocalServer extends AbstractLocalServer {
     constructor(localApp, settings = {}) {
         super(localApp, settings);
@@ -29,6 +43,15 @@ export class LocalServer extends AbstractLocalServer {
         this.app.set("trust proxy", this.settings.trustProxy);
         // Analisa os corpos de solicitação JSON
         this.app.use(express.json({ limit: this.settings.maxPayloadSize })); // , extended: true ?
+        const dir_temp = path.join(this.settings.localPath, "./temp");
+        createDirectories(dir_temp);
+        this.app.use(formData.parse({
+            uploadDir: path.resolve(this.settings.localPath, "./temp"),
+            autoClean: true,
+        }));
+        this.app.use(formData.format());
+        this.app.use(formData.stream());
+        this.app.use(formData.union());
         this.app.use(`/${this.settings.rootPath}`, this.router);
         // Adiciona middleware de CORS
         addCorsMiddleware(this);
@@ -51,6 +74,7 @@ export class LocalServer extends AbstractLocalServer {
             (await import("./middleware/swagger.js")).addMiddleware(this);
         }
         addDataRoutes(this);
+        addStorageRoutes(this);
         addWebManagerRoutes(this);
         this.extend = (database, method, ext_path, handler) => {
             const route = `/ext/${database}/${ext_path}`;

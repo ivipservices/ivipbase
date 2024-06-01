@@ -16,7 +16,10 @@ export declare class SequelizeStorage extends CustomStorage {
     private pending;
     constructor(database: string | string[], options?: Partial<SequelizeSettings>);
     initialize(): Promise<void>;
-    getMultiple(database: string, expression: RegExp, simplifyValues?: boolean): Promise<StorageNodeInfo[]>;
+    getMultiple(database: string, { regex }: {
+        regex: RegExp;
+        query: string[];
+    }, simplifyValues?: boolean): Promise<StorageNodeInfo[]>;
     setNode(database: string, path: string, content: StorageNode): Promise<void>;
     removeNode(database: string, path: string): Promise<void>;
 }

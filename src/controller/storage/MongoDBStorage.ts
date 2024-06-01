@@ -130,14 +130,14 @@ export class MongodbStorage extends CustomStorage {
 		return uri;
 	}
 
-	async getMultiple(database: string, expression: RegExp): Promise<StorageNodeInfo[]> {
+	async getMultiple(database: string, { regex }: { regex: RegExp; query: string[] }): Promise<StorageNodeInfo[]> {
 		if (!this.isConnected || !this.database[database] || !this.database[database].collection) {
 			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
 		}
 
 		const query = {
 			path: {
-				$regex: expression,
+				$regex: regex,
 			},
 		};
 

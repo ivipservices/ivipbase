@@ -37,10 +37,13 @@ export declare class MDESettings {
     /**
      * Uma função que realiza um get/pesquisa de dados na base de dados com base em uma expressão regular resultada da propriedade pathToRegex em MDE.
      *
-     * @type {((expression: RegExp) => Promise<StorageNodeInfo[]> | StorageNodeInfo[]) | undefined}
+     * @type {((database: database: string, expression: {regex: RegExp, query: string[] }, simplifyValues?: boolean) => Promise<StorageNodeInfo[]> | StorageNodeInfo[]) | undefined}
      * @default undefined
      */
-    getMultiple: (database: string, expression: RegExp, simplifyValues?: boolean) => Promise<StorageNodeInfo[]> | StorageNodeInfo[];
+    getMultiple: (database: string, expression: {
+        regex: RegExp;
+        query: string[];
+    }, simplifyValues?: boolean) => Promise<StorageNodeInfo[]> | StorageNodeInfo[];
     /**
      * Uma função que realiza um set de um node na base de dados com base em um path especificado.
      *
@@ -81,14 +84,14 @@ export default class MDE extends SimpleEventEmitter {
      */
     ready(callback?: () => void): Promise<void>;
     /**
-     * Converte um caminho em uma expressão regular.
+     * Converte um caminho em uma consulta de expressão regular e SQL LIKE pattern.
      *
-     * @param {string} path - O caminho a ser convertido em expressão regular.
+     * @param {string} path - O caminho a ser convertido.
      * @param {boolean} [onlyChildren=false] - Se verdadeiro, exporta apenas os filhos do node especificado.
      * @param {boolean} [allHeirs=false] - Se verdadeiro, exporta todos os descendentes em relação ao path especificado.
-     * @returns {RegExp} - A expressão regular resultante.
+     * @returns {{regex: RegExp, query: string[]}} - O objeto contendo a expressão regular e a query resultante.
      */
-    private pathToRegex;
+    private preparePathQuery;
     /**
      * Verifica se um caminho específico existe no nó.
      * @param {string} database - Nome do banco de dados.

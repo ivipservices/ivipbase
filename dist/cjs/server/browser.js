@@ -116,6 +116,7 @@ class ServerSettings {
         this.allowOrigin = "*";
         this.trustProxy = true;
         this.serverVersion = "1.0.0";
+        this.localPath = "./data";
         if (typeof options.logLevel === "string" && ["verbose", "log", "warn", "error"].includes(options.logLevel)) {
             this.logLevel = options.logLevel;
         }
@@ -144,6 +145,9 @@ class ServerSettings {
         this.transactions = new DataBaseServerTransactionSettings((_c = options.transactions) !== null && _c !== void 0 ? _c : {});
         if (typeof options.defineRules === "object") {
             this.defineRules = options.defineRules;
+        }
+        if (typeof options.localPath === "string") {
+            this.localPath = options.localPath;
         }
     }
 }

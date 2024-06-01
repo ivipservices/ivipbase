@@ -65,7 +65,7 @@ class MDESettings {
         /**
          * Uma função que realiza um get/pesquisa de dados na base de dados com base em uma expressão regular resultada da propriedade pathToRegex em MDE.
          *
-         * @type {((expression: RegExp) => Promise<StorageNodeInfo[]> | StorageNodeInfo[]) | undefined}
+         * @type {((database: database: string, expression: {regex: RegExp, query: string[] }, simplifyValues?: boolean) => Promise<StorageNodeInfo[]> | StorageNodeInfo[]) | undefined}
          * @default undefined
          */
         this.getMultiple = () => [];
@@ -161,15 +161,16 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         callback === null || callback === void 0 ? void 0 : callback();
     }
     /**
-     * Converte um caminho em uma expressão regular.
+     * Converte um caminho em uma consulta de expressão regular e SQL LIKE pattern.
      *
-     * @param {string} path - O caminho a ser convertido em expressão regular.
+     * @param {string} path - O caminho a ser convertido.
      * @param {boolean} [onlyChildren=false] - Se verdadeiro, exporta apenas os filhos do node especificado.
      * @param {boolean} [allHeirs=false] - Se verdadeiro, exporta todos os descendentes em relação ao path especificado.
-     * @returns {RegExp} - A expressão regular resultante.
+     * @returns {{regex: RegExp, query: string[]}} - O objeto contendo a expressão regular e a query resultante.
      */
-    pathToRegex(path, onlyChildren = false, allHeirs = false, includeAncestor = false) {
+    preparePathQuery(path, onlyChildren = false, allHeirs = false, includeAncestor = false) {
         const pathsRegex = [];
+        const pathsLike = [];
         /**
          * Substitui o caminho por uma expressão regular.
          * @param path - O caminho a ser convertido em expressão regular.
@@ -181,31 +182,58 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
             path = path.replace(/\[(\d+)\]/g, "\\[$1\\]");
             return path;
         };
+        /**
+         * Substitui o caminho por um padrão SQL LIKE.
+         * @param path - O caminho a ser convertido em um padrão SQL LIKE.
+         * @returns {string} O caminho convertido em um padrão SQL LIKE.
+         */
+        const replacePathToLike = (path) => {
+            path = path.replace(/\/((\*)|(\$[^/\$]*))/g, "/%");
+            path = path.replace(/\[\*\]/g, "[%]");
+            path = path.replace(/\[(\d+)\]/g, "[$1]");
+            return path;
+        };
         // Adiciona a expressão regular do caminho principal ao array.
         pathsRegex.push(replasePathToRegex(path));
+        // Adiciona o padrão SQL LIKE do caminho principal ao array.
+        pathsLike.push(replacePathToLike(path));
         if (onlyChildren) {
             pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1})`));
+            pathsLike.forEach((exp) => pathsLike.push(`${exp}/%`));
         }
         else if (allHeirs === true) {
             pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1,})`));
+            pathsLike.forEach((exp) => pathsLike.push(`${exp}%`));
         }
         else if (typeof allHeirs === "number") {
             pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1,${allHeirs}})`));
+            pathsLike.forEach((exp) => {
+                let heirsPattern = exp;
+                for (let i = 0; i < allHeirs; i++) {
+                    heirsPattern += "/%";
+                }
+                pathsLike.push(heirsPattern);
+            });
         }
         let parent = ivipbase_core_1.PathInfo.get(path).parent;
         // Obtém o caminho pai e adiciona a expressão regular correspondente ao array.
         if (includeAncestor) {
             while (parent) {
                 pathsRegex.push(replasePathToRegex(parent.path));
+                pathsLike.push(replacePathToLike(parent.path));
                 parent = parent.parent;
             }
         }
         else if (parent) {
             pathsRegex.push(replasePathToRegex(parent.path));
+            pathsLike.push(replacePathToLike(parent.path));
         }
         // Cria a expressão regular completa combinando as expressões individuais no array.
         const fullRegex = new RegExp(`^(${pathsRegex.map((e) => e.replace(/\/$/gi, "/?")).join("$)|(")}$)`);
-        return fullRegex;
+        return {
+            regex: fullRegex,
+            query: pathsLike,
+        };
     }
     /**
      * Verifica se um caminho específico existe no nó.
@@ -246,11 +274,11 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
      * @throws {Error} - Lança um erro se ocorrer algum problema durante a busca assíncrona.
      */
     async getNodesBy(database, path, onlyChildren = false, allHeirs = false, includeAncestor = false, simplifyValues = false) {
-        const reg = this.pathToRegex(path, onlyChildren, allHeirs, includeAncestor);
+        const expression = this.preparePathQuery(path, onlyChildren, allHeirs, includeAncestor);
         // console.log("getNodesBy::1::", reg.source);
         let result = [];
         try {
-            result = await this.settings.getMultiple(database, reg, simplifyValues);
+            result = await this.settings.getMultiple(database, expression, simplifyValues);
         }
         catch (_a) { }
         // console.log("getNodesBy::2::", JSON.stringify(result, null, 4));

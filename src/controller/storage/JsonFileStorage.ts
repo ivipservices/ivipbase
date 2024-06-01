@@ -64,14 +64,14 @@ export class JsonFileStorage extends CustomStorage {
 		});
 	}
 
-	async getMultiple(database: string, expression: RegExp): Promise<StorageNodeInfo[]> {
+	async getMultiple(database: string, { regex }: { regex: RegExp; query: string[] }): Promise<StorageNodeInfo[]> {
 		if (!this.data[database]) {
 			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
 		}
 
 		const list: StorageNodeInfo[] = [];
 		this.data[database].forEach((content, path) => {
-			if (expression.test(path)) {
+			if (regex.test(path)) {
 				if (content) {
 					list.push({ path, content });
 				}

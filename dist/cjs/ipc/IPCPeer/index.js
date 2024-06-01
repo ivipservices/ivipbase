@@ -34,7 +34,7 @@ class IPCPeer extends ipc_1.IvipBaseIPCPeer {
         var _a, _b;
         const pm2id = ((_a = process.env) === null || _a === void 0 ? void 0 : _a.NODE_APP_INSTANCE) || ((_b = process.env) === null || _b === void 0 ? void 0 : _b.pm_id);
         if (typeof pm2id === "string" && pm2id !== "0") {
-            throw new Error(`To use AceBase with pm2 in cluster mode, use an AceBase IPC server to enable interprocess communication.`);
+            throw new Error(`To use IVIPBASE with pm2 in cluster mode, use an IVIPBASE IPC server to enable interprocess communication.`);
         }
         const peerId = cluster.isMaster ? masterPeerId : cluster.worker.id.toString();
         super(peerId, name);

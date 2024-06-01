@@ -9,7 +9,10 @@ export declare class JsonFileStorage extends CustomStorage {
     private data;
     private timeForSaveFile?;
     constructor(database: string | string[], options?: Partial<JsonFileStorageSettings>);
-    getMultiple(database: string, expression: RegExp): Promise<StorageNodeInfo[]>;
+    getMultiple(database: string, { regex }: {
+        regex: RegExp;
+        query: string[];
+    }): Promise<StorageNodeInfo[]>;
     setNode(database: string, path: string, content: StorageNode, node: StorageNodeInfo): Promise<void>;
     removeNode(database: string, path: string, content: StorageNode, node: StorageNodeInfo): Promise<void>;
     saveFile(): void;

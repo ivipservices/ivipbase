@@ -1,4 +1,5 @@
 export * from "./base64";
+export * as Mime from "./Mime";
 /**
  * Substituição para console.assert, lança um erro se a condição não for atendida.
  * @param condition Condição 'truthy'
@@ -10,4 +11,5 @@ export declare function removeNulls(obj: any): any;
 export declare function joinObjects(obj1: any, ...objs: any[]): any;
 export declare function replaceUndefined(obj: any): any;
 export declare function sanitizeEmailPrefix(email: string): string;
+export declare const getExtension: (filename: string) => string;
 //# sourceMappingURL=index.d.ts.map

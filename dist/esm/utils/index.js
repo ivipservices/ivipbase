@@ -1,5 +1,6 @@
 import { PathInfo } from "ivipbase-core";
 export * from "./base64/index.js";
+export * as Mime from "./Mime.js";
 /**
  * Substituição para console.assert, lança um erro se a condição não for atendida.
  * @param condition Condição 'truthy'
@@ -80,4 +81,13 @@ export function sanitizeEmailPrefix(email) {
         .join("");
     return sanitizedPrefix;
 }
+export const getExtension = (filename) => {
+    try {
+        const i = filename.lastIndexOf(".");
+        return i < 0 ? "" : filename.substr(i);
+    }
+    catch {
+        return "";
+    }
+};
 //# sourceMappingURL=index.js.map

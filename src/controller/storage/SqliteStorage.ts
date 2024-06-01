@@ -144,36 +144,36 @@ export class SqliteStorage extends CustomStorage {
 		});
 	}
 
-	private async _getByRegex(table: string, param: string, expression: RegExp, simplifyValues: boolean = false): Promise<any[]> {
-		const sql = `SELECT path, type, text_value, json_value, revision, revision_nr, created, modified FROM ${table}`;
-		const rows = await this._get(sql);
-		const list = rows.filter((row) => param in row && expression.test(row[param]));
-		const promises = list.map(async (row: any) => {
-			if ([VALUE_TYPES.BINARY].includes(row.type) && !simplifyValues) {
-				return await this._getOne(`SELECT path, binary_value FROM ${table} WHERE path = '${row.path}'`)
-					.then(({ binary_value }) => {
-						row.binary_value = binary_value;
-						return Promise.resolve(row);
-					})
-					.catch((err) => {
-						return Promise.resolve(row);
-					});
-			}
-
-			return Promise.resolve(row);
-		});
-
-		return await Promise.all(promises);
-	}
-
-	async getMultiple(database: string, expression: RegExp, simplifyValues: boolean = false): Promise<StorageNodeInfo[]> {
+	async getMultiple(database: string, { regex, query }: { regex: RegExp; query: string[] }, simplifyValues: boolean = false): Promise<StorageNodeInfo[]> {
 		if (!(database in this.pending)) {
 			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
 		}
 
-		const pendingList: any[] = Array.from(this.pending[database].values()).filter((row) => expression.test(row.path));
+		const pendingList: any[] = Array.from(this.pending[database].values()).filter((row) => regex.test(row.path));
 
-		const list = await this._getByRegex(database, "path", expression, simplifyValues);
+		const sql = `SELECT path, type, revision, revision_nr, created, modified FROM ${database} WHERE ${query.map((p) => `path ${p}`).join(" OR ")}`;
+
+		const rows = await this._get(sql);
+		const list = await Promise.all(
+			rows
+				.filter((row) => "path" in row && regex.test(row["path"]))
+				.map(async (row: any) => {
+					if (!simplifyValues) {
+						return await this._getOne(`SELECT path, text_value, binary_value, json_value FROM ${database} WHERE path = '${row.path}'`)
+							.then(({ binary_value, text_value, json_value }) => {
+								row.text_value = text_value;
+								row.binary_value = binary_value;
+								row.json_value = json_value;
+								return Promise.resolve(row);
+							})
+							.catch((err) => {
+								return Promise.resolve(row);
+							});
+					}
+
+					return Promise.resolve(row);
+				}),
+		);
 
 		const result: StorageNodeInfo[] = pendingList
 			.concat(list)

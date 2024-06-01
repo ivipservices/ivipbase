@@ -13,7 +13,7 @@ export class IPCPeer extends IvipBaseIPCPeer {
 	constructor(protected name: string) {
 		const pm2id = process.env?.NODE_APP_INSTANCE || process.env?.pm_id;
 		if (typeof pm2id === "string" && pm2id !== "0") {
-			throw new Error(`To use AceBase with pm2 in cluster mode, use an AceBase IPC server to enable interprocess communication.`);
+			throw new Error(`To use IVIPBASE with pm2 in cluster mode, use an IVIPBASE IPC server to enable interprocess communication.`);
 		}
 
 		const peerId = cluster.isMaster ? masterPeerId : (cluster.worker as Cluster.Worker).id.toString();

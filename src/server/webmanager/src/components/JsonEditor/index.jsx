@@ -973,7 +973,7 @@ const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, checkRemove
 		return () => {
 			clearTimeout(time);
 		};
-	}, [loadData, currentPath, isExpanded]);
+	}, [loadData, actualPath, isExpanded]);
 
 	const applyNewChildres = () => {
 		if (newChildres.length <= 0) {

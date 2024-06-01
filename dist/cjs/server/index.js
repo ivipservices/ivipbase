@@ -22,6 +22,9 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LocalServer = exports.isPossiblyServer = exports.ServerSettings = void 0;
@@ -34,8 +37,22 @@ const middleware_1 = require("./middleware");
 const auth_1 = require("./services/auth");
 const ivipbase_core_1 = require("ivipbase-core");
 const websocket_1 = require("./websocket");
+const express_form_data_1 = __importDefault(require("express-form-data"));
+const path_1 = __importDefault(require("path"));
+const fs_1 = __importDefault(require("fs"));
 const createExpress = (_a = express.default) !== null && _a !== void 0 ? _a : express;
 exports.isPossiblyServer = true;
+/**
+ * Cria pastas de acordo com um caminho especificado, se não existirem.
+ *
+ * @param {string} dirPath - O caminho das pastas a serem criadas.
+ */
+const createDirectories = (dirPath) => {
+    // Usa path.resolve para garantir um caminho absoluto.
+    const absolutePath = path_1.default.resolve(dirPath);
+    // Usa fs.mkdirSync com { recursive: true } para criar todas as pastas necessárias.
+    fs_1.default.mkdirSync(absolutePath, { recursive: true });
+};
 class LocalServer extends browser_1.AbstractLocalServer {
     constructor(localApp, settings = {}) {
         super(localApp, settings);
@@ -57,6 +74,15 @@ class LocalServer extends browser_1.AbstractLocalServer {
         this.app.set("trust proxy", this.settings.trustProxy);
         // Analisa os corpos de solicitação JSON
         this.app.use(express.json({ limit: this.settings.maxPayloadSize })); // , extended: true ?
+        const dir_temp = path_1.default.join(this.settings.localPath, "./temp");
+        createDirectories(dir_temp);
+        this.app.use(express_form_data_1.default.parse({
+            uploadDir: path_1.default.resolve(this.settings.localPath, "./temp"),
+            autoClean: true,
+        }));
+        this.app.use(express_form_data_1.default.format());
+        this.app.use(express_form_data_1.default.stream());
+        this.app.use(express_form_data_1.default.union());
         this.app.use(`/${this.settings.rootPath}`, this.router);
         // Adiciona middleware de CORS
         (0, middleware_1.addCorsMiddleware)(this);
@@ -79,6 +105,7 @@ class LocalServer extends browser_1.AbstractLocalServer {
             (await Promise.resolve().then(() => __importStar(require("./middleware/swagger")))).addMiddleware(this);
         }
         (0, routes_1.addDataRoutes)(this);
+        (0, routes_1.addStorageRoutes)(this);
         (0, routes_1.addWebManagerRoutes)(this);
         this.extend = (database, method, ext_path, handler) => {
             const route = `/ext/${database}/${ext_path}`;

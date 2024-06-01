@@ -20,7 +20,10 @@ export declare class MongodbStorage extends CustomStorage {
     private connect;
     private getCollectionBy;
     get mongoUri(): string;
-    getMultiple(database: string, expression: RegExp): Promise<StorageNodeInfo[]>;
+    getMultiple(database: string, { regex }: {
+        regex: RegExp;
+        query: string[];
+    }): Promise<StorageNodeInfo[]>;
     setNode(database: string, path: string, content: StorageNode, node: StorageNodeInfo): Promise<void>;
     removeNode(database: string, path: string, content: StorageNode, node: StorageNodeInfo): Promise<void>;
 }

@@ -10,13 +10,26 @@ var __createBinding = (this && this.__createBinding) || (Object.create ? (functi
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
 }));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
 var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sanitizeEmailPrefix = exports.replaceUndefined = exports.joinObjects = exports.removeNulls = exports.pathValueToObject = exports.assert = void 0;
+exports.getExtension = exports.sanitizeEmailPrefix = exports.replaceUndefined = exports.joinObjects = exports.removeNulls = exports.pathValueToObject = exports.assert = exports.Mime = void 0;
 const ivipbase_core_1 = require("ivipbase-core");
 __exportStar(require("./base64"), exports);
+exports.Mime = __importStar(require("./Mime"));
 /**
  * Substituição para console.assert, lança um erro se a condição não for atendida.
  * @param condition Condição 'truthy'
@@ -103,4 +116,14 @@ function sanitizeEmailPrefix(email) {
     return sanitizedPrefix;
 }
 exports.sanitizeEmailPrefix = sanitizeEmailPrefix;
+const getExtension = (filename) => {
+    try {
+        const i = filename.lastIndexOf(".");
+        return i < 0 ? "" : filename.substr(i);
+    }
+    catch (_a) {
+        return "";
+    }
+};
+exports.getExtension = getExtension;
 //# sourceMappingURL=index.js.map
