@@ -139,6 +139,25 @@ const DataBaseEditor = () => {
 			}
 			return Promise.resolve(value);
 		});
+
+		refDatabaseEditor.current.subscribeMutated((path, callback) => {
+			// Create 3 subscriptions, combine them into 1
+			path = path ?? "";
+			const ref = db.ref(path);
+
+			// Subscribe to events
+			const mutated = ref.on("mutated").subscribe((snap) => {
+				const mutatedPath = snap.ref.path;
+				const newValue = snap.val();
+				callback(mutatedPath, newValue);
+			});
+
+			return {
+				stop() {
+					mutated.stop();
+				},
+			};
+		});
 	}, [refDatabaseEditor.current]);
 
 	return (
