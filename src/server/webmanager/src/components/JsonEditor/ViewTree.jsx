@@ -56,15 +56,35 @@ export const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, chec
 			const event = subscribeMutated(resolveArrayPath(actualPath), (path, value) => {
 				const isPathValid = resolveArrayPath(path).startsWith(resolveArrayPath(actualPath));
 				const isPathExact = resolveArrayPath(path) === resolveArrayPath(actualPath);
+				const isChild = isPathValid && path.length === actualPath.length + 1;
 
 				if (isPathValid) {
 					if (!isPathExact) {
 						emitNotify("change", true);
+					} else if (isChild) {
+						setData((data) => {
+							if (!Array.isArray(data?.children?.list)) {
+								return data;
+							}
+
+							const key = path[path.length - 1];
+							const type = getValueType(value);
+
+							const index = data.children.list.findIndex((it) => it.key === key);
+
+							beforeValues.current[key] = data.children.list[index]?.value ?? "";
+
+							data.children.list.unshift({ key, value, type });
+							data.children.list = data.children.list.filter(({ key }, i, l) => {
+								return l.findIndex((it) => it.key === key) === i;
+							});
+
+							return { ...data };
+						});
 					} else if (value === null) {
 						emitNotify("remove");
 					} else {
-						emitNotify("change", false);
-						setData(value);
+						emitNotify("change", true);
 					}
 				}
 
@@ -228,7 +248,6 @@ export const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, chec
 	};
 
 	const onChildreChange = async (key, value, type) => {
-		console.log("onChildreChange", key, value, type);
 		await onChange(resolveArrayPath(actualPath.concat([key])), value, type);
 		setData((data) => {
 			if (!Array.isArray(data?.children?.list)) {
@@ -245,6 +264,15 @@ export const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, chec
 
 			return { ...data };
 		});
+	};
+
+	const subscribeMutatedHandler = (path, callback) => {
+		subscribeMutatedRef.current.set(path, callback);
+		return {
+			stop: () => {
+				subscribeMutatedRef.current.delete(path);
+			},
+		};
 	};
 
 	const { type, value, children, exists = false } = data ?? {};
@@ -435,17 +463,11 @@ export const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, chec
 													children: {},
 													exists: true,
 												}}
-												subscribeMutated={(path, callback) => {
-													subscribeMutatedRef.current.set(path, callback);
-													return {
-														stop: () => {
-															subscribeMutatedRef.current.delete(path);
-														},
-													};
-												}}
+												subscribeMutated={subscribeMutatedHandler}
 											/>
 										) : (
 											<EditValueChild
+												parentPath={actualPath}
 												name={key}
 												value={valueToString(value)}
 												beforeValue={valueToString(beforeValues.current[key] ?? value)}
@@ -460,6 +482,7 @@ export const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, chec
 												goToPath={() => goToPath(path)}
 												exists={type !== "unknown"}
 												index={index + 1}
+												subscribeMutated={subscribeMutatedHandler}
 											/>
 										)}
 									</div>
@@ -522,6 +545,7 @@ export const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, chec
 		</div>
 	) : (
 		<EditValueChild
+			parentPath={actualPath.slice(0, -1)}
 			name={key}
 			value={valueToString(value)}
 			type={type}
@@ -533,6 +557,7 @@ export const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, chec
 			goToPath={() => goToPath(actualPath)}
 			exists={exists}
 			index={index + 1}
+			subscribeMutated={subscribeMutatedHandler}
 		/>
 	);
 };
