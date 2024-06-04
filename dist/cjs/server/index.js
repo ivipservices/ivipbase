@@ -50,8 +50,12 @@ exports.isPossiblyServer = true;
 const createDirectories = (dirPath) => {
     // Usa path.resolve para garantir um caminho absoluto.
     const absolutePath = path_1.default.resolve(dirPath);
-    // Usa fs.mkdirSync com { recursive: true } para criar todas as pastas necessárias.
-    fs_1.default.mkdirSync(absolutePath, { recursive: true });
+    if (!fs_1.default.existsSync(path_1.default.basename(absolutePath))) {
+        createDirectories(path_1.default.dirname(absolutePath));
+    }
+    if (!fs_1.default.existsSync(absolutePath)) {
+        fs_1.default.mkdirSync(absolutePath, { recursive: true });
+    }
 };
 class LocalServer extends browser_1.AbstractLocalServer {
     constructor(localApp, settings = {}) {
@@ -65,7 +69,7 @@ class LocalServer extends browser_1.AbstractLocalServer {
         this.clients = new Map();
         this.authCache = new ivipbase_core_1.SimpleCache({ expirySeconds: 300, cloneValues: false, maxEntries: 1000 });
         this.metaInfoCache = new ivipbase_core_1.SimpleCache({ expirySeconds: 500, cloneValues: false, maxEntries: 1000 });
-        this.tokenSalt = null;
+        this.tokenSalt = {};
         this.init();
     }
     async init() {
@@ -88,7 +92,7 @@ class LocalServer extends browser_1.AbstractLocalServer {
         (0, middleware_1.addCorsMiddleware)(this);
         // Adiciona middleware de cache
         (0, middleware_1.addCacheMiddleware)(this);
-        if (this.settings.auth.enabled) {
+        if (Object.values(this.settings.dbAuth).findIndex((auth) => auth.enabled) >= 0) {
             // Setup auth database
             await (0, auth_1.setupAuthentication)(this);
             // Add auth endpoints

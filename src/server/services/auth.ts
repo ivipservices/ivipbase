@@ -15,13 +15,13 @@ export const setupAuthentication = async (env: LocalServer) => {
 				.securityRef(dbName)
 				.child("token_salt")
 				.transaction((snap: any) => {
-					env.tokenSalt = snap.val();
-					if (!env.tokenSalt) {
+					env.tokenSalt[dbName] = snap.val() as any;
+					if (!env.tokenSalt[dbName]) {
 						const length = 256;
-						env.tokenSalt = randomBytes(Math.ceil(length / 2))
+						env.tokenSalt[dbName] = randomBytes(Math.ceil(length / 2))
 							.toString("hex")
 							.slice(0, length);
-						return env.tokenSalt;
+						return env.tokenSalt[dbName];
 					}
 				});
 
@@ -33,7 +33,7 @@ export const setupAuthentication = async (env: LocalServer) => {
 					let adminAccount: DbUserAccountDetails | null = snap.val();
 					if (adminAccount === null) {
 						// Use provided default password, or generate one:
-						const adminPassword = env.settings.auth.defaultAdminPassword || generatePassword();
+						const adminPassword = env.settings.dbAuth[dbName].defaultAdminPassword || generatePassword();
 
 						const pwd = createPasswordHash(adminPassword);
 						adminAccount = {
@@ -60,18 +60,18 @@ export const setupAuthentication = async (env: LocalServer) => {
 						env.debug.warn(`THIS IS ONLY SHOWN ONCE!`);
 						env.debug.warn(`__________________________________________________________________`);
 						return adminAccount; // Save it
-					} else if (env.settings.auth.defaultAdminPassword) {
+					} else if (env.settings.dbAuth[dbName].defaultAdminPassword) {
 						// Check if the default password was changed
-						let passwordHash;
+						let passwordHash: string;
 						if (!adminAccount.password_salt) {
 							// Old md5 password hash?
-							passwordHash = getOldPasswordHash(env.settings.auth.defaultAdminPassword);
+							passwordHash = getOldPasswordHash(env.settings.dbAuth[dbName].defaultAdminPassword as any);
 						} else {
-							passwordHash = getPasswordHash(env.settings.auth.defaultAdminPassword, adminAccount.password_salt);
+							passwordHash = getPasswordHash(env.settings.dbAuth[dbName].defaultAdminPassword as any, adminAccount.password_salt);
 						}
 
 						if (adminAccount.password !== passwordHash) {
-							const pwd = createPasswordHash(env.settings.auth.defaultAdminPassword);
+							const pwd = createPasswordHash(env.settings.dbAuth[dbName].defaultAdminPassword as any);
 							adminAccount.password = pwd.hash;
 							adminAccount.password_salt = pwd.salt;
 							return adminAccount; // Save it

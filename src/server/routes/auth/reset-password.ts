@@ -18,13 +18,15 @@ export type Request = RouteRequest<RequestQuery, RequestBody, ResponseBody>;
 
 export const addRoutes = (env: LocalServer) => {
 	const resetPassword = async (dbName: string, clientIp: string, code: string, newPassword: string) => {
-		if (!env.tokenSalt) {
+		const tokenSalt = env.tokenSalt[dbName];
+
+		if (!tokenSalt) {
 			throw new Error("Token salt not set in server settings");
 		}
 
 		const verification = (() => {
 			try {
-				return parseSignedPublicToken(code, env.tokenSalt);
+				return parseSignedPublicToken(code, tokenSalt);
 			} catch (err) {
 				throw new ResetPasswordError("invalid_code", (err as any).message);
 			}
@@ -89,7 +91,7 @@ export const addRoutes = (env: LocalServer) => {
 		const LOG_DETAILS = { ip: req.ip, uid: req.user?.uid ?? null };
 
 		try {
-			const user = await resetPassword(dbName, req.ip, details.code, details.password);
+			const user = await resetPassword(dbName, req.ip ?? "0.0.0.0", details.code, details.password);
 			// env.log.event(LOG_ACTION, { ...LOG_DETAILS, reset_uid: user.uid });
 			res.send("OK");
 		} catch (err) {

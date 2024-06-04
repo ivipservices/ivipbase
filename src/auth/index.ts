@@ -373,12 +373,6 @@ export class Auth extends SimpleEventEmitter {
 		super();
 		this.isValidAuth = app.isServer || !app.settings.isValidClient ? false : true;
 
-		app.onConnect((socket) => {
-			if (this._user?.accessToken && socket) {
-				socket.emit("signin", { dbName: this.database, accessToken: this._user.accessToken });
-			}
-		});
-
 		this.on("ready", () => {
 			this._ready = true;
 		});
@@ -421,14 +415,22 @@ export class Auth extends SimpleEventEmitter {
 	}
 
 	async initialize() {
-		this.app.onConnect(async () => {
+		this._ready = false;
+
+		this.app.onConnect(async (socket) => {
 			try {
 				if (!this._user) {
 					const user = localStorage.getItem(`[${this.database}][auth_user]`);
 					if (user) {
 						this._user = AuthUser.fromJSON(this, JSON.parse(Base64.decode(user)));
 						await this._user.reload(false);
+					} else if (!this._ready) {
+						this.emit("ready");
 					}
+				}
+
+				if (this._user?.accessToken && socket) {
+					socket.emit("signin", { dbName: this.database, accessToken: this._user.accessToken });
 				}
 			} catch {
 				this._user = null;

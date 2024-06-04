@@ -34,8 +34,8 @@ const createServer = (env) => {
     const maxPayloadBytes = 10e7; // Socket is closed if sent message exceeds this. Socket.io 2.x default is 10e7 (100MB)
     const server = createSocketIOServer(env.server, {
         // See https://socket.io/docs/v2/server-initialization/ and https://socket.io/docs/v3/server-initialization/
-        pingInterval: 5000,
-        pingTimeout: 5000,
+        pingInterval: 5000, // socket.io 2.x default is 25000
+        pingTimeout: 5000, // socket.io 2.x default is 5000, 3.x default = 20000
         maxHttpBufferSize: maxPayloadBytes,
         path: `/socket.io`,
         // Allow socket.io 2.x clients (using engine.io 3.x):

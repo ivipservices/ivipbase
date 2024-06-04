@@ -18,7 +18,8 @@ const addMiddleware = (env) => {
                 authorization = "Bearer " + req.query.auth_token;
             }
         }
-        if (!env.tokenSalt) {
+        const tokenSalt = (0, tokens_1.findValidPasswordByToken)(authorization, Object.values(env.tokenSalt));
+        if (!tokenSalt) {
             // Token salt not ready yet, skip authentication
             return next();
         }
@@ -26,7 +27,7 @@ const addMiddleware = (env) => {
             const token = authorization.slice(7);
             let tokenDetails;
             try {
-                tokenDetails = (0, tokens_1.decodePublicAccessToken)(token, env.tokenSalt);
+                tokenDetails = (0, tokens_1.decodePublicAccessToken)(token, tokenSalt);
             }
             catch (err) {
                 return (0, error_1.sendNotAuthenticatedError)(res, "invalid_token", "The passed token is invalid. Sign in again");

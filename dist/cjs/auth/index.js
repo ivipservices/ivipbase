@@ -254,12 +254,6 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
          */
         this._user = null;
         this.isValidAuth = app.isServer || !app.settings.isValidClient ? false : true;
-        app.onConnect((socket) => {
-            var _a;
-            if (((_a = this._user) === null || _a === void 0 ? void 0 : _a.accessToken) && socket) {
-                socket.emit("signin", { dbName: this.database, accessToken: this._user.accessToken });
-            }
-        });
         this.on("ready", () => {
             this._ready = true;
         });
@@ -298,7 +292,9 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
         this.initialize();
     }
     async initialize() {
-        this.app.onConnect(async () => {
+        this._ready = false;
+        this.app.onConnect(async (socket) => {
+            var _a;
             try {
                 if (!this._user) {
                     const user = localStorage_1.default.getItem(`[${this.database}][auth_user]`);
@@ -306,9 +302,15 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
                         this._user = AuthUser.fromJSON(this, JSON.parse(base64_1.default.decode(user)));
                         await this._user.reload(false);
                     }
+                    else if (!this._ready) {
+                        this.emit("ready");
+                    }
+                }
+                if (((_a = this._user) === null || _a === void 0 ? void 0 : _a.accessToken) && socket) {
+                    socket.emit("signin", { dbName: this.database, accessToken: this._user.accessToken });
                 }
             }
-            catch (_a) {
+            catch (_b) {
                 this._user = null;
                 localStorage_1.default.removeItem(`[${this.database}][auth_user]`);
                 if (!this._ready) {

@@ -10,12 +10,11 @@ const rules_1 = require("./services/rules");
 const utils_1 = require("../utils");
 class DataBase extends ivipbase_core_1.DataBase {
     constructor(database, app, options) {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t;
         super(database, options);
         this.database = database;
         this.app = app;
         this.subscriptions = new Subscriptions_1.Subscriptions();
-        this._ipc = null;
         this.name = database;
         this.description =
             (_c = ((_a = (Array.isArray(app.settings.database) ? app.settings.database : [app.settings.database]).find(({ name }) => {
@@ -32,11 +31,11 @@ class DataBase extends ivipbase_core_1.DataBase {
         this._rules = new rules_1.PathBasedRules((_m = (_l = (_k = this.app.settings) === null || _k === void 0 ? void 0 : _k.server) === null || _l === void 0 ? void 0 : _l.auth.defaultAccessRule) !== null && _m !== void 0 ? _m : "allow", {
             debug: this.debug,
             db: this,
-            authEnabled: (_q = (_p = (_o = this.app.settings) === null || _o === void 0 ? void 0 : _o.server) === null || _p === void 0 ? void 0 : _p.auth.enabled) !== null && _q !== void 0 ? _q : false,
+            authEnabled: (_s = (_p = (_o = dbInfo === null || dbInfo === void 0 ? void 0 : dbInfo.authentication) === null || _o === void 0 ? void 0 : _o.enabled) !== null && _p !== void 0 ? _p : (_r = (_q = this.app.settings) === null || _q === void 0 ? void 0 : _q.server) === null || _r === void 0 ? void 0 : _r.auth.enabled) !== null && _s !== void 0 ? _s : false,
             rules: (0, utils_1.joinObjects)({ rules: {} }, defaultRules.rules, mainRules.rules, dbRules.rules),
         });
         this.storage = !app.settings.isConnectionDefined || app.isServer || !app.settings.isValidClient ? new StorageDBServer_1.StorageDBServer(this) : new StorageDBClient_1.StorageDBClient(this);
-        app.ipc.addDatabase(this);
+        (_t = app.ipc) === null || _t === void 0 ? void 0 : _t.addDatabase(this);
         app.storage.on("add", (e) => {
             //console.log(e);
             this.subscriptions.triggerAllEvents(e.path, null, e.value);

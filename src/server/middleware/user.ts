@@ -1,7 +1,7 @@
 import { LocalServer, RouteRequest } from "..";
 import { sendNotAuthenticatedError } from "../shared/error";
 import { signIn } from "../shared/signin";
-import { decodePublicAccessToken, PublicAccessToken } from "../shared/tokens";
+import { decodePublicAccessToken, findValidPasswordByToken, PublicAccessToken } from "../shared/tokens";
 
 export const addMiddleware = (env: LocalServer) => {
 	// Add bearer authentication middleware
@@ -18,16 +18,19 @@ export const addMiddleware = (env: LocalServer) => {
 			}
 		}
 
-		if (!env.tokenSalt) {
-			// Token salt not ready yet, skip authentication
-			return next();
-		}
-
 		if (typeof authorization === "string" && authorization.startsWith("Bearer ")) {
 			const token = authorization.slice(7);
+
+			const tokenSalt = findValidPasswordByToken(token, Object.values(env.tokenSalt));
+
+			if (!tokenSalt) {
+				// Token salt not ready yet, skip authentication
+				return next();
+			}
+
 			let tokenDetails: PublicAccessToken;
 			try {
-				tokenDetails = decodePublicAccessToken(token, env.tokenSalt);
+				tokenDetails = decodePublicAccessToken(token, tokenSalt);
 			} catch (err) {
 				return sendNotAuthenticatedError(res, "invalid_token", "The passed token is invalid. Sign in again");
 			}

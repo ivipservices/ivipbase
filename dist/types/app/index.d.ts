@@ -33,7 +33,7 @@ export declare class IvipBaseApp extends SimpleEventEmitter {
     get isConnecting(): boolean;
     get connectionState(): "connected" | "disconnected" | "connecting" | "disconnecting";
     get socket(): import("socket.io-client").Socket<import("@socket.io/component-emitter").DefaultEventsMap, import("@socket.io/component-emitter").DefaultEventsMap> | null;
-    get ipc(): IPCPeer;
+    get ipc(): IPCPeer | undefined;
     onConnect(callback: (socket: IOWebSocket | null) => void, isOnce?: boolean): Promise<{
         stop: () => void;
     }>;

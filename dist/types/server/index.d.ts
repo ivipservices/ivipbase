@@ -48,7 +48,9 @@ export declare class LocalServer extends AbstractLocalServer<LocalServer> {
         };
         timestamp: number;
     }>;
-    tokenSalt: string | null;
+    readonly tokenSalt: {
+        [dbName: string]: string;
+    };
     constructor(localApp: IvipBaseApp, settings?: Partial<ServerSettings>);
     init(): Promise<void>;
     /**

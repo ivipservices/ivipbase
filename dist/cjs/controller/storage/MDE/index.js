@@ -170,6 +170,7 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
      */
     preparePathQuery(path, onlyChildren = false, allHeirs = false, includeAncestor = false) {
         const pathsRegex = [];
+        const querys = [];
         const pathsLike = [];
         /**
          * Substitui o caminho por uma expressão regular.
@@ -196,43 +197,50 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         // Adiciona a expressão regular do caminho principal ao array.
         pathsRegex.push(replasePathToRegex(path));
         // Adiciona o padrão SQL LIKE do caminho principal ao array.
-        pathsLike.push(replacePathToLike(path));
+        pathsLike.push(replacePathToLike(path).replace(/\/$/gi, ""));
+        querys.push(`LIKE '${replacePathToLike(path).replace(/\/$/gi, "")}'`);
         if (onlyChildren) {
             pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1})`));
+            pathsLike.forEach((exp) => querys.push(`LIKE '${exp}/%'`));
             pathsLike.forEach((exp) => pathsLike.push(`${exp}/%`));
         }
         else if (allHeirs === true) {
             pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1,})`));
-            pathsLike.forEach((exp) => pathsLike.push(`${exp}%`));
+            pathsLike.forEach((exp) => querys.push(`LIKE '${exp}/%'`));
+            pathsLike.forEach((exp) => pathsLike.push(`${exp}/%`));
         }
         else if (typeof allHeirs === "number") {
             pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1,${allHeirs}})`));
-            pathsLike.forEach((exp) => {
-                let heirsPattern = exp;
-                for (let i = 0; i < allHeirs; i++) {
-                    heirsPattern += "/%";
-                }
-                pathsLike.push(heirsPattern);
-            });
+            // pathsLike.forEach((exp) => querys.push(`LIKE '${exp}/%'`));
+            // pathsLike.forEach((exp) => pathsLike.push(`${exp}/%`));
+            const p = pathsLike;
+            let m = "/%";
+            for (let i = 0; i < allHeirs; i++) {
+                p.forEach((exp) => querys.push(`LIKE '${exp}${m}'`));
+                p.forEach((exp) => pathsLike.push(`${exp}${m}`));
+                m += "/%";
+            }
         }
         let parent = ivipbase_core_1.PathInfo.get(path).parent;
         // Obtém o caminho pai e adiciona a expressão regular correspondente ao array.
         if (includeAncestor) {
             while (parent) {
                 pathsRegex.push(replasePathToRegex(parent.path));
-                pathsLike.push(replacePathToLike(parent.path));
+                pathsLike.push(replacePathToLike(parent.path).replace(/\/$/gi, ""));
+                querys.push(`LIKE '${replacePathToLike(parent.path).replace(/\/$/gi, "")}'`);
                 parent = parent.parent;
             }
         }
         else if (parent) {
             pathsRegex.push(replasePathToRegex(parent.path));
-            pathsLike.push(replacePathToLike(parent.path));
+            pathsLike.push(replacePathToLike(parent.path).replace(/\/$/gi, ""));
+            querys.push(`LIKE '${replacePathToLike(parent.path).replace(/\/$/gi, "")}'`);
         }
         // Cria a expressão regular completa combinando as expressões individuais no array.
         const fullRegex = new RegExp(`^(${pathsRegex.map((e) => e.replace(/\/$/gi, "/?")).join("$)|(")}$)`);
         return {
             regex: fullRegex,
-            query: pathsLike,
+            query: querys.filter((e, i, l) => l.indexOf(e) === i && e !== ""),
         };
     }
     /**
@@ -460,7 +468,7 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
                     index: isArray ? key : undefined,
                     address: new NodeInfo_1.NodeAddress(node.path),
                     exists: true,
-                    value: null,
+                    value: null, // not loaded
                     revision: node.content.revision,
                     revision_nr: node.content.revision_nr,
                     created: new Date(node.content.created),

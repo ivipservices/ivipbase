@@ -41,6 +41,9 @@ export class IvipBaseSettings {
         this.defaultRules = { rules: {} };
         this.reset(options);
     }
+    get isPossiplyServer() {
+        return false;
+    }
     reset(options = {}) {
         if (typeof options.name === "string") {
             this.name = options.name;

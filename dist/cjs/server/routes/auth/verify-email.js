@@ -14,12 +14,13 @@ const addRoutes = (env) => {
     const LOG_ACTION = "auth.verify_email";
     const verifyEmailAddress = async (dbName, clientIp, code) => {
         const LOG_DETAILS = { ip: clientIp, uid: null };
+        const tokenSalt = env.tokenSalt[dbName];
         const verification = (() => {
             try {
-                if (!env.tokenSalt) {
+                if (!tokenSalt) {
                     throw new VerifyEmailError("invalid_code", "Token salt not set");
                 }
-                return (0, tokens_1.parseSignedPublicToken)(code, env.tokenSalt);
+                return (0, tokens_1.parseSignedPublicToken)(code, tokenSalt);
             }
             catch (err) {
                 throw new VerifyEmailError("invalid_code", err.message);
@@ -43,6 +44,7 @@ const addRoutes = (env) => {
         return user.email;
     };
     env.router.post(`/auth/:dbName/verify_email`, async (req, res) => {
+        var _a;
         const { dbName } = req.params;
         if (!env.hasDatabase(dbName)) {
             return (0, error_1.sendError)(res, {
@@ -52,7 +54,7 @@ const addRoutes = (env) => {
         }
         const details = req.body;
         try {
-            const email = await verifyEmailAddress(dbName, req.ip, details.code);
+            const email = await verifyEmailAddress(dbName, (_a = req.ip) !== null && _a !== void 0 ? _a : "0.0.0.0", details.code);
             res.send({
                 email,
             });

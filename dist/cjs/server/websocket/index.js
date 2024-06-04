@@ -78,13 +78,14 @@ const addWebsocketServer = (env) => {
             if (!event.data.accessToken) {
                 throw new SocketRequestError("missing_access_token", "Missing access token");
             }
-            if (!env.tokenSalt) {
-                throw new SocketRequestError("missing_token_salt", "Missing token salt");
-            }
             if (!event.data.dbName) {
                 throw new SocketRequestError("missing_db_name", "Missing database name");
             }
-            const uid = (0, tokens_1.decodePublicAccessToken)(event.data.accessToken, env.tokenSalt).uid;
+            const tokenSalt = env.tokenSalt[event.data.dbName];
+            if (!tokenSalt) {
+                throw new SocketRequestError("missing_token_salt", "Missing token salt");
+            }
+            const uid = (0, tokens_1.decodePublicAccessToken)(event.data.accessToken, tokenSalt).uid;
             const user = (_a = env.authCache.get(uid)) !== null && _a !== void 0 ? _a : undefined;
             if (user) {
                 client.user.set(event.data.dbName, user);

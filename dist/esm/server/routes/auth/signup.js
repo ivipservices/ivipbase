@@ -19,11 +19,12 @@ export const addRoutes = (env) => {
                 message: `Database '${dbName}' not found`,
             });
         }
-        if (!env.tokenSalt) {
+        const tokenSalt = env.tokenSalt[dbName];
+        if (!tokenSalt) {
             return sendError(res, { code: "token_salt_not_set", message: "Token salt not set" });
         }
         const LOG_ACTION = "auth.signup";
-        const LOG_DETAILS = { ip: req.ip, uid: req.user?.uid ?? null };
+        const LOG_DETAILS = { ip: req.ip ?? "0.0.0.0", uid: req.user?.uid ?? null };
         if (!env.settings.auth.allowUserSignup && req.user?.uid !== "admin") {
             env.log.error(LOG_ACTION, "user_signup_disabled", LOG_DETAILS);
             return sendUnauthorizedError(res, "admin_only", "Only admin is allowed to create users");
@@ -114,9 +115,9 @@ export const addRoutes = (env) => {
                     settings: user.settings,
                 },
                 date: user.created,
-                ip: user.created_ip ?? req.ip,
+                ip: user.created_ip ?? req.ip ?? "0.0.0.0",
                 provider: "ivipbase",
-                activationCode: createSignedPublicToken({ uid: user.uid }, env.tokenSalt),
+                activationCode: createSignedPublicToken({ uid: user.uid }, tokenSalt),
                 emailVerified: false,
             };
             env.send_email(dbName, request).catch((err) => {
@@ -125,7 +126,7 @@ export const addRoutes = (env) => {
             // Return the positive news
             const isAdmin = req.user && req.user.uid === "admin";
             res.send({
-                access_token: isAdmin ? "" : createPublicAccessToken(dbName, user.uid, req.ip, user.access_token ?? "", env.tokenSalt),
+                access_token: isAdmin ? "" : createPublicAccessToken(dbName, user.uid, req.ip ?? "0.0.0.0", user.access_token ?? "", tokenSalt),
                 user: getPublicAccountDetails(user),
             });
         }

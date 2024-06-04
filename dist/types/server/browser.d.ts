@@ -2,7 +2,7 @@ import { DebugLogger, SimpleEventEmitter } from "ivipbase-core";
 import { DataBase } from "../database";
 import type { IvipBaseApp } from "../app";
 import { DbUserAccountDetails } from "./schema/user";
-import { EmailRequest } from "../app/settings/browser";
+import { DatabaseSettings, EmailRequest } from "../app/settings/browser";
 import type { RulesData } from "../database/services/rules";
 import { PathBasedRules } from "../database/services/rules";
 export declare class ServerNotReadyError extends Error {
@@ -60,6 +60,15 @@ export declare class ServerAuthenticationSettings {
      */
     separateDb: boolean | "v2";
     constructor(settings?: Partial<ServerAuthenticationSettings>);
+    toJSON(): {
+        enabled: boolean;
+        allowUserSignup: boolean;
+        newUserRateLimit: number;
+        tokensExpire: number;
+        defaultAccessRule: AuthAccessDefault;
+        defaultAdminPassword: string | undefined;
+        separateDb: boolean | "v2";
+    };
 }
 export type ServerInitialSettings<LocalServer = any> = Partial<{
     /**
@@ -122,7 +131,12 @@ export declare class ServerSettings<LocalServer = any> {
     transactions: DataBaseServerTransactionSettings;
     defineRules?: RulesData;
     localPath: string;
-    constructor(options?: ServerInitialSettings<LocalServer>);
+    dbAuth: {
+        [dbName: string]: ServerAuthenticationSettings;
+    };
+    constructor(options?: Partial<ServerInitialSettings<LocalServer> & {
+        database: DatabaseSettings | DatabaseSettings[];
+    }>);
 }
 export declare const isPossiblyServer = false;
 export declare abstract class AbstractLocalServer<LocalServer = any> extends SimpleEventEmitter {

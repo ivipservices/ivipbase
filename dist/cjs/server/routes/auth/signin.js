@@ -10,6 +10,7 @@ const addRoutes = (env) => {
         throw new Error("Authentication not enabled in the server settings");
     }
     env.router.post(`/auth/:dbName/signin`, async (req, res) => {
+        var _a;
         const { dbName } = req.params;
         if (!env.hasDatabase(dbName)) {
             return (0, error_1.sendError)(res, {
@@ -17,7 +18,8 @@ const addRoutes = (env) => {
                 message: `Database '${dbName}' not found`,
             });
         }
-        if (!env.tokenSalt) {
+        const tokenSalt = env.tokenSalt[dbName];
+        if (!tokenSalt) {
             return (0, error_1.sendError)(res, {
                 code: "auth/system-error",
                 message: "Token salt not ready",
@@ -38,7 +40,7 @@ const addRoutes = (env) => {
                 client.user.delete(dbName); // Bind user to client socket
             }
             res.send({
-                access_token: (0, tokens_1.createPublicAccessToken)(dbName, user.uid, req.ip, user.access_token, env.tokenSalt),
+                access_token: (0, tokens_1.createPublicAccessToken)(dbName, user.uid, (_a = req.ip) !== null && _a !== void 0 ? _a : "0.0.0.0", user.access_token, tokenSalt),
                 user: (0, user_1.getPublicAccountDetails)(user),
             });
         }

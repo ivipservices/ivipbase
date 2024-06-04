@@ -36,13 +36,14 @@ export const addRoutes = (env) => {
             res.status(422).send(err); // Unprocessable Entity
             return;
         }
+        const tokenSalt = env.tokenSalt[dbName];
         try {
             let publicAccessToken;
             await env
                 .authRef(dbName)
                 .child(details.uid)
                 .transaction((snap) => {
-                if (!env.tokenSalt) {
+                if (!tokenSalt) {
                     throw new Error("Token salt not set yet, try again later");
                 }
                 if (!snap.exists()) {
@@ -72,7 +73,7 @@ export const addRoutes = (env) => {
                 // Set or update cache
                 env.authCache.set(user.uid, user);
                 // Create new public access token
-                publicAccessToken = createPublicAccessToken(dbName, user.uid, req.ip, user.access_token, env.tokenSalt);
+                publicAccessToken = createPublicAccessToken(dbName, user.uid, req.ip ?? "0.0.0.0", user.access_token, tokenSalt);
                 return user; // Update db
             });
             if (!publicAccessToken) {

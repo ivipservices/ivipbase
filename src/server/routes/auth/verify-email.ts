@@ -20,12 +20,14 @@ export const addRoutes = (env: LocalServer) => {
 	const verifyEmailAddress = async (dbName: string, clientIp: string, code: string): Promise<string> => {
 		const LOG_DETAILS = { ip: clientIp, uid: null };
 
+		const tokenSalt = env.tokenSalt[dbName];
+
 		const verification = (() => {
 			try {
-				if (!env.tokenSalt) {
+				if (!tokenSalt) {
 					throw new VerifyEmailError("invalid_code", "Token salt not set");
 				}
-				return parseSignedPublicToken(code, env.tokenSalt);
+				return parseSignedPublicToken(code, tokenSalt);
 			} catch (err) {
 				throw new VerifyEmailError("invalid_code", (err as any).message);
 			}
@@ -65,7 +67,7 @@ export const addRoutes = (env: LocalServer) => {
 		const details = req.body;
 
 		try {
-			const email = await verifyEmailAddress(dbName, req.ip, details.code);
+			const email = await verifyEmailAddress(dbName, req.ip ?? "0.0.0.0", details.code);
 			res.send({
 				email,
 			});

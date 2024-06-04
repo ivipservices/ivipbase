@@ -2,9 +2,10 @@ import { DataReference, DebugLogger, SimpleEventEmitter } from "ivipbase-core";
 import { DataBase, getDatabase, getDatabasesNames, hasDatabase } from "../database";
 import type { IvipBaseApp } from "../app";
 import { DbUserAccountDetails } from "./schema/user";
-import { EmailRequest } from "../app/settings/browser";
+import { DatabaseSettings, EmailRequest } from "../app/settings/browser";
 import type { RulesData } from "../database/services/rules";
 import { PathBasedRules } from "../database/services/rules";
+import { joinObjects } from "../utils";
 
 export class ServerNotReadyError extends Error {
 	constructor() {
@@ -122,6 +123,18 @@ export class ServerAuthenticationSettings {
 			this.separateDb = settings.separateDb;
 		}
 	}
+
+	toJSON() {
+		return {
+			enabled: this.enabled,
+			allowUserSignup: this.allowUserSignup,
+			newUserRateLimit: this.newUserRateLimit,
+			tokensExpire: this.tokensExpire,
+			defaultAccessRule: this.defaultAccessRule,
+			defaultAdminPassword: this.defaultAdminPassword,
+			separateDb: this.separateDb,
+		};
+	}
 }
 
 export type ServerInitialSettings<LocalServer = any> = Partial<{
@@ -198,8 +211,15 @@ export class ServerSettings<LocalServer = any> {
 	public transactions: DataBaseServerTransactionSettings;
 	public defineRules?: RulesData;
 	public localPath: string = "./data";
+	public dbAuth: { [dbName: string]: ServerAuthenticationSettings } = {};
 
-	constructor(options: ServerInitialSettings<LocalServer> = {}) {
+	constructor(
+		options: Partial<
+			ServerInitialSettings<LocalServer> & {
+				database: DatabaseSettings | DatabaseSettings[];
+			}
+		> = {},
+	) {
 		if (typeof options.logLevel === "string" && ["verbose", "log", "warn", "error"].includes(options.logLevel)) {
 			this.logLevel = options.logLevel;
 		}
@@ -225,6 +245,23 @@ export class ServerSettings<LocalServer = any> {
 		}
 
 		this.auth = new ServerAuthenticationSettings(options.authentication ?? (options as any).auth ?? {});
+
+		const dbList: DatabaseSettings[] = (Array.isArray(options.database) ? options.database : [options.database]).filter((db) => typeof db !== "undefined") as any;
+
+		if (typeof (options as any).dbAuth === "object") {
+			this.dbAuth = Object.fromEntries(
+				Object.entries((options as any).dbAuth).map(([dbName, auth]) => {
+					if (auth instanceof ServerAuthenticationSettings) {
+						return [dbName, auth];
+					}
+					return [dbName, new ServerAuthenticationSettings(joinObjects(this.auth.toJSON(), auth ?? {}))];
+				}),
+			);
+		}
+
+		dbList.forEach((db) => {
+			this.dbAuth[db.name] = new ServerAuthenticationSettings(joinObjects(this.auth.toJSON(), db.authentication ?? {}));
+		});
 
 		if (typeof options.init === "function") {
 			this.init = options.init;

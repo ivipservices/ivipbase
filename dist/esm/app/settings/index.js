@@ -66,6 +66,9 @@ export class IvipBaseSettings extends BrowserSettings {
         this.isValidClient = false;
         this.reset(options, false);
     }
+    get isPossiplyServer() {
+        return true;
+    }
     reset(options = {}, forceSuper = true) {
         if (forceSuper) {
             super.reset(options);

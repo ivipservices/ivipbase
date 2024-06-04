@@ -6,7 +6,7 @@ const tokens_1 = require("../../shared/tokens");
 const validate_1 = require("../../shared/validate");
 const addRoutes = (env) => {
     env.router.post(`/auth/:dbName/send_email_verification`, async (req, res) => {
-        var _a, _b, _c, _d, _e;
+        var _a, _b, _c, _d, _e, _f, _g;
         const { dbName } = req.params;
         if (!env.hasDatabase(dbName)) {
             return (0, error_1.sendError)(res, {
@@ -14,12 +14,13 @@ const addRoutes = (env) => {
                 message: `Database '${dbName}' not found`,
             });
         }
-        if (!env.tokenSalt) {
+        const tokenSalt = env.tokenSalt[dbName];
+        if (!tokenSalt) {
             return (0, error_1.sendError)(res, { code: "auth/system-error", message: "Token salt not set" });
         }
         const LOG_ACTION = "auth.send_email_verification";
-        const LOG_DETAILS = { ip: req.ip, uid: (_b = (_a = req.user) === null || _a === void 0 ? void 0 : _a.uid) !== null && _b !== void 0 ? _b : null };
-        let user = (_c = req.user) !== null && _c !== void 0 ? _c : null;
+        const LOG_DETAILS = { ip: (_a = req.ip) !== null && _a !== void 0 ? _a : "0.0.0.0", uid: (_c = (_b = req.user) === null || _b === void 0 ? void 0 : _b.uid) !== null && _c !== void 0 ? _c : null };
+        let user = (_d = req.user) !== null && _d !== void 0 ? _d : null;
         const details = req.body;
         if (!user) {
             if (!details.username || !details.email) {
@@ -59,14 +60,14 @@ const addRoutes = (env) => {
                 user: {
                     uid: user.uid,
                     username: user.username,
-                    email: (_d = user.email) !== null && _d !== void 0 ? _d : "",
+                    email: (_e = user.email) !== null && _e !== void 0 ? _e : "",
                     displayName: user.display_name,
                     settings: user.settings,
                 },
                 date: user.created,
-                ip: (_e = user.created_ip) !== null && _e !== void 0 ? _e : req.ip,
+                ip: (_g = (_f = user.created_ip) !== null && _f !== void 0 ? _f : req.ip) !== null && _g !== void 0 ? _g : "0.0.0.0",
                 provider: "ivipbase",
-                activationCode: (0, tokens_1.createSignedPublicToken)({ uid: user.uid }, env.tokenSalt),
+                activationCode: (0, tokens_1.createSignedPublicToken)({ uid: user.uid }, tokenSalt),
                 emailVerified: false,
             };
             LOG_DETAILS.uid = user.uid;

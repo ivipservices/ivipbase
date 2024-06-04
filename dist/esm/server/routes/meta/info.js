@@ -82,7 +82,7 @@ export const addRoute = (env) => {
                     total: numberToByteSize(os.totalmem()),
                     free: numberToByteSize(os.freemem()),
                     process: {
-                        arrayBuffers: numberToByteSize(mem.arrayBuffers),
+                        arrayBuffers: numberToByteSize(mem.arrayBuffers), // arrayBuffers was added in Node v13.9.0, v12.17.0
                         external: numberToByteSize(mem.external),
                         heapTotal: numberToByteSize(mem.heapTotal),
                         heapUsed: numberToByteSize(mem.heapUsed),

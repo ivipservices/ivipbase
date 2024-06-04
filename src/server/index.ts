@@ -50,8 +50,13 @@ const createDirectories = (dirPath: string) => {
 	// Usa path.resolve para garantir um caminho absoluto.
 	const absolutePath = path.resolve(dirPath);
 
-	// Usa fs.mkdirSync com { recursive: true } para criar todas as pastas necessárias.
-	fs.mkdirSync(absolutePath, { recursive: true });
+	if (!fs.existsSync(path.basename(absolutePath))) {
+		createDirectories(path.dirname(absolutePath));
+	}
+
+	if (!fs.existsSync(absolutePath)) {
+		fs.mkdirSync(absolutePath, { recursive: true });
+	}
 };
 
 export class LocalServer extends AbstractLocalServer<LocalServer> {
@@ -80,7 +85,7 @@ export class LocalServer extends AbstractLocalServer<LocalServer> {
 		}
 	> = new SimpleCache<number, any>({ expirySeconds: 500, cloneValues: false, maxEntries: 1000 });
 
-	tokenSalt: string | null = null;
+	readonly tokenSalt: { [dbName: string]: string } = {};
 
 	constructor(localApp: IvipBaseApp, settings: Partial<ServerSettings> = {}) {
 		super(localApp, settings);
@@ -116,7 +121,7 @@ export class LocalServer extends AbstractLocalServer<LocalServer> {
 		// Adiciona middleware de cache
 		addCacheMiddleware(this);
 
-		if (this.settings.auth.enabled) {
+		if (Object.values(this.settings.dbAuth).findIndex((auth) => auth.enabled) >= 0) {
 			// Setup auth database
 			await setupAuthentication(this);
 

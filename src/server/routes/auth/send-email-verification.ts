@@ -21,7 +21,9 @@ export const addRoutes = (env: LocalServer) => {
 			});
 		}
 
-		if (!env.tokenSalt) {
+		const tokenSalt = env.tokenSalt[dbName];
+
+		if (!tokenSalt) {
 			return sendError(res, { code: "auth/system-error", message: "Token salt not set" });
 		}
 
@@ -29,7 +31,7 @@ export const addRoutes = (env: LocalServer) => {
 		const LOG_DETAILS: {
 			ip: string;
 			uid?: string | null;
-		} = { ip: req.ip, uid: req.user?.uid ?? null };
+		} = { ip: req.ip ?? "0.0.0.0", uid: req.user?.uid ?? null };
 
 		let user: DbUserAccountDetails | null = req.user ?? null;
 		const details = req.body;
@@ -82,9 +84,9 @@ export const addRoutes = (env: LocalServer) => {
 					settings: user.settings,
 				},
 				date: user.created,
-				ip: user.created_ip ?? req.ip,
+				ip: user.created_ip ?? req.ip ?? "0.0.0.0",
 				provider: "ivipbase",
-				activationCode: createSignedPublicToken({ uid: user.uid }, env.tokenSalt),
+				activationCode: createSignedPublicToken({ uid: user.uid }, tokenSalt),
 				emailVerified: false,
 			};
 

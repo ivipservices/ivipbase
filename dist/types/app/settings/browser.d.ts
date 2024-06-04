@@ -1,4 +1,5 @@
 import type { RulesData } from "../../database/services/rules";
+import { ServerAuthenticationSettings } from "../../server/browser";
 import { StorageSettings } from "../verifyStorage";
 export interface EmailRequestType {
     /** email request type */
@@ -74,6 +75,7 @@ export interface DatabaseSettings {
     name: string;
     description?: string;
     defineRules?: RulesData;
+    authentication?: ServerAuthenticationSettings;
 }
 export declare class IvipBaseSettings {
     readonly options: Partial<Omit<IvipBaseSettings, "isServer" | "isValidClient">>;
@@ -92,6 +94,7 @@ export declare class IvipBaseSettings {
     bootable: boolean;
     defaultRules: RulesData;
     constructor(options?: Partial<Omit<IvipBaseSettings, "isServer" | "isValidClient">>);
+    get isPossiplyServer(): boolean;
     reset(options?: Partial<Omit<IvipBaseSettings, "isServer" | "isValidClient">>): void;
 }
 //# sourceMappingURL=browser.d.ts.map

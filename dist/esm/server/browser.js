@@ -1,5 +1,6 @@
 import { DebugLogger, SimpleEventEmitter } from "ivipbase-core";
 import { getDatabase, getDatabasesNames, hasDatabase } from "../database/index.js";
+import { joinObjects } from "../utils/index.js";
 export class ServerNotReadyError extends Error {
     constructor() {
         super("O servidor ainda não está pronto");
@@ -97,6 +98,17 @@ export class ServerAuthenticationSettings {
             this.separateDb = settings.separateDb;
         }
     }
+    toJSON() {
+        return {
+            enabled: this.enabled,
+            allowUserSignup: this.allowUserSignup,
+            newUserRateLimit: this.newUserRateLimit,
+            tokensExpire: this.tokensExpire,
+            defaultAccessRule: this.defaultAccessRule,
+            defaultAdminPassword: this.defaultAdminPassword,
+            separateDb: this.separateDb,
+        };
+    }
 }
 export class ServerSettings {
     constructor(options = {}) {
@@ -109,6 +121,7 @@ export class ServerSettings {
         this.trustProxy = true;
         this.serverVersion = "1.0.0";
         this.localPath = "./data";
+        this.dbAuth = {};
         if (typeof options.logLevel === "string" && ["verbose", "log", "warn", "error"].includes(options.logLevel)) {
             this.logLevel = options.logLevel;
         }
@@ -128,6 +141,18 @@ export class ServerSettings {
             this.trustProxy = options.trustProxy;
         }
         this.auth = new ServerAuthenticationSettings(options.authentication ?? options.auth ?? {});
+        const dbList = (Array.isArray(options.database) ? options.database : [options.database]).filter((db) => typeof db !== "undefined");
+        if (typeof options.dbAuth === "object") {
+            this.dbAuth = Object.fromEntries(Object.entries(options.dbAuth).map(([dbName, auth]) => {
+                if (auth instanceof ServerAuthenticationSettings) {
+                    return [dbName, auth];
+                }
+                return [dbName, new ServerAuthenticationSettings(joinObjects(this.auth.toJSON(), auth ?? {}))];
+            }));
+        }
+        dbList.forEach((db) => {
+            this.dbAuth[db.name] = new ServerAuthenticationSettings(joinObjects(this.auth.toJSON(), db.authentication ?? {}));
+        });
         if (typeof options.init === "function") {
             this.init = options.init;
         }

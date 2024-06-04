@@ -24,7 +24,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
         this.databases = new Map();
         this.auth = new Map();
         this._socket = null;
-        this._ipc = null;
+        this._ipc = undefined;
         this._connectionState = CONNECTION_STATE_DISCONNECTED;
         if (typeof options.name === "string") {
             this.name = options.name;
@@ -35,7 +35,9 @@ export class IvipBaseApp extends SimpleEventEmitter {
         }
         this.storage = applySettings(this.settings.dbname, this.settings.storage);
         this.isServer = typeof this.settings.server === "object";
-        this._ipc = getIPCPeer(this.name);
+        if (this.settings.isPossiplyServer) {
+            this._ipc = getIPCPeer(this.name);
+        }
         this.on("ready", () => {
             this._ready = true;
         });
@@ -109,6 +111,9 @@ export class IvipBaseApp extends SimpleEventEmitter {
         return this._socket;
     }
     get ipc() {
+        if (!this.settings.isPossiplyServer) {
+            return;
+        }
         if (this._ipc instanceof IPCPeer === false) {
             this._ipc = getIPCPeer(this.name);
         }
@@ -120,7 +125,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
             if (isReset) {
                 return;
             }
-            if (this._ready && this.isConnected) {
+            if (this.isConnected) {
                 count++;
                 if (count > 1 && isOnce) {
                     return;
@@ -130,11 +135,6 @@ export class IvipBaseApp extends SimpleEventEmitter {
                     this.off("connect", event);
                 }
                 return;
-            }
-            if (!this._ready) {
-                this.ready(() => {
-                    event();
-                });
             }
         };
         if (!this.isServer && (typeof this.settings.database === "string" || (Array.isArray(this.settings.database) && this.settings.database.length > 0))) {

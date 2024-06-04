@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { DataBase as DataBaseCore, DataBaseSettings, DebugLogger } from "ivipbase-core";
 import { IvipBaseApp } from "../app";
 import { StorageDBServer } from "./StorageDBServer";
@@ -13,7 +14,6 @@ export declare class DataBase extends DataBaseCore {
     readonly debug: DebugLogger;
     readonly storage: StorageDBServer | StorageDBClient;
     private _rules;
-    private _ipc;
     constructor(database: string, app: IvipBaseApp, options?: Partial<DataBaseSettings>);
     get accessToken(): string | undefined;
     get rules(): PathBasedRules;

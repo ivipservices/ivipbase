@@ -31,7 +31,9 @@ export const addRoutes = (env: LocalServer) => {
 			});
 		}
 
-		if (!env.tokenSalt) {
+		const tokenSalt = env.tokenSalt[dbName];
+
+		if (!tokenSalt) {
 			return sendError(res, {
 				code: "auth/system-error",
 				message: "Token salt not ready",
@@ -54,7 +56,7 @@ export const addRoutes = (env: LocalServer) => {
 				client.user.delete(dbName); // Bind user to client socket
 			}
 			res.send({
-				access_token: createPublicAccessToken(dbName, user.uid, req.ip, user.access_token, env.tokenSalt),
+				access_token: createPublicAccessToken(dbName, user.uid, req.ip ?? "0.0.0.0", user.access_token, tokenSalt),
 				user: getPublicAccountDetails(user),
 			});
 		} catch (err) {

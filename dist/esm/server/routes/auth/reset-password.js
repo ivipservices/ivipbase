@@ -9,12 +9,13 @@ export class ResetPasswordError extends Error {
 }
 export const addRoutes = (env) => {
     const resetPassword = async (dbName, clientIp, code, newPassword) => {
-        if (!env.tokenSalt) {
+        const tokenSalt = env.tokenSalt[dbName];
+        if (!tokenSalt) {
             throw new Error("Token salt not set in server settings");
         }
         const verification = (() => {
             try {
-                return parseSignedPublicToken(code, env.tokenSalt);
+                return parseSignedPublicToken(code, tokenSalt);
             }
             catch (err) {
                 throw new ResetPasswordError("invalid_code", err.message);
@@ -70,7 +71,7 @@ export const addRoutes = (env) => {
         const LOG_ACTION = "auth.reset_password";
         const LOG_DETAILS = { ip: req.ip, uid: req.user?.uid ?? null };
         try {
-            const user = await resetPassword(dbName, req.ip, details.code, details.password);
+            const user = await resetPassword(dbName, req.ip ?? "0.0.0.0", details.code, details.password);
             // env.log.event(LOG_ACTION, { ...LOG_DETAILS, reset_uid: user.uid });
             res.send("OK");
         }

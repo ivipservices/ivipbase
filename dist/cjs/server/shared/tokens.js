@@ -23,7 +23,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.parseSignedPublicToken = exports.createSignedPublicToken = exports.decodePublicAccessToken = exports.createPublicAccessToken = void 0;
+exports.findValidPasswordByToken = exports.parseSignedPublicToken = exports.createSignedPublicToken = exports.decodePublicAccessToken = exports.createPublicAccessToken = void 0;
 const crypto = __importStar(require("crypto"));
 const createPublicAccessToken = (database, uid, ip, dbToken, password) => {
     const obj = {
@@ -105,4 +105,21 @@ const parseSignedPublicToken = (str, password) => {
     return JSON.parse(obj.d);
 };
 exports.parseSignedPublicToken = parseSignedPublicToken;
+const findValidPasswordByToken = (token, passwords) => {
+    if (!token || !Array.isArray(passwords) || passwords.length === 0) {
+        return;
+    }
+    for (let i = 0; i < passwords.length; i++) {
+        try {
+            const obj = (0, exports.decodePublicAccessToken)(token, passwords[i]);
+            if (typeof obj.access_token !== "string" || typeof obj.created !== "number" || typeof obj.database !== "string" || typeof obj.ip !== "string" || typeof obj.uid !== "string") {
+                continue;
+            }
+            return passwords[i];
+        }
+        catch (_a) { }
+    }
+    return;
+};
+exports.findValidPasswordByToken = findValidPasswordByToken;
 //# sourceMappingURL=tokens.js.map

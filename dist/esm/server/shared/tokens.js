@@ -75,4 +75,20 @@ export const parseSignedPublicToken = (str, password) => {
     }
     return JSON.parse(obj.d);
 };
+export const findValidPasswordByToken = (token, passwords) => {
+    if (!token || !Array.isArray(passwords) || passwords.length === 0) {
+        return;
+    }
+    for (let i = 0; i < passwords.length; i++) {
+        try {
+            const obj = decodePublicAccessToken(token, passwords[i]);
+            if (typeof obj.access_token !== "string" || typeof obj.created !== "number" || typeof obj.database !== "string" || typeof obj.ip !== "string" || typeof obj.uid !== "string") {
+                continue;
+            }
+            return passwords[i];
+        }
+        catch { }
+    }
+    return;
+};
 //# sourceMappingURL=tokens.js.map

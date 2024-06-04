@@ -72,7 +72,9 @@ export const addRoutes = (env: LocalServer) => {
 			});
 		}
 
-		if (!env.tokenSalt) {
+		const tokenSalt = env.tokenSalt[dbName];
+
+		if (!tokenSalt) {
 			return sendError(res, { code: "token_salt_not_set", message: "Token salt not set" });
 		}
 
@@ -80,7 +82,7 @@ export const addRoutes = (env: LocalServer) => {
 		const LOG_DETAILS: {
 			ip: string;
 			uid?: string | null;
-		} = { ip: req.ip, uid: req.user?.uid ?? null };
+		} = { ip: req.ip ?? "0.0.0.0", uid: req.user?.uid ?? null };
 
 		if (!env.settings.auth.allowUserSignup && req.user?.uid !== "admin") {
 			env.log.error(LOG_ACTION, "user_signup_disabled", LOG_DETAILS);
@@ -173,9 +175,9 @@ export const addRoutes = (env: LocalServer) => {
 					settings: user.settings,
 				},
 				date: user.created,
-				ip: user.created_ip ?? req.ip,
+				ip: user.created_ip ?? req.ip ?? "0.0.0.0",
 				provider: "ivipbase",
-				activationCode: createSignedPublicToken({ uid: user.uid }, env.tokenSalt),
+				activationCode: createSignedPublicToken({ uid: user.uid }, tokenSalt),
 				emailVerified: false,
 			};
 
@@ -186,7 +188,7 @@ export const addRoutes = (env: LocalServer) => {
 			// Return the positive news
 			const isAdmin = req.user && req.user.uid === "admin";
 			res.send({
-				access_token: isAdmin ? "" : createPublicAccessToken(dbName, user.uid, req.ip, user.access_token ?? "", env.tokenSalt),
+				access_token: isAdmin ? "" : createPublicAccessToken(dbName, user.uid, req.ip ?? "0.0.0.0", user.access_token ?? "", tokenSalt),
 				user: getPublicAccountDetails(user),
 			});
 		} catch (err) {

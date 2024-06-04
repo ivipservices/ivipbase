@@ -11,7 +11,6 @@ export class DataBase extends DataBaseCore {
         this.database = database;
         this.app = app;
         this.subscriptions = new Subscriptions();
-        this._ipc = null;
         this.name = database;
         this.description =
             ((Array.isArray(app.settings.database) ? app.settings.database : [app.settings.database]).find(({ name }) => {
@@ -28,11 +27,11 @@ export class DataBase extends DataBaseCore {
         this._rules = new PathBasedRules(this.app.settings?.server?.auth.defaultAccessRule ?? "allow", {
             debug: this.debug,
             db: this,
-            authEnabled: this.app.settings?.server?.auth.enabled ?? false,
+            authEnabled: dbInfo?.authentication?.enabled ?? this.app.settings?.server?.auth.enabled ?? false,
             rules: joinObjects({ rules: {} }, defaultRules.rules, mainRules.rules, dbRules.rules),
         });
         this.storage = !app.settings.isConnectionDefined || app.isServer || !app.settings.isValidClient ? new StorageDBServer(this) : new StorageDBClient(this);
-        app.ipc.addDatabase(this);
+        app.ipc?.addDatabase(this);
         app.storage.on("add", (e) => {
             //console.log(e);
             this.subscriptions.triggerAllEvents(e.path, null, e.value);

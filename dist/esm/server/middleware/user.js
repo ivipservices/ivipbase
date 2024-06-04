@@ -1,6 +1,6 @@
 import { sendNotAuthenticatedError } from "../shared/error.js";
 import { signIn } from "../shared/signin.js";
-import { decodePublicAccessToken } from "../shared/tokens.js";
+import { decodePublicAccessToken, findValidPasswordByToken } from "../shared/tokens.js";
 export const addMiddleware = (env) => {
     // Add bearer authentication middleware
     env.router.use(async (req, res, next) => {
@@ -15,7 +15,8 @@ export const addMiddleware = (env) => {
                 authorization = "Bearer " + req.query.auth_token;
             }
         }
-        if (!env.tokenSalt) {
+        const tokenSalt = findValidPasswordByToken(authorization, Object.values(env.tokenSalt));
+        if (!tokenSalt) {
             // Token salt not ready yet, skip authentication
             return next();
         }
@@ -23,7 +24,7 @@ export const addMiddleware = (env) => {
             const token = authorization.slice(7);
             let tokenDetails;
             try {
-                tokenDetails = decodePublicAccessToken(token, env.tokenSalt);
+                tokenDetails = decodePublicAccessToken(token, tokenSalt);
             }
             catch (err) {
                 return sendNotAuthenticatedError(res, "invalid_token", "The passed token is invalid. Sign in again");

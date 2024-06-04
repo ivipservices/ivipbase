@@ -40,7 +40,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 		| typeof CONNECTION_STATE_DISCONNECTED;
 
 	private _socket: IOWebSocket | null = null;
-	private _ipc: IPCPeer | null = null;
+	private _ipc: IPCPeer | undefined | null = undefined;
 
 	constructor(options: Partial<IvipBaseApp>) {
 		super();
@@ -61,7 +61,9 @@ export class IvipBaseApp extends SimpleEventEmitter {
 
 		this.isServer = typeof this.settings.server === "object";
 
-		this._ipc = getIPCPeer(this.name);
+		if (this.settings.isPossiplyServer) {
+			this._ipc = getIPCPeer(this.name);
+		}
 
 		this.on("ready", () => {
 			this._ready = true;
@@ -154,10 +156,15 @@ export class IvipBaseApp extends SimpleEventEmitter {
 		return this._socket;
 	}
 
-	get ipc(): IPCPeer {
+	get ipc(): IPCPeer | undefined {
+		if (!this.settings.isPossiplyServer) {
+			return;
+		}
+
 		if (this._ipc instanceof IPCPeer === false) {
 			this._ipc = getIPCPeer(this.name);
 		}
+
 		return this._ipc as IPCPeer;
 	}
 
@@ -169,7 +176,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 				return;
 			}
 
-			if (this._ready && this.isConnected) {
+			if (this.isConnected) {
 				count++;
 
 				if (count > 1 && isOnce) {
@@ -182,12 +189,6 @@ export class IvipBaseApp extends SimpleEventEmitter {
 				}
 
 				return;
-			}
-
-			if (!this._ready) {
-				this.ready(() => {
-					event();
-				});
 			}
 		};
 

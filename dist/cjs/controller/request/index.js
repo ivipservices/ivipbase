@@ -22,7 +22,7 @@ function request(method, url, options = { accessToken: null, data: null, dataRec
             protocol: endpoint.protocol,
             host: endpoint.hostname,
             port: endpoint.port,
-            path: endpoint.pathname + endpoint.search,
+            path: endpoint.pathname + endpoint.search, //endpoint.path,
             headers: {
                 "DataBase-Context": JSON.stringify(options.context || null),
             },

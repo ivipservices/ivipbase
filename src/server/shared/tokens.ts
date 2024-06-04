@@ -80,3 +80,21 @@ export const parseSignedPublicToken = (str: string, password: string) => {
 	}
 	return JSON.parse(obj.d);
 };
+
+export const findValidPasswordByToken = (token?: string, passwords?: string[]): string | undefined => {
+	if (!token || !Array.isArray(passwords) || passwords.length === 0) {
+		return;
+	}
+
+	for (let i = 0; i < passwords.length; i++) {
+		try {
+			const obj = decodePublicAccessToken(token, passwords[i]);
+			if (typeof obj.access_token !== "string" || typeof obj.database !== "string") {
+				continue;
+			}
+			return passwords[i];
+		} catch {}
+	}
+
+	return;
+};

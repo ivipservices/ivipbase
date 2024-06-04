@@ -23,7 +23,8 @@ export const signIn = async (database, credentials, env, req) => {
         if (credentials.database && credentials.database !== database) {
             throw new SignInError("auth/invalid-database", "Invalid database");
         }
-        if (!env.tokenSalt) {
+        const tokenSalt = env.tokenSalt[database];
+        if (!tokenSalt) {
             throw new SignInError("auth/system-error", "Token salt not ready");
         }
         const query = env.authRef(database).query();
@@ -34,7 +35,7 @@ export const signIn = async (database, credentials, env, req) => {
                     throw new SignInError("auth/invalid-details", "sign in request has invalid arguments");
                 }
                 try {
-                    tokenDetails = decodePublicAccessToken(credentials.access_token, env.tokenSalt);
+                    tokenDetails = decodePublicAccessToken(credentials.access_token, tokenSalt);
                     if (Date.now() - tokenDetails.created > 1000 * 60 * 60 * 60 * 24 * 7) {
                         throw new Error("Token expired");
                     }

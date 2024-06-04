@@ -26,6 +26,7 @@ export declare class IvipBaseSettings extends BrowserSettings {
      */
     email?: ServerEmailSettings;
     constructor(options?: IvipBaseSettingsOptions);
+    get isPossiplyServer(): boolean;
     reset(options?: IvipBaseSettingsOptions, forceSuper?: boolean): void;
 }
 export {};

@@ -77,7 +77,7 @@ const addRoutes = (env) => {
                 }
                 for (const childInfo of list !== null && list !== void 0 ? list : []) {
                     childInfo.access = {
-                        read: (await env.rules(dbName).isOperationAllowed(impersonatedUser, ivipbase_core_1.PathInfo.getChildPath(path, childInfo.key), "get")).allow,
+                        read: (await env.rules(dbName).isOperationAllowed(impersonatedUser, ivipbase_core_1.PathInfo.getChildPath(path, childInfo.key), "get")).allow, // Use pre-flight 'get' check to mimic legacy 'read' check
                         write: (await env.rules(dbName).isOperationAllowed(impersonatedUser, ivipbase_core_1.PathInfo.getChildPath(path, childInfo.key), "update")).allow, // Use pre-flight 'update' check to mimic legacy 'write' check
                     };
                 }

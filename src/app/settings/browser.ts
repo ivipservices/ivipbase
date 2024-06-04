@@ -1,4 +1,5 @@
 import type { RulesData } from "../../database/services/rules";
+import { ServerAuthenticationSettings } from "../../server/browser";
 import { DEFAULT_ENTRY_NAME } from "../internal";
 import { DataStorageSettings, StorageSettings, validSettings } from "../verifyStorage";
 
@@ -104,6 +105,7 @@ export interface DatabaseSettings {
 	name: string;
 	description?: string;
 	defineRules?: RulesData;
+	authentication?: ServerAuthenticationSettings;
 }
 
 export class IvipBaseSettings {
@@ -132,6 +134,10 @@ export class IvipBaseSettings {
 
 	constructor(readonly options: Partial<Omit<IvipBaseSettings, "isServer" | "isValidClient">> = {}) {
 		this.reset(options);
+	}
+
+	get isPossiplyServer() {
+		return false;
 	}
 
 	reset(options: Partial<Omit<IvipBaseSettings, "isServer" | "isValidClient">> = {}) {

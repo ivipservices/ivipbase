@@ -31,7 +31,7 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         this.databases = new Map();
         this.auth = new Map();
         this._socket = null;
-        this._ipc = null;
+        this._ipc = undefined;
         this._connectionState = CONNECTION_STATE_DISCONNECTED;
         if (typeof options.name === "string") {
             this.name = options.name;
@@ -42,7 +42,9 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         }
         this.storage = (0, verifyStorage_1.applySettings)(this.settings.dbname, this.settings.storage);
         this.isServer = typeof this.settings.server === "object";
-        this._ipc = (0, ipc_1.getIPCPeer)(this.name);
+        if (this.settings.isPossiplyServer) {
+            this._ipc = (0, ipc_1.getIPCPeer)(this.name);
+        }
         this.on("ready", () => {
             this._ready = true;
         });
@@ -117,6 +119,9 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         return this._socket;
     }
     get ipc() {
+        if (!this.settings.isPossiplyServer) {
+            return;
+        }
         if (this._ipc instanceof ipc_1.IPCPeer === false) {
             this._ipc = (0, ipc_1.getIPCPeer)(this.name);
         }
@@ -128,7 +133,7 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
             if (isReset) {
                 return;
             }
-            if (this._ready && this.isConnected) {
+            if (this.isConnected) {
                 count++;
                 if (count > 1 && isOnce) {
                     return;
@@ -138,11 +143,6 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
                     this.off("connect", event);
                 }
                 return;
-            }
-            if (!this._ready) {
-                this.ready(() => {
-                    event();
-                });
             }
         };
         if (!this.isServer && (typeof this.settings.database === "string" || (Array.isArray(this.settings.database) && this.settings.database.length > 0))) {
@@ -444,6 +444,9 @@ class IvipBaseSettings {
         this.bootable = true;
         this.defaultRules = { rules: {} };
         this.reset(options);
+    }
+    get isPossiplyServer() {
+        return false;
     }
     reset(options = {}) {
         var _a, _b, _c, _d;
@@ -768,12 +771,6 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
          */
         this._user = null;
         this.isValidAuth = app.isServer || !app.settings.isValidClient ? false : true;
-        app.onConnect((socket) => {
-            var _a;
-            if (((_a = this._user) === null || _a === void 0 ? void 0 : _a.accessToken) && socket) {
-                socket.emit("signin", { dbName: this.database, accessToken: this._user.accessToken });
-            }
-        });
         this.on("ready", () => {
             this._ready = true;
         });
@@ -812,7 +809,9 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
         this.initialize();
     }
     async initialize() {
-        this.app.onConnect(async () => {
+        this._ready = false;
+        this.app.onConnect(async (socket) => {
+            var _a;
             try {
                 if (!this._user) {
                     const user = localStorage_1.default.getItem(`[${this.database}][auth_user]`);
@@ -820,9 +819,15 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
                         this._user = AuthUser.fromJSON(this, JSON.parse(base64_1.default.decode(user)));
                         await this._user.reload(false);
                     }
+                    else if (!this._ready) {
+                        this.emit("ready");
+                    }
+                }
+                if (((_a = this._user) === null || _a === void 0 ? void 0 : _a.accessToken) && socket) {
+                    socket.emit("signin", { dbName: this.database, accessToken: this._user.accessToken });
                 }
             }
-            catch (_a) {
+            catch (_b) {
                 this._user = null;
                 localStorage_1.default.removeItem(`[${this.database}][auth_user]`);
                 if (!this._ready) {
@@ -2134,6 +2139,7 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
      */
     preparePathQuery(path, onlyChildren = false, allHeirs = false, includeAncestor = false) {
         const pathsRegex = [];
+        const querys = [];
         const pathsLike = [];
         /**
          * Substitui o caminho por uma expressão regular.
@@ -2160,43 +2166,50 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         // Adiciona a expressão regular do caminho principal ao array.
         pathsRegex.push(replasePathToRegex(path));
         // Adiciona o padrão SQL LIKE do caminho principal ao array.
-        pathsLike.push(replacePathToLike(path));
+        pathsLike.push(replacePathToLike(path).replace(/\/$/gi, ""));
+        querys.push(`LIKE '${replacePathToLike(path).replace(/\/$/gi, "")}'`);
         if (onlyChildren) {
             pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1})`));
+            pathsLike.forEach((exp) => querys.push(`LIKE '${exp}/%'`));
             pathsLike.forEach((exp) => pathsLike.push(`${exp}/%`));
         }
         else if (allHeirs === true) {
             pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1,})`));
-            pathsLike.forEach((exp) => pathsLike.push(`${exp}%`));
+            pathsLike.forEach((exp) => querys.push(`LIKE '${exp}/%'`));
+            pathsLike.forEach((exp) => pathsLike.push(`${exp}/%`));
         }
         else if (typeof allHeirs === "number") {
             pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1,${allHeirs}})`));
-            pathsLike.forEach((exp) => {
-                let heirsPattern = exp;
-                for (let i = 0; i < allHeirs; i++) {
-                    heirsPattern += "/%";
-                }
-                pathsLike.push(heirsPattern);
-            });
+            // pathsLike.forEach((exp) => querys.push(`LIKE '${exp}/%'`));
+            // pathsLike.forEach((exp) => pathsLike.push(`${exp}/%`));
+            const p = pathsLike;
+            let m = "/%";
+            for (let i = 0; i < allHeirs; i++) {
+                p.forEach((exp) => querys.push(`LIKE '${exp}${m}'`));
+                p.forEach((exp) => pathsLike.push(`${exp}${m}`));
+                m += "/%";
+            }
         }
         let parent = ivipbase_core_1.PathInfo.get(path).parent;
         // Obtém o caminho pai e adiciona a expressão regular correspondente ao array.
         if (includeAncestor) {
             while (parent) {
                 pathsRegex.push(replasePathToRegex(parent.path));
-                pathsLike.push(replacePathToLike(parent.path));
+                pathsLike.push(replacePathToLike(parent.path).replace(/\/$/gi, ""));
+                querys.push(`LIKE '${replacePathToLike(parent.path).replace(/\/$/gi, "")}'`);
                 parent = parent.parent;
             }
         }
         else if (parent) {
             pathsRegex.push(replasePathToRegex(parent.path));
-            pathsLike.push(replacePathToLike(parent.path));
+            pathsLike.push(replacePathToLike(parent.path).replace(/\/$/gi, ""));
+            querys.push(`LIKE '${replacePathToLike(parent.path).replace(/\/$/gi, "")}'`);
         }
         // Cria a expressão regular completa combinando as expressões individuais no array.
         const fullRegex = new RegExp(`^(${pathsRegex.map((e) => e.replace(/\/$/gi, "/?")).join("$)|(")}$)`);
         return {
             regex: fullRegex,
-            query: pathsLike,
+            query: querys.filter((e, i, l) => l.indexOf(e) === i && e !== ""),
         };
     }
     /**
@@ -2424,7 +2437,7 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
                     index: isArray ? key : undefined,
                     address: new NodeInfo_1.NodeAddress(node.path),
                     exists: true,
-                    value: null,
+                    value: null, // not loaded
                     revision: node.content.revision,
                     revision_nr: node.content.revision_nr,
                     created: new Date(node.content.created),
@@ -4312,12 +4325,11 @@ const rules_1 = require("./services/rules");
 const utils_1 = require("../utils");
 class DataBase extends ivipbase_core_1.DataBase {
     constructor(database, app, options) {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t;
         super(database, options);
         this.database = database;
         this.app = app;
         this.subscriptions = new Subscriptions_1.Subscriptions();
-        this._ipc = null;
         this.name = database;
         this.description =
             (_c = ((_a = (Array.isArray(app.settings.database) ? app.settings.database : [app.settings.database]).find(({ name }) => {
@@ -4334,11 +4346,11 @@ class DataBase extends ivipbase_core_1.DataBase {
         this._rules = new rules_1.PathBasedRules((_m = (_l = (_k = this.app.settings) === null || _k === void 0 ? void 0 : _k.server) === null || _l === void 0 ? void 0 : _l.auth.defaultAccessRule) !== null && _m !== void 0 ? _m : "allow", {
             debug: this.debug,
             db: this,
-            authEnabled: (_q = (_p = (_o = this.app.settings) === null || _o === void 0 ? void 0 : _o.server) === null || _p === void 0 ? void 0 : _p.auth.enabled) !== null && _q !== void 0 ? _q : false,
+            authEnabled: (_s = (_p = (_o = dbInfo === null || dbInfo === void 0 ? void 0 : dbInfo.authentication) === null || _o === void 0 ? void 0 : _o.enabled) !== null && _p !== void 0 ? _p : (_r = (_q = this.app.settings) === null || _q === void 0 ? void 0 : _q.server) === null || _r === void 0 ? void 0 : _r.auth.enabled) !== null && _s !== void 0 ? _s : false,
             rules: (0, utils_1.joinObjects)({ rules: {} }, defaultRules.rules, mainRules.rules, dbRules.rules),
         });
         this.storage = !app.settings.isConnectionDefined || app.isServer || !app.settings.isValidClient ? new StorageDBServer_1.StorageDBServer(this) : new StorageDBClient_1.StorageDBClient(this);
-        app.ipc.addDatabase(this);
+        (_t = app.ipc) === null || _t === void 0 ? void 0 : _t.addDatabase(this);
         app.storage.on("add", (e) => {
             //console.log(e);
             this.subscriptions.triggerAllEvents(e.path, null, e.value);
@@ -5287,6 +5299,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.LocalServer = exports.AbstractLocalServer = exports.isPossiblyServer = exports.ServerSettings = exports.ServerAuthenticationSettings = exports.DataBaseServerTransactionSettings = exports.AUTH_ACCESS_DEFAULT = exports.ExternalServerError = exports.ServerNotReadyError = void 0;
 const ivipbase_core_1 = require("ivipbase-core");
 const database_1 = require("../database");
+const utils_1 = require("../utils");
 class ServerNotReadyError extends Error {
     constructor() {
         super("O servidor ainda não está pronto");
@@ -5387,6 +5400,17 @@ class ServerAuthenticationSettings {
             this.separateDb = settings.separateDb;
         }
     }
+    toJSON() {
+        return {
+            enabled: this.enabled,
+            allowUserSignup: this.allowUserSignup,
+            newUserRateLimit: this.newUserRateLimit,
+            tokensExpire: this.tokensExpire,
+            defaultAccessRule: this.defaultAccessRule,
+            defaultAdminPassword: this.defaultAdminPassword,
+            separateDb: this.separateDb,
+        };
+    }
 }
 exports.ServerAuthenticationSettings = ServerAuthenticationSettings;
 class ServerSettings {
@@ -5401,6 +5425,7 @@ class ServerSettings {
         this.trustProxy = true;
         this.serverVersion = "1.0.0";
         this.localPath = "./data";
+        this.dbAuth = {};
         if (typeof options.logLevel === "string" && ["verbose", "log", "warn", "error"].includes(options.logLevel)) {
             this.logLevel = options.logLevel;
         }
@@ -5420,6 +5445,19 @@ class ServerSettings {
             this.trustProxy = options.trustProxy;
         }
         this.auth = new ServerAuthenticationSettings((_b = (_a = options.authentication) !== null && _a !== void 0 ? _a : options.auth) !== null && _b !== void 0 ? _b : {});
+        const dbList = (Array.isArray(options.database) ? options.database : [options.database]).filter((db) => typeof db !== "undefined");
+        if (typeof options.dbAuth === "object") {
+            this.dbAuth = Object.fromEntries(Object.entries(options.dbAuth).map(([dbName, auth]) => {
+                if (auth instanceof ServerAuthenticationSettings) {
+                    return [dbName, auth];
+                }
+                return [dbName, new ServerAuthenticationSettings((0, utils_1.joinObjects)(this.auth.toJSON(), auth !== null && auth !== void 0 ? auth : {}))];
+            }));
+        }
+        dbList.forEach((db) => {
+            var _a;
+            this.dbAuth[db.name] = new ServerAuthenticationSettings((0, utils_1.joinObjects)(this.auth.toJSON(), (_a = db.authentication) !== null && _a !== void 0 ? _a : {}));
+        });
         if (typeof options.init === "function") {
             this.init = options.init;
         }
@@ -5533,7 +5571,7 @@ class LocalServer extends AbstractLocalServer {
 }
 exports.LocalServer = LocalServer;
 
-},{"../database":24,"ivipbase-core":99}],32:[function(require,module,exports){
+},{"../database":24,"../utils":34,"ivipbase-core":99}],32:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getExtension = exports.getType = exports.define = exports.extensions = exports.types = void 0;
@@ -9361,7 +9399,7 @@ PACKET_TYPES["upgrade"] = "5";
 PACKET_TYPES["noop"] = "6";
 const PACKET_TYPES_REVERSE = Object.create(null);
 exports.PACKET_TYPES_REVERSE = PACKET_TYPES_REVERSE;
-Object.keys(PACKET_TYPES).forEach(key => {
+Object.keys(PACKET_TYPES).forEach((key) => {
     PACKET_TYPES_REVERSE[PACKET_TYPES[key]] = key;
 });
 const ERROR_PACKET = { type: "error", data: "parser error" };
@@ -9428,14 +9466,14 @@ const decodePacket = (encodedPacket, binaryType) => {
     if (typeof encodedPacket !== "string") {
         return {
             type: "message",
-            data: mapBinary(encodedPacket, binaryType)
+            data: mapBinary(encodedPacket, binaryType),
         };
     }
     const type = encodedPacket.charAt(0);
     if (type === "b") {
         return {
             type: "message",
-            data: decodeBase64Packet(encodedPacket.substring(1), binaryType)
+            data: decodeBase64Packet(encodedPacket.substring(1), binaryType),
         };
     }
     const packetType = commons_js_1.PACKET_TYPES_REVERSE[type];
@@ -9445,10 +9483,10 @@ const decodePacket = (encodedPacket, binaryType) => {
     return encodedPacket.length > 1
         ? {
             type: commons_js_1.PACKET_TYPES_REVERSE[type],
-            data: encodedPacket.substring(1)
+            data: encodedPacket.substring(1),
         }
         : {
-            type: commons_js_1.PACKET_TYPES_REVERSE[type]
+            type: commons_js_1.PACKET_TYPES_REVERSE[type],
         };
 };
 exports.decodePacket = decodePacket;
@@ -9495,7 +9533,7 @@ const withNativeBlob = typeof Blob === "function" ||
         Object.prototype.toString.call(Blob) === "[object BlobConstructor]");
 const withNativeArrayBuffer = typeof ArrayBuffer === "function";
 // ArrayBuffer.isView method is not defined in IE10
-const isView = obj => {
+const isView = (obj) => {
     return typeof ArrayBuffer.isView === "function"
         ? ArrayBuffer.isView(obj)
         : obj && obj.buffer instanceof ArrayBuffer;
@@ -9544,16 +9582,13 @@ function toArray(data) {
 let TEXT_ENCODER;
 function encodePacketToBinary(packet, callback) {
     if (withNativeBlob && packet.data instanceof Blob) {
-        return packet.data
-            .arrayBuffer()
-            .then(toArray)
-            .then(callback);
+        return packet.data.arrayBuffer().then(toArray).then(callback);
     }
     else if (withNativeArrayBuffer &&
         (packet.data instanceof ArrayBuffer || isView(packet.data))) {
         return callback(toArray(packet.data));
     }
-    encodePacket(packet, false, encoded => {
+    encodePacket(packet, false, (encoded) => {
         if (!TEXT_ENCODER) {
             TEXT_ENCODER = new TextEncoder();
         }
@@ -9579,7 +9614,7 @@ const encodePayload = (packets, callback) => {
     let count = 0;
     packets.forEach((packet, i) => {
         // force base64 encoding for binary packets
-        (0, encodePacket_js_1.encodePacket)(packet, false, encodedPacket => {
+        (0, encodePacket_js_1.encodePacket)(packet, false, (encodedPacket) => {
             encodedPackets[i] = encodedPacket;
             if (++count === length) {
                 callback(encodedPackets.join(SEPARATOR));
@@ -9602,9 +9637,10 @@ const decodePayload = (encodedPayload, binaryType) => {
 };
 exports.decodePayload = decodePayload;
 function createPacketEncoderStream() {
+    // @ts-expect-error
     return new TransformStream({
         transform(packet, controller) {
-            (0, encodePacket_js_1.encodePacketToBinary)(packet, encodedPacket => {
+            (0, encodePacket_js_1.encodePacketToBinary)(packet, (encodedPacket) => {
                 const payloadLength = encodedPacket.length;
                 let header;
                 // inspired by the WebSocket format: https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers#decoding_payload_length
@@ -9631,7 +9667,7 @@ function createPacketEncoderStream() {
                 controller.enqueue(header);
                 controller.enqueue(encodedPacket);
             });
-        }
+        },
     });
 }
 exports.createPacketEncoderStream = createPacketEncoderStream;
@@ -9665,6 +9701,7 @@ function createPacketDecoderStream(maxPayload, binaryType) {
     let state = 0 /* READ_HEADER */;
     let expectedLength = -1;
     let isBinary = false;
+    // @ts-expect-error
     return new TransformStream({
         transform(chunk, controller) {
             chunks.push(chunk);
@@ -9722,7 +9759,7 @@ function createPacketDecoderStream(maxPayload, binaryType) {
                     break;
                 }
             }
-        }
+        },
     });
 }
 exports.createPacketDecoderStream = createPacketDecoderStream;

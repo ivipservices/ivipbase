@@ -31,8 +31,10 @@ export const addRoutes = (env: LocalServer) => {
 		const LOG_ACTION = "auth.forgot_password";
 		const LOG_DETAILS = { ip: req.ip, uid: req.user?.uid ?? null, email: details.email };
 
+		const tokenSalt = env.tokenSalt[dbName];
+
 		try {
-			if (!env.tokenSalt) {
+			if (!tokenSalt) {
 				throw new ForgotPasswordError("server_email_config", "Token salt not set");
 			}
 
@@ -59,8 +61,8 @@ export const addRoutes = (env: LocalServer) => {
 			const request: IvipBaseUserResetPasswordEmailRequest = {
 				type: "user_reset_password",
 				date: new Date(),
-				ip: req.ip,
-				resetCode: createSignedPublicToken({ uid: user.uid, code: user.password_reset_code }, env.tokenSalt),
+				ip: req.ip ?? "0.0.0.0",
+				resetCode: createSignedPublicToken({ uid: user.uid, code: user.password_reset_code }, tokenSalt),
 				user: {
 					email: user.email,
 					uid: user.uid,

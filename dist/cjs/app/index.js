@@ -30,7 +30,7 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         this.databases = new Map();
         this.auth = new Map();
         this._socket = null;
-        this._ipc = null;
+        this._ipc = undefined;
         this._connectionState = CONNECTION_STATE_DISCONNECTED;
         if (typeof options.name === "string") {
             this.name = options.name;
@@ -41,7 +41,9 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         }
         this.storage = (0, verifyStorage_1.applySettings)(this.settings.dbname, this.settings.storage);
         this.isServer = typeof this.settings.server === "object";
-        this._ipc = (0, ipc_1.getIPCPeer)(this.name);
+        if (this.settings.isPossiplyServer) {
+            this._ipc = (0, ipc_1.getIPCPeer)(this.name);
+        }
         this.on("ready", () => {
             this._ready = true;
         });
@@ -116,6 +118,9 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         return this._socket;
     }
     get ipc() {
+        if (!this.settings.isPossiplyServer) {
+            return;
+        }
         if (this._ipc instanceof ipc_1.IPCPeer === false) {
             this._ipc = (0, ipc_1.getIPCPeer)(this.name);
         }
@@ -127,7 +132,7 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
             if (isReset) {
                 return;
             }
-            if (this._ready && this.isConnected) {
+            if (this.isConnected) {
                 count++;
                 if (count > 1 && isOnce) {
                     return;
@@ -137,11 +142,6 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
                     this.off("connect", event);
                 }
                 return;
-            }
-            if (!this._ready) {
-                this.ready(() => {
-                    event();
-                });
             }
         };
         if (!this.isServer && (typeof this.settings.database === "string" || (Array.isArray(this.settings.database) && this.settings.database.length > 0))) {

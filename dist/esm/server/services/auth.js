@@ -11,13 +11,13 @@ export const setupAuthentication = async (env) => {
                 .securityRef(dbName)
                 .child("token_salt")
                 .transaction((snap) => {
-                env.tokenSalt = snap.val();
-                if (!env.tokenSalt) {
+                env.tokenSalt[dbName] = snap.val();
+                if (!env.tokenSalt[dbName]) {
                     const length = 256;
-                    env.tokenSalt = randomBytes(Math.ceil(length / 2))
+                    env.tokenSalt[dbName] = randomBytes(Math.ceil(length / 2))
                         .toString("hex")
                         .slice(0, length);
-                    return env.tokenSalt;
+                    return env.tokenSalt[dbName];
                 }
             });
             // Setup admin account
@@ -28,16 +28,16 @@ export const setupAuthentication = async (env) => {
                 let adminAccount = snap.val();
                 if (adminAccount === null) {
                     // Use provided default password, or generate one:
-                    const adminPassword = env.settings.auth.defaultAdminPassword || generatePassword();
+                    const adminPassword = env.settings.dbAuth[dbName].defaultAdminPassword || generatePassword();
                     const pwd = createPasswordHash(adminPassword);
                     adminAccount = {
                         username: "admin",
                         display_name: `[${dbName}] IvipBase admin`,
                         password: pwd.hash,
                         password_salt: pwd.salt,
-                        change_password: true,
+                        change_password: true, // flags that password must be changed. Not implemented yet
                         created: new Date(),
-                        access_token: undefined,
+                        access_token: undefined, // Will be set upon login, so bearer authentication strategy can find user with this token
                         settings: {},
                         permission_level: 2,
                     };
@@ -55,18 +55,18 @@ export const setupAuthentication = async (env) => {
                     env.debug.warn(`__________________________________________________________________`);
                     return adminAccount; // Save it
                 }
-                else if (env.settings.auth.defaultAdminPassword) {
+                else if (env.settings.dbAuth[dbName].defaultAdminPassword) {
                     // Check if the default password was changed
                     let passwordHash;
                     if (!adminAccount.password_salt) {
                         // Old md5 password hash?
-                        passwordHash = getOldPasswordHash(env.settings.auth.defaultAdminPassword);
+                        passwordHash = getOldPasswordHash(env.settings.dbAuth[dbName].defaultAdminPassword);
                     }
                     else {
-                        passwordHash = getPasswordHash(env.settings.auth.defaultAdminPassword, adminAccount.password_salt);
+                        passwordHash = getPasswordHash(env.settings.dbAuth[dbName].defaultAdminPassword, adminAccount.password_salt);
                     }
                     if (adminAccount.password !== passwordHash) {
-                        const pwd = createPasswordHash(env.settings.auth.defaultAdminPassword);
+                        const pwd = createPasswordHash(env.settings.dbAuth[dbName].defaultAdminPassword);
                         adminAccount.password = pwd.hash;
                         adminAccount.password_salt = pwd.salt;
                         return adminAccount; // Save it

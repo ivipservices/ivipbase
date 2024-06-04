@@ -123,14 +123,20 @@ class SqliteStorage extends CustomStorage_1.CustomStorage {
             });
         });
     }
-    async _getByRegex(table, param, expression, simplifyValues = false) {
-        const sql = `SELECT path, type, text_value, json_value, revision, revision_nr, created, modified FROM ${table}`;
+    async getMultiple(database, { regex, query }, simplifyValues = false) {
+        if (!(database in this.pending)) {
+            throw erros_1.ERROR_FACTORY.create("db-not-found" /* AppError.DB_NOT_FOUND */, { dbName: database });
+        }
+        const pendingList = Array.from(this.pending[database].values()).filter((row) => regex.test(row.path));
+        const sql = `SELECT path, type, json_value, revision, revision_nr, created, modified FROM ${database} WHERE ${query.map((p) => `path ${p}`).join(" OR ")}`;
         const rows = await this._get(sql);
-        const list = rows.filter((row) => param in row && expression.test(row[param]));
-        const promises = list.map(async (row) => {
-            if ([MDE_1.VALUE_TYPES.BINARY].includes(row.type) && !simplifyValues) {
-                return await this._getOne(`SELECT path, binary_value FROM ${table} WHERE path = '${row.path}'`)
-                    .then(({ binary_value }) => {
+        const list = await Promise.all(rows
+            .filter((row) => "path" in row && regex.test(row["path"]))
+            .map(async (row) => {
+            if ([MDE_1.VALUE_TYPES.STRING, MDE_1.VALUE_TYPES.REFERENCE, MDE_1.VALUE_TYPES.BINARY].includes(row.type) && !simplifyValues) {
+                return await this._getOne(`SELECT path, text_value, binary_value FROM ${database} WHERE path = '${row.path}'`)
+                    .then(({ text_value, binary_value }) => {
+                    row.text_value = text_value;
                     row.binary_value = binary_value;
                     return Promise.resolve(row);
                 })
@@ -139,20 +145,7 @@ class SqliteStorage extends CustomStorage_1.CustomStorage {
                 });
             }
             return Promise.resolve(row);
-        });
-        return await Promise.all(promises);
-    }
-    async getMultiple(database, { regex, query }, simplifyValues = false) {
-        if (!(database in this.pending)) {
-            throw erros_1.ERROR_FACTORY.create("db-not-found" /* AppError.DB_NOT_FOUND */, { dbName: database });
-        }
-        const pendingList = Array.from(this.pending[database].values()).filter((row) => regex.test(row.path));
-        const sql = `SELECT path, type, text_value, binary_value, json_value, revision, revision_nr, created, modified FROM ${database} WHERE ${query.map((p) => `path LIKE '${p}'`).join(" OR ")}`;
-        const rows = await this._get(sql);
-        const list = rows.filter((row) => "path" in row && regex.test(row["path"]));
-        console.log("patterns", query);
-        console.log("regex", regex);
-        console.log("list", rows.length, list.length);
+        }));
         const result = pendingList
             .concat(list)
             .filter((row, i, l) => {

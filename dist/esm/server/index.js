@@ -20,8 +20,12 @@ export const isPossiblyServer = true;
 const createDirectories = (dirPath) => {
     // Usa path.resolve para garantir um caminho absoluto.
     const absolutePath = path.resolve(dirPath);
-    // Usa fs.mkdirSync com { recursive: true } para criar todas as pastas necessárias.
-    fs.mkdirSync(absolutePath, { recursive: true });
+    if (!fs.existsSync(path.basename(absolutePath))) {
+        createDirectories(path.dirname(absolutePath));
+    }
+    if (!fs.existsSync(absolutePath)) {
+        fs.mkdirSync(absolutePath, { recursive: true });
+    }
 };
 export class LocalServer extends AbstractLocalServer {
     constructor(localApp, settings = {}) {
@@ -35,7 +39,7 @@ export class LocalServer extends AbstractLocalServer {
         this.clients = new Map();
         this.authCache = new SimpleCache({ expirySeconds: 300, cloneValues: false, maxEntries: 1000 });
         this.metaInfoCache = new SimpleCache({ expirySeconds: 500, cloneValues: false, maxEntries: 1000 });
-        this.tokenSalt = null;
+        this.tokenSalt = {};
         this.init();
     }
     async init() {
@@ -57,7 +61,7 @@ export class LocalServer extends AbstractLocalServer {
         addCorsMiddleware(this);
         // Adiciona middleware de cache
         addCacheMiddleware(this);
-        if (this.settings.auth.enabled) {
+        if (Object.values(this.settings.dbAuth).findIndex((auth) => auth.enabled) >= 0) {
             // Setup auth database
             await setupAuthentication(this);
             // Add auth endpoints

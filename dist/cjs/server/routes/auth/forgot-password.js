@@ -13,7 +13,7 @@ class ForgotPasswordError extends Error {
 exports.ForgotPasswordError = ForgotPasswordError;
 const addRoutes = (env) => {
     env.router.post(`/auth/:dbName/forgot_password`, async (req, res) => {
-        var _a, _b, _c;
+        var _a, _b, _c, _d;
         const { dbName } = req.params;
         if (!env.hasDatabase(dbName)) {
             return (0, error_1.sendError)(res, {
@@ -24,8 +24,9 @@ const addRoutes = (env) => {
         const details = req.body;
         const LOG_ACTION = "auth.forgot_password";
         const LOG_DETAILS = { ip: req.ip, uid: (_b = (_a = req.user) === null || _a === void 0 ? void 0 : _a.uid) !== null && _b !== void 0 ? _b : null, email: details.email };
+        const tokenSalt = env.tokenSalt[dbName];
         try {
-            if (!env.tokenSalt) {
+            if (!tokenSalt) {
                 throw new ForgotPasswordError("server_email_config", "Token salt not set");
             }
             if (typeof details !== "object" || typeof details.email !== "string" || details.email.length === 0) {
@@ -46,8 +47,8 @@ const addRoutes = (env) => {
             const request = {
                 type: "user_reset_password",
                 date: new Date(),
-                ip: req.ip,
-                resetCode: (0, tokens_1.createSignedPublicToken)({ uid: user.uid, code: user.password_reset_code }, env.tokenSalt),
+                ip: (_c = req.ip) !== null && _c !== void 0 ? _c : "0.0.0.0",
+                resetCode: (0, tokens_1.createSignedPublicToken)({ uid: user.uid, code: user.password_reset_code }, tokenSalt),
                 user: {
                     email: user.email,
                     uid: user.uid,
@@ -64,7 +65,7 @@ const addRoutes = (env) => {
             res.send("OK");
         }
         catch (err) {
-            env.log.error(LOG_ACTION, err.code || "unexpected", Object.assign(Object.assign({}, LOG_DETAILS), { message: (_c = (err instanceof Error && err.message)) !== null && _c !== void 0 ? _c : err.toString() }));
+            env.log.error(LOG_ACTION, err.code || "unexpected", Object.assign(Object.assign({}, LOG_DETAILS), { message: (_d = (err instanceof Error && err.message)) !== null && _d !== void 0 ? _d : err.toString() }));
             if (err.code) {
                 (0, error_1.sendBadRequestError)(res, err);
             }

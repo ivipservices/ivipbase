@@ -14,7 +14,6 @@ export declare class SqliteStorage extends CustomStorage {
     private _get;
     private _getOne;
     private _exec;
-    private _getByRegex;
     getMultiple(database: string, { regex, query }: {
         regex: RegExp;
         query: string[];

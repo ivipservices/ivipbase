@@ -12,7 +12,7 @@ export type ResponseBody = {
 };
 export type Request = RouteRequest<RequestQuery, RequestBody, ResponseBody>;
 
-let time: NodeJS.Timer;
+let time: NodeJS.Timeout;
 
 const getCpuUsage = (): Promise<number> => {
 	return new Promise((resolve, reject) => {
@@ -69,14 +69,67 @@ export const addRoute = (env: LocalServer) => {
 
 	// Add info endpoint
 	env.router.get(`/info/:dbName`, async (req: Request, res) => {
-		let info = {
+		let info: {
+			dbname: string;
+			version: string;
+			time: number;
+			process: number;
+			platform: string;
+			arch: string;
+			release: string;
+			host: string;
+			uptime: string;
+			load: number[];
+			mem: {
+				total: string;
+				free: string;
+				process: {
+					arrayBuffers: string;
+					external: string;
+					heapTotal: string;
+					heapUsed: string;
+					residentSet: string;
+				};
+			};
+			cpus: ReturnType<typeof os.cpus>;
+			network: ReturnType<typeof os.networkInterfaces>;
+			data: Array<{
+				cpuUsage: number;
+				networkStats: {
+					sent: number;
+					received: number;
+				};
+				memoryUsage: { total: number; free: number; used: number };
+				timestamp: number;
+			}>;
+		} = {
 			dbname: req.params["dbName"],
 			version: env.settings.serverVersion,
 			time: Date.now(),
 			process: process.pid,
+			platform: "",
+			arch: "",
+			release: "",
+			host: "",
+			uptime: "",
+			load: [],
+			mem: {
+				total: "0MB",
+				free: "0MB",
+				process: {
+					arrayBuffers: "0MB",
+					external: "0MB",
+					heapTotal: "0MB",
+					heapUsed: "0MB",
+					residentSet: "0MB",
+				},
+			},
+			cpus: [],
+			network: {},
+			data: [],
 		};
 
-		if (req.user && req.user.permission_level >= 2) {
+		if (req.user && req.user.permission_level >= 1) {
 			const numberToByteSize = (number: number) => {
 				return Math.round((number / 1024 / 1024) * 100) / 100 + "MB";
 			};
@@ -94,36 +147,14 @@ export const addRoute = (env: LocalServer) => {
 				return `${days}d${hours}h${minutes}m${seconds}s`;
 			};
 			const mem = process.memoryUsage();
-			const adminInfo: {
-				platform: NodeJS.Platform;
-				arch: string;
-				release: string;
-				host: string;
-				uptime: string;
-				load: number[];
-				mem: {
-					total: string;
-					free: string;
-					process: {
-						arrayBuffers: string;
-						external: string;
-						heapTotal: string;
-						heapUsed: string;
-						residentSet: string;
-					};
-				};
-				cpus: ReturnType<typeof os.cpus>;
-				network: ReturnType<typeof os.networkInterfaces>;
-				data: Array<{
-					cpuUsage: number;
-					networkStats: {
-						sent: number;
-						received: number;
-					};
-					memoryUsage: { total: number; free: number; used: number };
-					timestamp: number;
-				}>;
-			} = {
+
+			info.data = env.metaInfoCache.values();
+			info.data.sort((a, b) => {
+				return a.timestamp - b.timestamp;
+			});
+
+			info = {
+				...info,
 				platform: os.platform(),
 				arch: os.arch(),
 				release: os.release(),
@@ -145,12 +176,6 @@ export const addRoute = (env: LocalServer) => {
 				network: os.networkInterfaces(),
 				data: env.metaInfoCache.values(),
 			};
-
-			adminInfo.data.sort((a, b) => {
-				return a.timestamp - b.timestamp;
-			});
-
-			info = { ...info, ...adminInfo };
 		}
 		// for (let i = 0; i < 1000000000; i++) {
 		//     let j = Math.pow(i, 2);

@@ -13,12 +13,13 @@ class ResetPasswordError extends Error {
 exports.ResetPasswordError = ResetPasswordError;
 const addRoutes = (env) => {
     const resetPassword = async (dbName, clientIp, code, newPassword) => {
-        if (!env.tokenSalt) {
+        const tokenSalt = env.tokenSalt[dbName];
+        if (!tokenSalt) {
             throw new Error("Token salt not set in server settings");
         }
         const verification = (() => {
             try {
-                return (0, tokens_1.parseSignedPublicToken)(code, env.tokenSalt);
+                return (0, tokens_1.parseSignedPublicToken)(code, tokenSalt);
             }
             catch (err) {
                 throw new ResetPasswordError("invalid_code", err.message);
@@ -63,7 +64,7 @@ const addRoutes = (env) => {
         return user;
     };
     env.router.post(`/auth/:dbName/reset_password`, async (req, res) => {
-        var _a, _b, _c, _d;
+        var _a, _b, _c, _d, _e;
         const { dbName } = req.params;
         if (!env.hasDatabase(dbName)) {
             return (0, error_1.sendError)(res, {
@@ -75,12 +76,12 @@ const addRoutes = (env) => {
         const LOG_ACTION = "auth.reset_password";
         const LOG_DETAILS = { ip: req.ip, uid: (_b = (_a = req.user) === null || _a === void 0 ? void 0 : _a.uid) !== null && _b !== void 0 ? _b : null };
         try {
-            const user = await resetPassword(dbName, req.ip, details.code, details.password);
+            const user = await resetPassword(dbName, (_c = req.ip) !== null && _c !== void 0 ? _c : "0.0.0.0", details.code, details.password);
             // env.log.event(LOG_ACTION, { ...LOG_DETAILS, reset_uid: user.uid });
             res.send("OK");
         }
         catch (err) {
-            env.log.error(LOG_ACTION, (_c = err.code) !== null && _c !== void 0 ? _c : "unexpected", Object.assign(Object.assign({}, LOG_DETAILS), { message: (_d = (err instanceof Error && err.message)) !== null && _d !== void 0 ? _d : err.toString() }));
+            env.log.error(LOG_ACTION, (_d = err.code) !== null && _d !== void 0 ? _d : "unexpected", Object.assign(Object.assign({}, LOG_DETAILS), { message: (_e = (err instanceof Error && err.message)) !== null && _e !== void 0 ? _e : err.toString() }));
             if (err.code) {
                 (0, error_1.sendBadRequestError)(res, err);
             }
