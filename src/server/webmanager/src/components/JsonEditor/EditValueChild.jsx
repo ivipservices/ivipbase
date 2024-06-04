@@ -29,7 +29,7 @@ export const EditValueChild = ({
 	const [edit, setEdit] = useState(isNewChild);
 	const [currentKey, setCurrentKey] = useState(name);
 	const [currentValue, setCurrentValue] = useState(valueToString(value));
-	const [currentType, setCurrentType] = useState(type);
+	const [currentType, setCurrentType] = useState(type ?? "unknown");
 	const [textWarning, setTextWarning] = useState(null);
 
 	const [newChildres, setNewChildres] = useState([]);
@@ -96,6 +96,7 @@ export const EditValueChild = ({
 	useEffect(() => {
 		if (typeof subscribeMutated === "function") {
 			const actualPath = parentPath.concat([currentKey]);
+			let time;
 
 			const event = subscribeMutated(resolveArrayPath(actualPath), (path, value) => {
 				const isPathExact = resolveArrayPath(path) === resolveArrayPath(actualPath);
@@ -106,17 +107,20 @@ export const EditValueChild = ({
 					if (value === null) {
 						emitNotify("remove");
 					} else {
+						setLoading(true);
 						emitNotify("change");
-						// const type = getValueType(value);
-						// setCurrentValue(valueToString(value));
-						// setCurrentType(type);
-
-						console.log(type, valueToString(value));
+						const type = getValueType(value);
+						setCurrentValue(valueToString(value));
+						setCurrentType(type);
+						time = setTimeout(() => {
+							setLoading(false);
+						}, 1000);
 					}
 				}
 			});
 
 			return () => {
+				clearTimeout(time);
 				event?.stop();
 			};
 		}

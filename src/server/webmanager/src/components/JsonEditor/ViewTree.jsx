@@ -275,14 +275,14 @@ export const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, chec
 		};
 	};
 
-	const { type, value, children, exists = false } = data ?? {};
+	const { type = "unknown", value, children, exists = true } = data ?? {};
 	const key = data?.key ?? actualPath[actualPath.length - 1];
 
 	const colorMark = palette[index % palette.length];
 
 	const isRoot = resolveArrayPath(actualPath) === "";
 
-	return removed ? null : !value || (Array.isArray(children?.list) && ["object", "array"].includes(type)) ? (
+	return removed ? null : (!value && exists) || (Array.isArray(children?.list) && ["object", "array"].includes(type)) ? (
 		<div
 			className={style["key-tree"]}
 			style={{ "--color-mark": colorMark }}

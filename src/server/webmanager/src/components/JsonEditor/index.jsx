@@ -4,7 +4,7 @@ import { Typography, Breadcrumbs, Link, TextField, IconButton } from "@mui/mater
 import { mdiPencil, mdiClose, mdiLink, mdiChevronRight } from "@mdi/js";
 import SvgIcon from "../SvgIcon";
 import { PathInfo } from "ivipbase";
-import { getValueType, resolveArrayPath } from "./utils";
+import { getValueType, resolveArrayPath, valueToString } from "./utils.jsx";
 
 import ViewTree from "./ViewTree.jsx";
 
@@ -66,6 +66,31 @@ export const JsonEditor = forwardRef(({ rootDir = "root", path = [] }, ref) => {
 						.split("/")
 						.map((item) => (/(\[\d+\])/gi.test(item) ? parseInt(item.replace(/\[|\]/gi, "")) : item)),
 				);
+
+				const parentPath = PathInfo.get(path).parentPath;
+				const key = PathInfo.get(path).key;
+
+				if (cache.current.has(parentPath)) {
+					const data = cache.current.get(parentPath);
+
+					if (data && Array.isArray(data.children?.list)) {
+						const index = data.children.list.findIndex((e) => e.key === key);
+						if (index !== -1 && "value" in data.children.list[index]) {
+							data.children.list[index].value = value;
+							data.children.list[index].type = valueToString(value);
+							cache.current.set(parentPath, data);
+						}
+					}
+				}
+
+				if (cache.current.has(path)) {
+					const data = cache.current.get(parentPath);
+					if (data) {
+						data.value = value;
+						data.type = valueToString(value);
+						cache.current.set(path, data);
+					}
+				}
 
 				subscribeMutated.current.forEach((callback) => {
 					callback(currentPath, value);

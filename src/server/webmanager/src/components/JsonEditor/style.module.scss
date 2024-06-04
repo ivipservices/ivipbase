@@ -16,6 +16,10 @@
             >ol,
             >ul {
                 min-height: 40px;
+
+                :global(.MuiTypography-root) {
+                    user-select: text;
+                }
             }
 
             &.edit {
