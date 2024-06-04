@@ -20,7 +20,7 @@ export const addRoutes = (env: LocalServer) => {
 		} else if (filePath.startsWith("settings.js")) {
 			res.send(`
                 window.settings = {
-                    "host": "${env.settings.host}",
+                    "host": window.location.hostname ?? "${env.settings.host}",
                     "port": ${env.settings.port},
                 };
             `);
