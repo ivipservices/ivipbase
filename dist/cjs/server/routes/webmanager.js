@@ -15,10 +15,18 @@ const addRoutes = (env) => {
     // Serve static files from webmanager directory
     env.router.get(`/${webManagerDir}/*`, (req, res) => {
         const filePath = req.path.slice(webManagerDir.length + 2);
-        const assetsPath = path_1.default.join(rootpath_1.packageRootPath, "/server/webmanager");
+        const assetsPath = path_1.default.join(rootpath_1.packageRootPath, "/webmanager");
         if (filePath.length === 0) {
             // Send default file
             res.sendFile(path_1.default.join(assetsPath, "/index.html"));
+        }
+        else if (filePath.startsWith("settings.js")) {
+            res.send(`
+                window.settings = {
+                    "host": "${env.settings.host}",
+                    "port": ${env.settings.port},
+                };
+            `);
         }
         else {
             const mainFilePath = path_1.default.join(assetsPath, "/", filePath);

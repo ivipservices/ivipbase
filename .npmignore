@@ -10,3 +10,5 @@ test
 create-package-files
 previous_src
 *.tgz
+*.log
+*.sqlite

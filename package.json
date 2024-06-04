@@ -1,6 +1,6 @@
 {
 	"name": "ivipbase",
-	"version": "1.2.0",
+	"version": "1.2.4",
 	"description": "Componentes principais compartilhados do iVipBase, sem necessidade de instalação manual",
 	"comments": {
 		"browser": "As substituições de arquivo webpack/browserify foram movidas para package.json em dist/cjs e dist/esm. Veja README.md para mais informações",
@@ -9,6 +9,15 @@
 	"main": "dist/cjs/index.js",
 	"module": "./dist/esm/index.js",
 	"types": "./dist/types/index.d.ts",
+	"files": [
+		"dist",
+		"dist/esm",
+		"dist/cjs",
+		"dist/types",
+		"dist/webmanager",
+		"package.json",
+		"README.md"
+	],
 	"exports": {
 		".": {
 			"import": "./dist/esm/index.js",
@@ -45,13 +54,14 @@
 		"dev2": "nodemon ./src/server/services/database/Node/NodeResultWithPath.ts",
 		"dev3": "nodemon ./test/set.ts",
 		"dev4": "nodemon ./test/mde.ts",
-		"build": "npm run build:clean && npm run build:esm && npm run build:cjs && npm run build:packages && npm run browserify && echo Done!",
+		"build": "npm run build:clean && npm run build:esm && npm run build:cjs && npm run build:packages && npm run browserify && npm run clone:webmanager && echo Done!",
 		"build:clean": "rimraf dist",
 		"build:esm": "tsc -p tsconfig-esm.json && npx tsc-esm-fix ---target='dist/esm'",
 		"build:cjs": "tsc -p tsconfig-cjs.json",
 		"build:packages": "bash ./create-package-files",
-		"browserify": "browserify dist/cjs/browser.js -g envify -o dist/browser.js --standalone ivipbase --ignore rxjs --ignore buffer --ignore fetch && terser dist/browser.js -o dist/browser.min.js && terser dist/browser.js -o src/server/webmanager/src/script/ivipbase/browser.js",
-		"npm:publish": "npm pack && npm publish --access public"
+		"browserify": "browserify dist/cjs/browser.js -g envify -o dist/browser.js --standalone ivipbase --ignore rxjs --ignore buffer --ignore fetch && terser dist/browser.js -o dist/browser.min.js && terser dist/browser.js -o webmanager/src/script/ivipbase/browser.js",
+		"clone:webmanager": "cpx \"webmanager/**/*\" dist/webmanager",
+		"npm:publish": "npm run build && npm pack && npm publish --access public"
 	},
 	"keywords": [
 		"iVipBase",
@@ -104,6 +114,7 @@
 		"@typescript-eslint/eslint-plugin": "^6.2.1",
 		"@typescript-eslint/parser": "^6.2.1",
 		"browserify": "^17.0.0",
+		"cpx": "^1.5.0",
 		"ejs": "^3.1.8",
 		"envify": "^4.1.0",
 		"eslint": "^8.46.0",

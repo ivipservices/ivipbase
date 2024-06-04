@@ -50,6 +50,7 @@ exports.isPossiblyServer = true;
 const createDirectories = (dirPath) => {
     // Usa path.resolve para garantir um caminho absoluto.
     const absolutePath = path_1.default.resolve(dirPath);
+    return fs_1.default.mkdirSync(absolutePath, { recursive: true });
     if (!fs_1.default.existsSync(path_1.default.basename(absolutePath))) {
         createDirectories(path_1.default.dirname(absolutePath));
     }

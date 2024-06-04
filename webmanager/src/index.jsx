@@ -71,8 +71,8 @@ const App = () => {
 };
 
 const app = initializeApp({
-	host: "localhost",
-	port: 8080,
+	host: window.settings.host,
+	port: window.settings.port,
 	dbname: "",
 	bootable: false,
 });

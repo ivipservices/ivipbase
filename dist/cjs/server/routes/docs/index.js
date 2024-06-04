@@ -34,7 +34,7 @@ const rootpath_1 = require("../../shared/rootpath");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const addRoute = (env) => {
-    const yamlPath = path_1.default.join(rootpath_1.packageRootPath, "/server/routes/*/*.yaml");
+    const yamlPath = path_1.default.join(rootpath_1.packageRootPath, "/src/server/routes/*/*.yaml");
     // Generate docs from all yaml files
     const options = {
         definition: {
@@ -334,7 +334,7 @@ const addRoute = (env) => {
 </html>`;
     env.router.use("/docs/resources/*", (req, res, next) => {
         try {
-            let filePath = path_1.default.join(rootpath_1.packageRootPath, "/server/routes", req.originalUrl);
+            let filePath = path_1.default.join(rootpath_1.packageRootPath, "/src/server/routes", req.originalUrl);
             if (!fs_1.default.existsSync(filePath)) {
                 return next();
             }

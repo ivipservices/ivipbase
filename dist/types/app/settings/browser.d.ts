@@ -75,7 +75,7 @@ export interface DatabaseSettings {
     name: string;
     description?: string;
     defineRules?: RulesData;
-    authentication?: ServerAuthenticationSettings;
+    authentication?: Partial<ServerAuthenticationSettings>;
 }
 export declare class IvipBaseSettings {
     readonly options: Partial<Omit<IvipBaseSettings, "isServer" | "isValidClient">>;
