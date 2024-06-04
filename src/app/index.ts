@@ -367,7 +367,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 		if (this._connectionState === CONNECTION_STATE_DISCONNECTED) {
 			this._connectionState = CONNECTION_STATE_CONNECTING;
 
-			this._socket = connectSocket(this.url, {
+			this._socket = connectSocket(this.url.replace(/^http(s?)/gi, "ws$1"), {
 				// Use default socket.io connection settings:
 				path: `/socket.io`,
 				autoConnect: true,
