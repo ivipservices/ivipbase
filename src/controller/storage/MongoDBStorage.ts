@@ -212,9 +212,15 @@ export class MongodbStorage extends CustomStorage {
 		const pendingList: StorageNodeInfo[] = Array.from(this.pending[database].values()).filter((node) => regex.test(node.path));
 		const list: StorageNodeInfo[] = await this.database[database].collection.find(query).toArray();
 
-		const result: StorageNodeInfo[] = pendingList.concat(list).filter((node, i, l) => {
-			return l.findIndex((r) => r.path === node.path) === i;
-		});
+		const result: StorageNodeInfo[] = pendingList
+			.concat(list)
+			.map((node) => {
+				node.path = node.path.replace(/\/+$/g, "");
+				return node;
+			})
+			.filter((node, i, l) => {
+				return l.findIndex((r) => r.path === node.path) === i;
+			});
 
 		return result;
 	}
@@ -223,6 +229,9 @@ export class MongodbStorage extends CustomStorage {
 		if (!this.isConnected || !this.database[database] || !this.database[database].collection) {
 			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
 		}
+
+		path = path.replace(/\/+$/g, "");
+		node.path = node.path.replace(/\/+$/g, "");
 
 		this.pending[database].set(path, node);
 
@@ -241,6 +250,10 @@ export class MongodbStorage extends CustomStorage {
 		if (!this.isConnected || !this.database[database] || !this.database[database].collection) {
 			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
 		}
+
+		path = path.replace(/\/+$/g, "");
+		node.path = node.path.replace(/\/+$/g, "");
+
 		try {
 			await this.database[database].collection.deleteOne({ path: path });
 		} catch {

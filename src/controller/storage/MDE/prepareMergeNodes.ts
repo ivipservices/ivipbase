@@ -35,6 +35,16 @@ export default function prepareMergeNodes(
 	let modified: (NodesPending & { previous_content?: StorageNode })[] = [];
 	let removed: NodesPending[] = [];
 
+	nodes = nodes.map((node) => {
+		node.path = node.path.replace(/\/+$/g, "");
+		return node;
+	});
+
+	comparison = comparison.map((node) => {
+		node.path = node.path.replace(/\/+$/g, "");
+		return node;
+	});
+
 	// console.log(path, JSON.stringify(nodes, null, 4));
 	// console.log(nodes.find(({ path }) => path === "root/__auth__/accounts/admin"));
 

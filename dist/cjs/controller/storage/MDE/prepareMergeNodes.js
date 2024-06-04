@@ -23,6 +23,14 @@ function prepareMergeNodes(path, nodes, comparison) {
     let added = [];
     let modified = [];
     let removed = [];
+    nodes = nodes.map((node) => {
+        node.path = node.path.replace(/\/+$/g, "");
+        return node;
+    });
+    comparison = comparison.map((node) => {
+        node.path = node.path.replace(/\/+$/g, "");
+        return node;
+    });
     // console.log(path, JSON.stringify(nodes, null, 4));
     // console.log(nodes.find(({ path }) => path === "root/__auth__/accounts/admin"));
     for (let node of nodes) {

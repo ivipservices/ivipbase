@@ -29,7 +29,6 @@ export declare abstract class IvipBaseIPCPeer extends SimpleEventEmitter {
     protected peers: Array<{
         id: string;
         lastSeen: number;
-        dbname: string;
     }>;
     protected _exiting: boolean;
     private _eventsEnabled;
@@ -44,7 +43,7 @@ export declare abstract class IvipBaseIPCPeer extends SimpleEventEmitter {
     exit(code?: number): Promise<any>;
     protected sayGoodbye(dbname: string, forPeerId: string): void;
     protected addPeer(dbname: string, id: string, sendReply?: boolean): void;
-    protected removePeer(dbname: string, id: string, ignoreUnknown?: boolean): void;
+    protected removePeer(id: string, ignoreUnknown?: boolean): void;
     protected addRemoteSubscription(dbname: string, peerId: string, details: ISubscriptionData): void;
     protected cancelRemoteSubscription(dbname: string, peerId: string, details: ISubscriptionData): void;
     protected handleMessage(message: IMessage): Promise<void | this>;

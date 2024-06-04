@@ -37,7 +37,7 @@ export class IPCPeer extends IvipBaseIPCPeer {
                     for (const dbname of dbs) {
                         // Worker apparently did not have time to say goodbye,
                         // remove the peer ourselves
-                        this.removePeer(dbname, worker.id.toString());
+                        this.removePeer(worker.id.toString());
                         // Send "bye" message on their behalf
                         this.sayGoodbye(dbname, worker.id.toString());
                     }
@@ -45,14 +45,18 @@ export class IPCPeer extends IvipBaseIPCPeer {
             });
         }
         const handleMessage = (message) => {
+            // console.log(message);
             if (typeof message !== "object") {
                 // Ignore non-object IPC messages
                 return;
             }
-            if (!this.ipcDatabases.has(message.dbname)) {
-                // Ignore, message not meant for this database
-                return;
+            if (message.type === "hello") {
+                this.addPeer(message.dbname, message.from, false);
             }
+            // if (!this.ipcDatabases.has(message.dbname)) {
+            // 	// Ignore, message not meant for this database
+            // 	return;
+            // }
             if (cluster.isMaster && message.to !== masterPeerId) {
                 // Message is meant for others (or all). Forward it
                 this.sendMessage(message.dbname, message);

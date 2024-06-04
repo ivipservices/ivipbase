@@ -163,5 +163,8 @@ export default function destructureData(
 		}
 	}
 
-	return verifyNodes.concat(result);
+	return verifyNodes.concat(result).map((node) => {
+		node.path = node.path.replace(/\/+$/g, "");
+		return node;
+	});
 }

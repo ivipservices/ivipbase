@@ -21,7 +21,7 @@ export abstract class IvipBaseIPCPeer extends SimpleEventEmitter {
 
 	protected ourSubscriptions: { [dbname: string]: Array<{ path: string; event: IvipBaseEventType; callback: IvipBaseSubscribeCallback }> } = {};
 	protected remoteSubscriptions: { [dbname: string]: Array<{ for?: string; path: string; event: IvipBaseEventType; callback: IvipBaseSubscribeCallback }> } = {};
-	protected peers: Array<{ id: string; lastSeen: number; dbname: string }> = [];
+	protected peers: Array<{ id: string; lastSeen: number }> = [];
 
 	protected _exiting = false;
 	private _eventsEnabled = true;
@@ -132,9 +132,9 @@ export abstract class IvipBaseIPCPeer extends SimpleEventEmitter {
 		if (this._exiting) {
 			return;
 		}
-		const peer = this.peers.find((w) => w.id === id && w.dbname === dbname);
+		const peer = this.peers.find((w) => w.id === id);
 		if (!peer) {
-			this.peers.push({ id, lastSeen: Date.now(), dbname });
+			this.peers.push({ id, lastSeen: Date.now() });
 		}
 
 		if (sendReply) {
@@ -151,11 +151,11 @@ export abstract class IvipBaseIPCPeer extends SimpleEventEmitter {
 		}
 	}
 
-	protected removePeer(dbname: string, id: string, ignoreUnknown = false) {
+	protected removePeer(id: string, ignoreUnknown = false) {
 		if (this._exiting) {
 			return;
 		}
-		const peer = this.peers.find((peer) => peer.id === id && peer.dbname === dbname);
+		const peer = this.peers.find((peer) => peer.id === id);
 		if (!peer) {
 			if (!ignoreUnknown) {
 				throw new Error(`We are supposed to know this peer!`);
@@ -165,23 +165,23 @@ export abstract class IvipBaseIPCPeer extends SimpleEventEmitter {
 
 		this.peers.splice(this.peers.indexOf(peer), 1);
 
-		const db = this.ipcDatabases.get(dbname);
-
-		// Remove their subscriptions
-		const subscriptions = this.remoteSubscriptions[dbname]?.filter((sub) => sub.for === id);
-		subscriptions.forEach((sub) => {
-			if (Array.isArray(this.remoteSubscriptions[dbname])) {
-				this.remoteSubscriptions[dbname].splice(this.remoteSubscriptions[dbname].indexOf(sub), 1);
-			}
-			db?.subscriptions.remove(sub.path, sub.event, sub.callback as any);
-		});
+		for (const [dbname, db] of this.ipcDatabases) {
+			// Remove their subscriptions
+			const subscriptions = this.remoteSubscriptions[dbname]?.filter((sub) => sub.for === id);
+			subscriptions.forEach((sub) => {
+				if (Array.isArray(this.remoteSubscriptions[dbname])) {
+					this.remoteSubscriptions[dbname].splice(this.remoteSubscriptions[dbname].indexOf(sub), 1);
+				}
+				db?.subscriptions.remove(sub.path, sub.event, sub.callback as any);
+			});
+		}
 	}
 
 	protected addRemoteSubscription(dbname: string, peerId: string, details: ISubscriptionData) {
 		if (this._exiting) {
 			return;
 		}
-		// this.storage.debug.log(`remote subscription being added`);
+		// this.debug.log(`remote subscription being added -> ${dbname}::${peerId}::${this.id}`);
 
 		if (Array.isArray(this.remoteSubscriptions[dbname]) && this.remoteSubscriptions[dbname].some((sub) => sub.for === peerId && sub.event === details.event && sub.path === details.path)) {
 			// We're already serving this event for the other peer. Ignore
@@ -236,7 +236,7 @@ export abstract class IvipBaseIPCPeer extends SimpleEventEmitter {
 			case "hello":
 				return this.addPeer(dbname, message.from, message.to !== this.id);
 			case "bye":
-				return this.removePeer(dbname, message.from, true);
+				return this.removePeer(message.from, true);
 			case "subscribe":
 				return this.addRemoteSubscription(dbname, message.from, message.data);
 			case "unsubscribe":

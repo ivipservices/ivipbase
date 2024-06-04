@@ -163,7 +163,13 @@ class MongodbStorage extends CustomStorage_1.CustomStorage {
         };
         const pendingList = Array.from(this.pending[database].values()).filter((node) => regex.test(node.path));
         const list = await this.database[database].collection.find(query).toArray();
-        const result = pendingList.concat(list).filter((node, i, l) => {
+        const result = pendingList
+            .concat(list)
+            .map((node) => {
+            node.path = node.path.replace(/\/+$/g, "");
+            return node;
+        })
+            .filter((node, i, l) => {
             return l.findIndex((r) => r.path === node.path) === i;
         });
         return result;
@@ -172,6 +178,8 @@ class MongodbStorage extends CustomStorage_1.CustomStorage {
         if (!this.isConnected || !this.database[database] || !this.database[database].collection) {
             throw erros_1.ERROR_FACTORY.create("db-not-found" /* AppError.DB_NOT_FOUND */, { dbName: database });
         }
+        path = path.replace(/\/+$/g, "");
+        node.path = node.path.replace(/\/+$/g, "");
         this.pending[database].set(path, node);
         try {
             await this.database[database].collection.updateOne({ path: path }, { $set: JSON.parse(JSON.stringify(node)) }, { upsert: true });
@@ -187,6 +195,8 @@ class MongodbStorage extends CustomStorage_1.CustomStorage {
         if (!this.isConnected || !this.database[database] || !this.database[database].collection) {
             throw erros_1.ERROR_FACTORY.create("db-not-found" /* AppError.DB_NOT_FOUND */, { dbName: database });
         }
+        path = path.replace(/\/+$/g, "");
+        node.path = node.path.replace(/\/+$/g, "");
         try {
             await this.database[database].collection.deleteOne({ path: path });
         }
