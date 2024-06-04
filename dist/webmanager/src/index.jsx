@@ -71,6 +71,7 @@ const App = () => {
 };
 
 const app = initializeApp({
+	protocol: window.settings.protocol,
 	host: window.settings.host,
 	port: window.settings.port,
 	dbname: "",
