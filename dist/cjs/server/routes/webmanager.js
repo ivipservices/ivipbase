@@ -25,7 +25,7 @@ const addRoutes = (env) => {
                 window.settings = {
                     "protocol": (window.location.protocol ?? "http").replace(":", ""),
                     "host": window.location.hostname ?? "${env.settings.host}",
-                    "port": ${env.settings.port},
+                    "port": parseInt(window.location.port ?? "${env.settings.port}"),
                 };
             `);
         }
