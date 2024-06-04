@@ -386,6 +386,10 @@ export abstract class AbstractLocalServer<LocalServer = any> extends SimpleEvent
 	verifyEmailAddress(dbName: string, clientIp: string, code: string): Promise<string> {
 		throw new ServerNotReadyError();
 	}
+
+	getLogBytesUsage(): Promise<{ [dbName: string]: { request: number; response: number } }> {
+		return Promise.resolve({});
+	}
 }
 
 export class LocalServer extends AbstractLocalServer<LocalServer> {

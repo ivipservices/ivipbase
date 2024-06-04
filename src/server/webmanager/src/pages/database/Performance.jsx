@@ -106,8 +106,8 @@ export const Performance = () => {
 				labels: data.data.map(({ timestamp }) => new Date(timestamp).toLocaleString()),
 				datasets: [
 					{
-						label: "Leitura",
-						data: data.data.map(() => 0),
+						label: "Recebido",
+						data: data.data.map(({ stats }) => stats?.request ?? 0),
 						fill: false,
 						borderColor: "rgba(79,195,247,1)",
 						tooltip: {
@@ -117,8 +117,8 @@ export const Performance = () => {
 						},
 					},
 					{
-						label: "Escrita",
-						data: data.data.map(() => 0),
+						label: "Respondido",
+						data: data.data.map(({ stats }) => stats?.response ?? 0),
 						fill: false,
 						borderColor: "rgba(236,64,122,1)",
 						tooltip: {

@@ -5,7 +5,7 @@ import * as express from "express";
 import { addMetadataRoutes, addDataRoutes, addAuthenticionRoutes, addWebManagerRoutes, addStorageRoutes } from "./routes";
 import { Server, createServer } from "http";
 import { DbUserAccountDetails } from "./schema/user";
-import { add404Middleware, addCacheMiddleware, addCorsMiddleware } from "./middleware";
+import { add404Middleware, addCacheMiddleware, addCorsMiddleware, addLogBytesMiddleware } from "./middleware";
 import type { IvipBaseApp } from "../app";
 import { ConnectedClient } from "./shared/clients";
 import { setupAuthentication } from "./services/auth";
@@ -37,6 +37,8 @@ export interface RouteRequestEnvironment {
 
 	/** Se o contexto for enviado pelo cabeçalho iVipBase-Context, será associado à solicitação recebida */
 	context: { [key: string]: any };
+
+	database_name?: string;
 }
 
 export type RouteRequest<ReqQuery = any, ReqBody = any, ResBody = any> = Request<any, ResBody, ReqBody, ReqQuery> & Partial<RouteRequestEnvironment>;
@@ -75,6 +77,12 @@ export class LocalServer extends AbstractLocalServer<LocalServer> {
 	readonly metaInfoCache: SimpleCache<
 		number,
 		{
+			stats: {
+				[dbName: string]: {
+					request: number;
+					response: number;
+				};
+			};
 			cpuUsage: number;
 			networkStats: {
 				sent: number;
@@ -141,11 +149,13 @@ export class LocalServer extends AbstractLocalServer<LocalServer> {
 			(await import("./middleware/swagger")).addMiddleware(this);
 		}
 
+		addWebManagerRoutes(this);
+
+		this.getLogBytesUsage = addLogBytesMiddleware(this);
+
 		addDataRoutes(this);
 
 		addStorageRoutes(this);
-
-		addWebManagerRoutes(this);
 
 		this.extend = (database: string, method: HttpMethod, ext_path: string, handler: (req: HttpRequest, res: HttpResponse) => any) => {
 			const route = `/ext/${database}/${ext_path}`;

@@ -46,6 +46,7 @@ export const addMiddleware = (env: LocalServer) => {
 				}
 			}
 
+			req.database_name = tokenDetails.database;
 			req.user = user;
 
 			if (req.user.is_disabled === true) {

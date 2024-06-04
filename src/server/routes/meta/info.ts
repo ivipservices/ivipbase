@@ -15,48 +15,54 @@ export type Request = RouteRequest<RequestQuery, RequestBody, ResponseBody>;
 let time: NodeJS.Timeout;
 
 const getCpuUsage = (): Promise<number> => {
-	return new Promise((resolve, reject) => {
+	return new Promise(async (resolve, reject) => {
 		try {
-			require("os-utils").cpuUsage((percent: any) => {
-				resolve(parseFloat(((percent ?? 0) * 100).toFixed(2))); // Convertendo para porcentagem
-			});
+			const currentLoad = await si.currentLoad();
+			resolve(parseFloat(currentLoad.currentLoad.toFixed(2)));
+
+			// require("os-utils").cpuUsage((percent: any) => {
+			// 	resolve(parseFloat(((percent ?? 0) * 100).toFixed(2))); // Convertendo para porcentagem
+			// });
 		} catch {
 			resolve(0);
 		}
 	});
 };
 
-const getInfoMoment = async () => {
-	const d = new Date();
-
-	const cpuUsage = await getCpuUsage();
-	const mem = await si.mem();
-	const netStats = await si.networkStats();
-
-	return {
-		cpuUsage: cpuUsage,
-		networkStats: netStats.reduce(
-			(c, stats) => {
-				c.sent += stats.tx_bytes;
-				c.received += stats.rx_bytes;
-				return c;
-			},
-			{
-				sent: 0,
-				received: 0,
-			},
-		),
-		memoryUsage: {
-			total: mem.total,
-			free: mem.free,
-			used: mem.used,
-		},
-		timestamp: d.getTime(),
-	};
-};
-
 export const addRoute = (env: LocalServer) => {
 	clearInterval(time);
+
+	const getInfoMoment = async () => {
+		const d = new Date();
+
+		const stats = await env.getLogBytesUsage();
+
+		const cpuUsage = await getCpuUsage();
+		const mem = await si.mem();
+		const netStats = await si.networkStats();
+
+		const previousStats = netStats[1] ?? { ms: 0, rx_bytes: 0, tx_bytes: 0 };
+		const currentStats = netStats[0] ?? { ms: 0, rx_bytes: 0, tx_bytes: 0 };
+
+		const deltaTime = (currentStats.ms - previousStats.ms) / 1000;
+		const rxSec = (currentStats.rx_bytes - previousStats.rx_bytes) / deltaTime;
+		const txSec = (currentStats.tx_bytes - previousStats.tx_bytes) / deltaTime;
+
+		return {
+			stats,
+			cpuUsage: cpuUsage,
+			networkStats: {
+				sent: txSec,
+				received: rxSec,
+			},
+			memoryUsage: {
+				total: mem.total,
+				free: mem.free,
+				used: mem.used,
+			},
+			timestamp: d.getTime(),
+		};
+	};
 
 	time = setInterval(async () => {
 		const d = await getInfoMoment();
@@ -69,6 +75,8 @@ export const addRoute = (env: LocalServer) => {
 
 	// Add info endpoint
 	env.router.get(`/info/:dbName`, async (req: Request, res) => {
+		const dbname = req.params["dbName"];
+
 		let info: {
 			dbname: string;
 			version: string;
@@ -94,6 +102,10 @@ export const addRoute = (env: LocalServer) => {
 			cpus: ReturnType<typeof os.cpus>;
 			network: ReturnType<typeof os.networkInterfaces>;
 			data: Array<{
+				stats: {
+					request: number;
+					response: number;
+				};
 				cpuUsage: number;
 				networkStats: {
 					sent: number;
@@ -103,7 +115,7 @@ export const addRoute = (env: LocalServer) => {
 				timestamp: number;
 			}>;
 		} = {
-			dbname: req.params["dbName"],
+			dbname,
 			version: env.settings.serverVersion,
 			time: Date.now(),
 			process: process.pid,
@@ -148,7 +160,20 @@ export const addRoute = (env: LocalServer) => {
 			};
 			const mem = process.memoryUsage();
 
-			info.data = env.metaInfoCache.values();
+			const data = env.metaInfoCache.values();
+
+			info.data = data.map((d) => {
+				const a = d.stats["__default__"] ?? { request: 0, response: 0 };
+				const b = d.stats[dbname] ?? { request: 0, response: 0 };
+
+				return {
+					stats: { request: a.request + b.request, response: a.response + b.response },
+					cpuUsage: d.cpuUsage,
+					networkStats: d.networkStats,
+					memoryUsage: d.memoryUsage,
+					timestamp: d.timestamp,
+				};
+			});
 			info.data.sort((a, b) => {
 				return a.timestamp - b.timestamp;
 			});
@@ -174,7 +199,6 @@ export const addRoute = (env: LocalServer) => {
 				},
 				cpus: os.cpus(),
 				network: os.networkInterfaces(),
-				data: env.metaInfoCache.values(),
 			};
 		}
 		// for (let i = 0; i < 1000000000; i++) {
