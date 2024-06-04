@@ -1,7 +1,8 @@
+import { ID } from "ivipbase-core";
 import { AppError, ERROR_FACTORY } from "../erros";
 import { CustomStorage, CustomStorageSettings } from "./CustomStorage";
-import { StorageNode, StorageNodeInfo } from "./MDE";
-import { MongoClient, Collection, Db } from "mongodb";
+import { StorageNode, StorageNodeInfo, VALUE_TYPES } from "./MDE";
+import { MongoClient, Collection, Db, MongoClientOptions } from "mongodb";
 
 export class MongodbSettings {
 	host: string = "localhost";
@@ -10,7 +11,7 @@ export class MongodbSettings {
 	collection: string = "main-database";
 	username: string | undefined;
 	password: string | undefined;
-	options: Record<string, any> | undefined;
+	options: MongoClientOptions | undefined;
 	mdeOptions: Partial<Omit<CustomStorageSettings, "getMultiple" | "setNode" | "removeNode">> = {};
 
 	constructor(options: Partial<Omit<MongodbSettings, "database" | "collection">> = {}) {
@@ -40,10 +41,12 @@ export class MongodbSettings {
 	}
 }
 
+let timer: NodeJS.Timeout;
+
 export class MongodbStorage extends CustomStorage {
 	protected isConnected: boolean = false;
 	private options: MongodbSettings;
-	private client: MongoClient;
+	private readonly client: MongoClient;
 	private database: Record<
 		string,
 		{
@@ -51,17 +54,18 @@ export class MongodbStorage extends CustomStorage {
 			collection: Collection<StorageNodeInfo>;
 		}
 	> = {};
+	private pending: Record<string, Map<string, StorageNodeInfo & { refresh?: boolean; type?: "set" | "delete" }>> = {};
+	private resolvingPending: boolean = false;
 
 	constructor(database: string | string[], options: Partial<Omit<MongodbSettings, "database">>) {
 		super(options.mdeOptions);
 		this.options = new MongodbSettings(options);
-		this.options.database = (Array.isArray(database) ? database : [database]).filter((name) => typeof name === "string" && name.trim() !== "");
+		this.options.database = (Array.isArray(database) ? database : [this.database]).filter((name) => typeof name === "string" && name.trim() !== "").filter((a, i, l) => l.indexOf(a) === i) as any;
 		this.dbName = "MongoDB";
 
 		this.client = new MongoClient(this.mongoUri, {});
 
 		this.client.on("connected", () => {
-			this.emit("ready");
 			this.isConnected = true;
 		});
 
@@ -86,11 +90,38 @@ export class MongodbStorage extends CustomStorage {
 			this.isConnected = true;
 
 			for (let name of this.options.database) {
-				this.database[name].db = this.client.db(name);
+				this.database[name] = {
+					db: this.client.db(name),
+				} as any;
 				this.database[name].collection = await this.getCollectionBy(name, this.options.collection);
+				if (!this.pending[name]) {
+					this.pending[name] = new Map();
+				}
+
+				const nodeRoot = await this.database[name].collection.findOne({ path: this.settings.prefix });
+
+				if (!nodeRoot) {
+					const node: StorageNodeInfo = {
+						path: this.settings.prefix,
+						content: {
+							type: VALUE_TYPES.OBJECT as any,
+							value: {},
+							created: Date.now(),
+							modified: Date.now(),
+							revision_nr: 0,
+							revision: ID.generate(),
+						},
+					};
+
+					await this.database[name].collection.updateOne({ path: this.settings.prefix }, { $set: JSON.parse(JSON.stringify(node)) }, { upsert: true });
+				}
 			}
+
+			this.resolvePending(true);
+			this.emit("ready");
 		} catch (err) {
 			this.isConnected = false;
+			console.error(err);
 			throw ERROR_FACTORY.create(AppError.DB_CONNECTION_ERROR, { error: String(err) });
 		}
 	}
@@ -130,6 +161,43 @@ export class MongodbStorage extends CustomStorage {
 		return uri;
 	}
 
+	resolvePending(resolveAll = false) {
+		if (this.resolvingPending) {
+			return;
+		}
+
+		clearTimeout(timer);
+
+		timer = setTimeout(async () => {
+			this.resolvingPending = true;
+			let lengthRefresh = 0;
+
+			for (let name in this.pending) {
+				for (let [path, node] of this.pending[name]) {
+					if (!node.refresh && !resolveAll) {
+						continue;
+					}
+
+					if (node.type === "delete") {
+						await this.removeNode(name, path, node.content, node);
+					} else {
+						await this.setNode(name, path, node.content, node);
+					}
+				}
+
+				const pendingList: StorageNodeInfo[] = Array.from(this.pending[name].values()).filter((node) => node.refresh || resolveAll);
+
+				lengthRefresh += pendingList.length;
+			}
+
+			this.resolvingPending = false;
+
+			if (lengthRefresh > 0) {
+				this.resolvePending();
+			}
+		}, 5000);
+	}
+
 	async getMultiple(database: string, { regex }: { regex: RegExp; query: string[] }): Promise<StorageNodeInfo[]> {
 		if (!this.isConnected || !this.database[database] || !this.database[database].collection) {
 			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
@@ -141,7 +209,14 @@ export class MongodbStorage extends CustomStorage {
 			},
 		};
 
-		return await this.database[database].collection.find(query).toArray();
+		const pendingList: StorageNodeInfo[] = Array.from(this.pending[database].values()).filter((node) => regex.test(node.path));
+		const list: StorageNodeInfo[] = await this.database[database].collection.find(query).toArray();
+
+		const result: StorageNodeInfo[] = pendingList.concat(list).filter((node, i, l) => {
+			return l.findIndex((r) => r.path === node.path) === i;
+		});
+
+		return result;
 	}
 
 	async setNode(database: string, path: string, content: StorageNode, node: StorageNodeInfo) {
@@ -149,7 +224,16 @@ export class MongodbStorage extends CustomStorage {
 			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
 		}
 
-		await this.database[database].collection.updateOne({ path: path }, { $set: JSON.parse(JSON.stringify(node)) }, { upsert: true });
+		this.pending[database].set(path, node);
+
+		try {
+			await this.database[database].collection.updateOne({ path: path }, { $set: JSON.parse(JSON.stringify(node)) }, { upsert: true });
+		} catch {
+			this.pending[database].set(path, { ...node, refresh: true, type: "set" });
+			return this.resolvePending();
+		}
+
+		this.pending[database].delete(path);
 		//await this.database[database].collection.replaceOne({ path: path }, JSON.parse(JSON.stringify(node)));
 	}
 
@@ -157,7 +241,12 @@ export class MongodbStorage extends CustomStorage {
 		if (!this.isConnected || !this.database[database] || !this.database[database].collection) {
 			throw ERROR_FACTORY.create(AppError.DB_NOT_FOUND, { dbName: database });
 		}
-
-		await this.database[database].collection.deleteOne({ path: path });
+		try {
+			await this.database[database].collection.deleteOne({ path: path });
+		} catch {
+			this.pending[database].set(path, { ...node, refresh: true, type: "delete" });
+			return this.resolvePending();
+		}
+		this.pending[database].delete(path);
 	}
 }

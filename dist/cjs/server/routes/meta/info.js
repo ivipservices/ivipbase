@@ -31,42 +31,48 @@ const os = __importStar(require("os"));
 const systeminformation_1 = __importDefault(require("systeminformation"));
 let time;
 const getCpuUsage = () => {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
         try {
-            require("os-utils").cpuUsage((percent) => {
-                resolve(parseFloat(((percent !== null && percent !== void 0 ? percent : 0) * 100).toFixed(2))); // Convertendo para porcentagem
-            });
+            const currentLoad = await systeminformation_1.default.currentLoad();
+            resolve(parseFloat(currentLoad.currentLoad.toFixed(2)));
+            // require("os-utils").cpuUsage((percent: any) => {
+            // 	resolve(parseFloat(((percent ?? 0) * 100).toFixed(2))); // Convertendo para porcentagem
+            // });
         }
         catch (_a) {
             resolve(0);
         }
     });
 };
-const getInfoMoment = async () => {
-    const d = new Date();
-    const cpuUsage = await getCpuUsage();
-    const mem = await systeminformation_1.default.mem();
-    const netStats = await systeminformation_1.default.networkStats();
-    return {
-        cpuUsage: cpuUsage,
-        networkStats: netStats.reduce((c, stats) => {
-            c.sent += stats.tx_bytes;
-            c.received += stats.rx_bytes;
-            return c;
-        }, {
-            sent: 0,
-            received: 0,
-        }),
-        memoryUsage: {
-            total: mem.total,
-            free: mem.free,
-            used: mem.used,
-        },
-        timestamp: d.getTime(),
-    };
-};
 const addRoute = (env) => {
     clearInterval(time);
+    const getInfoMoment = async () => {
+        var _a, _b;
+        const d = new Date();
+        const stats = await env.getLogBytesUsage();
+        const cpuUsage = await getCpuUsage();
+        const mem = await systeminformation_1.default.mem();
+        const netStats = await systeminformation_1.default.networkStats();
+        const previousStats = (_a = netStats[1]) !== null && _a !== void 0 ? _a : { ms: 0, rx_bytes: 0, tx_bytes: 0 };
+        const currentStats = (_b = netStats[0]) !== null && _b !== void 0 ? _b : { ms: 0, rx_bytes: 0, tx_bytes: 0 };
+        const deltaTime = (currentStats.ms - previousStats.ms) / 1000;
+        const rxSec = (currentStats.rx_bytes - previousStats.rx_bytes) / deltaTime;
+        const txSec = (currentStats.tx_bytes - previousStats.tx_bytes) / deltaTime;
+        return {
+            stats,
+            cpuUsage: cpuUsage,
+            networkStats: {
+                sent: txSec,
+                received: rxSec,
+            },
+            memoryUsage: {
+                total: mem.total,
+                free: mem.free,
+                used: mem.used,
+            },
+            timestamp: d.getTime(),
+        };
+    };
     time = setInterval(async () => {
         const d = await getInfoMoment();
         env.metaInfoCache.set(d.timestamp, d);
@@ -76,13 +82,34 @@ const addRoute = (env) => {
     });
     // Add info endpoint
     env.router.get(`/info/:dbName`, async (req, res) => {
+        const dbname = req.params["dbName"];
         let info = {
-            dbname: req.params["dbName"],
+            dbname,
             version: env.settings.serverVersion,
             time: Date.now(),
             process: process.pid,
+            platform: "",
+            arch: "",
+            release: "",
+            host: "",
+            uptime: "",
+            load: [],
+            mem: {
+                total: "0MB",
+                free: "0MB",
+                process: {
+                    arrayBuffers: "0MB",
+                    external: "0MB",
+                    heapTotal: "0MB",
+                    heapUsed: "0MB",
+                    residentSet: "0MB",
+                },
+            },
+            cpus: [],
+            network: {},
+            data: [],
         };
-        if (req.user && req.user.permission_level >= 2) {
+        if (req.user && req.user.permission_level >= 1) {
             const numberToByteSize = (number) => {
                 return Math.round((number / 1024 / 1024) * 100) / 100 + "MB";
             };
@@ -100,14 +127,23 @@ const addRoute = (env) => {
                 return `${days}d${hours}h${minutes}m${seconds}s`;
             };
             const mem = process.memoryUsage();
-            const adminInfo = {
-                platform: os.platform(),
-                arch: os.arch(),
-                release: os.release(),
-                host: os.hostname(),
-                uptime: numberToTime(os.uptime()),
-                load: os.loadavg(),
-                mem: {
+            const data = env.metaInfoCache.values();
+            info.data = data.map((d) => {
+                var _a, _b;
+                const a = (_a = d.stats["__default__"]) !== null && _a !== void 0 ? _a : { request: 0, response: 0 };
+                const b = (_b = d.stats[dbname]) !== null && _b !== void 0 ? _b : { request: 0, response: 0 };
+                return {
+                    stats: { request: a.request + b.request, response: a.response + b.response },
+                    cpuUsage: d.cpuUsage,
+                    networkStats: d.networkStats,
+                    memoryUsage: d.memoryUsage,
+                    timestamp: d.timestamp,
+                };
+            });
+            info.data.sort((a, b) => {
+                return a.timestamp - b.timestamp;
+            });
+            info = Object.assign(Object.assign({}, info), { platform: os.platform(), arch: os.arch(), release: os.release(), host: os.hostname(), uptime: numberToTime(os.uptime()), load: os.loadavg(), mem: {
                     total: numberToByteSize(os.totalmem()),
                     free: numberToByteSize(os.freemem()),
                     process: {
@@ -117,15 +153,7 @@ const addRoute = (env) => {
                         heapUsed: numberToByteSize(mem.heapUsed),
                         residentSet: numberToByteSize(mem.rss),
                     },
-                },
-                cpus: os.cpus(),
-                network: os.networkInterfaces(),
-                data: env.metaInfoCache.values(),
-            };
-            adminInfo.data.sort((a, b) => {
-                return a.timestamp - b.timestamp;
-            });
-            info = Object.assign(Object.assign({}, info), adminInfo);
+                }, cpus: os.cpus(), network: os.networkInterfaces() });
         }
         // for (let i = 0; i < 1000000000; i++) {
         //     let j = Math.pow(i, 2);

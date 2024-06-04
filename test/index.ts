@@ -2,7 +2,7 @@
 //require("./MDE/test_ismael");
 //require("./MDE/test_initial_app");
 
-import { initializeApp, getDatabase, DataStorageSettings, JsonFileStorageSettings, SqliteSettings, SequelizeSettings } from "../src";
+import { initializeApp, getDatabase, DataStorageSettings, JsonFileStorageSettings, SqliteSettings, SequelizeSettings, MongodbSettings } from "../src";
 
 const app = initializeApp({
 	port: 8080,
@@ -24,8 +24,17 @@ const app = initializeApp({
 	// storage: new JsonFileStorageSettings({
 	// 	filePath: "./test_file.json",
 	// }),
-	storage: new SqliteSettings({
-		memory: "./db.sqlite",
+	// storage: new SqliteSettings({
+	// 	memory: "./db.sqlite",
+	// }),
+	storage: new MongodbSettings({
+		host: "85.31.60.71",
+		port: 27017,
+		username: "admin",
+		password: "4awK1a_OU03GVnX2c_UU8-Kafseroui3h45jferfs",
+		options: {
+			directConnection: true,
+		},
 	}),
 	authentication: {
 		enabled: true,

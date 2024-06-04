@@ -178,6 +178,12 @@ export declare abstract class AbstractLocalServer<LocalServer = any> extends Sim
      * @param code código de verificação enviado para o endereço de e-mail do usuário
      */
     verifyEmailAddress(dbName: string, clientIp: string, code: string): Promise<string>;
+    getLogBytesUsage(): Promise<{
+        [dbName: string]: {
+            request: number;
+            response: number;
+        };
+    }>;
 }
 export declare class LocalServer extends AbstractLocalServer<LocalServer> {
     readonly isServer: boolean;

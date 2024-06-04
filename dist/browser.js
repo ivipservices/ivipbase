@@ -2353,7 +2353,7 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
             revision: (_c = content.revision) !== null && _c !== void 0 ? _c : "",
             revision_nr: (_d = content.revision_nr) !== null && _d !== void 0 ? _d : 0,
         });
-        info.value = value ? value : null;
+        info.value = value !== null || value !== undefined ? value : null;
         // if (!PathInfo.get(mainNode.path).equals(pathInfo.path)) {
         // 	info.value = (typeof info.key === "string" ? info.value[info.key] : typeof info.index === "number" ? info.value[info.index] : null) ?? null;
         // }
@@ -5556,6 +5556,9 @@ class AbstractLocalServer extends ivipbase_core_1.SimpleEventEmitter {
      */
     verifyEmailAddress(dbName, clientIp, code) {
         throw new ServerNotReadyError();
+    }
+    getLogBytesUsage() {
+        return Promise.resolve({});
     }
 }
 exports.AbstractLocalServer = AbstractLocalServer;

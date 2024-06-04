@@ -18,13 +18,13 @@ const addMiddleware = (env) => {
                 authorization = "Bearer " + req.query.auth_token;
             }
         }
-        const tokenSalt = (0, tokens_1.findValidPasswordByToken)(authorization, Object.values(env.tokenSalt));
-        if (!tokenSalt) {
-            // Token salt not ready yet, skip authentication
-            return next();
-        }
         if (typeof authorization === "string" && authorization.startsWith("Bearer ")) {
             const token = authorization.slice(7);
+            const tokenSalt = (0, tokens_1.findValidPasswordByToken)(token, Object.values(env.tokenSalt));
+            if (!tokenSalt) {
+                // Token salt not ready yet, skip authentication
+                return next();
+            }
             let tokenDetails;
             try {
                 tokenDetails = (0, tokens_1.decodePublicAccessToken)(token, tokenSalt);
@@ -43,6 +43,7 @@ const addMiddleware = (env) => {
                     return (0, error_1.sendNotAuthenticatedError)(res, err.code, err.message);
                 }
             }
+            req.database_name = tokenDetails.database;
             req.user = user;
             if (req.user.is_disabled === true) {
                 return (0, error_1.sendNotAuthenticatedError)(res, "account_disabled", "Your account has been disabled. Contact your database administrator");

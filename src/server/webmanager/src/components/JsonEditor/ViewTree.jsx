@@ -282,7 +282,7 @@ export const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, chec
 
 	const isRoot = resolveArrayPath(actualPath) === "";
 
-	return removed ? null : (!value && exists) || (Array.isArray(children?.list) && ["object", "array"].includes(type)) ? (
+	return removed ? null : ((value === null || value === undefined) && exists) || (Array.isArray(children?.list) && ["object", "array"].includes(type)) ? (
 		<div
 			className={style["key-tree"]}
 			style={{ "--color-mark": colorMark }}

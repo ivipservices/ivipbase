@@ -51,7 +51,9 @@ export const addWebsocketServer = (env) => {
                     // Unsubscribe them at db level and remove from our list
                     env.db(dbName).storage.unsubscribe(subscr.path, subscr.event, subscr.callback); //db.ref(subscr.path).off(subscr.event, subscr.callback);
                     const pathSubs = client.subscriptions[dbName][subscr.path];
-                    pathSubs.splice(pathSubs.indexOf(subscr), 1);
+                    if (pathSubs && pathSubs.length > 0 && pathSubs.includes(subscr)) {
+                        pathSubs.splice(pathSubs.indexOf(subscr), 1);
+                    }
                 });
             }
         }
@@ -176,6 +178,9 @@ export const addWebsocketServer = (env) => {
         };
         let pathSubs = client.subscriptions[dbName]?.[subscriptionPath];
         if (!pathSubs) {
+            if (!client.subscriptions[dbName]) {
+                client.subscriptions[dbName] = {};
+            }
             pathSubs = client.subscriptions[dbName][subscriptionPath] = [];
         }
         const subscr = { path: subscriptionPath, event: eventName, callback };
@@ -213,9 +218,9 @@ export const addWebsocketServer = (env) => {
             env.db(dbName).storage.unsubscribe(subscr.path, subscr.event, subscr.callback); //db.api.unsubscribe(data.path, subscr.event, subscr.callback);
             pathSubs.splice(pathSubs.indexOf(subscr), 1);
         });
-        if (pathSubs.length === 0) {
+        if (pathSubs.length === 0 && client.subscriptions[dbName]) {
             // No subscriptions left on this path, remove the path entry
-            delete client.subscriptions[subscriptionPath];
+            delete client.subscriptions[dbName][subscriptionPath];
         }
         return acknowledgeRequest(event.socket, event.data.req_id);
     });

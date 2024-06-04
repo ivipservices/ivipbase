@@ -3,4 +3,5 @@ export { default as addCacheMiddleware } from "./cache.js";
 export { default as addAdminOnlyMiddleware } from "./admin-only.js";
 export { default as addSwaggerMiddleware } from "./swagger.js";
 export { default as add404Middleware } from "./404.js";
+export { default as addLogBytesMiddleware } from "./log-bytes.js";
 //# sourceMappingURL=index.js.map

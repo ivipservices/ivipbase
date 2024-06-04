@@ -82,7 +82,7 @@ export const findValidPasswordByToken = (token, passwords) => {
     for (let i = 0; i < passwords.length; i++) {
         try {
             const obj = decodePublicAccessToken(token, passwords[i]);
-            if (typeof obj.access_token !== "string" || typeof obj.created !== "number" || typeof obj.database !== "string" || typeof obj.ip !== "string" || typeof obj.uid !== "string") {
+            if (typeof obj.access_token !== "string" || typeof obj.database !== "string") {
                 continue;
             }
             return passwords[i];

@@ -108,9 +108,10 @@ class LocalServer extends browser_1.AbstractLocalServer {
             (await Promise.resolve().then(() => __importStar(require("./routes/docs")))).addRoute(this);
             (await Promise.resolve().then(() => __importStar(require("./middleware/swagger")))).addMiddleware(this);
         }
+        (0, routes_1.addWebManagerRoutes)(this);
+        this.getLogBytesUsage = (0, middleware_1.addLogBytesMiddleware)(this);
         (0, routes_1.addDataRoutes)(this);
         (0, routes_1.addStorageRoutes)(this);
-        (0, routes_1.addWebManagerRoutes)(this);
         this.extend = (database, method, ext_path, handler) => {
             const route = `/ext/${database}/${ext_path}`;
             this.debug.log(`Extending server: `, method, route);

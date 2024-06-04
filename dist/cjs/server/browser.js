@@ -261,6 +261,9 @@ class AbstractLocalServer extends ivipbase_core_1.SimpleEventEmitter {
     verifyEmailAddress(dbName, clientIp, code) {
         throw new ServerNotReadyError();
     }
+    getLogBytesUsage() {
+        return Promise.resolve({});
+    }
 }
 exports.AbstractLocalServer = AbstractLocalServer;
 class LocalServer extends AbstractLocalServer {

@@ -251,6 +251,9 @@ export class AbstractLocalServer extends SimpleEventEmitter {
     verifyEmailAddress(dbName, clientIp, code) {
         throw new ServerNotReadyError();
     }
+    getLogBytesUsage() {
+        return Promise.resolve({});
+    }
 }
 export class LocalServer extends AbstractLocalServer {
     constructor(localApp, settings = {}) {

@@ -452,7 +452,7 @@ export default class MDE extends SimpleEventEmitter {
 			revision_nr: content.revision_nr ?? 0,
 		});
 
-		info.value = value ? value : null;
+		info.value = value !== null || value !== undefined ? value : null;
 
 		// if (!PathInfo.get(mainNode.path).equals(pathInfo.path)) {
 		// 	info.value = (typeof info.key === "string" ? info.value[info.key] : typeof info.index === "number" ? info.value[info.index] : null) ?? null;

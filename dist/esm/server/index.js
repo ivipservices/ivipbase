@@ -2,7 +2,7 @@ import { AbstractLocalServer, ServerSettings, ServerNotReadyError } from "./brow
 import * as express from "express";
 import { addMetadataRoutes, addDataRoutes, addAuthenticionRoutes, addWebManagerRoutes, addStorageRoutes } from "./routes/index.js";
 import { createServer } from "http";
-import { add404Middleware, addCacheMiddleware, addCorsMiddleware } from "./middleware/index.js";
+import { add404Middleware, addCacheMiddleware, addCorsMiddleware, addLogBytesMiddleware } from "./middleware/index.js";
 import { setupAuthentication } from "./services/auth.js";
 import { SimpleCache } from "ivipbase-core";
 import { addWebsocketServer } from "./websocket/index.js";
@@ -77,9 +77,10 @@ export class LocalServer extends AbstractLocalServer {
             (await import("./routes/docs/index.js")).addRoute(this);
             (await import("./middleware/swagger.js")).addMiddleware(this);
         }
+        addWebManagerRoutes(this);
+        this.getLogBytesUsage = addLogBytesMiddleware(this);
         addDataRoutes(this);
         addStorageRoutes(this);
-        addWebManagerRoutes(this);
         this.extend = (database, method, ext_path, handler) => {
             const route = `/ext/${database}/${ext_path}`;
             this.debug.log(`Extending server: `, method, route);

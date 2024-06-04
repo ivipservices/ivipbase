@@ -101,8 +101,6 @@ export const EditValueChild = ({
 			const event = subscribeMutated(resolveArrayPath(actualPath), (path, value) => {
 				const isPathExact = resolveArrayPath(path) === resolveArrayPath(actualPath);
 
-				console.log("child: ", resolveArrayPath(actualPath), resolveArrayPath(path));
-
 				if (isPathExact) {
 					if (value === null) {
 						emitNotify("remove");

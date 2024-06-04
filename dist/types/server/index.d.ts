@@ -25,6 +25,7 @@ export interface RouteRequestEnvironment {
     context: {
         [key: string]: any;
     };
+    database_name?: string;
 }
 export type RouteRequest<ReqQuery = any, ReqBody = any, ResBody = any> = Request<any, ResBody, ReqBody, ReqQuery> & Partial<RouteRequestEnvironment>;
 export declare class LocalServer extends AbstractLocalServer<LocalServer> {
@@ -36,6 +37,12 @@ export declare class LocalServer extends AbstractLocalServer<LocalServer> {
     readonly clients: Map<string, ConnectedClient>;
     authCache: SimpleCache<string, DbUserAccountDetails>;
     readonly metaInfoCache: SimpleCache<number, {
+        stats: {
+            [dbName: string]: {
+                request: number;
+                response: number;
+            };
+        };
         cpuUsage: number;
         networkStats: {
             sent: number;
