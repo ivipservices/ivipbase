@@ -19,66 +19,19 @@ class IvipBaseIPCPeer extends ivipbase_core_1.SimpleEventEmitter {
         this.name = name;
         this.masterPeerId = masterPeerId;
         this.ipcType = "ipc";
-        this.ipcDatabases = new Map();
-        this.ourSubscriptions = {};
-        this.remoteSubscriptions = {};
         this.peers = [];
         this._exiting = false;
-        this._eventsEnabled = true;
         this._requests = new Map();
         this.debug = new ivipbase_core_1.DebugLogger("verbose", `[${name}]`);
+        const helloMsg = { type: "hello", from: this.id, data: undefined };
+        this.sendMessage(helloMsg);
     }
-    addDatabase(db) {
-        if (this.ipcDatabases.has(db.name)) {
-            return;
-        }
-        const dbname = db.name;
-        this.ipcDatabases.set(dbname, db);
-        // Setup db event listeners
-        db.subscriptions.on("subscribe", (subscription) => {
-            // Subscription was added to db
-            var _a, _b, _c;
-            db.debug.verbose(`database subscription being added on peer ${this.id}`);
-            const remoteSubscription = (_a = this.remoteSubscriptions[dbname]) === null || _a === void 0 ? void 0 : _a.find((sub) => sub.callback === subscription.callback);
-            if (remoteSubscription) {
-                // Send ack
-                // return sendMessage({ type: 'subscribe_ack', from: tabId, to: remoteSubscription.for, data: { path: subscription.path, event: subscription.event } });
-                return;
-            }
-            const othersAlreadyNotifying = (_b = this.ourSubscriptions[dbname]) === null || _b === void 0 ? void 0 : _b.some((sub) => sub.event === subscription.event && sub.path === subscription.path);
-            // Add subscription
-            (_c = this.ourSubscriptions[dbname]) === null || _c === void 0 ? void 0 : _c.push(subscription);
-            if (othersAlreadyNotifying) {
-                // Same subscription as other previously added. Others already know we want to be notified
-                return;
-            }
-            // Request other tabs to keep us updated of this event
-            const message = { type: "subscribe", from: this.id, data: { path: subscription.path, event: subscription.event }, dbname };
-            this.sendMessage(dbname, message);
-        });
-        db.subscriptions.on("unsubscribe", (subscription) => {
-            // Subscription was removed from db
-            var _a, _b, _c, _d;
-            const remoteSubscription = (_a = this.remoteSubscriptions[dbname]) === null || _a === void 0 ? void 0 : _a.find((sub) => sub.callback === subscription.callback);
-            if (remoteSubscription) {
-                // Remove
-                (_b = this.remoteSubscriptions[dbname]) === null || _b === void 0 ? void 0 : _b.splice((_c = this.remoteSubscriptions[dbname]) === null || _c === void 0 ? void 0 : _c.indexOf(remoteSubscription), 1);
-                // Send ack
-                // return sendMessage({ type: 'unsubscribe_ack', from: tabId, to: remoteSubscription.for, data: { path: subscription.path, event: subscription.event } });
-                return;
-            }
-            (_d = this.ourSubscriptions[dbname]) === null || _d === void 0 ? void 0 : _d.filter((sub) => sub.path === subscription.path && (!subscription.event || sub.event === subscription.event) && (!subscription.callback || sub.callback === subscription.callback)).forEach((sub) => {
-                var _a, _b;
-                // Remove from our subscriptions
-                (_a = this.ourSubscriptions[dbname]) === null || _a === void 0 ? void 0 : _a.splice((_b = this.ourSubscriptions[dbname]) === null || _b === void 0 ? void 0 : _b.indexOf(sub), 1);
-                // Request other tabs to stop notifying
-                const message = { type: "unsubscribe", from: this.id, data: { path: sub.path, event: sub.event }, dbname };
-                this.sendMessage(dbname, message);
-            });
-        });
-        // Send hello to other peers
-        const helloMsg = { type: "hello", from: this.id, data: undefined, dbname };
-        this.sendMessage(dbname, helloMsg);
+    on(event, callback) {
+        return super.on(event, callback);
+    }
+    emit(event, data) {
+        super.emit(event, data);
+        return this;
     }
     /**
      * Requests the peer to shut down. Resolves once its locks are cleared and 'exit' event has been emitted.
@@ -93,20 +46,16 @@ class IvipBaseIPCPeer extends ivipbase_core_1.SimpleEventEmitter {
         this._exiting = true;
         this.debug.warn(`Received ${this.isMaster ? "master" : "worker " + this.id} process exit request`);
         // Send "bye"
-        const dbnames = Array.from(this.ipcDatabases.keys());
-        for (const dbname of dbnames) {
-            this.sayGoodbye(dbname, this.id);
-        }
+        this.sayGoodbye(this.id);
         this.debug.warn(`${this.isMaster ? "Master" : "Worker " + this.id} will now exit`);
         this.emitOnce("exit", code);
     }
-    sayGoodbye(dbname, forPeerId) {
+    sayGoodbye(forPeerId) {
         // Send "bye" message on their behalf
-        const bye = { type: "bye", from: forPeerId, data: undefined, dbname };
-        this.sendMessage(dbname, bye);
+        const bye = { type: "bye", from: forPeerId, data: undefined };
+        this.sendMessage(bye);
     }
-    addPeer(dbname, id, sendReply = true) {
-        var _a;
+    addPeer(id, sendReply = true) {
         if (this._exiting) {
             return;
         }
@@ -116,18 +65,11 @@ class IvipBaseIPCPeer extends ivipbase_core_1.SimpleEventEmitter {
         }
         if (sendReply) {
             // Send hello back to sender
-            const helloMessage = { type: "hello", from: this.id, to: id, data: undefined, dbname };
-            this.sendMessage(dbname, helloMessage);
-            // Send our active subscriptions through
-            (_a = this.ourSubscriptions[dbname]) === null || _a === void 0 ? void 0 : _a.forEach((sub) => {
-                // Request to keep us updated
-                const message = { type: "subscribe", from: this.id, to: id, data: { path: sub.path, event: sub.event }, dbname };
-                this.sendMessage(dbname, message);
-            });
+            const helloMessage = { type: "hello", from: this.id, to: id, data: undefined };
+            this.sendMessage(helloMessage);
         }
     }
     removePeer(id, ignoreUnknown = false) {
-        var _a;
         if (this._exiting) {
             return;
         }
@@ -139,91 +81,18 @@ class IvipBaseIPCPeer extends ivipbase_core_1.SimpleEventEmitter {
             return;
         }
         this.peers.splice(this.peers.indexOf(peer), 1);
-        for (const [dbname, db] of this.ipcDatabases) {
-            // Remove their subscriptions
-            const subscriptions = (_a = this.remoteSubscriptions[dbname]) === null || _a === void 0 ? void 0 : _a.filter((sub) => sub.for === id);
-            subscriptions.forEach((sub) => {
-                if (Array.isArray(this.remoteSubscriptions[dbname])) {
-                    this.remoteSubscriptions[dbname].splice(this.remoteSubscriptions[dbname].indexOf(sub), 1);
-                }
-                db === null || db === void 0 ? void 0 : db.subscriptions.remove(sub.path, sub.event, sub.callback);
-            });
-        }
-    }
-    addRemoteSubscription(dbname, peerId, details) {
-        if (this._exiting) {
-            return;
-        }
-        // this.debug.log(`remote subscription being added -> ${dbname}::${peerId}::${this.id}`);
-        if (Array.isArray(this.remoteSubscriptions[dbname]) && this.remoteSubscriptions[dbname].some((sub) => sub.for === peerId && sub.event === details.event && sub.path === details.path)) {
-            // We're already serving this event for the other peer. Ignore
-            return;
-        }
-        // Add remote subscription
-        const subscribeCallback = (err, path, val, previous, context) => {
-            // db triggered an event, send notification to remote subscriber
-            const eventMessage = {
-                type: "event",
-                from: this.id,
-                to: peerId,
-                path: details.path,
-                event: details.event,
-                data: {
-                    path,
-                    val,
-                    previous,
-                    context,
-                },
-                dbname,
-            };
-            this.sendMessage(dbname, eventMessage);
-        };
-        if (!Array.isArray(this.remoteSubscriptions[dbname])) {
-            this.remoteSubscriptions[dbname] = [];
-        }
-        this.remoteSubscriptions[dbname].push({ for: peerId, event: details.event, path: details.path, callback: subscribeCallback });
-        const db = this.ipcDatabases.get(dbname);
-        db === null || db === void 0 ? void 0 : db.subscriptions.add(details.path, details.event, subscribeCallback);
-    }
-    cancelRemoteSubscription(dbname, peerId, details) {
-        var _a;
-        // Other tab requests to remove previously subscribed event
-        const sub = (_a = this.remoteSubscriptions[dbname]) === null || _a === void 0 ? void 0 : _a.find((sub) => sub.for === peerId && sub.event === details.event && sub.path === details.event);
-        if (!sub) {
-            // We don't know this subscription so we weren't notifying in the first place. Ignore
-            return;
-        }
-        // Stop subscription
-        const db = this.ipcDatabases.get(dbname);
-        db === null || db === void 0 ? void 0 : db.subscriptions.remove(details.path, details.event, sub.callback);
     }
     async handleMessage(message) {
-        var _a;
-        const dbname = message.dbname;
+        if (message.from === this.id) {
+            return;
+        }
         switch (message.type) {
             case "hello":
-                return this.addPeer(dbname, message.from, message.to !== this.id);
+                return this.addPeer(message.from, message.to !== this.id);
             case "bye":
                 return this.removePeer(message.from, true);
-            case "subscribe":
-                return this.addRemoteSubscription(dbname, message.from, message.data);
-            case "unsubscribe":
-                return this.cancelRemoteSubscription(dbname, message.from, message.data);
-            case "event": {
-                if (!this._eventsEnabled) {
-                    // IPC event handling is disabled for this client. Ignore message.
-                    break;
-                }
-                const eventMessage = message;
-                const context = eventMessage.data.context || {};
-                context.database_ipc = { type: this.ipcType, origin: eventMessage.from }; // Add IPC details
-                // Other peer raised an event we are monitoring
-                const subscriptions = (_a = this.ourSubscriptions[dbname]) === null || _a === void 0 ? void 0 : _a.filter((sub) => sub.event === eventMessage.event && sub.path === eventMessage.path);
-                subscriptions.forEach((sub) => {
-                    sub.callback(null, eventMessage.data.path, eventMessage.data.val, eventMessage.data.previous, context);
-                });
-                break;
-            }
+            case "triggerEvents":
+                return this.emit("triggerEvents", message.data);
             case "notification": {
                 // Custom notification received - raise event
                 return this.emit("notification", message);
@@ -262,7 +131,7 @@ class IvipBaseIPCPeer extends ivipbase_core_1.SimpleEventEmitter {
             };
         });
         this._requests.set(req.id, { resolve, reject, request: req });
-        this.sendMessage(req.dbname, req);
+        this.sendMessage(req);
         return promise;
     }
     /**
@@ -279,7 +148,7 @@ class IvipBaseIPCPeer extends ivipbase_core_1.SimpleEventEmitter {
     }
     replyRequest(dbname, requestMessage, result) {
         const reply = { type: "result", id: requestMessage.id, ok: true, from: this.id, to: requestMessage.from, data: result, dbname };
-        this.sendMessage(dbname, reply);
+        this.sendMessage(reply);
     }
     /**
      * Sends a custom notification to all IPC peers
@@ -288,20 +157,24 @@ class IvipBaseIPCPeer extends ivipbase_core_1.SimpleEventEmitter {
      */
     sendNotification(dbname, notification) {
         const msg = { type: "notification", from: this.id, data: notification, dbname };
-        this.sendMessage(dbname, msg);
+        this.sendMessage(msg);
     }
-    /**
-     * If ipc event handling is currently enabled
-     */
-    get eventsEnabled() {
-        return this._eventsEnabled;
-    }
-    /**
-     * Enables or disables ipc event handling. When disabled, incoming event messages will be ignored.
-     */
-    set eventsEnabled(enabled) {
-        this.debug.log(`ipc events ${enabled ? "enabled" : "disabled"}`);
-        this._eventsEnabled = enabled;
+    sendTriggerEvents(dbname, path, oldValue, newValue, options = {
+        suppress_events: false,
+        context: undefined,
+    }) {
+        this.sendMessage({
+            type: "triggerEvents",
+            from: this.id,
+            data: {
+                dbName: dbname,
+                path,
+                oldValue,
+                newValue,
+                options,
+            },
+            dbname,
+        });
     }
 }
 exports.IvipBaseIPCPeer = IvipBaseIPCPeer;

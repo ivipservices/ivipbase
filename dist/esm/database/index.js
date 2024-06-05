@@ -10,7 +10,6 @@ export class DataBase extends DataBaseCore {
         super(database, options);
         this.database = database;
         this.app = app;
-        this.subscriptions = new Subscriptions();
         this.name = database;
         this.description =
             ((Array.isArray(app.settings.database) ? app.settings.database : [app.settings.database]).find(({ name }) => {
@@ -20,6 +19,7 @@ export class DataBase extends DataBaseCore {
                 description: app.settings.description ?? "iVipBase database",
             }).description ?? "iVipBase database";
         this.debug = new DebugLogger(app.settings.logLevel, `[${database}]`);
+        this.subscriptions = new Subscriptions(database, app);
         const dbInfo = (Array.isArray(this.app.settings.database) ? this.app.settings.database : [this.app.settings.database]).find((d) => d.name === this.name);
         const defaultRules = this.app.settings?.defaultRules ?? { rules: {} };
         const mainRules = this.app.settings?.server?.defineRules ?? { rules: {} };
@@ -31,20 +31,29 @@ export class DataBase extends DataBaseCore {
             rules: joinObjects({ rules: {} }, defaultRules.rules, mainRules.rules, dbRules.rules),
         });
         this.storage = !app.settings.isConnectionDefined || app.isServer || !app.settings.isValidClient ? new StorageDBServer(this) : new StorageDBClient(this);
-        app.ipc?.addDatabase(this);
         app.storage.on("add", (e) => {
             //console.log(e);
+            if (e.dbName !== database) {
+                return;
+            }
             this.subscriptions.triggerAllEvents(e.path, null, e.value);
         });
         app.storage.on("change", (e) => {
             //console.log(e);
+            if (e.dbName !== database) {
+                return;
+            }
             this.subscriptions.triggerAllEvents(e.path, e.previous, e.value);
         });
         app.storage.on("remove", (e) => {
+            if (e.dbName !== database) {
+                return;
+            }
             this.subscriptions.triggerAllEvents(e.path, e.value, null);
         });
         app.storage.ready(() => {
             this.emit("ready");
+            this.subscriptions.initialize();
         });
     }
     get accessToken() {

@@ -1,7 +1,17 @@
-import { DebugLogger, SimpleEventEmitter } from "ivipbase-core";
-import { DataBase } from "../database";
+import { DebugLogger, SimpleEventEmitter, Types } from "ivipbase-core";
 export declare class AIvipBaseIPCPeerExitingError extends Error {
     constructor(message: string);
+}
+interface TriggerEventsData {
+    dbName: string;
+    path: string;
+    oldValue: any;
+    newValue: any;
+    options: Partial<{
+        tid: string | number;
+        suppress_events: boolean;
+        context: any;
+    }>;
 }
 export declare abstract class IvipBaseIPCPeer extends SimpleEventEmitter {
     protected id: string;
@@ -10,45 +20,33 @@ export declare abstract class IvipBaseIPCPeer extends SimpleEventEmitter {
     protected masterPeerId: string;
     protected ipcType: string;
     get isMaster(): boolean;
-    protected ipcDatabases: Map<string, DataBase>;
-    protected ourSubscriptions: {
-        [dbname: string]: Array<{
-            path: string;
-            event: IvipBaseEventType;
-            callback: IvipBaseSubscribeCallback;
-        }>;
-    };
-    protected remoteSubscriptions: {
-        [dbname: string]: Array<{
-            for?: string;
-            path: string;
-            event: IvipBaseEventType;
-            callback: IvipBaseSubscribeCallback;
-        }>;
-    };
     protected peers: Array<{
         id: string;
         lastSeen: number;
     }>;
     protected _exiting: boolean;
-    private _eventsEnabled;
     private _requests;
     constructor(id: string, name: string);
-    addDatabase(db: DataBase): void;
+    on<TriggerEventsData>(event: "triggerEvents", callback: (data: TriggerEventsData) => void): Types.SimpleEventEmitterProperty;
+    on<undefined>(event: "exit", callback: (data: undefined) => void): Types.SimpleEventEmitterProperty;
+    on<IMessage>(event: "notification", callback: (data: IMessage) => void): Types.SimpleEventEmitterProperty;
+    on<IMessage>(event: "request", callback: (data: IMessage) => void): Types.SimpleEventEmitterProperty;
+    emit(event: "triggerEvents", data: TriggerEventsData): this;
+    emit(event: "exit", data: undefined): this;
+    emit(event: "notification", data: IMessage): this;
+    emit(event: "request", data: IMessage): this;
     /**
      * Requests the peer to shut down. Resolves once its locks are cleared and 'exit' event has been emitted.
      * Has to be overridden by the IPC implementation to perform custom shutdown tasks
      * @param code optional exit code (eg one provided by SIGINT event)
      */
     exit(code?: number): Promise<any>;
-    protected sayGoodbye(dbname: string, forPeerId: string): void;
-    protected addPeer(dbname: string, id: string, sendReply?: boolean): void;
+    protected sayGoodbye(forPeerId: string): void;
+    protected addPeer(id: string, sendReply?: boolean): void;
     protected removePeer(id: string, ignoreUnknown?: boolean): void;
-    protected addRemoteSubscription(dbname: string, peerId: string, details: ISubscriptionData): void;
-    protected cancelRemoteSubscription(dbname: string, peerId: string, details: ISubscriptionData): void;
     protected handleMessage(message: IMessage): Promise<void | this>;
     private request;
-    protected abstract sendMessage(dbname: string, message: IMessage): any;
+    protected abstract sendMessage(message: IMessage): any;
     /**
      * Sends a custom request to the IPC master
      * @param request
@@ -62,21 +60,18 @@ export declare abstract class IvipBaseIPCPeer extends SimpleEventEmitter {
      * @returns
      */
     sendNotification(dbname: string, notification: any): void;
-    /**
-     * If ipc event handling is currently enabled
-     */
-    get eventsEnabled(): boolean;
-    /**
-     * Enables or disables ipc event handling. When disabled, incoming event messages will be ignored.
-     */
-    set eventsEnabled(enabled: boolean);
+    sendTriggerEvents(dbname: string, path: string, oldValue: any, newValue: any, options?: Partial<{
+        tid: string | number;
+        suppress_events: boolean;
+        context: any;
+    }>): void;
 }
 export type IvipBaseSubscribeCallback = (error: Error | null, path: string, newValue: any, oldValue: any, eventContext: any) => void;
 export interface IMessage {
     /**
      * name of the target database. Needed when multiple database use the same communication channel
      */
-    dbname: string;
+    dbname?: string;
     /**
      * Message type, determines how to handle data
      */
@@ -152,4 +147,5 @@ export interface ICustomRequestMessage extends IRequestMessage {
     type: "request";
     data?: any;
 }
+export {};
 //# sourceMappingURL=ipc.d.ts.map

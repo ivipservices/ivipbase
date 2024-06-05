@@ -1,7 +1,5 @@
 import { ID, Transport } from "ivipbase-core";
-import { IvipBaseIPCPeer, IHelloMessage, IMessage } from "../ipc";
-import { DataBase } from "../../database";
-import { IvipBaseApp } from "../../app";
+import { IvipBaseIPCPeer, IMessage } from "../ipc";
 
 type MessageEventCallback = (event: MessageEvent) => any;
 
@@ -137,8 +135,7 @@ export class IPCPeer extends IvipBaseIPCPeer {
 		// }, 30000);
 	}
 
-	sendMessage(dbname: string, message: IMessage) {
-		message.dbname = dbname;
+	sendMessage(message: IMessage) {
 		this.debug.verbose(`[BroadcastChannel] sending: `, message);
 		this.channel?.postMessage(message);
 	}

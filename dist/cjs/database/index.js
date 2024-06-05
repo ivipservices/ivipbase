@@ -10,11 +10,10 @@ const rules_1 = require("./services/rules");
 const utils_1 = require("../utils");
 class DataBase extends ivipbase_core_1.DataBase {
     constructor(database, app, options) {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s;
         super(database, options);
         this.database = database;
         this.app = app;
-        this.subscriptions = new Subscriptions_1.Subscriptions();
         this.name = database;
         this.description =
             (_c = ((_a = (Array.isArray(app.settings.database) ? app.settings.database : [app.settings.database]).find(({ name }) => {
@@ -24,6 +23,7 @@ class DataBase extends ivipbase_core_1.DataBase {
                 description: (_b = app.settings.description) !== null && _b !== void 0 ? _b : "iVipBase database",
             }).description) !== null && _c !== void 0 ? _c : "iVipBase database";
         this.debug = new ivipbase_core_1.DebugLogger(app.settings.logLevel, `[${database}]`);
+        this.subscriptions = new Subscriptions_1.Subscriptions(database, app);
         const dbInfo = (Array.isArray(this.app.settings.database) ? this.app.settings.database : [this.app.settings.database]).find((d) => d.name === this.name);
         const defaultRules = (_e = (_d = this.app.settings) === null || _d === void 0 ? void 0 : _d.defaultRules) !== null && _e !== void 0 ? _e : { rules: {} };
         const mainRules = (_h = (_g = (_f = this.app.settings) === null || _f === void 0 ? void 0 : _f.server) === null || _g === void 0 ? void 0 : _g.defineRules) !== null && _h !== void 0 ? _h : { rules: {} };
@@ -35,20 +35,29 @@ class DataBase extends ivipbase_core_1.DataBase {
             rules: (0, utils_1.joinObjects)({ rules: {} }, defaultRules.rules, mainRules.rules, dbRules.rules),
         });
         this.storage = !app.settings.isConnectionDefined || app.isServer || !app.settings.isValidClient ? new StorageDBServer_1.StorageDBServer(this) : new StorageDBClient_1.StorageDBClient(this);
-        (_t = app.ipc) === null || _t === void 0 ? void 0 : _t.addDatabase(this);
         app.storage.on("add", (e) => {
             //console.log(e);
+            if (e.dbName !== database) {
+                return;
+            }
             this.subscriptions.triggerAllEvents(e.path, null, e.value);
         });
         app.storage.on("change", (e) => {
             //console.log(e);
+            if (e.dbName !== database) {
+                return;
+            }
             this.subscriptions.triggerAllEvents(e.path, e.previous, e.value);
         });
         app.storage.on("remove", (e) => {
+            if (e.dbName !== database) {
+                return;
+            }
             this.subscriptions.triggerAllEvents(e.path, e.value, null);
         });
         app.storage.ready(() => {
             this.emit("ready");
+            this.subscriptions.initialize();
         });
     }
     get accessToken() {

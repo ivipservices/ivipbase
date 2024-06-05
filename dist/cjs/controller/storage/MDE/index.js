@@ -522,6 +522,7 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         const promises = [];
         for (let node of removed) {
             this.emit("remove", {
+                dbName: database,
                 name: "remove",
                 path: ivipbase_core_1.PathInfo.get(ivipbase_core_1.PathInfo.get(node.path).keys.slice(1)).path,
                 value: (0, utils_2.removeNulls)(node.content.value),
@@ -540,6 +541,7 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         }
         for (let node of modified) {
             this.emit("change", {
+                dbName: database,
                 name: "change",
                 path: ivipbase_core_1.PathInfo.get(ivipbase_core_1.PathInfo.get(node.path).keys.slice(1)).path,
                 value: (0, utils_2.removeNulls)(node.content.value),
@@ -556,6 +558,7 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         }
         for (let node of added) {
             this.emit("add", {
+                dbName: database,
                 name: "add",
                 path: ivipbase_core_1.PathInfo.get(ivipbase_core_1.PathInfo.get(node.path).keys.slice(1)).path,
                 value: (0, utils_2.removeNulls)(node.content.value),

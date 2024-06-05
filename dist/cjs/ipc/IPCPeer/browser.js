@@ -122,9 +122,8 @@ class IPCPeer extends ipc_1.IvipBaseIPCPeer {
         //     sendMessage(<IPulseMessage>{ from: tabId, type: 'pulse' });
         // }, 30000);
     }
-    sendMessage(dbname, message) {
+    sendMessage(message) {
         var _a;
-        message.dbname = dbname;
         this.debug.verbose(`[BroadcastChannel] sending: `, message);
         (_a = this.channel) === null || _a === void 0 ? void 0 : _a.postMessage(message);
     }

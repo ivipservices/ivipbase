@@ -1,11 +1,40 @@
 import { Types, PathInfo, Utils, SimpleEventEmitter } from "ivipbase-core";
 import { assert, pathValueToObject } from "../utils";
+import { IvipBaseApp } from "../app";
 
 const SUPPORTED_EVENTS = ["value", "child_added", "child_changed", "child_removed", "mutated", "mutations"];
 SUPPORTED_EVENTS.push(...SUPPORTED_EVENTS.map((event) => `notify_${event}`));
 
 export class Subscriptions extends SimpleEventEmitter {
 	private _eventSubscriptions = {} as { [path: string]: Array<{ created: number; type: string; callback: Types.EventSubscriptionCallback }> };
+	private _event: Types.SimpleEventEmitterProperty | undefined;
+	private _pendingEvents: Map<string, NodeJS.Timeout> = new Map();
+
+	constructor(readonly dbName: string, readonly app: IvipBaseApp) {
+		super();
+	}
+
+	initialize() {
+		const applyEvent = () => {
+			return this.app.ipc?.on("triggerEvents", (data: any) => {
+				if (data.dbName !== this.dbName) {
+					return;
+				}
+				this.triggerAllEvents(data.path, data.oldValue, data.newValue, {
+					...(data.options ?? {}),
+					emitIpc: false,
+				});
+			});
+		};
+
+		this.on("subscribe", () => {
+			if (!this._event) {
+				this._event = applyEvent();
+			}
+		});
+
+		this._event = applyEvent();
+	}
 
 	forEach(callback: (event: string, path: string, callback: Types.EventSubscriptionCallback) => void) {
 		Object.keys(this._eventSubscriptions).forEach((path) => {
@@ -350,6 +379,8 @@ export class Subscriptions extends SimpleEventEmitter {
 			suppress_events: boolean;
 			context: any;
 			impact: ReturnType<Subscriptions["getUpdateImpact"]>;
+			emitIpc: boolean;
+			inTime: boolean;
 		}> = {
 			suppress_events: false,
 			context: undefined,
@@ -359,6 +390,27 @@ export class Subscriptions extends SimpleEventEmitter {
 		const dataChanges = Utils.compareValues(oldValue, newValue);
 		if (dataChanges === "identical") {
 			return;
+		}
+
+		const inTime = typeof options.inTime === "boolean" ? options.inTime : true;
+
+		if (inTime) {
+			let time = this._pendingEvents.get(path);
+			clearTimeout(time);
+
+			time = setTimeout(() => {
+				this._pendingEvents.delete(path);
+				this.triggerAllEvents(path, oldValue, newValue, { ...(options ?? {}), inTime: false });
+			}, 100);
+
+			this._pendingEvents.set(path, time);
+			return;
+		}
+
+		const emitIpc = typeof options.emitIpc === "boolean" ? options.emitIpc : true;
+
+		if (emitIpc) {
+			this.app.ipc?.sendTriggerEvents(this.dbName, path, oldValue, newValue, options);
 		}
 
 		const updateImpact = options.impact ? options.impact : this.getUpdateImpact(path, options.suppress_events);

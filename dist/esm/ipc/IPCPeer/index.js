@@ -33,14 +33,11 @@ export class IPCPeer extends IvipBaseIPCPeer {
             bindEventHandler(cluster, "exit", (worker) => {
                 // A worker has shut down
                 if (this.peers.find((peer) => peer.id === worker.id.toString())) {
-                    const dbs = Array.from(this.ipcDatabases.keys());
-                    for (const dbname of dbs) {
-                        // Worker apparently did not have time to say goodbye,
-                        // remove the peer ourselves
-                        this.removePeer(worker.id.toString());
-                        // Send "bye" message on their behalf
-                        this.sayGoodbye(dbname, worker.id.toString());
-                    }
+                    // Worker apparently did not have time to say goodbye,
+                    // remove the peer ourselves
+                    this.removePeer(worker.id.toString());
+                    // Send "bye" message on their behalf
+                    this.sayGoodbye(worker.id.toString());
                 }
             });
         }
@@ -51,15 +48,11 @@ export class IPCPeer extends IvipBaseIPCPeer {
                 return;
             }
             if (message.type === "hello") {
-                this.addPeer(message.dbname, message.from, false);
+                this.addPeer(message.from, false);
             }
-            // if (!this.ipcDatabases.has(message.dbname)) {
-            // 	// Ignore, message not meant for this database
-            // 	return;
-            // }
             if (cluster.isMaster && message.to !== masterPeerId) {
                 // Message is meant for others (or all). Forward it
-                this.sendMessage(message.dbname, message);
+                this.sendMessage(message);
             }
             if (message.to && message.to !== this.id) {
                 // Message is for somebody else. Ignore
@@ -73,20 +66,21 @@ export class IPCPeer extends IvipBaseIPCPeer {
         else {
             bindEventHandler(cluster.worker, "message", handleMessage);
         }
-        // if (!cluster.isMaster) {
-        //     // Add master peer. Do we have to?
-        //     this.addPeer(masterPeerId, false, false);
-        // }
+        if (!cluster.isMaster) {
+            // Add master peer. Do we have to?
+            this.addPeer(masterPeerId, false);
+        }
     }
-    sendMessage(dbname, message) {
-        message.dbname = dbname;
+    sendMessage(message) {
         if (cluster.isMaster) {
             // If we are the master, send the message to the target worker(s)
             this.peers
                 .filter((p) => p.id !== message.from && (!message.to || p.id === message.to))
                 .forEach((peer) => {
                 const worker = cluster.workers?.[peer.id];
-                worker && worker.send(message); // When debugging, worker might have stopped in the meantime
+                if (worker && worker.isConnected()) {
+                    worker?.send(message); // When debugging, worker might have stopped in the meantime
+                }
             });
         }
         else {

@@ -685,6 +685,7 @@ export default class MDE extends SimpleEventEmitter {
 
 		for (let node of removed) {
 			this.emit("remove", {
+				dbName: database,
 				name: "remove",
 				path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
 				value: removeNulls(node.content.value),
@@ -708,6 +709,7 @@ export default class MDE extends SimpleEventEmitter {
 
 		for (let node of modified) {
 			this.emit("change", {
+				dbName: database,
 				name: "change",
 				path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
 				value: removeNulls(node.content.value),
@@ -725,6 +727,7 @@ export default class MDE extends SimpleEventEmitter {
 
 		for (let node of added) {
 			this.emit("add", {
+				dbName: database,
 				name: "add",
 				path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
 				value: removeNulls(node.content.value),

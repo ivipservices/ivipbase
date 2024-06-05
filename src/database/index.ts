@@ -10,7 +10,7 @@ export class DataBase extends DataBaseCore {
 	readonly name: string;
 	readonly description: string;
 
-	readonly subscriptions = new Subscriptions();
+	readonly subscriptions: Subscriptions;
 	readonly debug: DebugLogger;
 	readonly storage: StorageDBServer | StorageDBClient;
 
@@ -32,6 +32,8 @@ export class DataBase extends DataBaseCore {
 
 		this.debug = new DebugLogger(app.settings.logLevel, `[${database}]`);
 
+		this.subscriptions = new Subscriptions(database, app);
+
 		const dbInfo = (Array.isArray(this.app.settings.database) ? this.app.settings.database : [this.app.settings.database]).find((d) => d.name === this.name);
 
 		const defaultRules = this.app.settings?.defaultRules ?? { rules: {} };
@@ -47,24 +49,32 @@ export class DataBase extends DataBaseCore {
 
 		this.storage = !app.settings.isConnectionDefined || app.isServer || !app.settings.isValidClient ? new StorageDBServer(this) : new StorageDBClient(this);
 
-		app.ipc?.addDatabase(this);
-
-		app.storage.on("add", (e: { name: string; path: string; value: any }) => {
+		app.storage.on("add", (e: { dbName: string; name: string; path: string; value: any }) => {
 			//console.log(e);
+			if (e.dbName !== database) {
+				return;
+			}
 			this.subscriptions.triggerAllEvents(e.path, null, e.value);
 		});
 
-		app.storage.on("change", (e: { name: string; path: string; value: any; previous: any }) => {
+		app.storage.on("change", (e: { dbName: string; name: string; path: string; value: any; previous: any }) => {
 			//console.log(e);
+			if (e.dbName !== database) {
+				return;
+			}
 			this.subscriptions.triggerAllEvents(e.path, e.previous, e.value);
 		});
 
-		app.storage.on("remove", (e: { name: string; path: string; value: any }) => {
+		app.storage.on("remove", (e: { dbName: string; name: string; path: string; value: any }) => {
+			if (e.dbName !== database) {
+				return;
+			}
 			this.subscriptions.triggerAllEvents(e.path, e.value, null);
 		});
 
 		app.storage.ready(() => {
 			this.emit("ready");
+			this.subscriptions.initialize();
 		});
 	}
 

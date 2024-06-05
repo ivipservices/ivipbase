@@ -8,6 +8,6 @@ export declare class IPCPeer extends IvipBaseIPCPeer {
     protected name: string;
     private channel?;
     constructor(name: string);
-    sendMessage(dbname: string, message: IMessage): void;
+    sendMessage(message: IMessage): void;
 }
 //# sourceMappingURL=browser.d.ts.map

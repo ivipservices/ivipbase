@@ -1,6 +1,13 @@
 import { Types, SimpleEventEmitter } from "ivipbase-core";
+import { IvipBaseApp } from "../app";
 export declare class Subscriptions extends SimpleEventEmitter {
+    readonly dbName: string;
+    readonly app: IvipBaseApp;
     private _eventSubscriptions;
+    private _event;
+    private _pendingEvents;
+    constructor(dbName: string, app: IvipBaseApp);
+    initialize(): void;
     forEach(callback: (event: string, path: string, callback: Types.EventSubscriptionCallback) => void): void;
     countByPath(path: string): number;
     /**
@@ -102,6 +109,8 @@ export declare class Subscriptions extends SimpleEventEmitter {
         suppress_events: boolean;
         context: any;
         impact: ReturnType<Subscriptions["getUpdateImpact"]>;
+        emitIpc: boolean;
+        inTime: boolean;
     }>): void;
 }
 //# sourceMappingURL=Subscriptions.d.ts.map
