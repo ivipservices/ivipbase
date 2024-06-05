@@ -50,6 +50,15 @@ export const addWebsocketServer = (env) => {
         });
     });
     serverManager.on("disconnect", (event) => {
+        env.localApp.ipc?.sendNotification({
+            type: "websocket.userDisconnect",
+            dbNames: event.dbNames,
+            user: event.socket_id,
+        });
+        env.emit("userDisconnect", {
+            dbNames: event.dbNames,
+            user: event.socket_id,
+        });
         // We lost one
         const client = getClientBySocketId(event.socket_id, "disconnect");
         if (!client) {
@@ -84,15 +93,6 @@ export const addWebsocketServer = (env) => {
         }
         env.clients.delete(client.id);
         env.debug.verbose(`Socket disconnected, total: ${env.clients.size}`);
-        env.localApp.ipc?.sendNotification({
-            type: "websocket.userDisconnect",
-            dbNames: event.dbNames,
-            user: client.id,
-        });
-        env.emit("userDisconnect", {
-            dbNames: event.dbNames,
-            user: client.id,
-        });
     });
     serverManager.on("signin", (event) => {
         // client sends this request once user has been signed in, binds the user to the socket,

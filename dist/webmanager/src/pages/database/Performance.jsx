@@ -111,10 +111,21 @@ export const Performance = () => {
 						label: "Conexões",
 						data: data.data.map(({ users }) => users?.connections ?? 0),
 						fill: false,
-						borderColor: "rgba(75, 192, 192, 1)",
+						borderColor: "rgba(76,175,80,1)",
 						tooltip: {
 							callbacks: {
 								label: (context) => `${context.dataset.label}: ${context.parsed.y} conexões`,
+							},
+						},
+					},
+					{
+						label: "Desconexões",
+						data: data.data.map(({ users }) => users?.disconnections ?? 0),
+						fill: false,
+						borderColor: "rgba(255,152,0,1)",
+						tooltip: {
+							callbacks: {
+								label: (context) => `${context.dataset.label}: ${context.parsed.y} desconexões`,
 							},
 						},
 					},

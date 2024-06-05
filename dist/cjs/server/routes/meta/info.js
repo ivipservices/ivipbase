@@ -87,7 +87,7 @@ const addRoute = (env) => {
         const deltaTime = (currentStats.ms - previousStats.ms) / 1000;
         const rxSec = (currentStats.rx_bytes - previousStats.rx_bytes) / deltaTime;
         const txSec = (currentStats.tx_bytes - previousStats.tx_bytes) / deltaTime;
-        const _users = users;
+        const _users = JSON.parse(JSON.stringify(users));
         for (const dbName in users) {
             users[dbName].connections -= users[dbName].disconnections;
             users[dbName].disconnections = 0;
