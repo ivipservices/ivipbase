@@ -45,9 +45,16 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         if (this.settings.isPossiplyServer) {
             this._ipc = (0, ipc_1.getIPCPeer)(this.name);
         }
-        this.on("ready", () => {
+        this.on("ready", (data) => {
             this._ready = true;
         });
+    }
+    on(event, callback) {
+        return super.on(event, callback);
+    }
+    emit(event, data) {
+        super.emit(event, data);
+        return this;
     }
     async initialize() {
         var _a;
@@ -125,7 +132,19 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         if (this._ipc instanceof ipc_1.IPCPeer === false) {
             this._ipc = (0, ipc_1.getIPCPeer)(this.name);
         }
+        this._ipc.on("connect", () => {
+            this.emit("connectIPC", this._ipc);
+        });
         return this._ipc;
+    }
+    async ipcReady(callback) {
+        if (!this._ipc && this.settings.isPossiplyServer) {
+            // Aguarda o evento ready
+            await new Promise((resolve) => this.once("connectIPC", resolve));
+        }
+        if (this._ipc instanceof ipc_1.IPCPeer) {
+            callback === null || callback === void 0 ? void 0 : callback(this._ipc);
+        }
     }
     async onConnect(callback, isOnce = false) {
         let count = 0, isReset = false;
@@ -259,6 +278,7 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
     async connect() {
         if (this._connectionState === CONNECTION_STATE_DISCONNECTED) {
             this._connectionState = CONNECTION_STATE_CONNECTING;
+            const dbNames = Array.isArray(this.settings.dbname) ? this.settings.dbname : [this.settings.dbname];
             this._socket = (0, socket_io_client_1.connect)(this.url.replace(/^http(s?)/gi, "ws$1"), {
                 // Use default socket.io connection settings:
                 path: `/socket.io`,
@@ -268,6 +288,9 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
                 timeout: 20000,
                 randomizationFactor: 0.5,
                 transports: ["websocket"], // Override default setting of ['polling', 'websocket']
+                query: {
+                    dbNames: JSON.stringify(dbNames),
+                },
             });
             this._socket.on("connect", () => {
                 this._connectionState = CONNECTION_STATE_CONNECTED;
@@ -5007,6 +5030,7 @@ class IPCPeer extends ipc_1.IvipBaseIPCPeer {
         // setInterval(() => {
         //     sendMessage(<IPulseMessage>{ from: tabId, type: 'pulse' });
         // }, 30000);
+        this.emit("connect", this);
     }
     sendMessage(message) {
         var _a;
@@ -5142,7 +5166,7 @@ class IvipBaseIPCPeer extends ivipbase_core_1.SimpleEventEmitter {
                 return this.emit("triggerEvents", message.data);
             case "notification": {
                 // Custom notification received - raise event
-                return this.emit("notification", message);
+                return this.emit("notification", message.data);
             }
             case "request": {
                 // Custom message received - raise event
@@ -5181,29 +5205,19 @@ class IvipBaseIPCPeer extends ivipbase_core_1.SimpleEventEmitter {
         this.sendMessage(req);
         return promise;
     }
-    /**
-     * Sends a custom request to the IPC master
-     * @param request
-     * @returns
-     */
-    sendRequest(dbname, request) {
-        const req = { type: "request", from: this.id, to: this.masterPeerId, id: ivipbase_core_1.ID.generate(), data: request, dbname };
+    sendRequest(request) {
+        const req = { type: "request", from: this.id, to: this.masterPeerId, id: ivipbase_core_1.ID.generate(), data: request };
         return this.request(req).catch((err) => {
             this.debug.error(err);
             throw err;
         });
     }
-    replyRequest(dbname, requestMessage, result) {
-        const reply = { type: "result", id: requestMessage.id, ok: true, from: this.id, to: requestMessage.from, data: result, dbname };
+    replyRequest(requestMessage, result) {
+        const reply = { type: "result", id: requestMessage.id, ok: true, from: this.id, to: requestMessage.from, data: result };
         this.sendMessage(reply);
     }
-    /**
-     * Sends a custom notification to all IPC peers
-     * @param notification
-     * @returns
-     */
-    sendNotification(dbname, notification) {
-        const msg = { type: "notification", from: this.id, data: notification, dbname };
+    sendNotification(notification) {
+        const msg = { type: "notification", from: this.id, data: notification };
         this.sendMessage(msg);
     }
     sendTriggerEvents(dbname, path, oldValue, newValue, options = {

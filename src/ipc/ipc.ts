@@ -38,18 +38,20 @@ export abstract class IvipBaseIPCPeer extends SimpleEventEmitter {
 		this.sendMessage(helloMsg);
 	}
 
-	on<TriggerEventsData>(event: "triggerEvents", callback: (data: TriggerEventsData) => void): Types.SimpleEventEmitterProperty;
-	on<undefined>(event: "exit", callback: (data: undefined) => void): Types.SimpleEventEmitterProperty;
-	on<IMessage>(event: "notification", callback: (data: IMessage) => void): Types.SimpleEventEmitterProperty;
-	on<IMessage>(event: "request", callback: (data: IMessage) => void): Types.SimpleEventEmitterProperty;
+	on<d = TriggerEventsData>(event: "triggerEvents", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+	on<d = undefined>(event: "exit", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+	on<d = any>(event: "notification", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+	on<d = ICustomRequestMessage>(event: "request", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+	on<d = IvipBaseIPCPeer>(event: "connect", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
 	on(event: string, callback: any) {
 		return super.on(event, callback as any);
 	}
 
 	emit(event: "triggerEvents", data: TriggerEventsData): this;
 	emit(event: "exit", data: undefined): this;
-	emit(event: "notification", data: IMessage): this;
+	emit(event: "notification", data: any): this;
 	emit(event: "request", data: IMessage): this;
+	emit(event: "connect", data: IvipBaseIPCPeer): this;
 	emit(event: string, data: any) {
 		super.emit(event, data);
 		return this;
@@ -128,7 +130,7 @@ export abstract class IvipBaseIPCPeer extends SimpleEventEmitter {
 
 			case "notification": {
 				// Custom notification received - raise event
-				return this.emit("notification", message);
+				return this.emit("notification", message.data);
 			}
 
 			case "request": {
@@ -173,31 +175,21 @@ export abstract class IvipBaseIPCPeer extends SimpleEventEmitter {
 
 	protected abstract sendMessage(message: IMessage): any;
 
-	/**
-	 * Sends a custom request to the IPC master
-	 * @param request
-	 * @returns
-	 */
-	public sendRequest(dbname: string, request: any) {
-		const req: ICustomRequestMessage = { type: "request", from: this.id, to: this.masterPeerId, id: ID.generate(), data: request, dbname };
+	public sendRequest(request: any) {
+		const req: ICustomRequestMessage = { type: "request", from: this.id, to: this.masterPeerId, id: ID.generate(), data: request };
 		return this.request(req).catch((err) => {
 			this.debug.error(err);
 			throw err;
 		});
 	}
 
-	public replyRequest(dbname: string, requestMessage: IRequestMessage, result: any) {
-		const reply: IResponseMessage = { type: "result", id: requestMessage.id, ok: true, from: this.id, to: requestMessage.from, data: result, dbname };
+	public replyRequest(requestMessage: IRequestMessage, result: any) {
+		const reply: IResponseMessage = { type: "result", id: requestMessage.id, ok: true, from: this.id, to: requestMessage.from, data: result };
 		this.sendMessage(reply);
 	}
 
-	/**
-	 * Sends a custom notification to all IPC peers
-	 * @param notification
-	 * @returns
-	 */
-	public sendNotification(dbname: string, notification: any) {
-		const msg: ICustomNotificationMessage = { type: "notification", from: this.id, data: notification, dbname };
+	public sendNotification(notification: any) {
+		const msg: ICustomNotificationMessage = { type: "notification", from: this.id, data: notification };
 		this.sendMessage(msg);
 	}
 
@@ -229,8 +221,6 @@ export abstract class IvipBaseIPCPeer extends SimpleEventEmitter {
 		});
 	}
 }
-
-export type IvipBaseSubscribeCallback = (error: Error | null, path: string, newValue: any, oldValue: any, eventContext: any) => void;
 
 export interface IMessage {
 	/**
@@ -265,49 +255,9 @@ export interface IByeMessage extends IMessage {
 	data: void;
 }
 
-export interface IPulseMessage extends IMessage {
-	type: "pulse";
-	data: void;
-}
-
 export interface ICustomNotificationMessage extends IMessage {
 	type: "notification";
 	data: any;
-}
-
-export type IvipBaseEventType = string; //'value' | 'child_added' | 'child_changed' | 'child_removed' | 'mutated' | 'mutations' | 'notify_value' | 'notify_child_added' | 'notify_child_changed' | 'notify_child_removed' | 'notify_mutated' | 'notify_mutations'
-
-export interface ISubscriptionData {
-	path: string;
-	event: IvipBaseEventType;
-}
-
-export interface ISubscribeMessage extends IMessage {
-	type: "subscribe";
-	data: ISubscriptionData;
-}
-
-export interface IUnsubscribeMessage extends IMessage {
-	type: "unsubscribe";
-	data: ISubscriptionData;
-}
-
-export interface IEventMessage extends IMessage {
-	type: "event";
-	event: IvipBaseEventType;
-	/**
-	 * Path the subscription is on
-	 */
-	path: string;
-	data: {
-		/**
-		 * The path the event fires on
-		 */
-		path: string;
-		val?: any;
-		previous?: any;
-		context: any;
-	};
 }
 
 export interface IRequestMessage extends IMessage {

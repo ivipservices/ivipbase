@@ -95,7 +95,7 @@ class IvipBaseIPCPeer extends ivipbase_core_1.SimpleEventEmitter {
                 return this.emit("triggerEvents", message.data);
             case "notification": {
                 // Custom notification received - raise event
-                return this.emit("notification", message);
+                return this.emit("notification", message.data);
             }
             case "request": {
                 // Custom message received - raise event
@@ -134,29 +134,19 @@ class IvipBaseIPCPeer extends ivipbase_core_1.SimpleEventEmitter {
         this.sendMessage(req);
         return promise;
     }
-    /**
-     * Sends a custom request to the IPC master
-     * @param request
-     * @returns
-     */
-    sendRequest(dbname, request) {
-        const req = { type: "request", from: this.id, to: this.masterPeerId, id: ivipbase_core_1.ID.generate(), data: request, dbname };
+    sendRequest(request) {
+        const req = { type: "request", from: this.id, to: this.masterPeerId, id: ivipbase_core_1.ID.generate(), data: request };
         return this.request(req).catch((err) => {
             this.debug.error(err);
             throw err;
         });
     }
-    replyRequest(dbname, requestMessage, result) {
-        const reply = { type: "result", id: requestMessage.id, ok: true, from: this.id, to: requestMessage.from, data: result, dbname };
+    replyRequest(requestMessage, result) {
+        const reply = { type: "result", id: requestMessage.id, ok: true, from: this.id, to: requestMessage.from, data: result };
         this.sendMessage(reply);
     }
-    /**
-     * Sends a custom notification to all IPC peers
-     * @param notification
-     * @returns
-     */
-    sendNotification(dbname, notification) {
-        const msg = { type: "notification", from: this.id, data: notification, dbname };
+    sendNotification(notification) {
+        const msg = { type: "notification", from: this.id, data: notification };
         this.sendMessage(msg);
     }
     sendTriggerEvents(dbname, path, oldValue, newValue, options = {

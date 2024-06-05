@@ -43,9 +43,7 @@ export const addMiddleware = (env: LocalServer) => {
 		});
 	};
 
-	env.router.use(async (req: RouteRequest<{ auth_token?: string }>, res, next) => {
-		const dbname = req.params["dbName"] ?? req.database_name ?? "__default__";
-
+	const appendLogBytesUsage = (dbname: string, requestBytes: number, responseBytes: number, notify: boolean = true) => {
 		if (!info[dbname]) {
 			info[dbname] = {
 				lastTime: Date.now(),
@@ -54,13 +52,37 @@ export const addMiddleware = (env: LocalServer) => {
 			};
 		}
 
+		info[dbname].requestBytes += requestBytes;
+		info[dbname].responseBytes += responseBytes;
+
+		if (notify) {
+			env.localApp.ipc?.sendNotification({
+				type: "logBytesUsage",
+				dbname,
+				requestBytes: info[dbname].requestBytes,
+				responseBytes: info[dbname].responseBytes,
+			});
+		}
+	};
+
+	env.localApp.ipcReady((ipc) => {
+		ipc.on("notification", (message) => {
+			if (message.type === "logBytesUsage") {
+				appendLogBytesUsage(message.dbname, message.requestBytes, message.responseBytes, false);
+			}
+		});
+	});
+
+	env.router.use(async (req: RouteRequest<{ auth_token?: string }>, res, next) => {
+		const dbname = req.params["dbName"] ?? req.database_name ?? "__default__";
+
 		// Contabiliza os bytes da requisição
 		req.on("data", (chunk) => {
-			info[dbname].requestBytes += chunk.length;
+			appendLogBytesUsage(dbname, chunk.length, 0);
 		});
 
 		const data = JSON.stringify({ body: req.body, query: req.query, params: req.params });
-		info[dbname].requestBytes += byteLength(data);
+		appendLogBytesUsage(dbname, byteLength(data), 0);
 
 		// Contabiliza os bytes da resposta
 		const originalWrite = res.write;
@@ -69,24 +91,24 @@ export const addMiddleware = (env: LocalServer) => {
 		const originalSend = res.send;
 
 		(res as any).write = function (chunk: any, encoding: any, callback: any) {
-			info[dbname].responseBytes += chunk.length;
+			appendLogBytesUsage(dbname, 0, chunk.length);
 			originalWrite.call(res, chunk, encoding, callback);
 		};
 
 		(res as any).end = function (chunk: any, encoding: any, callback: any) {
 			if (chunk) {
-				info[dbname].responseBytes += chunk.length;
+				appendLogBytesUsage(dbname, 0, chunk.length);
 			}
 			originalEnd.call(res, chunk, encoding, callback);
 		};
 
 		(res as any).json = function (body: any) {
-			info[dbname].responseBytes += byteLength(JSON.stringify(body));
+			appendLogBytesUsage(dbname, 0, byteLength(JSON.stringify(body)));
 			originalJson.call(res, body);
 		};
 
 		(res as any).send = function (body: any) {
-			info[dbname].responseBytes += byteLength(String(body));
+			appendLogBytesUsage(dbname, 0, byteLength(String(body)));
 			originalSend.call(res, body);
 		};
 

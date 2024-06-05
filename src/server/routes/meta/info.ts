@@ -32,6 +32,44 @@ const getCpuUsage = (): Promise<number> => {
 export const addRoute = (env: LocalServer) => {
 	clearInterval(time);
 
+	let users: Record<
+		string,
+		{
+			connections: number;
+			disconnections: number;
+		}
+	> = {};
+
+	env.on("userConnect", (data) => {
+		if (!Array.isArray(data.dbNames) || data.dbNames.length <= 0) {
+			return;
+		}
+		for (let dbName of data.dbNames) {
+			if (!users[dbName]) {
+				users[dbName] = {
+					connections: 0,
+					disconnections: 0,
+				};
+			}
+			users[dbName].connections++;
+		}
+	});
+
+	env.on("userDisconnect", (data) => {
+		if (!Array.isArray(data.dbNames) || data.dbNames.length <= 0) {
+			return;
+		}
+		for (let dbName of data.dbNames) {
+			if (!users[dbName]) {
+				users[dbName] = {
+					connections: 0,
+					disconnections: 0,
+				};
+			}
+			users[dbName].disconnections++;
+		}
+	});
+
 	const getInfoMoment = async () => {
 		const d = new Date();
 
@@ -48,7 +86,15 @@ export const addRoute = (env: LocalServer) => {
 		const rxSec = (currentStats.rx_bytes - previousStats.rx_bytes) / deltaTime;
 		const txSec = (currentStats.tx_bytes - previousStats.tx_bytes) / deltaTime;
 
+		const _users = users;
+
+		for (const dbName in users) {
+			users[dbName].connections -= users[dbName].disconnections;
+			users[dbName].disconnections = 0;
+		}
+
 		return {
+			users: _users,
 			stats,
 			cpuUsage: cpuUsage,
 			networkStats: {
@@ -167,6 +213,7 @@ export const addRoute = (env: LocalServer) => {
 				const b = d.stats[dbname] ?? { request: 0, response: 0 };
 
 				return {
+					users: d.users[dbname] ?? { connections: 0, disconnections: 0 },
 					stats: { request: a.request + b.request, response: a.response + b.response },
 					cpuUsage: d.cpuUsage,
 					networkStats: d.networkStats,

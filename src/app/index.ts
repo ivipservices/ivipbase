@@ -65,9 +65,36 @@ export class IvipBaseApp extends SimpleEventEmitter {
 			this._ipc = getIPCPeer(this.name);
 		}
 
-		this.on("ready", () => {
+		this.on("ready", (data) => {
 			this._ready = true;
 		});
+	}
+
+	on<d = undefined>(event: "ready", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+	on<d = undefined>(event: "connect", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+	on<d = undefined>(event: "disconnect", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+	on<d = undefined>(event: "reconnecting", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+	on<d = undefined>(event: "reconnect", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+	on<d = undefined>(event: "reconnect_failed", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+	on<d = undefined>(event: "reset", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+	on<d = undefined>(event: "destroyed", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+	on<d = IPCPeer>(event: "connectIPC", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+	on(event: string, callback: any) {
+		return super.on(event, callback as any);
+	}
+
+	emit(event: "ready", data?: undefined): this;
+	emit(event: "connect", data?: undefined): this;
+	emit(event: "disconnect", data?: undefined): this;
+	emit(event: "reconnecting", data?: undefined): this;
+	emit(event: "reconnect", data?: undefined): this;
+	emit(event: "reconnect_failed", data?: undefined): this;
+	emit(event: "reset", data?: undefined): this;
+	emit(event: "destroyed", data?: undefined): this;
+	emit(event: "connectIPC", data: IPCPeer): this;
+	emit(event: string, data: any) {
+		super.emit(event, data);
+		return this;
 	}
 
 	async initialize() {
@@ -165,7 +192,21 @@ export class IvipBaseApp extends SimpleEventEmitter {
 			this._ipc = getIPCPeer(this.name);
 		}
 
+		this._ipc.on("connect", () => {
+			this.emit("connectIPC", this._ipc as any);
+		});
+
 		return this._ipc as IPCPeer;
+	}
+
+	async ipcReady(callback?: (ipc: IPCPeer) => void) {
+		if (!this._ipc && this.settings.isPossiplyServer) {
+			// Aguarda o evento ready
+			await new Promise((resolve) => this.once("connectIPC", resolve));
+		}
+		if (this._ipc instanceof IPCPeer) {
+			callback?.(this._ipc);
+		}
 	}
 
 	async onConnect(callback: (socket: IOWebSocket | null) => void, isOnce: boolean = false) {
@@ -367,6 +408,8 @@ export class IvipBaseApp extends SimpleEventEmitter {
 		if (this._connectionState === CONNECTION_STATE_DISCONNECTED) {
 			this._connectionState = CONNECTION_STATE_CONNECTING;
 
+			const dbNames = Array.isArray(this.settings.dbname) ? this.settings.dbname : [this.settings.dbname];
+
 			this._socket = connectSocket(this.url.replace(/^http(s?)/gi, "ws$1"), {
 				// Use default socket.io connection settings:
 				path: `/socket.io`,
@@ -376,6 +419,9 @@ export class IvipBaseApp extends SimpleEventEmitter {
 				timeout: 20000,
 				randomizationFactor: 0.5,
 				transports: ["websocket"], // Override default setting of ['polling', 'websocket']
+				query: {
+					dbNames: JSON.stringify(dbNames),
+				},
 			});
 
 			this._socket.on("connect", () => {

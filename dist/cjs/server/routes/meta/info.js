@@ -46,6 +46,35 @@ const getCpuUsage = () => {
 };
 const addRoute = (env) => {
     clearInterval(time);
+    let users = {};
+    env.on("userConnect", (data) => {
+        if (!Array.isArray(data.dbNames) || data.dbNames.length <= 0) {
+            return;
+        }
+        for (let dbName of data.dbNames) {
+            if (!users[dbName]) {
+                users[dbName] = {
+                    connections: 0,
+                    disconnections: 0,
+                };
+            }
+            users[dbName].connections++;
+        }
+    });
+    env.on("userDisconnect", (data) => {
+        if (!Array.isArray(data.dbNames) || data.dbNames.length <= 0) {
+            return;
+        }
+        for (let dbName of data.dbNames) {
+            if (!users[dbName]) {
+                users[dbName] = {
+                    connections: 0,
+                    disconnections: 0,
+                };
+            }
+            users[dbName].disconnections++;
+        }
+    });
     const getInfoMoment = async () => {
         var _a, _b;
         const d = new Date();
@@ -58,7 +87,13 @@ const addRoute = (env) => {
         const deltaTime = (currentStats.ms - previousStats.ms) / 1000;
         const rxSec = (currentStats.rx_bytes - previousStats.rx_bytes) / deltaTime;
         const txSec = (currentStats.tx_bytes - previousStats.tx_bytes) / deltaTime;
+        const _users = users;
+        for (const dbName in users) {
+            users[dbName].connections -= users[dbName].disconnections;
+            users[dbName].disconnections = 0;
+        }
         return {
+            users: _users,
             stats,
             cpuUsage: cpuUsage,
             networkStats: {
@@ -129,10 +164,11 @@ const addRoute = (env) => {
             const mem = process.memoryUsage();
             const data = env.metaInfoCache.values();
             info.data = data.map((d) => {
-                var _a, _b;
+                var _a, _b, _c;
                 const a = (_a = d.stats["__default__"]) !== null && _a !== void 0 ? _a : { request: 0, response: 0 };
                 const b = (_b = d.stats[dbname]) !== null && _b !== void 0 ? _b : { request: 0, response: 0 };
                 return {
+                    users: (_c = d.users[dbname]) !== null && _c !== void 0 ? _c : { connections: 0, disconnections: 0 },
                     stats: { request: a.request + b.request, response: a.response + b.response },
                     cpuUsage: d.cpuUsage,
                     networkStats: d.networkStats,

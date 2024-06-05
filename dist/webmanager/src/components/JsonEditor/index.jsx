@@ -15,7 +15,6 @@ export const JsonEditor = forwardRef(({ rootDir = "root", path = [] }, ref) => {
 	const [callbackChangeData, setCallbackChangeData] = useState(null);
 	const [callbackNewChildres, setCallbackNewChildres] = useState(null);
 	const [callbacksubscribeMutated, setCallbacksubscribeMutated] = useState(null);
-	const [mutated, setMutated] = useState({});
 
 	const [editPath, setEditPath] = useState(false);
 
@@ -45,9 +44,6 @@ export const JsonEditor = forwardRef(({ rootDir = "root", path = [] }, ref) => {
 			},
 			onNewChildres: (callback) => {
 				setCallbackNewChildres(() => (typeof callback === "function" ? callback : null));
-			},
-			mutated: (data) => {
-				setMutated(data);
 			},
 			subscribeMutated: (callback) => {
 				setCallbacksubscribeMutated(() => (typeof callback === "function" ? callback : null));
@@ -93,7 +89,7 @@ export const JsonEditor = forwardRef(({ rootDir = "root", path = [] }, ref) => {
 				}
 
 				subscribeMutated.current.forEach((callback) => {
-					callback(currentPath, value);
+					callback(currentPath, value, value);
 				});
 			});
 

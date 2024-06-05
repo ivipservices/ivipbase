@@ -44,9 +44,16 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         if (this.settings.isPossiplyServer) {
             this._ipc = (0, ipc_1.getIPCPeer)(this.name);
         }
-        this.on("ready", () => {
+        this.on("ready", (data) => {
             this._ready = true;
         });
+    }
+    on(event, callback) {
+        return super.on(event, callback);
+    }
+    emit(event, data) {
+        super.emit(event, data);
+        return this;
     }
     async initialize() {
         var _a;
@@ -124,7 +131,19 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         if (this._ipc instanceof ipc_1.IPCPeer === false) {
             this._ipc = (0, ipc_1.getIPCPeer)(this.name);
         }
+        this._ipc.on("connect", () => {
+            this.emit("connectIPC", this._ipc);
+        });
         return this._ipc;
+    }
+    async ipcReady(callback) {
+        if (!this._ipc && this.settings.isPossiplyServer) {
+            // Aguarda o evento ready
+            await new Promise((resolve) => this.once("connectIPC", resolve));
+        }
+        if (this._ipc instanceof ipc_1.IPCPeer) {
+            callback === null || callback === void 0 ? void 0 : callback(this._ipc);
+        }
     }
     async onConnect(callback, isOnce = false) {
         let count = 0, isReset = false;
@@ -258,6 +277,7 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
     async connect() {
         if (this._connectionState === CONNECTION_STATE_DISCONNECTED) {
             this._connectionState = CONNECTION_STATE_CONNECTING;
+            const dbNames = Array.isArray(this.settings.dbname) ? this.settings.dbname : [this.settings.dbname];
             this._socket = (0, socket_io_client_1.connect)(this.url.replace(/^http(s?)/gi, "ws$1"), {
                 // Use default socket.io connection settings:
                 path: `/socket.io`,
@@ -267,6 +287,9 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
                 timeout: 20000,
                 randomizationFactor: 0.5,
                 transports: ["websocket"], // Override default setting of ['polling', 'websocket']
+                query: {
+                    dbNames: JSON.stringify(dbNames),
+                },
             });
             this._socket.on("connect", () => {
                 this._connectionState = CONNECTION_STATE_CONNECTED;

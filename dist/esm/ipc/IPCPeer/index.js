@@ -15,12 +15,21 @@ export class IPCPeer extends IvipBaseIPCPeer {
         this.ipcType = "node.cluster";
         /** Adds an event handler to a Node.js EventEmitter that is automatically removed upon IPC exit */
         const bindEventHandler = (target, event, handler) => {
-            target.addListener(event, handler);
-            this.on("exit", () => target.removeListener(event, handler));
+            const events = Array.isArray(event) ? event : [event];
+            for (let event of events) {
+                target.addListener(event, handler);
+                this.on("exit", () => target.removeListener(event, handler));
+            }
         };
         // Setup process exit handler
-        bindEventHandler(process, "SIGINT", () => {
+        bindEventHandler(process, ["SIGINT", "SIGTERM"], () => {
             this.exit();
+            if (cluster.isMaster) {
+                Object.values(cluster.workers ?? {}).forEach((worker) => {
+                    worker?.destroy();
+                });
+            }
+            process.exit(0);
         });
         if (cluster.isMaster) {
             bindEventHandler(cluster, "online", (worker) => {
@@ -70,6 +79,7 @@ export class IPCPeer extends IvipBaseIPCPeer {
             // Add master peer. Do we have to?
             this.addPeer(masterPeerId, false);
         }
+        this.emit("connect", this);
     }
     sendMessage(message) {
         if (cluster.isMaster) {

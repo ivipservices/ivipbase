@@ -22,6 +22,24 @@ export declare class IvipBaseApp extends SimpleEventEmitter {
     private _socket;
     private _ipc;
     constructor(options: Partial<IvipBaseApp>);
+    on<d = undefined>(event: "ready", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+    on<d = undefined>(event: "connect", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+    on<d = undefined>(event: "disconnect", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+    on<d = undefined>(event: "reconnecting", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+    on<d = undefined>(event: "reconnect", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+    on<d = undefined>(event: "reconnect_failed", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+    on<d = undefined>(event: "reset", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+    on<d = undefined>(event: "destroyed", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+    on<d = IPCPeer>(event: "connectIPC", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+    emit(event: "ready", data?: undefined): this;
+    emit(event: "connect", data?: undefined): this;
+    emit(event: "disconnect", data?: undefined): this;
+    emit(event: "reconnecting", data?: undefined): this;
+    emit(event: "reconnect", data?: undefined): this;
+    emit(event: "reconnect_failed", data?: undefined): this;
+    emit(event: "reset", data?: undefined): this;
+    emit(event: "destroyed", data?: undefined): this;
+    emit(event: "connectIPC", data: IPCPeer): this;
     initialize(): Promise<void>;
     /**
      * Aguarda o serviço estar pronto antes de executar o seu callback.
@@ -34,6 +52,7 @@ export declare class IvipBaseApp extends SimpleEventEmitter {
     get connectionState(): "connected" | "disconnected" | "connecting" | "disconnecting";
     get socket(): import("socket.io-client").Socket<import("@socket.io/component-emitter").DefaultEventsMap, import("@socket.io/component-emitter").DefaultEventsMap> | null;
     get ipc(): IPCPeer | undefined;
+    ipcReady(callback?: (ipc: IPCPeer) => void): Promise<void>;
     onConnect(callback: (socket: IOWebSocket | null) => void, isOnce?: boolean): Promise<{
         stop: () => void;
     }>;

@@ -121,6 +121,7 @@ class IPCPeer extends ipc_1.IvipBaseIPCPeer {
         // setInterval(() => {
         //     sendMessage(<IPulseMessage>{ from: tabId, type: 'pulse' });
         // }, 30000);
+        this.emit("connect", this);
     }
     sendMessage(message) {
         var _a;

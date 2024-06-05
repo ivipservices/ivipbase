@@ -13,6 +13,22 @@ class SocketRequestError extends Error {
 }
 exports.SocketRequestError = SocketRequestError;
 const addWebsocketServer = (env) => {
+    env.localApp.ipcReady((ipc) => {
+        ipc.on("notification", (message) => {
+            if (message.type === "websocket.userConnect") {
+                env.emit("userConnect", {
+                    dbNames: message.dbNames,
+                    user: message.user,
+                });
+            }
+            else if (message.type === "websocket.userDisconnect") {
+                env.emit("userDisconnect", {
+                    dbNames: message.dbNames,
+                    user: message.user,
+                });
+            }
+        });
+    });
     // TODO: Allow using uWebSockets.js server instead of Socket.IO
     const serverManager = (0, socket_io_1.createServer)(env);
     const getClientBySocketId = (id, event) => {
@@ -23,12 +39,23 @@ const addWebsocketServer = (env) => {
         return !client || client.disconnected ? undefined : client;
     };
     serverManager.on("connect", (event) => {
+        var _a;
         const client = new clients_1.ConnectedClient(event.socket);
         env.clients.set(client.id, client);
         env.debug.warn(`New socket connected, total: ${env.clients.size}`);
         serverManager.send(event.socket, "welcome");
+        (_a = env.localApp.ipc) === null || _a === void 0 ? void 0 : _a.sendNotification({
+            type: "websocket.userConnect",
+            dbNames: event.dbNames,
+            user: client.id,
+        });
+        env.emit("userConnect", {
+            dbNames: event.dbNames,
+            user: client.id,
+        });
     });
     serverManager.on("disconnect", (event) => {
+        var _a;
         // We lost one
         const client = getClientBySocketId(event.socket_id, "disconnect");
         if (!client) {
@@ -63,6 +90,15 @@ const addWebsocketServer = (env) => {
         }
         env.clients.delete(client.id);
         env.debug.verbose(`Socket disconnected, total: ${env.clients.size}`);
+        (_a = env.localApp.ipc) === null || _a === void 0 ? void 0 : _a.sendNotification({
+            type: "websocket.userDisconnect",
+            dbNames: event.dbNames,
+            user: client.id,
+        });
+        env.emit("userDisconnect", {
+            dbNames: event.dbNames,
+            user: client.id,
+        });
     });
     serverManager.on("signin", (event) => {
         var _a;

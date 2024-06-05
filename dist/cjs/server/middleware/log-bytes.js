@@ -38,9 +38,8 @@ const addMiddleware = (env) => {
             resolve(result);
         });
     };
-    env.router.use(async (req, res, next) => {
-        var _a, _b;
-        const dbname = (_b = (_a = req.params["dbName"]) !== null && _a !== void 0 ? _a : req.database_name) !== null && _b !== void 0 ? _b : "__default__";
+    const appendLogBytesUsage = (dbname, requestBytes, responseBytes, notify = true) => {
+        var _a;
         if (!info[dbname]) {
             info[dbname] = {
                 lastTime: Date.now(),
@@ -48,33 +47,54 @@ const addMiddleware = (env) => {
                 responseBytes: 0,
             };
         }
+        info[dbname].requestBytes += requestBytes;
+        info[dbname].responseBytes += responseBytes;
+        if (notify) {
+            (_a = env.localApp.ipc) === null || _a === void 0 ? void 0 : _a.sendNotification({
+                type: "logBytesUsage",
+                dbname,
+                requestBytes: info[dbname].requestBytes,
+                responseBytes: info[dbname].responseBytes,
+            });
+        }
+    };
+    env.localApp.ipcReady((ipc) => {
+        ipc.on("notification", (message) => {
+            if (message.type === "logBytesUsage") {
+                appendLogBytesUsage(message.dbname, message.requestBytes, message.responseBytes, false);
+            }
+        });
+    });
+    env.router.use(async (req, res, next) => {
+        var _a, _b;
+        const dbname = (_b = (_a = req.params["dbName"]) !== null && _a !== void 0 ? _a : req.database_name) !== null && _b !== void 0 ? _b : "__default__";
         // Contabiliza os bytes da requisição
         req.on("data", (chunk) => {
-            info[dbname].requestBytes += chunk.length;
+            appendLogBytesUsage(dbname, chunk.length, 0);
         });
         const data = JSON.stringify({ body: req.body, query: req.query, params: req.params });
-        info[dbname].requestBytes += byteLength(data);
+        appendLogBytesUsage(dbname, byteLength(data), 0);
         // Contabiliza os bytes da resposta
         const originalWrite = res.write;
         const originalEnd = res.end;
         const originalJson = res.json;
         const originalSend = res.send;
         res.write = function (chunk, encoding, callback) {
-            info[dbname].responseBytes += chunk.length;
+            appendLogBytesUsage(dbname, 0, chunk.length);
             originalWrite.call(res, chunk, encoding, callback);
         };
         res.end = function (chunk, encoding, callback) {
             if (chunk) {
-                info[dbname].responseBytes += chunk.length;
+                appendLogBytesUsage(dbname, 0, chunk.length);
             }
             originalEnd.call(res, chunk, encoding, callback);
         };
         res.json = function (body) {
-            info[dbname].responseBytes += byteLength(JSON.stringify(body));
+            appendLogBytesUsage(dbname, 0, byteLength(JSON.stringify(body)));
             originalJson.call(res, body);
         };
         res.send = function (body) {
-            info[dbname].responseBytes += byteLength(String(body));
+            appendLogBytesUsage(dbname, 0, byteLength(String(body)));
             originalSend.call(res, body);
         };
         next();

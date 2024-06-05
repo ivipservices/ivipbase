@@ -9,6 +9,22 @@ export class SocketRequestError extends Error {
     }
 }
 export const addWebsocketServer = (env) => {
+    env.localApp.ipcReady((ipc) => {
+        ipc.on("notification", (message) => {
+            if (message.type === "websocket.userConnect") {
+                env.emit("userConnect", {
+                    dbNames: message.dbNames,
+                    user: message.user,
+                });
+            }
+            else if (message.type === "websocket.userDisconnect") {
+                env.emit("userDisconnect", {
+                    dbNames: message.dbNames,
+                    user: message.user,
+                });
+            }
+        });
+    });
     // TODO: Allow using uWebSockets.js server instead of Socket.IO
     const serverManager = createServer(env);
     const getClientBySocketId = (id, event) => {
@@ -23,6 +39,15 @@ export const addWebsocketServer = (env) => {
         env.clients.set(client.id, client);
         env.debug.warn(`New socket connected, total: ${env.clients.size}`);
         serverManager.send(event.socket, "welcome");
+        env.localApp.ipc?.sendNotification({
+            type: "websocket.userConnect",
+            dbNames: event.dbNames,
+            user: client.id,
+        });
+        env.emit("userConnect", {
+            dbNames: event.dbNames,
+            user: client.id,
+        });
     });
     serverManager.on("disconnect", (event) => {
         // We lost one
@@ -59,6 +84,15 @@ export const addWebsocketServer = (env) => {
         }
         env.clients.delete(client.id);
         env.debug.verbose(`Socket disconnected, total: ${env.clients.size}`);
+        env.localApp.ipc?.sendNotification({
+            type: "websocket.userDisconnect",
+            dbNames: event.dbNames,
+            user: client.id,
+        });
+        env.emit("userDisconnect", {
+            dbNames: event.dbNames,
+            user: client.id,
+        });
     });
     serverManager.on("signin", (event) => {
         // client sends this request once user has been signed in, binds the user to the socket,

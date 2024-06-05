@@ -37,12 +37,14 @@ export declare class LocalServer extends AbstractLocalServer<LocalServer> {
     readonly clients: Map<string, ConnectedClient>;
     authCache: SimpleCache<string, DbUserAccountDetails>;
     readonly metaInfoCache: SimpleCache<number, {
-        stats: {
-            [dbName: string]: {
-                request: number;
-                response: number;
-            };
-        };
+        users: Record<string, {
+            connections: number;
+            disconnections: number;
+        }>;
+        stats: Record<string, {
+            request: number;
+            response: number;
+        }>;
         cpuUsage: number;
         networkStats: {
             sent: number;

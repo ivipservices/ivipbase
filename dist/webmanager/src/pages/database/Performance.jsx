@@ -67,6 +67,7 @@ export const Performance = () => {
 		data: [],
 	});
 
+	const usersRef = useRef(null);
 	const dbRef = useRef(null);
 	const cpuRef = useRef(null);
 	const memRef = useRef(null);
@@ -89,6 +90,43 @@ export const Performance = () => {
 			clearTimeout(time2);
 		};
 	}, []);
+
+	useEffect(() => {
+		if (!usersRef.current) {
+			return;
+		}
+
+		const options = { ...chartOptions };
+		options.scales.y.ticks.callback = (value) => `${value}`;
+		options.scales.y.ticks.stepSize = 1;
+		options.scales.y.suggestedMin = 0;
+		options.scales.y.suggestedMax = 5;
+
+		const chart = new Chart(usersRef.current, {
+			type: "line",
+			data: {
+				labels: data.data.map(({ timestamp }) => new Date(timestamp).toLocaleString()),
+				datasets: [
+					{
+						label: "Conexões",
+						data: data.data.map(({ users }) => users?.connections ?? 0),
+						fill: false,
+						borderColor: "rgba(75, 192, 192, 1)",
+						tooltip: {
+							callbacks: {
+								label: (context) => `${context.dataset.label}: ${context.parsed.y} conexões`,
+							},
+						},
+					},
+				],
+			},
+			options,
+		});
+
+		return () => {
+			chart.destroy();
+		};
+	}, [data, usersRef.current]);
 
 	useEffect(() => {
 		if (!dbRef.current) {
@@ -276,6 +314,14 @@ export const Performance = () => {
 
 	return (
 		<div className={style["performance"]}>
+			<Typography
+				variant="h5"
+				gutterBottom
+			>
+				Usuários conectados
+			</Typography>
+			<canvas ref={usersRef} />
+
 			<Typography
 				variant="h5"
 				gutterBottom

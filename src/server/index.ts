@@ -78,12 +78,20 @@ export class LocalServer extends AbstractLocalServer<LocalServer> {
 	readonly metaInfoCache: SimpleCache<
 		number,
 		{
-			stats: {
-				[dbName: string]: {
+			users: Record<
+				string,
+				{
+					connections: number;
+					disconnections: number;
+				}
+			>;
+			stats: Record<
+				string,
+				{
 					request: number;
 					response: number;
-				};
-			};
+				}
+			>;
 			cpuUsage: number;
 			networkStats: {
 				sent: number;
