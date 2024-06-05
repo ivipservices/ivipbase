@@ -7,6 +7,8 @@ import moment from "moment";
 import { mdiAlphabetical, mdiNumeric, mdiAsterisk, mdiToggleSwitch, mdiCalendar, mdiCodeBraces, mdiCodeBrackets, mdiNumeric9PlusBoxMultiple, mdiHook, mdiMatrix } from "@mdi/js";
 import { PathReference, Utils, ascii85 } from "ivipbase";
 
+moment.locale("en");
+
 export const palette = ["102,187,106", "38,166,154", "229,115,115", "66,165,245", "0, 161, 180", "255, 194, 0", "236,64,122", "126,87,194", "255, 122, 0"];
 
 // const palette = ["209, 150, 22", "198, 120, 221", "97, 175, 239", "209, 154, 102", "224, 108, 117", "152, 195, 121", "86, 182, 194", "229, 192, 123", "158, 158, 158"];
@@ -96,7 +98,7 @@ export const AutoWidthTextField = ({ value, defaultValue, minWidth = 30, maxWidt
 	);
 };
 
-export const momentFormat = "DD/MM/YYYY HH:mm:ss";
+export const momentFormat = "YYYY/MM/DD HH:mm:ss";
 
 export const TextMaskDate = React.forwardRef(function TextMaskCustom({ onChange, ...props }, ref) {
 	return (
