@@ -27,9 +27,11 @@ export const EditValueChild = ({
 	const [_loading, setLoading] = useState(false);
 	const [disabled, setDisabled] = useState(_disabled);
 	const [edit, setEdit] = useState(isNewChild);
+
 	const [currentKey, setCurrentKey] = useState(name);
 	const [currentValue, setCurrentValue] = useState(valueToString(value));
 	const [currentType, setCurrentType] = useState(type ?? "unknown");
+
 	const [textWarning, setTextWarning] = useState(null);
 
 	const [newChildres, setNewChildres] = useState([]);
@@ -98,7 +100,7 @@ export const EditValueChild = ({
 			const actualPath = parentPath.concat([currentKey]);
 			let time;
 
-			const event = subscribeMutated(resolveArrayPath(actualPath), (path, value) => {
+			const event = subscribeMutated(resolveArrayPath(actualPath), (path, value, beforeValue) => {
 				const isPathExact = resolveArrayPath(path) === resolveArrayPath(actualPath);
 
 				if (isPathExact) {
@@ -106,7 +108,7 @@ export const EditValueChild = ({
 						emitNotify("remove");
 					} else {
 						setLoading(true);
-						emitNotify("change");
+						emitNotify(beforeValue === null && value !== null ? "add" : "change");
 						const type = getValueType(value);
 						setCurrentValue(valueToString(value));
 						setCurrentType(type);
@@ -123,12 +125,6 @@ export const EditValueChild = ({
 			};
 		}
 	}, [currentKey, parentPath]);
-
-	useLayoutEffect(() => {
-		if (valueToString(beforeValue ?? value) !== valueToString(value)) {
-			emitNotify("change");
-		}
-	}, [mainRef.current, beforeValue, value]);
 
 	const confirmEdit = async () => {
 		if (isNewChild) {
@@ -203,16 +199,16 @@ export const EditValueChild = ({
 			return;
 		}
 
-		if (valueToString(value) !== currentValue) {
+		if (valueToString(beforeValue ?? value) !== valueToString(value) || valueToString(value) !== currentValue) {
 			if (value === null) {
 				emitNotify("remove");
 			} else {
 				setCurrentValue(valueToString(value));
 				setCurrentType(type);
-				emitNotify("change");
+				emitNotify(beforeValue === null && value !== null ? "add" : "change");
 			}
 		}
-	}, [currentValue, value]);
+	}, [mainRef.current, beforeValue, value]);
 
 	useEffect(() => {
 		if (!mainRef.current) {

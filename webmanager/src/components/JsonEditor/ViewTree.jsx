@@ -3,11 +3,11 @@ import style from "./style.module.scss";
 import { Box, Typography, Link, Button, IconButton, CircularProgress } from "@mui/material";
 import { mdiArrowDownDropCircle, mdiArrowRightDropCircle, mdiDelete, mdiPlus, mdiChevronDown } from "@mdi/js";
 import SvgIcon from "../SvgIcon";
-import { ID } from "ivipbase";
+import { ID, PathInfo } from "ivipbase";
 import { getValueType, normalizeValue, palette, resolveArrayPath, valueToString } from "./utils";
 import EditValueChild from "./EditValueChild.jsx";
 
-export const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, checkRemoved, loadData, isExpanded = false, index = 0, goToPath, prevData, subscribeMutated }) => {
+export const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, checkRemoved, loadData, isExpanded = false, index = 0, goToPath, prevData, subscribeMutated, isAdded = false }) => {
 	const [actualPath, setActualPath] = useState(currentPath);
 	const [loading, setLoading] = useState(true);
 	const [forceLoading, setForceLoading] = useState(false);
@@ -23,7 +23,7 @@ export const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, chec
 
 	const mainRef = useRef(null);
 	const objectChildresRef = useRef({});
-	const beforeValues = useRef({});
+	const beforeValues = useRef(new Map());
 
 	const subscribeMutatedRef = useRef(new Map());
 
@@ -52,44 +52,58 @@ export const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, chec
 	};
 
 	useEffect(() => {
+		if (mainRef.current && isAdded) {
+			emitNotify("add");
+		}
+	}, [mainRef.current, isAdded]);
+
+	useEffect(() => {
 		if (typeof subscribeMutated === "function") {
 			const event = subscribeMutated(resolveArrayPath(actualPath), (path, value) => {
 				const isPathValid = resolveArrayPath(path).startsWith(resolveArrayPath(actualPath));
 				const isPathExact = resolveArrayPath(path) === resolveArrayPath(actualPath);
-				const isChild = isPathValid && path.length === actualPath.length + 1;
+				const isChild = isPathValid && !isPathExact && PathInfo.get(resolveArrayPath(path)).isChildOf(resolveArrayPath(actualPath));
+
+				const key = path[path.length - 1];
+				const type = getValueType(value);
 
 				if (isPathValid) {
 					if (!isPathExact) {
 						emitNotify("change", true);
-					} else if (isChild) {
+					} else if (value === null) {
+						emitNotify("remove");
+					} else {
+						emitNotify(isAdded ? "add" : "change", true);
+					}
+
+					if (isChild) {
 						setData((data) => {
 							if (!Array.isArray(data?.children?.list)) {
 								return data;
 							}
 
-							const key = path[path.length - 1];
-							const type = getValueType(value);
-
 							const index = data.children.list.findIndex((it) => it.key === key);
 
-							beforeValues.current[key] = data.children.list[index]?.value ?? "";
+							const item = { key, value: ["object", "array", "dedicated_record", "binary"].includes(type) ? undefined : value, type };
 
-							data.children.list.unshift({ key, value, type });
-							data.children.list = data.children.list.filter(({ key }, i, l) => {
-								return l.findIndex((it) => it.key === key) === i;
-							});
+							beforeValues.current.set(key, index >= 0 ? data.children.list[index]?.value ?? null : null);
+
+							if (index < 0) {
+								data.children.list.unshift(item);
+								data.children.list = data.children.list.filter(({ key }, i, l) => {
+									return l.findIndex((it) => it.key === key) === i;
+								});
+							} else {
+								data.children.list[index] = item;
+							}
 
 							return { ...data };
 						});
-					} else if (value === null) {
-						emitNotify("remove");
-					} else {
-						emitNotify("change", true);
 					}
 				}
 
 				subscribeMutatedRef.current.forEach((callback) => {
-					callback(path, value);
+					callback(path, value, isChild && beforeValues.current.has(key) ? beforeValues.current.get(key) : value);
 				});
 			});
 
@@ -97,7 +111,7 @@ export const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, chec
 				event?.stop();
 			};
 		}
-	}, [actualPath]);
+	}, [actualPath, isAdded]);
 
 	const deleteValue = async () => {
 		setForceLoading(true);
@@ -174,9 +188,16 @@ export const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, chec
 		if (!isExpanded) {
 			setExpandChildren([]);
 			setHiddenActionExpandChildren([]);
+			beforeValues.current.clear();
 			//setLoading(false);
 		}
 	}, [isExpanded]);
+
+	useEffect(() => {
+		if (isExpanded && data && ["object", "array"].includes(data.type) && !Array.isArray(data.children?.list)) {
+			getData();
+		}
+	}, [data, isExpanded]);
 
 	useEffect(() => {
 		if (!isExpanded) {
@@ -218,7 +239,7 @@ export const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, chec
 				});
 
 				for (let key in obj) {
-					beforeValues.current[key] = "";
+					beforeValues.current.set(key, null);
 				}
 
 				setData((data) => {
@@ -248,6 +269,7 @@ export const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, chec
 	};
 
 	const onChildreChange = async (key, value, type) => {
+		beforeValues.current.delete(key);
 		await onChange(resolveArrayPath(actualPath.concat([key])), value, type);
 		setData((data) => {
 			if (!Array.isArray(data?.children?.list)) {
@@ -256,11 +278,17 @@ export const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, chec
 
 			const _type = getValueType(value);
 
-			data.children.list.push({ key: key, value: ["object", "array", "dedicated_record", "binary"].includes(_type) ? undefined : value, type: _type });
+			const index = data.children.list.findIndex((it) => it.key === key);
+			const item = { key: key, value: ["object", "array", "dedicated_record", "binary"].includes(_type) ? undefined : value, type: _type };
 
-			data.children.list = data.children.list.filter(({ key }, i, l) => {
-				return l.findIndex((it) => it.key === key) === i;
-			});
+			if (index < 0) {
+				data.children.list.unshift(item);
+				data.children.list = data.children.list.filter(({ key }, i, l) => {
+					return l.findIndex((it) => it.key === key) === i;
+				});
+			} else {
+				data.children.list[index] = item;
+			}
 
 			return { ...data };
 		});
@@ -282,7 +310,7 @@ export const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, chec
 
 	const isRoot = resolveArrayPath(actualPath) === "";
 
-	return removed ? null : ((value === null || value === undefined) && exists) || (Array.isArray(children?.list) && ["object", "array"].includes(type)) ? (
+	return removed ? null : ((value === null || value === undefined) && exists) || ["object", "array"].includes(type) ? (
 		<div
 			className={style["key-tree"]}
 			style={{ "--color-mark": colorMark }}
@@ -413,6 +441,9 @@ export const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, chec
 							({ value, key }) =>
 								value !== null && !removeChildren.includes(value) && (typeof checkRemoved === "function" ? !checkRemoved(resolveArrayPath(actualPath.concat([key]))) : true),
 						)
+						.filter(({ key }, i, l) => {
+							return l.findIndex((it) => it.key === key) === i;
+						})
 						.sort((a, b) => {
 							const indexA = orderFirstChildren.indexOf(a.key);
 							const indexB = orderFirstChildren.indexOf(b.key);
@@ -464,13 +495,14 @@ export const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, chec
 													exists: true,
 												}}
 												subscribeMutated={subscribeMutatedHandler}
+												isAdded={beforeValues.current.has(key) && beforeValues.current.get(key) === null}
 											/>
 										) : (
 											<EditValueChild
 												parentPath={actualPath}
 												name={key}
-												value={valueToString(value)}
-												beforeValue={valueToString(beforeValues.current[key] ?? value)}
+												value={value}
+												beforeValue={beforeValues.current.has(key) ? beforeValues.current.get(key) : value}
 												type={type}
 												onChange={onChildreChange}
 												onRemoved={() => {
@@ -547,9 +579,19 @@ export const ViewTree = ({ currentPath, onChange, onNewChildres, onRemoved, chec
 		<EditValueChild
 			parentPath={actualPath.slice(0, -1)}
 			name={key}
-			value={valueToString(value)}
+			value={value}
+			beforeValue={value}
 			type={type}
-			onChange={(key, newValue, typeValue) => onChange(resolveArrayPath(actualPath), newValue, typeValue)}
+			onChange={(key, newValue, typeValue) => {
+				onChange(resolveArrayPath(actualPath), newValue, typeValue);
+				setData((data) => {
+					if (["object", "array", "dedicated_record", "binary"].includes(typeValue)) {
+						return { ...data, key, value: undefined, type: typeValue };
+					}
+
+					return { ...data, key, value: newValue, type: typeValue };
+				});
+			}}
 			onRemoved={() => {
 				setRemoved(true);
 				onRemoved?.(resolveArrayPath(actualPath));
