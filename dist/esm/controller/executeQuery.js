@@ -22,8 +22,8 @@ export async function executeQuery(api, database, path, query, options = { snaps
     path = PathInfo.get([api.storage.settings.prefix, originalPath]).path;
     const context = {};
     context.database_cursor = ID.generate();
-    const queryFilters = query.filters.map((f) => ({ ...f }));
-    const querySort = query.order.map((s) => ({ ...s }));
+    const queryFilters = query.filters ?? [];
+    const querySort = query.order ?? [];
     const nodes = await api.storage
         .getNodesBy(database, path, false, 2, false, true)
         .then((nodes) => {
@@ -137,9 +137,12 @@ export async function executeQuery(api, database, path, query, options = { snaps
         .sort((a, b) => {
         const compare = (i) => {
             const o = querySort[i];
+            if (!o) {
+                return 0;
+            }
             const trailKeys = PathInfo.get(typeof o.key === "number" ? `[${o.key}]` : o.key).keys;
-            let left = trailKeys.reduce((val, key) => (val !== null && typeof val === "object" && key in val ? val[key] : null), a.val);
-            let right = trailKeys.reduce((val, key) => (val !== null && typeof val === "object" && key in val ? val[key] : null), b.val);
+            let left = trailKeys.reduce((val, key) => (val !== null && typeof val === "object" && key && key in val ? val[key] : null), a.val);
+            let right = trailKeys.reduce((val, key) => (val !== null && typeof val === "object" && key && key in val ? val[key] : null), b.val);
             left = isDate(left) ? new Date(left).getTime() : left;
             right = isDate(right) ? new Date(right).getTime() : right;
             if (left === null) {

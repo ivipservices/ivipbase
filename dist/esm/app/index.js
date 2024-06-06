@@ -321,12 +321,12 @@ export class IvipBaseApp extends SimpleEventEmitter {
         this._socket = null;
     }
     async reset(options) {
+        this._ready = false;
         this.emit("destroyed");
         this.id = ID.generate();
         await this.destroy();
         this._connectionState = CONNECTION_STATE_DISCONNECTED;
         this._socket = null;
-        this._ready = false;
         this.isDeleted = false;
         this.settings = new IvipBaseSettings(joinObjects(this.settings.options, options));
         this.storage = applySettings(this.settings.dbname, this.settings.storage);
@@ -335,6 +335,8 @@ export class IvipBaseApp extends SimpleEventEmitter {
         this.databases.clear();
         this.emit("reset");
         await this.initialize();
+        await this.ready();
+        return this;
     }
 }
 export function initializeApp(options) {

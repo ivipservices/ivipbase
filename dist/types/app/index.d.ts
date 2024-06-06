@@ -116,7 +116,7 @@ export declare class IvipBaseApp extends SimpleEventEmitter {
     disconnect(): Promise<void>;
     reconnect(): Promise<void>;
     destroy(): Promise<void>;
-    reset(options: IvipBaseSettingsOptions): Promise<void>;
+    reset(options: IvipBaseSettingsOptions): Promise<IvipBaseApp>;
 }
 export declare function initializeApp(options: IvipBaseSettingsOptions): IvipBaseApp;
 export declare function appExists(name?: string): boolean;

@@ -46,9 +46,7 @@ export const Login = () => {
 			app.reset({
 				dbname: dbName,
 				bootable: true,
-			});
-
-			app.ready(() => {
+			}).then(()=>{
 				const auth = getAuth();
 
 				auth.ready((currentUser) => {

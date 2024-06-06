@@ -15,7 +15,7 @@ const noop = () => { };
  * @returns Retorna uma promise que resolve com os dados ou caminhos correspondentes em `results`
  */
 async function executeQuery(api, database, path, query, options = { snapshots: false, include: undefined, exclude: undefined, child_objects: undefined, eventHandler: noop }) {
-    var _a, _b, _c;
+    var _a, _b, _c, _d, _e;
     if (typeof options !== "object") {
         options = {};
     }
@@ -26,8 +26,8 @@ async function executeQuery(api, database, path, query, options = { snapshots: f
     path = ivipbase_core_1.PathInfo.get([api.storage.settings.prefix, originalPath]).path;
     const context = {};
     context.database_cursor = ivipbase_core_1.ID.generate();
-    const queryFilters = query.filters.map((f) => (Object.assign({}, f)));
-    const querySort = query.order.map((s) => (Object.assign({}, s)));
+    const queryFilters = (_a = query.filters) !== null && _a !== void 0 ? _a : [];
+    const querySort = (_b = query.order) !== null && _b !== void 0 ? _b : [];
     const nodes = await api.storage
         .getNodesBy(database, path, false, 2, false, true)
         .then((nodes) => {
@@ -142,9 +142,12 @@ async function executeQuery(api, database, path, query, options = { snapshots: f
         .sort((a, b) => {
         const compare = (i) => {
             const o = querySort[i];
+            if (!o) {
+                return 0;
+            }
             const trailKeys = ivipbase_core_1.PathInfo.get(typeof o.key === "number" ? `[${o.key}]` : o.key).keys;
-            let left = trailKeys.reduce((val, key) => (val !== null && typeof val === "object" && key in val ? val[key] : null), a.val);
-            let right = trailKeys.reduce((val, key) => (val !== null && typeof val === "object" && key in val ? val[key] : null), b.val);
+            let left = trailKeys.reduce((val, key) => (val !== null && typeof val === "object" && key && key in val ? val[key] : null), a.val);
+            let right = trailKeys.reduce((val, key) => (val !== null && typeof val === "object" && key && key in val ? val[key] : null), b.val);
             left = (0, ivip_utils_1.isDate)(left) ? new Date(left).getTime() : left;
             right = (0, ivip_utils_1.isDate)(right) ? new Date(right).getTime() : right;
             if (left === null) {
@@ -171,7 +174,7 @@ async function executeQuery(api, database, path, query, options = { snapshots: f
         return compare(0);
     })
         .slice(query.skip, query.skip + Math.abs(query.take > 0 ? query.take : results.length));
-    const isRealtime = typeof options.monitor === "object" && [(_a = options.monitor) === null || _a === void 0 ? void 0 : _a.add, (_b = options.monitor) === null || _b === void 0 ? void 0 : _b.change, (_c = options.monitor) === null || _c === void 0 ? void 0 : _c.remove].some((val) => val === true);
+    const isRealtime = typeof options.monitor === "object" && [(_c = options.monitor) === null || _c === void 0 ? void 0 : _c.add, (_d = options.monitor) === null || _d === void 0 ? void 0 : _d.change, (_e = options.monitor) === null || _e === void 0 ? void 0 : _e.remove].some((val) => val === true);
     if (options.snapshots) {
         for (let i = 0; i < results.length; i++) {
             const path = results[i].path.replace(`${api.storage.settings.prefix}`, "").replace(/^(\/)+/gi, "");

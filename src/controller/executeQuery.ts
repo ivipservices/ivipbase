@@ -38,8 +38,8 @@ export async function executeQuery(
 	const context: any = {};
 	context.database_cursor = ID.generate();
 
-	const queryFilters: Array<Types.QueryFilter & { index?: any; indexUsage?: "filter" | "sort" }> = query.filters.map((f) => ({ ...f }));
-	const querySort: Array<Types.QueryOrder & { index?: any }> = query.order.map((s) => ({ ...s }));
+	const queryFilters: Array<Types.QueryFilter> = query.filters ?? [];
+	const querySort: Array<Types.QueryOrder> = query.order ?? [];
 
 	const nodes = await api.storage
 		.getNodesBy(database, path, false, 2, false, true)
@@ -170,11 +170,14 @@ export async function executeQuery(
 		.sort((a, b) => {
 			const compare = (i: number): number => {
 				const o = querySort[i];
+				if (!o) {
+					return 0;
+				}
 				const trailKeys = PathInfo.get(typeof o.key === "number" ? `[${o.key}]` : o.key).keys;
 
-				let left = trailKeys.reduce((val, key) => (val !== null && typeof val === "object" && key in val ? val[key] : null), a.val);
+				let left = trailKeys.reduce((val, key) => (val !== null && typeof val === "object" && key && key in val ? val[key] : null), a.val);
 
-				let right = trailKeys.reduce((val, key) => (val !== null && typeof val === "object" && key in val ? val[key] : null), b.val);
+				let right = trailKeys.reduce((val, key) => (val !== null && typeof val === "object" && key && key in val ? val[key] : null), b.val);
 
 				left = isDate(left) ? new Date(left).getTime() : left;
 				right = isDate(right) ? new Date(right).getTime() : right;

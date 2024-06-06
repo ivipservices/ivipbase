@@ -471,13 +471,13 @@ export class IvipBaseApp extends SimpleEventEmitter {
 		this._socket = null;
 	}
 
-	async reset(options: IvipBaseSettingsOptions) {
+	async reset(options: IvipBaseSettingsOptions): Promise<IvipBaseApp> {
+		this._ready = false;
 		this.emit("destroyed");
 		this.id = ID.generate();
 		await this.destroy();
 		this._connectionState = CONNECTION_STATE_DISCONNECTED;
 		this._socket = null;
-		this._ready = false;
 		this.isDeleted = false;
 
 		this.settings = new IvipBaseSettings(joinObjects(this.settings.options, options));
@@ -492,6 +492,8 @@ export class IvipBaseApp extends SimpleEventEmitter {
 		this.emit("reset");
 
 		await this.initialize();
+		await this.ready();
+		return this;
 	}
 }
 
