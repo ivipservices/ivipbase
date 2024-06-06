@@ -42,7 +42,7 @@ const addWebsocketServer = (env) => {
         var _a;
         const client = new clients_1.ConnectedClient(event.socket);
         env.clients.set(client.id, client);
-        env.debug.warn(`New socket connected, total: ${env.clients.size}`);
+        //env.debug.warn(`New socket connected, total: ${env.clients.size}`);
         serverManager.send(event.socket, "welcome");
         (_a = env.localApp.ipc) === null || _a === void 0 ? void 0 : _a.sendNotification({
             type: "websocket.userConnect",

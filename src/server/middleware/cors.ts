@@ -1,4 +1,5 @@
 import { LocalServer } from "..";
+import cors from "cors";
 
 /**
  * Obtém opções de CORS compatíveis com o pacote 'cors' (usado pelo Socket.IO 3+)
@@ -27,7 +28,7 @@ export const getCorsHeaders = (allowedOrigins: string, currentOrigin: string | u
 		"Access-Control-Allow-Origin": origins,
 		"Access-Control-Allow-Methods": corsOptions.methods,
 		"Access-Control-Allow-Headers": corsOptions.allowedHeaders,
-		"Access-Control-Expose-Headers": "Date, AceBase-Context", // Impede que os navegadores removam esses cabeçalhos da resposta para acesso programático em solicitações entre origens
+		"Access-Control-Expose-Headers": "Date",
 	};
 };
 
@@ -45,6 +46,25 @@ export const addMiddleware = (env: LocalServer) => {
 		}
 		next();
 	});
+
+	env.router.use(
+		cors((req, callback) => {
+			const headers: {
+				[name: string]: string;
+			} = getCorsHeaders(env.settings.allowOrigin, req.headers.origin);
+
+			let corsOptions = { origin: false };
+			const whitelist = headers["Access-Control-Allow-Origin"].split(/,\s*/);
+
+			if (whitelist.includes(req.headers.origin ?? "") || whitelist.includes("*")) {
+				corsOptions = { origin: true }; // reflect (enable) the requested origin in the CORS response
+			} else {
+				corsOptions = { origin: false }; // disable CORS for this request
+			}
+
+			callback(null, corsOptions); // callback expects two parameters: error and options
+		}),
+	);
 };
 
 export default addMiddleware;

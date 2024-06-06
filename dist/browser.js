@@ -60,7 +60,7 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         var _a;
         if (!this._ready) {
             const id = this.id;
-            if (!this.isServer && (typeof this.settings.database === "string" || (Array.isArray(this.settings.database) && this.settings.database.length > 0))) {
+            if (this.settings.bootable && !this.isServer && (typeof this.settings.database === "string" || (Array.isArray(this.settings.database) && this.settings.database.length > 0))) {
                 await new Promise((resolve) => {
                     if (this._socket) {
                         this.disconnect();

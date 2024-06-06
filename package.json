@@ -1,6 +1,6 @@
 {
 	"name": "ivipbase",
-	"version": "1.2.71",
+	"version": "1.2.74",
 	"description": "Componentes principais compartilhados do iVipBase, sem necessidade de instalação manual",
 	"comments": {
 		"browser": "As substituições de arquivo webpack/browserify foram movidas para package.json em dist/cjs e dist/esm. Veja README.md para mais informações",
@@ -82,6 +82,7 @@
 		"@types/memory-cache": "^0.2.5",
 		"@types/nodemailer": "^6.4.14",
 		"@types/os-utils": "^0.0.4",
+		"cors": "^2.8.5",
 		"data-urls": "^5.0.0",
 		"dotenv": "^16.0.3",
 		"express": "^4.17.1",

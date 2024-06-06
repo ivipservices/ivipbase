@@ -1,6 +1,10 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.addMiddleware = exports.getCorsHeaders = exports.getCorsOptions = void 0;
+const cors_1 = __importDefault(require("cors"));
 /**
  * Obtém opções de CORS compatíveis com o pacote 'cors' (usado pelo Socket.IO 3+)
  * @param allowedOrigins Origens permitidas
@@ -27,7 +31,7 @@ const getCorsHeaders = (allowedOrigins, currentOrigin) => {
         "Access-Control-Allow-Origin": origins,
         "Access-Control-Allow-Methods": corsOptions.methods,
         "Access-Control-Allow-Headers": corsOptions.allowedHeaders,
-        "Access-Control-Expose-Headers": "Date, AceBase-Context", // Impede que os navegadores removam esses cabeçalhos da resposta para acesso programático em solicitações entre origens
+        "Access-Control-Expose-Headers": "Date",
     };
 };
 exports.getCorsHeaders = getCorsHeaders;
@@ -43,6 +47,19 @@ const addMiddleware = (env) => {
         }
         next();
     });
+    env.router.use((0, cors_1.default)((req, callback) => {
+        var _a;
+        const headers = (0, exports.getCorsHeaders)(env.settings.allowOrigin, req.headers.origin);
+        let corsOptions = { origin: false };
+        const whitelist = headers["Access-Control-Allow-Origin"].split(/,\s*/);
+        if (whitelist.includes((_a = req.headers.origin) !== null && _a !== void 0 ? _a : "") || whitelist.includes("*")) {
+            corsOptions = { origin: true }; // reflect (enable) the requested origin in the CORS response
+        }
+        else {
+            corsOptions = { origin: false }; // disable CORS for this request
+        }
+        callback(null, corsOptions); // callback expects two parameters: error and options
+    }));
 };
 exports.addMiddleware = addMiddleware;
 exports.default = exports.addMiddleware;
