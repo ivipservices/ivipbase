@@ -10,7 +10,7 @@ export const getCorsOptions = (allowedOrigins: string) => {
 	return {
 		origin: allowedOrigins === "*" ? true : allowedOrigins === "" ? false : allowedOrigins.split(/,\s*/),
 		methods: "GET,PUT,POST,DELETE,OPTIONS",
-		allowedHeaders: "Content-Type, Authorization, Content-Length, Accept, Origin, X-Requested-With, AceBase-Context",
+		allowedHeaders: "Content-Type, Authorization, Content-Length, Accept, Origin, X-Requested-With, DataBase-Context",
 	};
 };
 
@@ -28,7 +28,7 @@ export const getCorsHeaders = (allowedOrigins: string, currentOrigin: string | u
 		"Access-Control-Allow-Origin": origins,
 		"Access-Control-Allow-Methods": corsOptions.methods,
 		"Access-Control-Allow-Headers": corsOptions.allowedHeaders,
-		"Access-Control-Expose-Headers": "Date",
+		"Access-Control-Expose-Headers": "Date, DataBase-Context",
 	};
 };
 
