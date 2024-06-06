@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getTypeFromStoredValue = exports.processReadNodeValue = exports.getTypedChildValue = exports.valueFitsInline = exports.promiseState = exports.getValueType = exports.getNodeValueType = exports.getValueTypeDefault = exports.getValueTypeName = exports.VALUE_TYPES = exports.nodeValueTypes = void 0;
 const ivipbase_core_1 = require("ivipbase-core");
 const ivip_utils_1 = require("ivip-utils");
+const utils_1 = require("../../../utils");
 const { assert } = ivipbase_core_1.Lib;
 exports.nodeValueTypes = {
     EMPTY: 0,
@@ -125,7 +126,7 @@ function getNodeValueType(value) {
     else if (value instanceof ArrayBuffer) {
         return exports.VALUE_TYPES.BINARY;
     }
-    else if ((0, ivip_utils_1.isDate)(value)) {
+    else if ((0, utils_1.isDate)(value)) {
         return exports.VALUE_TYPES.DATETIME;
     }
     // TODO else if (value instanceof DataDocument) { return VALUE_TYPES.DOCUMENT; }
@@ -165,7 +166,7 @@ function getValueType(value) {
     else if (value instanceof ArrayBuffer) {
         return exports.VALUE_TYPES.BINARY;
     }
-    else if ((0, ivip_utils_1.isDate)(value)) {
+    else if ((0, utils_1.isDate)(value)) {
         return exports.VALUE_TYPES.DATETIME;
     }
     // TODO else if (value instanceof DataDocument) { return VALUE_TYPES.DOCUMENT; }
@@ -201,7 +202,7 @@ exports.promiseState = promiseState;
  */
 function valueFitsInline(value, settings) {
     value = value == undefined ? null : value;
-    if (typeof value === "number" || typeof value === "boolean" || (0, ivip_utils_1.isDate)(value)) {
+    if (typeof value === "number" || typeof value === "boolean" || (0, utils_1.isDate)(value)) {
         return true;
     }
     else if (typeof value === "string") {
@@ -245,7 +246,7 @@ function getTypedChildValue(val) {
         return null;
         //throw new Error(`Not allowed to store null values. remove the property`);
     }
-    else if ((0, ivip_utils_1.isDate)(val)) {
+    else if ((0, utils_1.isDate)(val)) {
         return { type: exports.VALUE_TYPES.DATETIME, value: new Date(val).getTime() };
     }
     else if (["string", "number", "boolean"].includes(typeof val)) {

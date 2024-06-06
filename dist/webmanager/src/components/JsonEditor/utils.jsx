@@ -13,6 +13,23 @@ export const palette = ["102,187,106", "38,166,154", "229,115,115", "66,165,245"
 
 // const palette = ["209, 150, 22", "198, 120, 221", "97, 175, 239", "209, 154, 102", "224, 108, 117", "152, 195, 121", "86, 182, 194", "229, 192, 123", "158, 158, 158"];
 
+export const isDate = (value) => {
+	if (value instanceof Date) {
+		return !isNaN(value.getTime());
+	}
+
+	if (typeof value === "object" && value !== null && typeof value.getMonth === "function") {
+		return !isNaN(value.getTime());
+	}
+
+	if (typeof value === "string" && /^\d+$/.test(value) !== true) {
+		const parsedDate = Date.parse(value);
+		return !isNaN(parsedDate) && new Date(parsedDate).toISOString().startsWith(value);
+	}
+
+	return false;
+};
+
 export const types = {
 	unknown: mdiAsterisk,
 	string: mdiAlphabetical,
@@ -175,7 +192,7 @@ export const valueToString = (value) => {
 		return value ? "true" : "false";
 	}
 
-	if (Utils.isDate(value)) {
+	if (isDate(value)) {
 		return moment(value).format(momentFormat);
 	}
 
@@ -221,7 +238,7 @@ export const normalizeValue = (value, type, selfVerify = true) => {
 			value = ascii85.decode(value);
 			break;
 		case "date":
-			if (Utils.isDate(value)) {
+			if (isDate(value)) {
 				value = new Date(value).toISOString();
 			} else if (/^([\d\/\s\:]+)$/gi.test(value) && moment(value, momentFormat).isValid()) {
 				value = moment(value, momentFormat).toDate().toISOString();
@@ -252,7 +269,7 @@ export const normalizeValue = (value, type, selfVerify = true) => {
 				type = "number";
 			} else if (/^(?:[-+]?[0-9]+|0[xX][0-9a-fA-F]+|0[bB][01]+)$/gi.test(String(value)) && !isNaN(BigInt(value))) {
 				type = "bigint";
-			} else if (Utils.isDate(value) || (/^([\d\/\s\:]+)$/gi.test(value) && moment(value, momentFormat).isValid())) {
+			} else if (isDate(value) || (/^([\d\/\s\:]+)$/gi.test(value) && moment(value, momentFormat).isValid())) {
 				type = "date";
 			} else if (isJson(value)) {
 				type = Array.isArray(JSON.parse(value)) ? "array" : "object";
@@ -277,7 +294,7 @@ export const getValueType = (value) => {
 		return "reference";
 	} else if (value instanceof ArrayBuffer) {
 		return "binary";
-	} else if (Utils.isDate(value)) {
+	} else if (isDate(value)) {
 		return "date";
 	} else if (typeof value === "string") {
 		return "string";

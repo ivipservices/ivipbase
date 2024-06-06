@@ -1,4 +1,4 @@
-import { isDate } from "ivip-utils";
+import { isDate } from "../../utils";
 
 export interface UserSettings {
 	[key: string]: string | number | boolean;

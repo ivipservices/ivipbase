@@ -5,7 +5,6 @@ export declare class Subscriptions extends SimpleEventEmitter {
     readonly app: IvipBaseApp;
     private _eventSubscriptions;
     private _event;
-    private _pendingEvents;
     constructor(dbName: string, app: IvipBaseApp);
     initialize(): void;
     forEach(callback: (event: string, path: string, callback: Types.EventSubscriptionCallback) => void): void;
@@ -57,7 +56,7 @@ export declare class Subscriptions extends SimpleEventEmitter {
      * @param newValue Novo valor
      * @param context Contexto usado pelo cliente que atualizou esses dados
      */
-    trigger(event: string, path: string, dataPath: string, oldValue: any, newValue: any, context: any): void;
+    trigger(event: string, path: string, dataPath: string, oldValue: any, newValue: any, context: any): Promise<void>;
     /**
      * Obtém o impacto de uma atualização no caminho especificado, considerando as assinaturas relevantes.
      * @param path Caminho para a atualização.
@@ -110,7 +109,6 @@ export declare class Subscriptions extends SimpleEventEmitter {
         context: any;
         impact: ReturnType<Subscriptions["getUpdateImpact"]>;
         emitIpc: boolean;
-        inTime: boolean;
     }>): void;
 }
 //# sourceMappingURL=Subscriptions.d.ts.map

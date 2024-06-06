@@ -194,7 +194,8 @@ export class MongodbStorage extends CustomStorage {
         path = path.replace(/\/+$/g, "");
         node.path = node.path.replace(/\/+$/g, "");
         try {
-            await this.database[database].collection.deleteOne({ path: path });
+            const pathRegex = new RegExp(`^${path.replace(/\//g, "\\/")}(\\/.*)?`);
+            await this.database[database].collection.deleteMany({ path: pathRegex });
         }
         catch {
             this.pending[database].set(path, { ...node, refresh: true, type: "delete" });

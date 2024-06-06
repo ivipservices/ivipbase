@@ -1,4 +1,4 @@
-import { isDate } from "ivip-utils";
+import { isDate } from "../../utils/index.js";
 export const getPublicAccountDetails = (account) => {
     return {
         uid: account.uid,

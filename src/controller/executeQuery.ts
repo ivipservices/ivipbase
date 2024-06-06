@@ -1,7 +1,7 @@
 import { IvipBaseApp } from "../app";
 import { ID, PathInfo, Types } from "ivipbase-core";
 import { nodeValueTypes, processReadNodeValue } from "./storage/MDE/utils";
-import { isDate } from "ivip-utils";
+import { isDate } from "../utils";
 
 const noop = () => {};
 

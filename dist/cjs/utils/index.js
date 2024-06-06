@@ -26,7 +26,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getExtension = exports.sanitizeEmailPrefix = exports.replaceUndefined = exports.joinObjects = exports.removeNulls = exports.pathValueToObject = exports.assert = exports.Mime = void 0;
+exports.isDate = exports.getExtension = exports.sanitizeEmailPrefix = exports.replaceUndefined = exports.joinObjects = exports.removeNulls = exports.pathValueToObject = exports.assert = exports.Mime = void 0;
 const ivipbase_core_1 = require("ivipbase-core");
 __exportStar(require("./base64"), exports);
 exports.Mime = __importStar(require("./Mime"));
@@ -126,4 +126,18 @@ const getExtension = (filename) => {
     }
 };
 exports.getExtension = getExtension;
+const isDate = (value) => {
+    if (value instanceof Date) {
+        return !isNaN(value.getTime());
+    }
+    if (typeof value === "object" && value !== null && typeof value.getMonth === "function") {
+        return !isNaN(value.getTime());
+    }
+    if (typeof value === "string" && /^\d+$/.test(value) !== true) {
+        const parsedDate = Date.parse(value);
+        return !isNaN(parsedDate) && new Date(parsedDate).toISOString().startsWith(value);
+    }
+    return false;
+};
+exports.isDate = isDate;
 //# sourceMappingURL=index.js.map

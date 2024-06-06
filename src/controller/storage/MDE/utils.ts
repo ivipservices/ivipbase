@@ -1,5 +1,6 @@
 import { PathReference, ascii85, Lib } from "ivipbase-core";
-import { encodeString, isDate } from "ivip-utils";
+import { encodeString } from "ivip-utils";
+import { isDate } from "../../../utils";
 import { MDESettings } from ".";
 import { StorageNode } from "./NodeInfo";
 

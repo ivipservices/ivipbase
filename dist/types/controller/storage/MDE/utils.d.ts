@@ -30,7 +30,7 @@ export declare const VALUE_TYPES: Record<"EMPTY" | "OBJECT" | "ARRAY" | "NUMBER"
  * const typeName = getValueTypeName(99);
  * // Retorna: "dedicated_record"
  */
-export declare function getValueTypeName(valueType: number): "array" | "binary" | "boolean" | "date" | "number" | "object" | "reference" | "string" | "bigint" | "dedicated_record" | "unknown";
+export declare function getValueTypeName(valueType: number): "binary" | "object" | "string" | "array" | "boolean" | "date" | "number" | "reference" | "bigint" | "dedicated_record" | "unknown";
 /**
  * Retorna um valor padrão para um tipo de valor com base no código do tipo.
  *

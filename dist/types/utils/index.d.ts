@@ -12,4 +12,5 @@ export declare function joinObjects(obj1: any, ...objs: any[]): any;
 export declare function replaceUndefined(obj: any): any;
 export declare function sanitizeEmailPrefix(email: string): string;
 export declare const getExtension: (filename: string) => string;
+export declare const isDate: (value: any) => value is Date;
 //# sourceMappingURL=index.d.ts.map

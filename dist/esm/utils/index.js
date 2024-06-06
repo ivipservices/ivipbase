@@ -90,4 +90,17 @@ export const getExtension = (filename) => {
         return "";
     }
 };
+export const isDate = (value) => {
+    if (value instanceof Date) {
+        return !isNaN(value.getTime());
+    }
+    if (typeof value === "object" && value !== null && typeof value.getMonth === "function") {
+        return !isNaN(value.getTime());
+    }
+    if (typeof value === "string" && /^\d+$/.test(value) !== true) {
+        const parsedDate = Date.parse(value);
+        return !isNaN(parsedDate) && new Date(parsedDate).toISOString().startsWith(value);
+    }
+    return false;
+};
 //# sourceMappingURL=index.js.map

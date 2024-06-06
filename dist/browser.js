@@ -1326,7 +1326,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.executeQuery = void 0;
 const ivipbase_core_1 = require("ivipbase-core");
 const utils_1 = require("./storage/MDE/utils");
-const ivip_utils_1 = require("ivip-utils");
+const utils_2 = require("../utils");
 const noop = () => { };
 /**
  *
@@ -1382,9 +1382,9 @@ async function executeQuery(api, database, path, query, options = { snapshots: f
         const node_val = Object.assign(Object.assign({}, params), value);
         const filters = queryFilters.filter((f) => ["<", "<=", "==", "!=", ">=", ">", "like", "!like", "in", "!in", "exists", "!exists", "between", "!between", "matches", "!matches", "has", "!has", "contains", "!contains"].includes(f.op));
         const isFiltersValid = filters.every((f) => {
-            const val = (0, ivip_utils_1.isDate)(node_val[f.key]) ? new Date(node_val[f.key]).getTime() : node_val[f.key];
+            const val = (0, utils_2.isDate)(node_val[f.key]) ? new Date(node_val[f.key]).getTime() : node_val[f.key];
             const op = f.op;
-            const compare = (0, ivip_utils_1.isDate)(f.compare) ? new Date(f.compare).getTime() : f.compare;
+            const compare = (0, utils_2.isDate)(f.compare) ? new Date(f.compare).getTime() : f.compare;
             switch (op) {
                 case "<":
                     return val < compare;
@@ -1471,8 +1471,8 @@ async function executeQuery(api, database, path, query, options = { snapshots: f
             const trailKeys = ivipbase_core_1.PathInfo.get(typeof o.key === "number" ? `[${o.key}]` : o.key).keys;
             let left = trailKeys.reduce((val, key) => (val !== null && typeof val === "object" && key && key in val ? val[key] : null), a.val);
             let right = trailKeys.reduce((val, key) => (val !== null && typeof val === "object" && key && key in val ? val[key] : null), b.val);
-            left = (0, ivip_utils_1.isDate)(left) ? new Date(left).getTime() : left;
-            right = (0, ivip_utils_1.isDate)(right) ? new Date(right).getTime() : right;
+            left = (0, utils_2.isDate)(left) ? new Date(left).getTime() : left;
+            right = (0, utils_2.isDate)(right) ? new Date(right).getTime() : right;
             if (left === null) {
                 return right === null ? 0 : o.ascending ? -1 : 1;
             }
@@ -1517,7 +1517,7 @@ async function executeQuery(api, database, path, query, options = { snapshots: f
 exports.executeQuery = executeQuery;
 exports.default = executeQuery;
 
-},{"./storage/MDE/utils":19,"ivip-utils":72,"ivipbase-core":99}],10:[function(require,module,exports){
+},{"../utils":34,"./storage/MDE/utils":19,"ivipbase-core":99}],10:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const error_1 = require("./error");
@@ -2909,10 +2909,27 @@ function prepareMergeNodes(path, nodes, comparison) {
         node.content.revision_nr = node.content.revision_nr + 1;
         return node;
     };
-    result = result.filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i).map(modifyRevision);
-    added = added.filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i).map(modifyRevision);
-    modified = modified.filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i).map(modifyRevision);
-    removed = removed.filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i).map(modifyRevision);
+    const sortNodes = (a, b) => {
+        const aPath = ivipbase_core_1.PathInfo.get(a.path);
+        const bPath = ivipbase_core_1.PathInfo.get(b.path);
+        return aPath.isAncestorOf(bPath) || aPath.isParentOf(bPath) ? -1 : aPath.isDescendantOf(bPath) || aPath.isChildOf(bPath) ? 1 : 0;
+    };
+    result = result
+        .filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i)
+        .map(modifyRevision)
+        .sort(sortNodes);
+    added = added
+        .filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i)
+        .map(modifyRevision)
+        .sort(sortNodes);
+    modified = modified
+        .filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i)
+        .map(modifyRevision)
+        .sort(sortNodes);
+    removed = removed
+        .filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i)
+        .map(modifyRevision)
+        .sort(sortNodes);
     // console.log("removed:", JSON.stringify(removed, null, 4));
     // console.log("RESULT:", path, JSON.stringify(result, null, 4));
     // console.log(path, JSON.stringify({ result, added, modified, removed }, null, 4));
@@ -2983,6 +3000,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getTypeFromStoredValue = exports.processReadNodeValue = exports.getTypedChildValue = exports.valueFitsInline = exports.promiseState = exports.getValueType = exports.getNodeValueType = exports.getValueTypeDefault = exports.getValueTypeName = exports.VALUE_TYPES = exports.nodeValueTypes = void 0;
 const ivipbase_core_1 = require("ivipbase-core");
 const ivip_utils_1 = require("ivip-utils");
+const utils_1 = require("../../../utils");
 const { assert } = ivipbase_core_1.Lib;
 exports.nodeValueTypes = {
     EMPTY: 0,
@@ -3105,7 +3123,7 @@ function getNodeValueType(value) {
     else if (value instanceof ArrayBuffer) {
         return exports.VALUE_TYPES.BINARY;
     }
-    else if ((0, ivip_utils_1.isDate)(value)) {
+    else if ((0, utils_1.isDate)(value)) {
         return exports.VALUE_TYPES.DATETIME;
     }
     // TODO else if (value instanceof DataDocument) { return VALUE_TYPES.DOCUMENT; }
@@ -3145,7 +3163,7 @@ function getValueType(value) {
     else if (value instanceof ArrayBuffer) {
         return exports.VALUE_TYPES.BINARY;
     }
-    else if ((0, ivip_utils_1.isDate)(value)) {
+    else if ((0, utils_1.isDate)(value)) {
         return exports.VALUE_TYPES.DATETIME;
     }
     // TODO else if (value instanceof DataDocument) { return VALUE_TYPES.DOCUMENT; }
@@ -3181,7 +3199,7 @@ exports.promiseState = promiseState;
  */
 function valueFitsInline(value, settings) {
     value = value == undefined ? null : value;
-    if (typeof value === "number" || typeof value === "boolean" || (0, ivip_utils_1.isDate)(value)) {
+    if (typeof value === "number" || typeof value === "boolean" || (0, utils_1.isDate)(value)) {
         return true;
     }
     else if (typeof value === "string") {
@@ -3225,7 +3243,7 @@ function getTypedChildValue(val) {
         return null;
         //throw new Error(`Not allowed to store null values. remove the property`);
     }
-    else if ((0, ivip_utils_1.isDate)(val)) {
+    else if ((0, utils_1.isDate)(val)) {
         return { type: exports.VALUE_TYPES.DATETIME, value: new Date(val).getTime() };
     }
     else if (["string", "number", "boolean"].includes(typeof val)) {
@@ -3350,7 +3368,7 @@ const getTypeFromStoredValue = (val) => {
 };
 exports.getTypeFromStoredValue = getTypeFromStoredValue;
 
-},{"ivip-utils":72,"ivipbase-core":99}],20:[function(require,module,exports){
+},{"../../../utils":34,"ivip-utils":72,"ivipbase-core":99}],20:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -3882,7 +3900,6 @@ class Subscriptions extends ivipbase_core_1.SimpleEventEmitter {
         this.dbName = dbName;
         this.app = app;
         this._eventSubscriptions = {};
-        this._pendingEvents = new Map();
     }
     initialize() {
         const applyEvent = () => {
@@ -4056,8 +4073,52 @@ class Subscriptions extends ivipbase_core_1.SimpleEventEmitter {
      * @param newValue Novo valor
      * @param context Contexto usado pelo cliente que atualizou esses dados
      */
-    trigger(event, path, dataPath, oldValue, newValue, context) {
+    async trigger(event, path, dataPath, oldValue, newValue, context) {
         //console.warn(`Event "${event}" triggered on node "/${path}" with data of "/${dataPath}": `, newValue);
+        if (["value", "child_added", "child_changed", "child_removed"].includes(event) && ["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(newValue))) {
+            await new Promise((resolve) => {
+                let timer;
+                const callback = (err, mutatedPath, value, previous) => {
+                    clearTimeout(timer);
+                    if (!err) {
+                        const propertyTrail = ivipbase_core_1.PathInfo.getPathKeys(mutatedPath.slice(dataPath.length + 1));
+                        const asingObj = (obj, value, insist = true) => {
+                            if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(obj)) !== true) {
+                                return;
+                            }
+                            let targetObject = obj;
+                            const targetProperty = propertyTrail.slice(-1)[0];
+                            for (let p of propertyTrail.slice(0, -1)) {
+                                if (!(p in targetObject)) {
+                                    if (!insist) {
+                                        return;
+                                    }
+                                    targetObject[p] = typeof p === "number" ? [] : {};
+                                }
+                                targetObject = targetObject[p];
+                            }
+                            if (value === null) {
+                                delete targetObject[targetProperty];
+                            }
+                            else {
+                                targetObject[targetProperty] = value;
+                            }
+                        };
+                        asingObj(newValue, value);
+                        asingObj(oldValue, previous, false);
+                    }
+                    timer = setTimeout(() => {
+                        this.remove(dataPath, "mutated", callback);
+                        resolve();
+                    }, 1000);
+                };
+                this.add(dataPath, "mutated", callback);
+                timer = setTimeout(() => {
+                    this.remove(dataPath, "mutated", callback);
+                    resolve();
+                }, 1000);
+            });
+        }
         const pathSubscriptions = this._eventSubscriptions[path] || [];
         pathSubscriptions
             .filter((sub) => sub.type === event)
@@ -4228,17 +4289,6 @@ class Subscriptions extends ivipbase_core_1.SimpleEventEmitter {
         var _a;
         const dataChanges = ivipbase_core_1.Utils.compareValues(oldValue, newValue);
         if (dataChanges === "identical") {
-            return;
-        }
-        const inTime = typeof options.inTime === "boolean" ? options.inTime : true;
-        if (inTime) {
-            let time = this._pendingEvents.get(path);
-            clearTimeout(time);
-            time = setTimeout(() => {
-                this._pendingEvents.delete(path);
-                this.triggerAllEvents(path, oldValue, newValue, Object.assign(Object.assign({}, (options !== null && options !== void 0 ? options : {})), { inTime: false }));
-            }, 100);
-            this._pendingEvents.set(path, time);
             return;
         }
         const emitIpc = typeof options.emitIpc === "boolean" ? options.emitIpc : true;
@@ -6589,7 +6639,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getExtension = exports.sanitizeEmailPrefix = exports.replaceUndefined = exports.joinObjects = exports.removeNulls = exports.pathValueToObject = exports.assert = exports.Mime = void 0;
+exports.isDate = exports.getExtension = exports.sanitizeEmailPrefix = exports.replaceUndefined = exports.joinObjects = exports.removeNulls = exports.pathValueToObject = exports.assert = exports.Mime = void 0;
 const ivipbase_core_1 = require("ivipbase-core");
 __exportStar(require("./base64"), exports);
 exports.Mime = __importStar(require("./Mime"));
@@ -6689,6 +6739,20 @@ const getExtension = (filename) => {
     }
 };
 exports.getExtension = getExtension;
+const isDate = (value) => {
+    if (value instanceof Date) {
+        return !isNaN(value.getTime());
+    }
+    if (typeof value === "object" && value !== null && typeof value.getMonth === "function") {
+        return !isNaN(value.getTime());
+    }
+    if (typeof value === "string" && /^\d+$/.test(value) !== true) {
+        const parsedDate = Date.parse(value);
+        return !isNaN(parsedDate) && new Date(parsedDate).toISOString().startsWith(value);
+    }
+    return false;
+};
+exports.isDate = isDate;
 
 },{"./Mime":32,"./base64":33,"ivipbase-core":99}],35:[function(require,module,exports){
 "use strict";

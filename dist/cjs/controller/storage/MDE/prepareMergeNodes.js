@@ -117,10 +117,27 @@ function prepareMergeNodes(path, nodes, comparison) {
         node.content.revision_nr = node.content.revision_nr + 1;
         return node;
     };
-    result = result.filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i).map(modifyRevision);
-    added = added.filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i).map(modifyRevision);
-    modified = modified.filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i).map(modifyRevision);
-    removed = removed.filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i).map(modifyRevision);
+    const sortNodes = (a, b) => {
+        const aPath = ivipbase_core_1.PathInfo.get(a.path);
+        const bPath = ivipbase_core_1.PathInfo.get(b.path);
+        return aPath.isAncestorOf(bPath) || aPath.isParentOf(bPath) ? -1 : aPath.isDescendantOf(bPath) || aPath.isChildOf(bPath) ? 1 : 0;
+    };
+    result = result
+        .filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i)
+        .map(modifyRevision)
+        .sort(sortNodes);
+    added = added
+        .filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i)
+        .map(modifyRevision)
+        .sort(sortNodes);
+    modified = modified
+        .filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i)
+        .map(modifyRevision)
+        .sort(sortNodes);
+    removed = removed
+        .filter((n, i, l) => l.findIndex(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(n.path)) === i)
+        .map(modifyRevision)
+        .sort(sortNodes);
     // console.log("removed:", JSON.stringify(removed, null, 4));
     // console.log("RESULT:", path, JSON.stringify(result, null, 4));
     // console.log(path, JSON.stringify({ result, added, modified, removed }, null, 4));

@@ -1,6 +1,7 @@
 import { Types, PathInfo, Utils, SimpleEventEmitter } from "ivipbase-core";
 import { assert, pathValueToObject } from "../utils";
 import { IvipBaseApp } from "../app";
+import { clear } from "console";
 
 const SUPPORTED_EVENTS = ["value", "child_added", "child_changed", "child_removed", "mutated", "mutations"];
 SUPPORTED_EVENTS.push(...SUPPORTED_EVENTS.map((event) => `notify_${event}`));
@@ -8,7 +9,6 @@ SUPPORTED_EVENTS.push(...SUPPORTED_EVENTS.map((event) => `notify_${event}`));
 export class Subscriptions extends SimpleEventEmitter {
 	private _eventSubscriptions = {} as { [path: string]: Array<{ created: number; type: string; callback: Types.EventSubscriptionCallback }> };
 	private _event: Types.SimpleEventEmitterProperty | undefined;
-	private _pendingEvents: Map<string, NodeJS.Timeout> = new Map();
 
 	constructor(readonly dbName: string, readonly app: IvipBaseApp) {
 		super();
@@ -195,8 +195,62 @@ export class Subscriptions extends SimpleEventEmitter {
 	 * @param newValue Novo valor
 	 * @param context Contexto usado pelo cliente que atualizou esses dados
 	 */
-	trigger(event: string, path: string, dataPath: string, oldValue: any, newValue: any, context: any) {
+	async trigger(event: string, path: string, dataPath: string, oldValue: any, newValue: any, context: any) {
 		//console.warn(`Event "${event}" triggered on node "/${path}" with data of "/${dataPath}": `, newValue);
+		if (["value", "child_added", "child_changed", "child_removed"].includes(event) && ["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(newValue))) {
+			await new Promise<void>((resolve) => {
+				let timer: NodeJS.Timeout;
+
+				const callback: Types.EventSubscriptionCallback = (err, mutatedPath, value, previous) => {
+					clearTimeout(timer);
+
+					if (!err) {
+						const propertyTrail = PathInfo.getPathKeys(mutatedPath.slice(dataPath.length + 1));
+
+						const asingObj = (obj: any, value: any, insist: boolean = true) => {
+							if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(obj)) !== true) {
+								return;
+							}
+
+							let targetObject = obj;
+							const targetProperty = propertyTrail.slice(-1)[0];
+
+							for (let p of propertyTrail.slice(0, -1)) {
+								if (!(p in targetObject)) {
+									if (!insist) {
+										return;
+									}
+									targetObject[p] = typeof p === "number" ? [] : {};
+								}
+								targetObject = targetObject[p];
+							}
+
+							if (value === null) {
+								delete targetObject[targetProperty];
+							} else {
+								targetObject[targetProperty] = value;
+							}
+						};
+
+						asingObj(newValue, value);
+						asingObj(oldValue, previous, false);
+					}
+
+					timer = setTimeout(() => {
+						this.remove(dataPath, "mutated", callback);
+						resolve();
+					}, 1000);
+				};
+
+				this.add(dataPath, "mutated", callback);
+
+				timer = setTimeout(() => {
+					this.remove(dataPath, "mutated", callback);
+					resolve();
+				}, 1000);
+			});
+		}
+
 		const pathSubscriptions = this._eventSubscriptions[path] || [];
 		pathSubscriptions
 			.filter((sub) => sub.type === event)
@@ -380,7 +434,6 @@ export class Subscriptions extends SimpleEventEmitter {
 			context: any;
 			impact: ReturnType<Subscriptions["getUpdateImpact"]>;
 			emitIpc: boolean;
-			inTime: boolean;
 		}> = {
 			suppress_events: false,
 			context: undefined,
@@ -389,21 +442,6 @@ export class Subscriptions extends SimpleEventEmitter {
 	) {
 		const dataChanges = Utils.compareValues(oldValue, newValue);
 		if (dataChanges === "identical") {
-			return;
-		}
-
-		const inTime = typeof options.inTime === "boolean" ? options.inTime : true;
-
-		if (inTime) {
-			let time = this._pendingEvents.get(path);
-			clearTimeout(time);
-
-			time = setTimeout(() => {
-				this._pendingEvents.delete(path);
-				this.triggerAllEvents(path, oldValue, newValue, { ...(options ?? {}), inTime: false });
-			}, 100);
-
-			this._pendingEvents.set(path, time);
 			return;
 		}
 

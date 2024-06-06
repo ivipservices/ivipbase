@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.executeQuery = void 0;
 const ivipbase_core_1 = require("ivipbase-core");
 const utils_1 = require("./storage/MDE/utils");
-const ivip_utils_1 = require("ivip-utils");
+const utils_2 = require("../utils");
 const noop = () => { };
 /**
  *
@@ -59,9 +59,9 @@ async function executeQuery(api, database, path, query, options = { snapshots: f
         const node_val = Object.assign(Object.assign({}, params), value);
         const filters = queryFilters.filter((f) => ["<", "<=", "==", "!=", ">=", ">", "like", "!like", "in", "!in", "exists", "!exists", "between", "!between", "matches", "!matches", "has", "!has", "contains", "!contains"].includes(f.op));
         const isFiltersValid = filters.every((f) => {
-            const val = (0, ivip_utils_1.isDate)(node_val[f.key]) ? new Date(node_val[f.key]).getTime() : node_val[f.key];
+            const val = (0, utils_2.isDate)(node_val[f.key]) ? new Date(node_val[f.key]).getTime() : node_val[f.key];
             const op = f.op;
-            const compare = (0, ivip_utils_1.isDate)(f.compare) ? new Date(f.compare).getTime() : f.compare;
+            const compare = (0, utils_2.isDate)(f.compare) ? new Date(f.compare).getTime() : f.compare;
             switch (op) {
                 case "<":
                     return val < compare;
@@ -148,8 +148,8 @@ async function executeQuery(api, database, path, query, options = { snapshots: f
             const trailKeys = ivipbase_core_1.PathInfo.get(typeof o.key === "number" ? `[${o.key}]` : o.key).keys;
             let left = trailKeys.reduce((val, key) => (val !== null && typeof val === "object" && key && key in val ? val[key] : null), a.val);
             let right = trailKeys.reduce((val, key) => (val !== null && typeof val === "object" && key && key in val ? val[key] : null), b.val);
-            left = (0, ivip_utils_1.isDate)(left) ? new Date(left).getTime() : left;
-            right = (0, ivip_utils_1.isDate)(right) ? new Date(right).getTime() : right;
+            left = (0, utils_2.isDate)(left) ? new Date(left).getTime() : left;
+            right = (0, utils_2.isDate)(right) ? new Date(right).getTime() : right;
             if (left === null) {
                 return right === null ? 0 : o.ascending ? -1 : 1;
             }

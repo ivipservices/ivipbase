@@ -20,7 +20,7 @@ export declare class NodeInfo {
     childCount?: number;
     constructor(info: Partial<NodeInfo>);
     get valueType(): NodeValueType | -1;
-    get valueTypeName(): "array" | "binary" | "boolean" | "date" | "number" | "object" | "reference" | "string" | "bigint" | "dedicated_record" | "unknown";
+    get valueTypeName(): "binary" | "object" | "string" | "array" | "boolean" | "date" | "number" | "reference" | "bigint" | "dedicated_record" | "unknown";
     toString(): string;
 }
 export declare class CustomStorageNodeInfo extends NodeInfo {
