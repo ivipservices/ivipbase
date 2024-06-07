@@ -1,9 +1,13 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.executeQuery = void 0;
 const ivipbase_core_1 = require("ivipbase-core");
 const utils_1 = require("./storage/MDE/utils");
 const utils_2 = require("../utils");
+const structureNodes_1 = __importDefault(require("./storage/MDE/structureNodes"));
 const noop = () => { };
 /**
  *
@@ -28,36 +32,61 @@ async function executeQuery(api, database, path, query, options = { snapshots: f
     context.database_cursor = ivipbase_core_1.ID.generate();
     const queryFilters = (_a = query.filters) !== null && _a !== void 0 ? _a : [];
     const querySort = (_b = query.order) !== null && _b !== void 0 ? _b : [];
-    const nodes = await api.storage
-        .getNodesBy(database, path, false, 2, false, true)
-        .then((nodes) => {
-        const childrens = nodes.filter(({ path: p }) => ivipbase_core_1.PathInfo.get(p).isChildOf(path));
-        return Promise.resolve(childrens.map((node) => {
-            var _a;
-            if (node.content && (node.content.type === utils_1.nodeValueTypes.OBJECT || node.content.type === utils_1.nodeValueTypes.ARRAY)) {
-                const childrens = nodes.filter(({ path: p }) => ivipbase_core_1.PathInfo.get(p).isChildOf(node.path));
-                node.content.value = childrens.reduce((acc, { path, content }) => {
-                    acc[ivipbase_core_1.PathInfo.get(path).key] = content.value;
-                    return acc;
-                }, (_a = node.content.value) !== null && _a !== void 0 ? _a : {});
-            }
-            return node;
-        }));
-    })
-        .catch(() => Promise.resolve([]));
+    const nodes = await api.storage.getNodesBy(database, path, false, true, false).catch(() => Promise.resolve([]));
     let results = [];
     const pathInfo = ivipbase_core_1.PathInfo.get(path);
     const isWildcardPath = pathInfo.keys.some((key) => key === "*" || key.toString().startsWith("$")); // path.includes('*');
     const vars = isWildcardPath ? pathInfo.keys.filter((key) => typeof key === "string" && key.startsWith("$")) : [];
-    for (const node of nodes) {
-        const value = (0, utils_1.processReadNodeValue)(node.content).value;
-        if (typeof value !== "object" || value === null) {
-            continue;
-        }
+    const filters = queryFilters.filter((f) => ["<", "<=", "==", "!=", ">=", ">", "like", "!like", "in", "!in", "exists", "!exists", "between", "!between", "matches", "!matches", "has", "!has", "contains", "!contains"].includes(f.op));
+    results = nodes
+        .sort((a, b) => {
+        const aPath = ivipbase_core_1.PathInfo.get(a.path);
+        const bPath = ivipbase_core_1.PathInfo.get(b.path);
+        return aPath.isAncestorOf(bPath) || aPath.isParentOf(bPath) ? -1 : aPath.isDescendantOf(bPath) || aPath.isChildOf(bPath) ? 1 : 0;
+    })
+        .reduce((acc, node) => {
         const node_path = ivipbase_core_1.PathInfo.get(node.path);
-        const params = Object.fromEntries(Object.entries(ivipbase_core_1.PathInfo.extractVariables(path, node_path.path)).filter(([key]) => vars.includes(key)));
-        const node_val = Object.assign(Object.assign({}, params), value);
-        const filters = queryFilters.filter((f) => ["<", "<=", "==", "!=", ">=", ">", "like", "!like", "in", "!in", "exists", "!exists", "between", "!between", "matches", "!matches", "has", "!has", "contains", "!contains"].includes(f.op));
+        if (node_path.isChildOf(path)) {
+            const index = acc.findIndex(({ path }) => node_path.equals(path));
+            if (index >= 0) {
+                acc[index].mainNode = node;
+            }
+            else {
+                acc.push({ path: node.path, mainNode: node, heirsNodes: [] });
+            }
+        }
+        else if (node_path.isDescendantOf(path)) {
+            let mainPath = node_path;
+            while (!(mainPath === null || mainPath === void 0 ? void 0 : mainPath.isChildOf(path)) && mainPath.parent !== null) {
+                mainPath = mainPath.parent;
+            }
+            const index = acc.findIndex(({ path }) => mainPath.equals(path));
+            if (index >= 0) {
+                acc[index].heirsNodes.push(node);
+            }
+            else {
+                acc.push({ path: mainPath.path, heirsNodes: [node] });
+            }
+        }
+        return acc;
+    }, [])
+        .map(({ path, mainNode, heirsNodes }) => {
+        var _a;
+        if (mainNode) {
+            let value = mainNode.content.value;
+            if (mainNode.content && (mainNode.content.type === utils_1.nodeValueTypes.OBJECT || mainNode.content.type === utils_1.nodeValueTypes.ARRAY)) {
+                value = (_a = (0, utils_2.removeNulls)((0, structureNodes_1.default)(path, [mainNode, ...heirsNodes]))) !== null && _a !== void 0 ? _a : null;
+            }
+            return { path, val: value, nodes: [mainNode, ...heirsNodes] };
+        }
+        return undefined;
+    })
+        .filter((node) => {
+        if (!node || !["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(node.val)) || node.val === null) {
+            return false;
+        }
+        const params = Object.fromEntries(Object.entries(ivipbase_core_1.PathInfo.extractVariables(path, node.path)).filter(([key]) => vars.includes(key)));
+        const node_val = Object.assign(Object.assign({}, params), node.val);
         const isFiltersValid = filters.every((f) => {
             const val = (0, utils_2.isDate)(node_val[f.key]) ? new Date(node_val[f.key]).getTime() : node_val[f.key];
             const op = f.op;
@@ -134,10 +163,9 @@ async function executeQuery(api, database, path, query, options = { snapshots: f
             }
             return false;
         });
-        if (isFiltersValid) {
-            results.push({ path: node.path, val: value });
-        }
-    }
+        return isFiltersValid;
+    });
+    const take = query.take > 0 ? query.take : results.length;
     results = results
         .sort((a, b) => {
         const compare = (i) => {
@@ -173,20 +201,33 @@ async function executeQuery(api, database, path, query, options = { snapshots: f
         };
         return compare(0);
     })
-        .slice(query.skip, query.skip + Math.abs(query.take > 0 ? query.take : results.length));
+        .filter((_, i) => i >= query.skip * take && i < query.skip * take + take);
     const isRealtime = typeof options.monitor === "object" && [(_c = options.monitor) === null || _c === void 0 ? void 0 : _c.add, (_d = options.monitor) === null || _d === void 0 ? void 0 : _d.change, (_e = options.monitor) === null || _e === void 0 ? void 0 : _e.remove].some((val) => val === true);
     if (options.snapshots) {
-        for (let i = 0; i < results.length; i++) {
-            const path = results[i].path.replace(`${api.storage.settings.prefix}`, "").replace(/^(\/)+/gi, "");
-            const val = await api.storage.get(database, path, {
+        results = results.map(({ path, nodes }) => {
+            var _a;
+            const node_path = path.replace(new RegExp(`^${api.storage.settings.prefix.replace(/\//gi, "\\/")}`), "").replace(/^(\/)+/gi, "");
+            const val = (_a = (0, utils_2.removeNulls)((0, structureNodes_1.default)(path, nodes !== null && nodes !== void 0 ? nodes : [], {
                 include: options.include,
                 exclude: options.exclude,
-            });
-            results[i] = { path: path, val };
-        }
+            }))) !== null && _a !== void 0 ? _a : null;
+            return { path: node_path, val };
+        });
+        // for (let i = 0; i < results.length; i++) {
+        // 	const path = results[i].path.replace(`${api.storage.settings.prefix}`, "").replace(/^(\/)+/gi, "");
+        // 	const byNodes = results[i].nodes ?? [];
+        // 	const val =
+        // 		removeNulls(
+        // 			structureNodes(results[i].path, byNodes, {
+        // 				include: options.include,
+        // 				exclude: options.exclude,
+        // 			}),
+        // 		) ?? null;
+        // 	results[i] = { path: path, val };
+        // }
     }
     return {
-        results: options.snapshots ? results : results.map(({ path }) => path),
+        results: options.snapshots ? results : results.map(({ path }) => path.replace(new RegExp(`^${api.storage.settings.prefix.replace(/\//gi, "\\/")}`), "").replace(/^(\/)+/gi, "")),
         context: null,
         stop: async () => { },
     };

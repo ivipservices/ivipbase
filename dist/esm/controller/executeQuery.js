@@ -1,6 +1,7 @@
 import { ID, PathInfo } from "ivipbase-core";
-import { nodeValueTypes, processReadNodeValue } from "./storage/MDE/utils.js";
-import { isDate } from "../utils/index.js";
+import { nodeValueTypes } from "./storage/MDE/utils.js";
+import { isDate, removeNulls } from "../utils/index.js";
+import structureNodes from "./storage/MDE/structureNodes.js";
 const noop = () => { };
 /**
  *
@@ -24,35 +25,60 @@ export async function executeQuery(api, database, path, query, options = { snaps
     context.database_cursor = ID.generate();
     const queryFilters = query.filters ?? [];
     const querySort = query.order ?? [];
-    const nodes = await api.storage
-        .getNodesBy(database, path, false, 2, false, true)
-        .then((nodes) => {
-        const childrens = nodes.filter(({ path: p }) => PathInfo.get(p).isChildOf(path));
-        return Promise.resolve(childrens.map((node) => {
-            if (node.content && (node.content.type === nodeValueTypes.OBJECT || node.content.type === nodeValueTypes.ARRAY)) {
-                const childrens = nodes.filter(({ path: p }) => PathInfo.get(p).isChildOf(node.path));
-                node.content.value = childrens.reduce((acc, { path, content }) => {
-                    acc[PathInfo.get(path).key] = content.value;
-                    return acc;
-                }, node.content.value ?? {});
-            }
-            return node;
-        }));
-    })
-        .catch(() => Promise.resolve([]));
+    const nodes = await api.storage.getNodesBy(database, path, false, true, false).catch(() => Promise.resolve([]));
     let results = [];
     const pathInfo = PathInfo.get(path);
     const isWildcardPath = pathInfo.keys.some((key) => key === "*" || key.toString().startsWith("$")); // path.includes('*');
     const vars = isWildcardPath ? pathInfo.keys.filter((key) => typeof key === "string" && key.startsWith("$")) : [];
-    for (const node of nodes) {
-        const value = processReadNodeValue(node.content).value;
-        if (typeof value !== "object" || value === null) {
-            continue;
-        }
+    const filters = queryFilters.filter((f) => ["<", "<=", "==", "!=", ">=", ">", "like", "!like", "in", "!in", "exists", "!exists", "between", "!between", "matches", "!matches", "has", "!has", "contains", "!contains"].includes(f.op));
+    results = nodes
+        .sort((a, b) => {
+        const aPath = PathInfo.get(a.path);
+        const bPath = PathInfo.get(b.path);
+        return aPath.isAncestorOf(bPath) || aPath.isParentOf(bPath) ? -1 : aPath.isDescendantOf(bPath) || aPath.isChildOf(bPath) ? 1 : 0;
+    })
+        .reduce((acc, node) => {
         const node_path = PathInfo.get(node.path);
-        const params = Object.fromEntries(Object.entries(PathInfo.extractVariables(path, node_path.path)).filter(([key]) => vars.includes(key)));
-        const node_val = { ...params, ...value };
-        const filters = queryFilters.filter((f) => ["<", "<=", "==", "!=", ">=", ">", "like", "!like", "in", "!in", "exists", "!exists", "between", "!between", "matches", "!matches", "has", "!has", "contains", "!contains"].includes(f.op));
+        if (node_path.isChildOf(path)) {
+            const index = acc.findIndex(({ path }) => node_path.equals(path));
+            if (index >= 0) {
+                acc[index].mainNode = node;
+            }
+            else {
+                acc.push({ path: node.path, mainNode: node, heirsNodes: [] });
+            }
+        }
+        else if (node_path.isDescendantOf(path)) {
+            let mainPath = node_path;
+            while (!mainPath?.isChildOf(path) && mainPath.parent !== null) {
+                mainPath = mainPath.parent;
+            }
+            const index = acc.findIndex(({ path }) => mainPath.equals(path));
+            if (index >= 0) {
+                acc[index].heirsNodes.push(node);
+            }
+            else {
+                acc.push({ path: mainPath.path, heirsNodes: [node] });
+            }
+        }
+        return acc;
+    }, [])
+        .map(({ path, mainNode, heirsNodes }) => {
+        if (mainNode) {
+            let value = mainNode.content.value;
+            if (mainNode.content && (mainNode.content.type === nodeValueTypes.OBJECT || mainNode.content.type === nodeValueTypes.ARRAY)) {
+                value = removeNulls(structureNodes(path, [mainNode, ...heirsNodes])) ?? null;
+            }
+            return { path, val: value, nodes: [mainNode, ...heirsNodes] };
+        }
+        return undefined;
+    })
+        .filter((node) => {
+        if (!node || !["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(node.val)) || node.val === null) {
+            return false;
+        }
+        const params = Object.fromEntries(Object.entries(PathInfo.extractVariables(path, node.path)).filter(([key]) => vars.includes(key)));
+        const node_val = { ...params, ...node.val };
         const isFiltersValid = filters.every((f) => {
             const val = isDate(node_val[f.key]) ? new Date(node_val[f.key]).getTime() : node_val[f.key];
             const op = f.op;
@@ -129,10 +155,9 @@ export async function executeQuery(api, database, path, query, options = { snaps
             }
             return false;
         });
-        if (isFiltersValid) {
-            results.push({ path: node.path, val: value });
-        }
-    }
+        return isFiltersValid;
+    });
+    const take = query.take > 0 ? query.take : results.length;
     results = results
         .sort((a, b) => {
         const compare = (i) => {
@@ -168,20 +193,32 @@ export async function executeQuery(api, database, path, query, options = { snaps
         };
         return compare(0);
     })
-        .slice(query.skip, query.skip + Math.abs(query.take > 0 ? query.take : results.length));
+        .filter((_, i) => i >= query.skip * take && i < query.skip * take + take);
     const isRealtime = typeof options.monitor === "object" && [options.monitor?.add, options.monitor?.change, options.monitor?.remove].some((val) => val === true);
     if (options.snapshots) {
-        for (let i = 0; i < results.length; i++) {
-            const path = results[i].path.replace(`${api.storage.settings.prefix}`, "").replace(/^(\/)+/gi, "");
-            const val = await api.storage.get(database, path, {
+        results = results.map(({ path, nodes }) => {
+            const node_path = path.replace(new RegExp(`^${api.storage.settings.prefix.replace(/\//gi, "\\/")}`), "").replace(/^(\/)+/gi, "");
+            const val = removeNulls(structureNodes(path, nodes ?? [], {
                 include: options.include,
                 exclude: options.exclude,
-            });
-            results[i] = { path: path, val };
-        }
+            })) ?? null;
+            return { path: node_path, val };
+        });
+        // for (let i = 0; i < results.length; i++) {
+        // 	const path = results[i].path.replace(`${api.storage.settings.prefix}`, "").replace(/^(\/)+/gi, "");
+        // 	const byNodes = results[i].nodes ?? [];
+        // 	const val =
+        // 		removeNulls(
+        // 			structureNodes(results[i].path, byNodes, {
+        // 				include: options.include,
+        // 				exclude: options.exclude,
+        // 			}),
+        // 		) ?? null;
+        // 	results[i] = { path: path, val };
+        // }
     }
     return {
-        results: options.snapshots ? results : results.map(({ path }) => path),
+        results: options.snapshots ? results : results.map(({ path }) => path.replace(new RegExp(`^${api.storage.settings.prefix.replace(/\//gi, "\\/")}`), "").replace(/^(\/)+/gi, "")),
         context: null,
         stop: async () => { },
     };
