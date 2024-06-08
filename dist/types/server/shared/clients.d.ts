@@ -31,6 +31,7 @@ export declare class ConnectedClient {
                 path: string;
                 query: Types.Query;
                 options: Types.QueryOptions;
+                stop: () => Promise<void>;
             };
         };
     };

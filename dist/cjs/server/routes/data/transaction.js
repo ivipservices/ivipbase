@@ -135,7 +135,7 @@ const addRoutes = (env) => {
                 tx.context = {};
             }
             tx.context.database_cursor = result === null || result === void 0 ? void 0 : result.cursor;
-            res.setHeader("AceBase-Context", JSON.stringify(tx.context));
+            res.setHeader("DataBase-Context", JSON.stringify(tx.context));
             res.send("done");
         }
         catch (err) {

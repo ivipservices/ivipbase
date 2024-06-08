@@ -21,7 +21,7 @@ type HttpMethod = expressRouteMethod | "GET" | "PUT" | "POST" | "DELETE";
 export interface RouteRequestEnvironment {
     /** Se a solicitação tiver um token "Authentication: bearer", o usuário será associado à solicitação recebida */
     user?: DbUserAccountDetails;
-    /** Se o contexto for enviado pelo cabeçalho iVipBase-Context, será associado à solicitação recebida */
+    /** Se o contexto for enviado pelo cabeçalho DataBase-Context, será associado à solicitação recebida */
     context: {
         [key: string]: any;
     };

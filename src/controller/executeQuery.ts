@@ -7,6 +7,262 @@ import { DataBase } from "../database";
 
 const noop = () => {};
 
+export const executeFilters = (value: any, queryFilters: Types.QueryFilter[]): boolean => {
+	const filters = queryFilters.filter((f) =>
+		["<", "<=", "==", "!=", ">=", ">", "like", "!like", "in", "!in", "exists", "!exists", "between", "!between", "matches", "!matches", "has", "!has", "contains", "!contains"].includes(f.op),
+	);
+
+	return (
+		["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(value)) &&
+		filters.every((f) => {
+			const val = isDate(value[f.key] as any) ? new Date(value[f.key] as any).getTime() : (value[f.key] as any);
+			const op = f.op;
+			const compare = isDate(f.compare) ? new Date(f.compare).getTime() : f.compare;
+
+			switch (op) {
+				case "<":
+					return val < compare;
+				case "<=":
+					return val <= compare;
+				case "==":
+					return val === compare;
+				case "!=":
+					return val !== compare;
+				case ">=":
+					return val >= compare;
+				case ">":
+					return val > compare;
+				case "in":
+				case "!in": {
+					if (!(f.compare instanceof Array)) {
+						return op === "!in";
+					}
+					const isIn = f.compare instanceof Array && f.compare.includes(val);
+					return op === "in" ? isIn : !isIn;
+				}
+				case "exists":
+				case "!exists": {
+					const isExists = val !== undefined && val !== null;
+					return op === "exists" ? isExists : !isExists;
+				}
+				case "between":
+				case "!between": {
+					if (!(f.compare instanceof Array)) {
+						return op === "!between";
+					}
+					const isBetween = f.compare instanceof Array && val >= f.compare[0] && val <= f.compare[1];
+					return op === "between" ? isBetween : !isBetween;
+				}
+				case "like":
+				case "!like": {
+					if (typeof compare !== "string") {
+						return op === "!like";
+					}
+					const pattern = "^" + compare.replace(/\*/g, ".*").replace(/\?/g, ".") + "$";
+					const re = new RegExp(pattern, "i");
+					const isLike = re.test(val as string);
+					return op === "like" ? isLike : !isLike;
+				}
+				case "matches":
+				case "!matches": {
+					if (typeof compare !== "string") {
+						return op === "!matches";
+					}
+					const re = new RegExp(compare, "i");
+					const isMatch = re.test(val as string);
+					return op === "matches" ? isMatch : !isMatch;
+				}
+				case "has":
+				case "!has": {
+					if (typeof val !== "object") {
+						return op === "!has";
+					}
+					const hasKey = Object.keys(val).includes(compare);
+					return op === "has" ? hasKey : !hasKey;
+				}
+				case "contains":
+				case "!contains": {
+					if (!(val instanceof Array)) {
+						return op === "!contains";
+					}
+					const contains = val.includes(compare);
+					return op === "contains" ? contains : !contains;
+				}
+			}
+
+			return false;
+		})
+	);
+};
+
+export const executeQueryRealtime = (db: DataBase, path: string, query: Types.Query, options: Types.QueryOptions, matchedPaths: string[]) => {
+	if (options?.monitor === true) {
+		options.monitor = { add: true, change: true, remove: true };
+	}
+
+	const isRealtime = typeof options.monitor === "object" && [options.monitor?.add, options.monitor?.change, options.monitor?.remove].some((val) => val === true);
+
+	if (isRealtime && typeof options?.eventHandler === "function") {
+		const queryFilters: Array<Types.QueryFilter> = query.filters ?? [];
+		const ref = db.ref(path);
+		const originalPath = ref.path;
+
+		const removeMatch = (path: string) => {
+			const index = matchedPaths.indexOf(path);
+			if (index < 0) {
+				return;
+			}
+			matchedPaths.splice(index, 1);
+		};
+
+		const addMatch = (path: string) => {
+			if (matchedPaths.includes(path)) {
+				return;
+			}
+			matchedPaths.push(path);
+		};
+
+		const getMainPathChild = (path: string) => {
+			let main_path = PathInfo.get(path);
+
+			while (!main_path?.isChildOf(originalPath) && main_path.parent !== null) {
+				main_path = main_path.parent;
+			}
+
+			return main_path;
+		};
+
+		const childChangedCallback: Types.EventSubscriptionCallback = async (err, path, newValue, oldValue) => {
+			const wasMatch = matchedPaths.includes(path);
+			let keepMonitoring = true;
+
+			if (typeof options?.eventHandler !== "function" || newValue === null || newValue === undefined) {
+				return;
+			}
+
+			let main_path = getMainPathChild(path);
+
+			if (!main_path?.isChildOf(originalPath)) {
+				return;
+			}
+
+			let isMatch = ["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(newValue)) && executeFilters(newValue, queryFilters);
+
+			if (options.snapshots) {
+				newValue = ["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(newValue))
+					? removeNulls(
+							resolveObjetByIncluded(path, newValue, {
+								include: options.include,
+								exclude: options.exclude,
+								main_path: main_path.path,
+							}),
+					  ) ?? null
+					: newValue;
+			}
+
+			const isChange = typeof options?.monitor === "boolean" ? options.monitor : options?.monitor?.change ?? false;
+			const isAdd = typeof options?.monitor === "boolean" ? options.monitor : options?.monitor?.add ?? false;
+			const isRemove = typeof options?.monitor === "boolean" ? options.monitor : options?.monitor?.remove ?? false;
+
+			if (isMatch) {
+				if (!wasMatch) {
+					addMatch(path);
+				}
+				if (wasMatch && isChange) {
+					keepMonitoring = options.eventHandler({ name: "change", path, value: newValue }) !== false;
+				} else if (!wasMatch && isAdd) {
+					keepMonitoring = options.eventHandler({ name: "add", path, value: newValue }) !== false;
+				}
+			} else if (wasMatch) {
+				removeMatch(path);
+				if (isRemove) {
+					keepMonitoring = options.eventHandler({ name: "remove", path: path, value: oldValue }) !== false;
+				}
+			}
+
+			if (keepMonitoring === false) {
+				stopMonitoring();
+			}
+		};
+
+		const childAddedCallback: Types.EventSubscriptionCallback = (err, path, newValue) => {
+			const wasMatch = ["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(newValue)) && executeFilters(newValue, queryFilters);
+
+			if (typeof options?.eventHandler !== "function" || !wasMatch || newValue === null || newValue === undefined) {
+				return;
+			}
+
+			let main_path = getMainPathChild(path);
+
+			if (!main_path?.isChildOf(originalPath)) {
+				return;
+			}
+
+			let keepMonitoring = true;
+			addMatch(path);
+
+			const isAdd = typeof options?.monitor === "boolean" ? options.monitor : options?.monitor?.add ?? false;
+			if (isAdd) {
+				if (options.snapshots) {
+					newValue = ["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(newValue))
+						? removeNulls(
+								resolveObjetByIncluded(path, newValue, {
+									include: options.include,
+									exclude: options.exclude,
+									main_path: main_path.path,
+								}),
+						  ) ?? null
+						: newValue;
+				}
+
+				keepMonitoring = options.eventHandler({ name: "add", path: path, value: options.snapshots ? newValue : null }) !== false;
+			}
+			if (keepMonitoring === false) {
+				stopMonitoring();
+			}
+		};
+
+		const childRemovedCallback: Types.EventSubscriptionCallback = (err, path, newValue, oldValue) => {
+			let keepMonitoring = true;
+			if (typeof options?.eventHandler !== "function") {
+				return;
+			}
+			removeMatch(path);
+
+			const isRemove = typeof options?.monitor === "boolean" ? options.monitor : options?.monitor?.remove ?? false;
+			if (isRemove) {
+				keepMonitoring = options.eventHandler({ name: "remove", path: path, value: options.snapshots ? oldValue : null }) !== false;
+			}
+
+			if (keepMonitoring === false) {
+				stopMonitoring();
+			}
+		};
+
+		if (typeof options.monitor === "object" && (options.monitor.add || options.monitor.change || options.monitor.remove)) {
+			db.storage.subscribe(ref.path, "child_changed", childChangedCallback);
+		}
+		if (typeof options.monitor === "object" && options.monitor.remove) {
+			db.storage.subscribe(ref.path, "notify_child_removed", childRemovedCallback);
+		}
+		if (typeof options.monitor === "object" && options.monitor.add) {
+			db.storage.subscribe(ref.path, "child_added", childAddedCallback);
+		}
+
+		const stopMonitoring = () => {
+			db.storage.unsubscribe(ref.path, "child_changed", childChangedCallback);
+			db.storage.unsubscribe(ref.path, "child_added", childAddedCallback);
+			db.storage.unsubscribe(ref.path, "notify_child_removed", childRemovedCallback);
+		};
+
+		return async () => {
+			stopMonitoring();
+		};
+	}
+
+	return async () => {};
+};
+
 /**
  *
  * @param storage Instância de armazenamento de destino
@@ -25,6 +281,7 @@ export async function executeQuery(
 	results: Array<{ path: string; val: any }> | string[];
 	context: any;
 	stop(): Promise<void>;
+	isMore: boolean;
 }> {
 	if (typeof options !== "object") {
 		options = {};
@@ -53,94 +310,6 @@ export async function executeQuery(
 	const pathInfo = PathInfo.get(path);
 	const isWildcardPath = pathInfo.keys.some((key) => key === "*" || key.toString().startsWith("$")); // path.includes('*');
 	const vars: string[] = isWildcardPath ? (pathInfo.keys.filter((key) => typeof key === "string" && key.startsWith("$")) as any) : [];
-
-	const filters = queryFilters.filter((f) =>
-		["<", "<=", "==", "!=", ">=", ">", "like", "!like", "in", "!in", "exists", "!exists", "between", "!between", "matches", "!matches", "has", "!has", "contains", "!contains"].includes(f.op),
-	);
-
-	const executeFilters = (value: any): boolean => {
-		return (
-			["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(value)) &&
-			filters.every((f) => {
-				const val = isDate(value[f.key] as any) ? new Date(value[f.key] as any).getTime() : (value[f.key] as any);
-				const op = f.op;
-				const compare = isDate(f.compare) ? new Date(f.compare).getTime() : f.compare;
-
-				switch (op) {
-					case "<":
-						return val < compare;
-					case "<=":
-						return val <= compare;
-					case "==":
-						return val === compare;
-					case "!=":
-						return val !== compare;
-					case ">=":
-						return val >= compare;
-					case ">":
-						return val > compare;
-					case "in":
-					case "!in": {
-						if (!(f.compare instanceof Array)) {
-							return op === "!in";
-						}
-						const isIn = f.compare instanceof Array && f.compare.includes(val);
-						return op === "in" ? isIn : !isIn;
-					}
-					case "exists":
-					case "!exists": {
-						const isExists = val !== undefined && val !== null;
-						return op === "exists" ? isExists : !isExists;
-					}
-					case "between":
-					case "!between": {
-						if (!(f.compare instanceof Array)) {
-							return op === "!between";
-						}
-						const isBetween = f.compare instanceof Array && val >= f.compare[0] && val <= f.compare[1];
-						return op === "between" ? isBetween : !isBetween;
-					}
-					case "like":
-					case "!like": {
-						if (typeof compare !== "string") {
-							return op === "!like";
-						}
-						const pattern = "^" + compare.replace(/\*/g, ".*").replace(/\?/g, ".") + "$";
-						const re = new RegExp(pattern, "i");
-						const isLike = re.test(val as string);
-						return op === "like" ? isLike : !isLike;
-					}
-					case "matches":
-					case "!matches": {
-						if (typeof compare !== "string") {
-							return op === "!matches";
-						}
-						const re = new RegExp(compare, "i");
-						const isMatch = re.test(val as string);
-						return op === "matches" ? isMatch : !isMatch;
-					}
-					case "has":
-					case "!has": {
-						if (typeof val !== "object") {
-							return op === "!has";
-						}
-						const hasKey = Object.keys(val).includes(compare);
-						return op === "has" ? hasKey : !hasKey;
-					}
-					case "contains":
-					case "!contains": {
-						if (!(val instanceof Array)) {
-							return op === "!contains";
-						}
-						const contains = val.includes(compare);
-						return op === "contains" ? contains : !contains;
-					}
-				}
-
-				return false;
-			})
-		);
-	};
 
 	results = nodes
 		.sort((a, b) => {
@@ -192,7 +361,7 @@ export async function executeQuery(
 			}
 			const params = Object.fromEntries(Object.entries(PathInfo.extractVariables(path, node.path)).filter(([key]) => vars.includes(key)));
 			const node_val: any = { ...params, ...(node.val as any) };
-			return executeFilters(node_val);
+			return executeFilters(node_val, queryFilters);
 		}) as any;
 
 	const take = query.take > 0 ? query.take : results.length;
@@ -232,11 +401,15 @@ export async function executeQuery(
 		// }
 	};
 
+	const totalLength = results.length;
+
 	results = results
 		.sort((a, b) => {
 			return compare(a, b, 0);
 		})
 		.filter((_, i) => i >= query.skip * take && i < query.skip * take + take);
+
+	const isMore = totalLength > query.skip * take + take;
 
 	if (options.snapshots) {
 		results = results.map(({ path, val, nodes }) => {
@@ -254,171 +427,19 @@ export async function executeQuery(
 		});
 	}
 
-	if (options?.monitor === true) {
-		options.monitor = { add: true, change: true, remove: true };
-	}
-
-	const isRealtime = typeof options.monitor === "object" && [options.monitor?.add, options.monitor?.change, options.monitor?.remove].some((val) => val === true);
-
-	if (isRealtime && typeof options?.eventHandler === "function") {
-		const matchedPaths = results.map(({ path }) => path.replace(new RegExp(`^${api.storage.settings.prefix.replace(/\//gi, "\\/")}`), "").replace(/^(\/)+/gi, ""));
-		const ref = db.ref(originalPath);
-
-		const removeMatch = (path: string) => {
-			const index = matchedPaths.indexOf(path);
-			if (index < 0) {
-				return;
-			}
-			matchedPaths.splice(index, 1);
-		};
-
-		const addMatch = (path: string) => {
-			if (matchedPaths.includes(path)) {
-				return;
-			}
-			matchedPaths.push(path);
-		};
-
-		const getMainPathChild = (path: string) => {
-			let main_path = PathInfo.get(path);
-
-			while (!main_path?.isChildOf(originalPath) && main_path.parent !== null) {
-				main_path = main_path.parent;
-			}
-
-			return main_path;
-		};
-
-		const childChangedCallback: Types.EventSubscriptionCallback = async (err, path, newValue, oldValue) => {
-			const wasMatch = matchedPaths.includes(path);
-			let keepMonitoring = true;
-
-			if (typeof options?.eventHandler !== "function" || newValue === null || newValue === undefined) {
-				return;
-			}
-
-			let main_path = getMainPathChild(path);
-
-			if (!main_path?.isChildOf(originalPath)) {
-				return;
-			}
-
-			let isMatch = ["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(newValue)) && executeFilters(newValue);
-
-			if (options.snapshots) {
-				newValue = ["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(newValue))
-					? removeNulls(
-							resolveObjetByIncluded(path, newValue, {
-								include: options.include,
-								exclude: options.exclude,
-								main_path: main_path.path,
-							}),
-					  ) ?? null
-					: newValue;
-			}
-
-			const isChange = typeof options?.monitor === "boolean" ? options.monitor : options?.monitor?.change ?? false;
-			const isAdd = typeof options?.monitor === "boolean" ? options.monitor : options?.monitor?.add ?? false;
-			const isRemove = typeof options?.monitor === "boolean" ? options.monitor : options?.monitor?.remove ?? false;
-
-			if (isMatch) {
-				if (!wasMatch) {
-					addMatch(path);
-				}
-				if (wasMatch && isChange) {
-					keepMonitoring = options.eventHandler({ name: "change", path, value: newValue }) !== false;
-				} else if (!wasMatch && isAdd) {
-					keepMonitoring = options.eventHandler({ name: "add", path, value: newValue }) !== false;
-				}
-			} else if (wasMatch) {
-				removeMatch(path);
-				if (isRemove) {
-					keepMonitoring = options.eventHandler({ name: "remove", path: path, value: oldValue }) !== false;
-				}
-			}
-
-			if (keepMonitoring === false) {
-				stopMonitoring();
-			}
-		};
-		const childAddedCallback: Types.EventSubscriptionCallback = (err, path, newValue) => {
-			const wasMatch = ["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(newValue)) && executeFilters(newValue);
-
-			if (typeof options?.eventHandler !== "function" || !wasMatch || newValue === null || newValue === undefined) {
-				return;
-			}
-
-			let main_path = getMainPathChild(path);
-
-			if (!main_path?.isChildOf(originalPath)) {
-				return;
-			}
-
-			let keepMonitoring = true;
-			addMatch(path);
-
-			const isAdd = typeof options?.monitor === "boolean" ? options.monitor : options?.monitor?.add ?? false;
-			if (isAdd) {
-				if (options.snapshots) {
-					newValue = ["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(newValue))
-						? removeNulls(
-								resolveObjetByIncluded(path, newValue, {
-									include: options.include,
-									exclude: options.exclude,
-									main_path: main_path.path,
-								}),
-						  ) ?? null
-						: newValue;
-				}
-
-				keepMonitoring = options.eventHandler({ name: "add", path: path, value: options.snapshots ? newValue : null }) !== false;
-			}
-			if (keepMonitoring === false) {
-				stopMonitoring();
-			}
-		};
-		const childRemovedCallback: Types.EventSubscriptionCallback = (err, path, newValue, oldValue) => {
-			let keepMonitoring = true;
-			if (typeof options?.eventHandler !== "function") {
-				return;
-			}
-			removeMatch(path);
-
-			const isRemove = typeof options?.monitor === "boolean" ? options.monitor : options?.monitor?.remove ?? false;
-			if (isRemove) {
-				keepMonitoring = options.eventHandler({ name: "remove", path: path, value: options.snapshots ? oldValue : null }) !== false;
-			}
-
-			if (keepMonitoring === false) {
-				stopMonitoring();
-			}
-		};
-
-		if (typeof options.monitor === "object" && (options.monitor.add || options.monitor.change || options.monitor.remove)) {
-			db.storage.subscribe(ref.path, "child_changed", childChangedCallback);
-		}
-		if (typeof options.monitor === "object" && options.monitor.remove) {
-			db.storage.subscribe(ref.path, "notify_child_removed", childRemovedCallback);
-		}
-		if (typeof options.monitor === "object" && options.monitor.add) {
-			db.storage.subscribe(ref.path, "child_added", childAddedCallback);
-		}
-
-		const stopMonitoring = () => {
-			db.storage.unsubscribe(ref.path, "child_changed", childChangedCallback);
-			db.storage.unsubscribe(ref.path, "child_added", childAddedCallback);
-			db.storage.unsubscribe(ref.path, "notify_child_removed", childRemovedCallback);
-		};
-
-		stop = async () => {
-			stopMonitoring();
-		};
-	}
+	stop = executeQueryRealtime(
+		db,
+		originalPath,
+		query,
+		options,
+		results.map(({ path }) => path.replace(new RegExp(`^${api.storage.settings.prefix.replace(/\//gi, "\\/")}`), "").replace(/^(\/)+/gi, "")),
+	);
 
 	return {
 		results: options.snapshots ? results : results.map(({ path }) => path.replace(new RegExp(`^${api.storage.settings.prefix.replace(/\//gi, "\\/")}`), "").replace(/^(\/)+/gi, "")),
-		context: null,
+		context,
 		stop,
+		isMore,
 	};
 }
 

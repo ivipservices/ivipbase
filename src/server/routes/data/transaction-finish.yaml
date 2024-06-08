@@ -35,7 +35,7 @@
                 content:
                     "text/plain":
                         headers:
-                            "AceBase-Context":
+                            "DataBase-Context":
                                 description: Retorna o contexto que foi passado para o endpoint de início da transação, aumentado com um `database_cursor` se o log de transações estiver ativado no servidor.
                                 schema:
                                     type: string

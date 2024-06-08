@@ -12,7 +12,7 @@
               schema:
                   type: string
                   example: mydb
-            - name: AceBase-Context
+            - name: DataBase-Context
               in: header
               description: Informações contextuais sobre a operação do banco de dados (deve ser JSON válido). Essas informações são incluídas em notificações de eventos enviadas para clientes observando dados neste ou em caminhos filhos
               schema:

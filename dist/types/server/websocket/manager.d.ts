@@ -33,6 +33,16 @@ export declare abstract class WebSocketManager<SocketType> extends SimpleEventEm
         path: string;
         event?: string;
     }>): Types.SimpleEventEmitterProperty;
+    on(event: "query-subscribe", callback: WebSocketEventCallback<SocketType, {
+        dbName: string;
+        req_id: string;
+        query_id: string;
+        path: string;
+        query: Types.Query;
+        options: Omit<Types.QueryOptions, "eventHandler">;
+        matchedPaths: string[];
+        context: any;
+    }>): Types.SimpleEventEmitterProperty;
     on(event: "query-unsubscribe", callback: WebSocketEventCallback<SocketType, {
         dbName: string;
         req_id: string;
@@ -53,6 +63,15 @@ export declare abstract class WebSocketManager<SocketType> extends SimpleEventEm
         req_id: string;
         path: string;
         event?: string;
+    }>): this;
+    emit(event: "query-subscribe", data: WebSocketEventData<SocketType, {
+        req_id: string;
+        path: string;
+        query_id: string;
+        query: Types.Query;
+        options: Omit<Types.QueryOptions, "eventHandler">;
+        matchedPaths: string[];
+        context: any;
     }>): this;
     emit(event: "query-unsubscribe", data: WebSocketEventData<SocketType, {
         req_id: string;

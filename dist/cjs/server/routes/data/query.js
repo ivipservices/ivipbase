@@ -24,104 +24,20 @@ const addRoutes = (env) => {
         }
         const query = data.query;
         const options = data.options;
-        let cancelSubscription;
         if (options.monitor === true) {
             options.monitor = { add: true, change: true, remove: true };
         }
-        if (typeof options.monitor === "object" && (options.monitor.add || options.monitor.change || options.monitor.remove)) {
-            const queryId = data.query_id;
-            const clientId = data.client_id;
-            const client = env.clients.get(clientId);
-            env.localApp.ipcReady((ipc) => {
-                ipc.on("notification", async (message) => {
-                    if (message.type === "websocket.queryUnsubscribe" && message.dbName === dbName && message.queryId === queryId) {
-                        cancelSubscription === null || cancelSubscription === void 0 ? void 0 : cancelSubscription();
-                    }
-                });
-            });
-            if (client) {
-                if (!(dbName in client.realtimeQueries)) {
-                    client.realtimeQueries[dbName] = {};
-                }
-                client.realtimeQueries[dbName][queryId] = { path, query, options };
-            }
-            else {
-                env.localApp.ipcReady((ipc) => {
-                    ipc.sendNotification({
-                        type: "websocket.realtimeQueries",
-                        dbName,
-                        clientId,
-                        queryId,
-                        path,
-                        query,
-                        options,
-                    });
-                });
-            }
-            let effort = 0;
-            const sendEvent = async (event) => {
-                var _a;
-                try {
-                    event.query_id = queryId;
-                    const client = env.clients.get(clientId);
-                    // if (!client) {
-                    // 	return cancelSubscription?.();
-                    // } // Not connected, stop subscription
-                    if (client) {
-                        if (!(await env.rules(dbName).isOperationAllowed((_a = client.user.get(dbName)) !== null && _a !== void 0 ? _a : {}, event.path, "get", { context: req.context, value: event.value })).allow) {
-                            return cancelSubscription === null || cancelSubscription === void 0 ? void 0 : cancelSubscription(); // Access denied, stop subscription
-                        }
-                        const data = ivipbase_core_1.Transport.serialize(event);
-                        client.socket.emit("query-event", data);
-                    }
-                    else {
-                        env.localApp.ipcReady((ipc) => {
-                            ipc.sendNotification({
-                                type: "websocket.realtimeQueries",
-                                dbName,
-                                clientId,
-                                queryId,
-                                context: req.context,
-                                event,
-                            });
-                            ipc.sendRequest({
-                                type: "websocket.verifyClient",
-                                dbName,
-                                clientId,
-                                queryId,
-                            })
-                                .then(() => {
-                                effort = 0;
-                            })
-                                .catch((err) => {
-                                effort++;
-                                if (effort > 5) {
-                                    cancelSubscription === null || cancelSubscription === void 0 ? void 0 : cancelSubscription();
-                                }
-                            });
-                        });
-                    }
-                }
-                catch (err) {
-                    env.debug.error(`Unexpected error orccured trying to send event`);
-                    env.debug.error(err);
-                }
-            };
-            options.eventHandler = (event) => {
-                sendEvent(event);
-            };
-        }
         try {
-            const { results, context, stop } = await env.db(dbName).storage.query(path, query, options);
-            cancelSubscription = stop;
+            const { results, context, isMore } = (await env.db(dbName).storage.query(path, query, options));
             if (!((_b = env.settings.transactions) === null || _b === void 0 ? void 0 : _b.log) && context && context.database_cursor) {
                 delete context.database_cursor;
             }
             const response = {
                 count: results.length,
                 list: results, // []
+                isMore,
             };
-            res.setHeader("AceBase-Context", JSON.stringify(context));
+            res.setHeader("DataBase-Context", JSON.stringify(context));
             res.send(ivipbase_core_1.Transport.serialize(response));
         }
         catch (err) {

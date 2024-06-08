@@ -10,7 +10,7 @@ const addMiddleware = (env) => {
             req.context = JSON.parse(context);
         }
         catch (err) {
-            env.debug.error(`Failed to parse AceBase-Context header: "${context}" in request at ${req.url} from client ${req.ip}`);
+            env.debug.error(`Failed to parse DataBase-Context header: "${context}" in request at ${req.url} from client ${req.ip}`);
             return res.status(500).end("Invalid request context");
         }
         next();

@@ -18,7 +18,7 @@ function promiseTimeout<T = any>(promise: Promise<T>, ms: number, comment?: stri
 }
 
 export class StorageDBClient extends Api {
-	private _realtimeQueries: any = {};
+	private _realtimeQueries: Record<string, { path: string; query: Types.Query; options: Types.QueryOptions; query_id: string; matchedPaths: string[] }> = {};
 	readonly url: string;
 	private readonly app: IvipBaseApp;
 
@@ -32,6 +32,25 @@ export class StorageDBClient extends Api {
 		this.app.onConnect(async (socket) => {
 			const subscribePromises = [] as Promise<void>[];
 
+			for (const query_id in this._realtimeQueries) {
+				const subscribeQuery = this._realtimeQueries[query_id];
+				subscribePromises.push(
+					new Promise<void>(async (resolve, reject) => {
+						try {
+							await this.app.websocketRequest(socket, "query-subscribe", subscribeQuery, this.db.name);
+						} catch (err: any) {
+							if (err.code === "access_denied" && !this.db.accessToken) {
+								this.db.debug.error(
+									`Could not subscribe to event "Query-Event" on path "${subscribeQuery.path}" because you are not signed in. If you added this event while offline and have a user access token, you can prevent this by using getAuth().signInWithToken(token) to automatically try signing in after connecting`,
+								);
+							} else {
+								this.db.debug.error(err);
+							}
+						}
+					}),
+				);
+			}
+
 			this.db.subscriptions.forEach((event, path) => {
 				subscribePromises.push(
 					new Promise<void>(async (resolve, reject) => {
@@ -40,7 +59,7 @@ export class StorageDBClient extends Api {
 						} catch (err: any) {
 							if (err.code === "access_denied" && !this.db.accessToken) {
 								this.db.debug.error(
-									`Could not subscribe to event "${event}" on path "${path}" because you are not signed in. If you added this event while offline and have a user access token, you can prevent this by using client.auth.setAccessToken(token) to automatically try signing in after connecting`,
+									`Could not subscribe to event "${event}" on path "${path}" because you are not signed in. If you added this event while offline and have a user access token, you can prevent this by using getAuth().signInWithToken(token) to automatically try signing in after connecting`,
 								);
 							} else {
 								this.db.debug.error(err);
@@ -71,9 +90,13 @@ export class StorageDBClient extends Api {
 			this.app.socket?.on("query-event", (data: any) => {
 				data = Transport.deserialize(data);
 				const query = this._realtimeQueries[data.query_id];
+				if (!query) {
+					return;
+				}
+
 				let keepMonitoring = true;
 				try {
-					keepMonitoring = query.options.eventHandler(data);
+					keepMonitoring = query.options?.eventHandler?.(data) !== false;
 				} catch (err) {
 					keepMonitoring = false;
 				}
@@ -321,6 +344,10 @@ export class StorageDBClient extends Api {
 			options,
 		};
 
+		const containsRealtime =
+			(options.monitor === true || (typeof options.monitor === "object" && (options.monitor.add || options.monitor.change || options.monitor.remove))) &&
+			typeof options.eventHandler === "function";
+
 		if (options.monitor === true || (typeof options.monitor === "object" && (options.monitor.add || options.monitor.change || options.monitor.remove))) {
 			console.assert(typeof options.eventHandler === "function", `no eventHandler specified to handle realtime changes`);
 			if (!this.app.socket) {
@@ -328,22 +355,35 @@ export class StorageDBClient extends Api {
 			}
 			request.query_id = ID.generate();
 			request.client_id = this.app.id;
-			this._realtimeQueries[request.query_id] = { query, options };
+			this._realtimeQueries[request.query_id] = { path, query_id: request.query_id as string, query, options: { ...options, eventHandler: undefined }, matchedPaths: [] };
 		}
 
 		const reqData = JSON.stringify(Transport.serialize(request));
 
 		try {
 			const { data, context } = await this._request({ method: "POST", route: `/query/${this.db.database}/${path}`, data: reqData, includeContext: true });
-			const results = Transport.deserialize(data);
+			const { list, isMore } = Transport.deserialize(data);
+			let socketSend: Promise<void> | undefined;
+
+			if (containsRealtime && typeof request.query_id === "string") {
+				this._realtimeQueries[request.query_id].matchedPaths = (list as any).map((n: any) => n.path) as any;
+				socketSend = this.app.websocketRequest(this.app.socket, "query-subscribe", this._realtimeQueries[request.query_id], this.db.name);
+			}
 
 			const stop = async () => {
+				if (!containsRealtime && socketSend !== undefined) {
+					return;
+				}
+				await socketSend;
 				delete this._realtimeQueries[request.query_id as string];
 				await this.app.websocketRequest(this.app.socket, "query-unsubscribe", { query_id: request.query_id as string }, this.db.name);
 			};
 
-			return { results: results.list, context, stop };
+			return { results: list, context, stop, isMore } as any;
 		} catch (err) {
+			if (typeof request.query_id === "string" && request.query_id in this._realtimeQueries) {
+				delete this._realtimeQueries[request.query_id];
+			}
 			throw err;
 		}
 	}

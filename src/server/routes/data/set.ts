@@ -69,7 +69,7 @@ export const addRoutes = (env: LocalServer) => {
 
 			// NEW: add cursor to response context, which was added to the request context in `database_cursor` if transaction logging is enabled
 			const returnContext = { database_cursor: (req as any)?.context?.database_cursor };
-			res.setHeader("AceBase-Context", JSON.stringify(returnContext));
+			res.setHeader("DataBase-Context", JSON.stringify(returnContext));
 
 			res.send({ success: true });
 		} catch (err) {

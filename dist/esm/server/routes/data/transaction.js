@@ -127,7 +127,7 @@ export const addRoutes = (env) => {
                 tx.context = {};
             }
             tx.context.database_cursor = result?.cursor;
-            res.setHeader("AceBase-Context", JSON.stringify(tx.context));
+            res.setHeader("DataBase-Context", JSON.stringify(tx.context));
             res.send("done");
         }
         catch (err) {

@@ -26,7 +26,7 @@ export class ConnectedClient {
 	subscriptions: { [dbName: string]: { [path: string]: Array<{ path: string; event: string; callback: Types.EventSubscriptionCallback }> } } = {};
 
 	/** Active realtime query subscriptions for this client */
-	realtimeQueries: { [dbName: string]: { [id: string]: { path: string; query: Types.Query; options: Types.QueryOptions } } } = {};
+	realtimeQueries: { [dbName: string]: { [id: string]: { path: string; query: Types.Query; options: Types.QueryOptions; stop: () => Promise<void> } } } = {};
 
 	/** Currently running transactions */
 	transactions: { [dbName: string]: { [id: string]: { id: string; started: number; path: string; context: any; finish?: (val?: any) => Promise<{ cursor?: string }>; timeout: NodeJS.Timeout } } } =

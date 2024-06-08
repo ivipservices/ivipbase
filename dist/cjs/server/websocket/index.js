@@ -5,6 +5,7 @@ const ivipbase_core_1 = require("ivipbase-core");
 const clients_1 = require("../shared/clients");
 const tokens_1 = require("../shared/tokens");
 const socket_io_1 = require("./socket.io");
+const executeQuery_1 = require("../../controller/executeQuery");
 class SocketRequestError extends Error {
     constructor(code, message) {
         super(message);
@@ -14,16 +15,7 @@ class SocketRequestError extends Error {
 exports.SocketRequestError = SocketRequestError;
 const addWebsocketServer = (env) => {
     env.localApp.ipcReady((ipc) => {
-        ipc.on("request", async (message) => {
-            if (message.data.type === "websocket.verifyClient") {
-                const client = env.clients.get(message.data.clientId);
-                if (client && client.realtimeQueries[message.data.dbName] && message.data.queryId in client.realtimeQueries[message.data.dbName]) {
-                    ipc.replyRequest(message, { success: true });
-                }
-            }
-        });
         ipc.on("notification", async (message) => {
-            var _a;
             if (message.type === "websocket.userConnect") {
                 env.emit("userConnect", {
                     dbNames: message.dbNames,
@@ -35,27 +27,6 @@ const addWebsocketServer = (env) => {
                     dbNames: message.dbNames,
                     user: message.id,
                 });
-            }
-            else if (message.type === "websocket.realtimeQueries") {
-                const { dbName, clientId, queryId, path, query, options } = message;
-                const client = env.clients.get(clientId);
-                if (client) {
-                    if (!(dbName in client.realtimeQueries)) {
-                        client.realtimeQueries[dbName] = {};
-                    }
-                    client.realtimeQueries[dbName][queryId] = { path, query, options };
-                }
-            }
-            else if (message.type === "websocket.queryEvent") {
-                const { dbName, clientId, context, event } = message;
-                const client = env.clients.get(clientId);
-                if (client) {
-                    if (!(await env.rules(dbName).isOperationAllowed((_a = client.user.get(dbName)) !== null && _a !== void 0 ? _a : {}, event.path, "get", { context, value: event.value })).allow) {
-                        return; // Access denied, stop subscription
-                    }
-                    const data = ivipbase_core_1.Transport.serialize(event);
-                    client.socket.emit("query-event", data);
-                }
             }
         });
     });
@@ -125,6 +96,13 @@ const addWebsocketServer = (env) => {
                         pathSubs.splice(pathSubs.indexOf(subscr), 1);
                     }
                 });
+            }
+        }
+        for (const dbName in client.realtimeQueries) {
+            const queries = client.realtimeQueries[dbName];
+            for (const queryId in queries) {
+                const { stop } = queries[queryId];
+                stop();
             }
         }
         env.clients.delete(client.id);
@@ -298,16 +276,53 @@ const addWebsocketServer = (env) => {
         }
         return acknowledgeRequest(event.socket, event.data.req_id);
     });
-    serverManager.on("query-unsubscribe", (event) => {
-        var _a;
+    serverManager.on("query-subscribe", (event) => {
         if (!event.data) {
             return;
         }
-        (_a = env.localApp.ipc) === null || _a === void 0 ? void 0 : _a.sendNotification({
-            type: "websocket.queryUnsubscribe",
-            dbName: event.data.dbName,
-            queryId: event.data.query_id,
-        });
+        // Client unsubscribing from realtime query events
+        const client = getClientBySocketId(event.id, "query-subscribe");
+        if (!client) {
+            return;
+        }
+        const { dbName, query_id, path: originalPath, query, options, matchedPaths, context } = event.data;
+        const isRealtime = options.monitor === true || (typeof options.monitor === "object" && (options.monitor.add || options.monitor.change || options.monitor.remove));
+        if (!isRealtime) {
+            return;
+        }
+        env.debug.verbose(`Client ${event.id} is subscribing from realtime query "${event.data.query_id}"`);
+        if (!(dbName in client.realtimeQueries)) {
+            client.realtimeQueries[dbName] = {};
+        }
+        const eventHandler = async (e) => {
+            var _a;
+            try {
+                const client = getClientBySocketId(event.id, "query-subscribe");
+                if (client) {
+                    if (!(await env.rules(dbName).isOperationAllowed((_a = client.user.get(dbName)) !== null && _a !== void 0 ? _a : {}, e.path, "get", { context, value: e.value })).allow) {
+                        return stop === null || stop === void 0 ? void 0 : stop();
+                    }
+                    const data = ivipbase_core_1.Transport.serialize(event);
+                    client.socket.emit("query-event", data);
+                }
+                else {
+                    stop === null || stop === void 0 ? void 0 : stop();
+                }
+            }
+            catch (err) {
+                env.debug.error(`Unexpected error orccured trying to send event`);
+                env.debug.error(err);
+            }
+        };
+        const opt = { path: originalPath, query, options: Object.assign(Object.assign({}, options), { eventHandler: eventHandler }), stop: async () => { } };
+        client.realtimeQueries[dbName][query_id] = opt;
+        const db = env.db(dbName);
+        opt.stop = (0, executeQuery_1.executeQueryRealtime)(db, opt.path, opt.query, opt.options, matchedPaths);
+    });
+    serverManager.on("query-unsubscribe", (event) => {
+        if (!event.data) {
+            return;
+        }
         // Client unsubscribing from realtime query events
         const client = getClientBySocketId(event.id, "query-unsubscribe");
         if (!client) {
@@ -317,6 +332,8 @@ const addWebsocketServer = (env) => {
         env.debug.verbose(`Client ${event.id} is unsubscribing from realtime query "${event.data.query_id}"`);
         // const client = clients.get(socket.id);
         if (dbName in client.realtimeQueries && event.data.query_id in client.realtimeQueries[dbName]) {
+            const { stop } = client.realtimeQueries[dbName][event.data.query_id];
+            stop();
             delete client.realtimeQueries[dbName][event.data.query_id];
         }
         acknowledgeRequest(event.socket, event.data.req_id);

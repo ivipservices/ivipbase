@@ -1,5 +1,7 @@
 import { Types } from "ivipbase-core";
 import { DataBase } from "../database";
+export declare const executeFilters: (value: any, queryFilters: Types.QueryFilter[]) => boolean;
+export declare const executeQueryRealtime: (db: DataBase, path: string, query: Types.Query, options: Types.QueryOptions, matchedPaths: string[]) => () => Promise<void>;
 /**
  *
  * @param storage Instância de armazenamento de destino
@@ -16,6 +18,7 @@ export declare function executeQuery(db: DataBase, path: string, query: Types.Qu
     }> | string[];
     context: any;
     stop(): Promise<void>;
+    isMore: boolean;
 }>;
 export default executeQuery;
 //# sourceMappingURL=executeQuery.d.ts.map

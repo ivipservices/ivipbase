@@ -19,7 +19,7 @@
               schema:
                   type: string
                   example: coleção/filho/propriedade
-            - name: AceBase-Context
+            - name: DataBase-Context
               in: header
               description: Informações contextuais sobre a operação do banco de dados (deve ser JSON válido). Essas informações são incluídas em notificações de eventos enviadas para clientes observando dados neste ou em caminhos filhos
               schema:
@@ -37,7 +37,7 @@
                 content:
                     "application/json":
                         headers:
-                            "AceBase-Context":
+                            "DataBase-Context":
                                 description: Retorna informações contextuais, como o `acebase_cursor` se o registro de transações estiver habilitado no servidor.
                                 schema:
                                     type: string

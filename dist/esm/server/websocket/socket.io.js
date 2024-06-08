@@ -61,6 +61,8 @@ export const createServer = (env) => {
         socket.on("signout", (data) => manager.emit("signout", { socket, socket_id: socket.id, id, data, dbNames }));
         socket.on("subscribe", (data) => manager.emit("subscribe", { socket, socket_id: socket.id, id, data, dbNames }));
         socket.on("unsubscribe", (data) => manager.emit("unsubscribe", { socket, socket_id: socket.id, id, data, dbNames }));
+        socket.on("query-subscribe", (data) => manager.emit("query-subscribe", { socket, socket_id: socket.id, id, data, dbNames }));
+        socket.on("query_subscribe", (data) => manager.emit("query-subscribe", { socket, socket_id: socket.id, id, data, dbNames }));
         socket.on("query-unsubscribe", (data) => manager.emit("query-unsubscribe", { socket, socket_id: socket.id, id, data, dbNames }));
         socket.on("query_unsubscribe", (data) => manager.emit("query-unsubscribe", { socket, socket_id: socket.id, id, data, dbNames }));
     });
