@@ -197,7 +197,7 @@ export class StorageDBClient extends Api {
                 throw new Error(`Cannot create realtime query because websocket is not connected. Check your AceBaseClient network.realtime setting`);
             }
             request.query_id = ID.generate();
-            request.client_id = this.app.socket.id;
+            request.client_id = this.app.id;
             this._realtimeQueries[request.query_id] = { query, options };
         }
         const reqData = JSON.stringify(Transport.serialize(request));

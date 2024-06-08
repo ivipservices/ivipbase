@@ -130,7 +130,7 @@ export class StorageDBServer extends Api {
 	}
 
 	async query(path: string, query: Types.Query, options: Types.QueryOptions = { snapshots: false }): ReturnType<Api["query"]> {
-		const results = await executeQuery(this.db.app, this.db.database, path, query, options);
+		const results = await executeQuery(this.db, path, query, options);
 		return results;
 	}
 

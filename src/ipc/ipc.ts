@@ -157,27 +157,38 @@ export abstract class IvipBaseIPCPeer extends SimpleEventEmitter {
 
 	private async request(req: IRequestMessage): Promise<any> {
 		// Send request, return result promise
-		let resolve: any, reject: any;
+		let resolve: any, reject: any, timer: NodeJS.Timeout;
 		const promise = new Promise((rs, rj) => {
 			resolve = (result: any) => {
+				if (this._requests.has(req.id) !== true) {
+					return;
+				}
+				clearTimeout(timer);
 				this._requests.delete(req.id);
 				rs(result);
 			};
 			reject = (err: Error) => {
+				if (this._requests.has(req.id) !== true) {
+					return;
+				}
+				clearTimeout(timer);
 				this._requests.delete(req.id);
 				rj(err);
 			};
 		});
 		this._requests.set(req.id, { resolve, reject, request: req });
+		timer = setTimeout(() => {
+			reject(new Error("Request timed out"));
+		}, 1000 * 60 * 1);
 		this.sendMessage(req);
 		return promise;
 	}
 
 	protected abstract sendMessage(message: IMessage): any;
 
-	public sendRequest(request: any) {
+	public async sendRequest(request: any) {
 		const req: ICustomRequestMessage = { type: "request", from: this.id, to: this.masterPeerId, id: ID.generate(), data: request };
-		return this.request(req).catch((err) => {
+		return await this.request(req).catch((err) => {
 			this.debug.error(err);
 			throw err;
 		});

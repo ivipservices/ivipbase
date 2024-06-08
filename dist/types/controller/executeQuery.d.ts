@@ -1,5 +1,5 @@
-import { IvipBaseApp } from "../app";
 import { Types } from "ivipbase-core";
+import { DataBase } from "../database";
 /**
  *
  * @param storage Instância de armazenamento de destino
@@ -9,7 +9,7 @@ import { Types } from "ivipbase-core";
  * @param options Opções adicionais
  * @returns Retorna uma promise que resolve com os dados ou caminhos correspondentes em `results`
  */
-export declare function executeQuery(api: IvipBaseApp, database: string, path: string, query: Types.Query, options?: Types.QueryOptions): Promise<{
+export declare function executeQuery(db: DataBase, path: string, query: Types.Query, options?: Types.QueryOptions): Promise<{
     results: Array<{
         path: string;
         val: any;

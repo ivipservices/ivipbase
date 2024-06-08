@@ -9,7 +9,7 @@ import { IPCPeer } from "../ipc";
 type IOWebSocket = ReturnType<typeof connectSocket>;
 export declare class IvipBaseApp extends SimpleEventEmitter {
     _ready: boolean;
-    private id;
+    id: string;
     readonly name: string;
     settings: IvipBaseSettings;
     storage: CustomStorage;

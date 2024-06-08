@@ -280,6 +280,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
                 transports: ["websocket"], // Override default setting of ['polling', 'websocket']
                 query: {
                     dbNames: JSON.stringify(dbNames),
+                    id: this.id,
                 },
             });
             this._socket.on("connect", () => {

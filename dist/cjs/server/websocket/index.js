@@ -14,18 +14,48 @@ class SocketRequestError extends Error {
 exports.SocketRequestError = SocketRequestError;
 const addWebsocketServer = (env) => {
     env.localApp.ipcReady((ipc) => {
-        ipc.on("notification", (message) => {
+        ipc.on("request", async (message) => {
+            if (message.data.type === "websocket.verifyClient") {
+                const client = env.clients.get(message.data.clientId);
+                if (client && client.realtimeQueries[message.data.dbName] && message.data.queryId in client.realtimeQueries[message.data.dbName]) {
+                    ipc.replyRequest(message, { success: true });
+                }
+            }
+        });
+        ipc.on("notification", async (message) => {
+            var _a;
             if (message.type === "websocket.userConnect") {
                 env.emit("userConnect", {
                     dbNames: message.dbNames,
-                    user: message.user,
+                    user: message.id,
                 });
             }
             else if (message.type === "websocket.userDisconnect") {
                 env.emit("userDisconnect", {
                     dbNames: message.dbNames,
-                    user: message.user,
+                    user: message.id,
                 });
+            }
+            else if (message.type === "websocket.realtimeQueries") {
+                const { dbName, clientId, queryId, path, query, options } = message;
+                const client = env.clients.get(clientId);
+                if (client) {
+                    if (!(dbName in client.realtimeQueries)) {
+                        client.realtimeQueries[dbName] = {};
+                    }
+                    client.realtimeQueries[dbName][queryId] = { path, query, options };
+                }
+            }
+            else if (message.type === "websocket.queryEvent") {
+                const { dbName, clientId, context, event } = message;
+                const client = env.clients.get(clientId);
+                if (client) {
+                    if (!(await env.rules(dbName).isOperationAllowed((_a = client.user.get(dbName)) !== null && _a !== void 0 ? _a : {}, event.path, "get", { context, value: event.value })).allow) {
+                        return; // Access denied, stop subscription
+                    }
+                    const data = ivipbase_core_1.Transport.serialize(event);
+                    client.socket.emit("query-event", data);
+                }
             }
         });
     });
@@ -40,7 +70,7 @@ const addWebsocketServer = (env) => {
     };
     serverManager.on("connect", (event) => {
         var _a;
-        const client = new clients_1.ConnectedClient(event.socket);
+        const client = new clients_1.ConnectedClient(event.socket, event.id);
         env.clients.set(client.id, client);
         //env.debug.warn(`New socket connected, total: ${env.clients.size}`);
         serverManager.send(event.socket, "welcome");
@@ -59,14 +89,14 @@ const addWebsocketServer = (env) => {
         (_a = env.localApp.ipc) === null || _a === void 0 ? void 0 : _a.sendNotification({
             type: "websocket.userDisconnect",
             dbNames: event.dbNames,
-            user: event.socket_id,
+            user: event.id,
         });
         env.emit("userDisconnect", {
             dbNames: event.dbNames,
-            user: event.socket_id,
+            user: event.id,
         });
         // We lost one
-        const client = getClientBySocketId(event.socket_id, "disconnect");
+        const client = getClientBySocketId(event.id, "disconnect");
         if (!client) {
             return;
         } // Disconnected a client we did not know? Don't crash, just ignore.
@@ -105,7 +135,7 @@ const addWebsocketServer = (env) => {
         // client sends this request once user has been signed in, binds the user to the socket,
         // deprecated since client v0.9.4, which sends client_id with signin api call
         // const client = clients.get(socket.id);
-        const client = getClientBySocketId(event.socket_id, "signin");
+        const client = getClientBySocketId(event.id, "signin");
         if (!client) {
             return;
         }
@@ -144,7 +174,7 @@ const addWebsocketServer = (env) => {
     serverManager.on("signout", (event) => {
         // deprecated since client v0.9.4, which sends client_id with signout api call
         // const client = clients.get(socket.id);
-        const client = getClientBySocketId(event.socket_id, "signout");
+        const client = getClientBySocketId(event.id, "signout");
         if (!client || !event.data) {
             return;
         }
@@ -168,14 +198,14 @@ const addWebsocketServer = (env) => {
     serverManager.on("subscribe", async (event) => {
         var _a, _b, _c, _d;
         // Client wants to subscribe to events on a node
-        const client = getClientBySocketId(event.socket_id, "subscribe");
+        const client = getClientBySocketId(event.id, "subscribe");
         if (!client || !event.data) {
             return;
         }
         const eventName = event.data.event;
         const subscriptionPath = event.data.path;
         const dbName = event.data.dbName;
-        env.debug.verbose(`Client ${event.socket_id} subscribes to event "${eventName}" on path "/${subscriptionPath}"`);
+        env.debug.verbose(`Client ${event.id} subscribes to event "${eventName}" on path "/${subscriptionPath}"`);
         const isSubscribed = () => client.subscriptions[dbName] && subscriptionPath in client.subscriptions[dbName] && client.subscriptions[dbName][subscriptionPath].some((s) => s.event === eventName);
         if (isSubscribed()) {
             return acknowledgeRequest(event.socket, event.data.req_id);
@@ -209,7 +239,7 @@ const addWebsocketServer = (env) => {
                 current: currentValue,
                 previous: previousValue,
             });
-            env.debug.verbose(`Sending data event "${eventName}" for path "/${path}" to client ${event.socket_id}`);
+            env.debug.verbose(`Sending data event "${eventName}" for path "/${path}" to client ${event.id}`);
             // TODO: let large data events notify the client, then let them download the data manually so it doesn't have to be transmitted through the websocket
             serverManager.send(event.socket, "data-event", {
                 subscr_path: subscriptionPath,
@@ -234,14 +264,14 @@ const addWebsocketServer = (env) => {
     serverManager.on("unsubscribe", (event) => {
         var _a;
         // Client unsubscribes from events on a node
-        const client = getClientBySocketId(event.socket_id, "unsubscribe");
+        const client = getClientBySocketId(event.id, "unsubscribe");
         if (!client || !event.data) {
             return;
         }
         const eventName = event.data.event;
         const subscriptionPath = event.data.path;
         const dbName = event.data.dbName;
-        env.debug.verbose(`Client ${event.socket_id} is unsubscribing from event "${eventName || "(any)"}" on path "/${subscriptionPath}"`);
+        env.debug.verbose(`Client ${event.id} is unsubscribing from event "${eventName || "(any)"}" on path "/${subscriptionPath}"`);
         // const client = clients.get(socket.id);
         const pathSubs = (_a = client.subscriptions[dbName]) === null || _a === void 0 ? void 0 : _a[subscriptionPath];
         if (!pathSubs) {
@@ -269,13 +299,22 @@ const addWebsocketServer = (env) => {
         return acknowledgeRequest(event.socket, event.data.req_id);
     });
     serverManager.on("query-unsubscribe", (event) => {
+        var _a;
+        if (!event.data) {
+            return;
+        }
+        (_a = env.localApp.ipc) === null || _a === void 0 ? void 0 : _a.sendNotification({
+            type: "websocket.queryUnsubscribe",
+            dbName: event.data.dbName,
+            queryId: event.data.query_id,
+        });
         // Client unsubscribing from realtime query events
-        const client = getClientBySocketId(event.socket_id, "query-unsubscribe");
-        if (!client || !event.data) {
+        const client = getClientBySocketId(event.id, "query-unsubscribe");
+        if (!client) {
             return;
         }
         const dbName = event.data.dbName;
-        env.debug.verbose(`Client ${event.socket_id} is unsubscribing from realtime query "${event.data.query_id}"`);
+        env.debug.verbose(`Client ${event.id} is unsubscribing from realtime query "${event.data.query_id}"`);
         // const client = clients.get(socket.id);
         if (dbName in client.realtimeQueries && event.data.query_id in client.realtimeQueries[dbName]) {
             delete client.realtimeQueries[dbName][event.data.query_id];

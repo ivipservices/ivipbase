@@ -115,24 +115,35 @@ export class IvipBaseIPCPeer extends SimpleEventEmitter {
     }
     async request(req) {
         // Send request, return result promise
-        let resolve, reject;
+        let resolve, reject, timer;
         const promise = new Promise((rs, rj) => {
             resolve = (result) => {
+                if (this._requests.has(req.id) !== true) {
+                    return;
+                }
+                clearTimeout(timer);
                 this._requests.delete(req.id);
                 rs(result);
             };
             reject = (err) => {
+                if (this._requests.has(req.id) !== true) {
+                    return;
+                }
+                clearTimeout(timer);
                 this._requests.delete(req.id);
                 rj(err);
             };
         });
         this._requests.set(req.id, { resolve, reject, request: req });
+        timer = setTimeout(() => {
+            reject(new Error("Request timed out"));
+        }, 1000 * 60 * 1);
         this.sendMessage(req);
         return promise;
     }
-    sendRequest(request) {
+    async sendRequest(request) {
         const req = { type: "request", from: this.id, to: this.masterPeerId, id: ID.generate(), data: request };
-        return this.request(req).catch((err) => {
+        return await this.request(req).catch((err) => {
             this.debug.error(err);
             throw err;
         });

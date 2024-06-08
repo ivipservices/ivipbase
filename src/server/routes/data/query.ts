@@ -69,25 +69,78 @@ export const addRoutes = (env: LocalServer) => {
 			const queryId = data.query_id;
 			const clientId = data.client_id;
 			const client = env.clients.get(clientId);
+
+			env.localApp.ipcReady((ipc) => {
+				ipc.on("notification", async (message) => {
+					if (message.type === "websocket.queryUnsubscribe" && message.dbName === dbName && message.queryId === queryId) {
+						cancelSubscription?.();
+					}
+				});
+			});
+
 			if (client) {
 				if (!(dbName in client.realtimeQueries)) {
 					client.realtimeQueries[dbName] = {};
 				}
 				client.realtimeQueries[dbName][queryId] = { path, query, options };
+			} else {
+				env.localApp.ipcReady((ipc) => {
+					ipc.sendNotification({
+						type: "websocket.realtimeQueries",
+						dbName,
+						clientId,
+						queryId,
+						path,
+						query,
+						options,
+					});
+				});
 			}
+
+			let effort = 0;
 
 			const sendEvent = async (event: any) => {
 				try {
-					const client = env.clients.get(clientId);
-					if (!client) {
-						return cancelSubscription?.();
-					} // Not connected, stop subscription
-					if (!(await env.rules(dbName).isOperationAllowed(client.user.get(dbName) ?? ({} as any), event.path, "get", { context: req.context, value: event.value })).allow) {
-						return cancelSubscription?.(); // Access denied, stop subscription
-					}
 					event.query_id = queryId;
-					const data = Transport.serialize(event);
-					client.socket.emit("query-event", data);
+					const client = env.clients.get(clientId);
+					// if (!client) {
+					// 	return cancelSubscription?.();
+					// } // Not connected, stop subscription
+
+					if (client) {
+						if (!(await env.rules(dbName).isOperationAllowed(client.user.get(dbName) ?? ({} as any), event.path, "get", { context: req.context, value: event.value })).allow) {
+							return cancelSubscription?.(); // Access denied, stop subscription
+						}
+						const data = Transport.serialize(event);
+						client.socket.emit("query-event", data);
+					} else {
+						env.localApp.ipcReady((ipc) => {
+							ipc.sendNotification({
+								type: "websocket.realtimeQueries",
+								dbName,
+								clientId,
+								queryId,
+								context: req.context,
+								event,
+							});
+
+							ipc.sendRequest({
+								type: "websocket.verifyClient",
+								dbName,
+								clientId,
+								queryId,
+							})
+								.then(() => {
+									effort = 0;
+								})
+								.catch((err) => {
+									effort++;
+									if (effort > 5) {
+										cancelSubscription?.();
+									}
+								});
+						});
+					}
 				} catch (err) {
 					env.debug.error(`Unexpected error orccured trying to send event`);
 					env.debug.error(err as any);

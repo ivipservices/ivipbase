@@ -44,22 +44,25 @@ export const createServer = (env) => {
     server.sockets.on("connection", (socket) => {
         const { protocol, host, port } = socket.request.headers;
         const { query } = socket.handshake;
-        let dbNames = [];
+        let dbNames = [], id = socket.id;
         if (query && typeof query.dbNames === "string") {
             try {
                 dbNames = JSON.parse(query.dbNames);
             }
             catch { }
         }
-        manager.emit("connect", { socket, socket_id: socket.id, dbNames });
-        socket.on("disconnect", (reason) => manager.emit("disconnect", { socket, socket_id: socket.id, data: reason, dbNames }));
-        socket.on("reconnect", (data) => manager.emit("connect", { socket, socket_id: socket.id, data, dbNames }));
-        socket.on("signin", (data) => manager.emit("signin", { socket, socket_id: socket.id, data, dbNames }));
-        socket.on("signout", (data) => manager.emit("signout", { socket, socket_id: socket.id, data, dbNames }));
-        socket.on("subscribe", (data) => manager.emit("subscribe", { socket, socket_id: socket.id, data, dbNames }));
-        socket.on("unsubscribe", (data) => manager.emit("unsubscribe", { socket, socket_id: socket.id, data, dbNames }));
-        socket.on("query-unsubscribe", (data) => manager.emit("query-unsubscribe", { socket, socket_id: socket.id, data, dbNames }));
-        socket.on("query_unsubscribe", (data) => manager.emit("query-unsubscribe", { socket, socket_id: socket.id, data, dbNames }));
+        if (query && typeof query.id === "string") {
+            id = query.id;
+        }
+        manager.emit("connect", { socket, socket_id: socket.id, id, dbNames });
+        socket.on("disconnect", (reason) => manager.emit("disconnect", { socket, socket_id: socket.id, id, data: reason, dbNames }));
+        socket.on("reconnect", (data) => manager.emit("connect", { socket, socket_id: socket.id, id, data, dbNames }));
+        socket.on("signin", (data) => manager.emit("signin", { socket, socket_id: socket.id, id, data, dbNames }));
+        socket.on("signout", (data) => manager.emit("signout", { socket, socket_id: socket.id, id, data, dbNames }));
+        socket.on("subscribe", (data) => manager.emit("subscribe", { socket, socket_id: socket.id, id, data, dbNames }));
+        socket.on("unsubscribe", (data) => manager.emit("unsubscribe", { socket, socket_id: socket.id, id, data, dbNames }));
+        socket.on("query-unsubscribe", (data) => manager.emit("query-unsubscribe", { socket, socket_id: socket.id, id, data, dbNames }));
+        socket.on("query_unsubscribe", (data) => manager.emit("query-unsubscribe", { socket, socket_id: socket.id, id, data, dbNames }));
     });
     return manager;
 };

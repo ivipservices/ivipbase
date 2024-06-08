@@ -71,7 +71,7 @@ class StorageDBServer extends ivipbase_core_1.Api {
         return await this.db.app.storage.isPathExists(this.db.database, path);
     }
     async query(path, query, options = { snapshots: false }) {
-        const results = await (0, executeQuery_1.default)(this.db.app, this.db.database, path, query, options);
+        const results = await (0, executeQuery_1.default)(this.db, path, query, options);
         return results;
     }
     async export(path, stream, options) {

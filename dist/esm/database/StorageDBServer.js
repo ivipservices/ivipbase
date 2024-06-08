@@ -65,7 +65,7 @@ export class StorageDBServer extends Api {
         return await this.db.app.storage.isPathExists(this.db.database, path);
     }
     async query(path, query, options = { snapshots: false }) {
-        const results = await executeQuery(this.db.app, this.db.database, path, query, options);
+        const results = await executeQuery(this.db, path, query, options);
         return results;
     }
     async export(path, stream, options) {

@@ -2,6 +2,7 @@ import { SimpleEventEmitter, Types } from "ivipbase-core";
 export type WebSocketEventData<SocketType, DataType = undefined> = {
     socket: SocketType;
     socket_id: string;
+    id: string;
     data?: DataType;
     dbNames?: string[];
 };

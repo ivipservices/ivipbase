@@ -1,28 +1,39 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.resolveObjetByIncluded = exports.checkIncludedPath = void 0;
 const ivipbase_core_1 = require("ivipbase-core");
 const utils_1 = require("./utils");
+const checkIncludedPath = (from, options) => {
+    var _a, _b;
+    const include = ((_a = options === null || options === void 0 ? void 0 : options.include) !== null && _a !== void 0 ? _a : []).map((p) => ivipbase_core_1.PathInfo.get([options.main_path, p]));
+    const exclude = ((_b = options === null || options === void 0 ? void 0 : options.exclude) !== null && _b !== void 0 ? _b : []).map((p) => ivipbase_core_1.PathInfo.get([options.main_path, p]));
+    const p = ivipbase_core_1.PathInfo.get(from);
+    const isInclude = include.length > 0 ? include.findIndex((path) => p.equals(path) || p.isDescendantOf(path)) >= 0 : true;
+    return exclude.findIndex((path) => p.equals(path) || p.isDescendantOf(path)) < 0 && isInclude;
+};
+exports.checkIncludedPath = checkIncludedPath;
+const resolveObjetByIncluded = (path, obj, options) => {
+    return Object.fromEntries(Object.entries(obj)
+        .filter(([k, v]) => {
+        const p = ivipbase_core_1.PathInfo.get([path, k]);
+        return (0, exports.checkIncludedPath)(p.path, options);
+    })
+        .map(([k, v]) => {
+        if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(v))) {
+            return [k, (0, exports.resolveObjetByIncluded)(ivipbase_core_1.PathInfo.get([path, k]).path, v, options)];
+        }
+        return [k, v];
+    }));
+};
+exports.resolveObjetByIncluded = resolveObjetByIncluded;
 function structureNodes(path, nodes, options = {}) {
-    var _a, _b, _c;
-    options.path_main = !options.path_main ? path : options.path_main;
-    const include = ((_a = options === null || options === void 0 ? void 0 : options.include) !== null && _a !== void 0 ? _a : []).map((p) => { var _a; return ivipbase_core_1.PathInfo.get([(_a = options.path_main) !== null && _a !== void 0 ? _a : path, p]); });
-    const exclude = ((_b = options === null || options === void 0 ? void 0 : options.exclude) !== null && _b !== void 0 ? _b : []).map((p) => { var _a; return ivipbase_core_1.PathInfo.get([(_a = options.path_main) !== null && _a !== void 0 ? _a : path, p]); });
+    var _a;
+    options.main_path = !options.main_path ? path : options.main_path;
     const pathInfo = ivipbase_core_1.PathInfo.get(path);
     const mainNode = nodes.find(({ path: p }) => pathInfo.equals(p) || pathInfo.isChildOf(p));
     if (!mainNode) {
         return undefined;
     }
-    const checkIncludedPath = (from) => {
-        const p = ivipbase_core_1.PathInfo.get(from);
-        const isInclude = include.length > 0 ? include.findIndex((path) => p.equals(path) || p.isDescendantOf(path)) >= 0 : true;
-        return exclude.findIndex((path) => p.equals(path) || p.isDescendantOf(path)) < 0 && isInclude;
-    };
-    const resolveObjetByIncluded = (path, obj) => {
-        return Object.fromEntries(Object.entries(obj).filter(([k, v]) => {
-            const p = ivipbase_core_1.PathInfo.get([path, k]);
-            return checkIncludedPath(p.path);
-        }));
-    };
     let value = undefined;
     let { path: nodePath, content } = mainNode;
     content = (0, utils_1.processReadNodeValue)(content);
@@ -32,7 +43,7 @@ function structureNodes(path, nodes, options = {}) {
             content.value !== null &&
             pathInfo.key &&
             pathInfo.key in content.value) {
-            value = (_c = content.value[pathInfo.key]) !== null && _c !== void 0 ? _c : undefined;
+            value = (_a = content.value[pathInfo.key]) !== null && _a !== void 0 ? _a : undefined;
         }
         return value;
     }
@@ -46,7 +57,7 @@ function structureNodes(path, nodes, options = {}) {
         })
             .reduce((acc, { path, content }) => {
             const pathInfo = ivipbase_core_1.PathInfo.get(path);
-            if (pathInfo.key !== null && checkIncludedPath(path)) {
+            if (pathInfo.key !== null && (0, exports.checkIncludedPath)(path, options)) {
                 content = (0, utils_1.processReadNodeValue)(content);
                 const propertyTrail = ivipbase_core_1.PathInfo.getPathKeys(path.slice(nodePath.length + 1));
                 let targetObject = acc;
@@ -58,14 +69,14 @@ function structureNodes(path, nodes, options = {}) {
                     targetObject = targetObject[p];
                 }
                 if (content.type === utils_1.nodeValueTypes.OBJECT || content.type === utils_1.nodeValueTypes.ARRAY) {
-                    targetObject[targetProperty] = resolveObjetByIncluded(path, content.value);
+                    targetObject[targetProperty] = (0, exports.resolveObjetByIncluded)(path, content.value, options);
                 }
                 else {
                     targetObject[targetProperty] = content.value;
                 }
             }
             return acc;
-        }, resolveObjetByIncluded(nodePath, content.value));
+        }, (0, exports.resolveObjetByIncluded)(nodePath, content.value, options));
     }
     return content.value;
     // if (nodes.length === 1) {

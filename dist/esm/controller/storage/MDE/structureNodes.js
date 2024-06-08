@@ -1,25 +1,32 @@
 import { PathInfo } from "ivipbase-core";
 import { nodeValueTypes, processReadNodeValue } from "./utils.js";
+export const checkIncludedPath = (from, options) => {
+    const include = (options?.include ?? []).map((p) => PathInfo.get([options.main_path, p]));
+    const exclude = (options?.exclude ?? []).map((p) => PathInfo.get([options.main_path, p]));
+    const p = PathInfo.get(from);
+    const isInclude = include.length > 0 ? include.findIndex((path) => p.equals(path) || p.isDescendantOf(path)) >= 0 : true;
+    return exclude.findIndex((path) => p.equals(path) || p.isDescendantOf(path)) < 0 && isInclude;
+};
+export const resolveObjetByIncluded = (path, obj, options) => {
+    return Object.fromEntries(Object.entries(obj)
+        .filter(([k, v]) => {
+        const p = PathInfo.get([path, k]);
+        return checkIncludedPath(p.path, options);
+    })
+        .map(([k, v]) => {
+        if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(v))) {
+            return [k, resolveObjetByIncluded(PathInfo.get([path, k]).path, v, options)];
+        }
+        return [k, v];
+    }));
+};
 export default function structureNodes(path, nodes, options = {}) {
-    options.path_main = !options.path_main ? path : options.path_main;
-    const include = (options?.include ?? []).map((p) => PathInfo.get([options.path_main ?? path, p]));
-    const exclude = (options?.exclude ?? []).map((p) => PathInfo.get([options.path_main ?? path, p]));
+    options.main_path = !options.main_path ? path : options.main_path;
     const pathInfo = PathInfo.get(path);
     const mainNode = nodes.find(({ path: p }) => pathInfo.equals(p) || pathInfo.isChildOf(p));
     if (!mainNode) {
         return undefined;
     }
-    const checkIncludedPath = (from) => {
-        const p = PathInfo.get(from);
-        const isInclude = include.length > 0 ? include.findIndex((path) => p.equals(path) || p.isDescendantOf(path)) >= 0 : true;
-        return exclude.findIndex((path) => p.equals(path) || p.isDescendantOf(path)) < 0 && isInclude;
-    };
-    const resolveObjetByIncluded = (path, obj) => {
-        return Object.fromEntries(Object.entries(obj).filter(([k, v]) => {
-            const p = PathInfo.get([path, k]);
-            return checkIncludedPath(p.path);
-        }));
-    };
     let value = undefined;
     let { path: nodePath, content } = mainNode;
     content = processReadNodeValue(content);
@@ -43,7 +50,7 @@ export default function structureNodes(path, nodes, options = {}) {
         })
             .reduce((acc, { path, content }) => {
             const pathInfo = PathInfo.get(path);
-            if (pathInfo.key !== null && checkIncludedPath(path)) {
+            if (pathInfo.key !== null && checkIncludedPath(path, options)) {
                 content = processReadNodeValue(content);
                 const propertyTrail = PathInfo.getPathKeys(path.slice(nodePath.length + 1));
                 let targetObject = acc;
@@ -55,14 +62,14 @@ export default function structureNodes(path, nodes, options = {}) {
                     targetObject = targetObject[p];
                 }
                 if (content.type === nodeValueTypes.OBJECT || content.type === nodeValueTypes.ARRAY) {
-                    targetObject[targetProperty] = resolveObjetByIncluded(path, content.value);
+                    targetObject[targetProperty] = resolveObjetByIncluded(path, content.value, options);
                 }
                 else {
                     targetObject[targetProperty] = content.value;
                 }
             }
             return acc;
-        }, resolveObjetByIncluded(nodePath, content.value));
+        }, resolveObjetByIncluded(nodePath, content.value, options));
     }
     return content.value;
     // if (nodes.length === 1) {

@@ -22,7 +22,7 @@ const CONNECTION_STATE_DISCONNECTING = "disconnecting";
 
 export class IvipBaseApp extends SimpleEventEmitter {
 	public _ready = false;
-	private id = ID.generate();
+	public id = ID.generate();
 	readonly name: string = DEFAULT_ENTRY_NAME;
 	public settings: IvipBaseSettings;
 	public storage: CustomStorage;
@@ -421,6 +421,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 				transports: ["websocket"], // Override default setting of ['polling', 'websocket']
 				query: {
 					dbNames: JSON.stringify(dbNames),
+					id: this.id,
 				},
 			});
 
