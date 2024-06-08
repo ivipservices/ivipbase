@@ -1,6 +1,6 @@
 import { Types } from "ivipbase-core";
 import { DataBase } from "../database";
-export declare const executeFilters: (value: any, queryFilters: Types.QueryFilter[]) => boolean;
+export declare const executeFilters: (mainPath: string, currentPath: string, value: any, queryFilters: Types.QueryFilter[]) => boolean;
 export declare const executeQueryRealtime: (db: DataBase, path: string, query: Types.Query, options: Types.QueryOptions, matchedPaths: string[]) => () => Promise<void>;
 /**
  *
