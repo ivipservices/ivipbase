@@ -1,5 +1,4 @@
 import { ID, PathInfo } from "ivipbase-core";
-import { nodeValueTypes } from "./storage/MDE/utils.js";
 import { isDate, removeNulls } from "../utils/index.js";
 import structureNodes, { resolveObjetByIncluded } from "./storage/MDE/structureNodes.js";
 const noop = () => { };
@@ -245,7 +244,12 @@ export async function executeQuery(db, path, query, options = { snapshots: false
     context.database_cursor = ID.generate();
     const queryFilters = query.filters ?? [];
     const querySort = query.order ?? [];
+    const priorityKeys = queryFilters
+        .map((f) => f.key)
+        .concat(querySort.map((o) => o.key))
+        .filter((k, i, l) => k !== undefined && l.indexOf(k) === i);
     const nodes = await api.storage.getNodesBy(database, path, false, true, false).catch(() => Promise.resolve([]));
+    // .then((nodes) => nodes.filter((n) => PathInfo.get(n.path).isChildOf(path) || PathInfo.get(n.path).isDescendantOf(path)));
     const compare = (a, b, i) => {
         const o = querySort[i];
         if (!o) {
@@ -277,46 +281,11 @@ export async function executeQuery(db, path, query, options = { snapshots: false
         return o.ascending ? 1 : -1;
         // }
     };
-    let results = nodes
-        .reduce((acc, node) => {
-        const node_path = PathInfo.get(node.path);
-        if (node_path.isChildOf(path)) {
-            const index = acc.findIndex(({ path }) => node_path.equals(path));
-            if (index >= 0) {
-                acc[index].mainNode = node;
-                acc[index].heirsNodes.push(node);
-            }
-            else {
-                acc.push({ path: node.path, mainNode: node, heirsNodes: [node] });
-            }
-        }
-        else if (node_path.isDescendantOf(path)) {
-            let mainPath = node_path;
-            while (!mainPath?.isChildOf(path) && mainPath.parent !== null) {
-                mainPath = mainPath.parent;
-            }
-            const index = acc.findIndex(({ path }) => mainPath.equals(path));
-            if (index >= 0) {
-                acc[index].heirsNodes.push(node);
-            }
-            else {
-                acc.push({ path: mainPath.path, mainNode: node, heirsNodes: [node] });
-            }
-        }
-        return acc;
-    }, [])
-        .map(({ path, mainNode, heirsNodes }) => {
-        const content = PathInfo.get(mainNode.path).equals(path)
-            ? mainNode.content
-            : {
-                type: nodeValueTypes.OBJECT,
-                value: {},
-            };
-        let value = content.value;
-        if (content && (content.type === nodeValueTypes.OBJECT || content.type === nodeValueTypes.ARRAY)) {
-            value = structureNodes(path, heirsNodes) ?? null;
-        }
-        return { path, val: value };
+    const json = structureNodes(path, nodes);
+    let results = Object.entries(json)
+        .map(([k, val]) => {
+        const p = PathInfo.get([path, k]).path;
+        return { path: p, val };
     })
         .filter((node) => {
         if (!node) {

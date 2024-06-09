@@ -199,7 +199,24 @@ export class StorageDBClient extends Api {
         return this.update(path, newValue, { suppress_events: options.suppress_events, context: options.context });
     }
     async get(path, options) {
-        const { data, context } = await this._request({ route: `/data/${this.db.database}/${path}`, context: options, includeContext: true });
+        let filtered = false, url = "";
+        if (options) {
+            const query = [];
+            if (options.exclude instanceof Array) {
+                query.push(`exclude=${options.exclude.join(",")}`);
+            }
+            if (options.include instanceof Array) {
+                query.push(`include=${options.include.join(",")}`);
+            }
+            if (typeof options.child_objects === "boolean") {
+                query.push(`child_objects=${options.child_objects}`);
+            }
+            if (query.length > 0) {
+                filtered = true;
+                url += `?${query.join("&")}`;
+            }
+        }
+        const { data, context } = await this._request({ route: `/data/${this.db.database}/${path}${url}`, context: options, includeContext: true });
         return { value: Transport.deserialize(data), context, cursor: context?.database_cursor };
     }
     exists(path) {

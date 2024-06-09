@@ -4,6 +4,7 @@ import { nodeValueTypes, processReadNodeValue } from "./storage/MDE/utils";
 import { isDate, removeNulls } from "../utils";
 import structureNodes, { resolveObjetByIncluded } from "./storage/MDE/structureNodes";
 import { DataBase } from "../database";
+import { StorageNodeInfo } from "./storage/MDE";
 
 const noop = () => {};
 
@@ -305,7 +306,13 @@ export async function executeQuery(
 	const queryFilters: Array<Types.QueryFilter> = query.filters ?? [];
 	const querySort: Array<Types.QueryOrder> = query.order ?? [];
 
+	const priorityKeys = queryFilters
+		.map((f) => f.key)
+		.concat(querySort.map((o) => o.key))
+		.filter((k, i, l) => k !== undefined && l.indexOf(k) === i);
+
 	const nodes = await api.storage.getNodesBy(database, path, false, true, false).catch(() => Promise.resolve([]));
+	// .then((nodes) => nodes.filter((n) => PathInfo.get(n.path).isChildOf(path) || PathInfo.get(n.path).isDescendantOf(path)));
 
 	const compare = (a: { path: string; val: any }, b: { path: string; val: any }, i: number): number => {
 		const o = querySort[i];
@@ -342,48 +349,12 @@ export async function executeQuery(
 		// }
 	};
 
-	let results: Array<{ path: string; val: any }> = nodes
-		.reduce((acc, node) => {
-			const node_path = PathInfo.get(node.path);
+	const json = structureNodes(path, nodes);
 
-			if (node_path.isChildOf(path)) {
-				const index = acc.findIndex(({ path }) => node_path.equals(path));
-				if (index >= 0) {
-					acc[index].mainNode = node;
-					acc[index].heirsNodes.push(node);
-				} else {
-					acc.push({ path: node.path, mainNode: node, heirsNodes: [node] });
-				}
-			} else if (node_path.isDescendantOf(path)) {
-				let mainPath = node_path;
-				while (!mainPath?.isChildOf(path) && mainPath.parent !== null) {
-					mainPath = mainPath.parent;
-				}
-
-				const index = acc.findIndex(({ path }) => mainPath.equals(path));
-
-				if (index >= 0) {
-					acc[index].heirsNodes.push(node);
-				} else {
-					acc.push({ path: mainPath.path, mainNode: node, heirsNodes: [node] });
-				}
-			}
-
-			return acc;
-		}, [] as Array<{ path: string; mainNode: (typeof nodes)[number]; heirsNodes: Array<(typeof nodes)[number]> }>)
-		.map(({ path, mainNode, heirsNodes }) => {
-			const content = PathInfo.get(mainNode.path).equals(path)
-				? mainNode.content
-				: {
-						type: nodeValueTypes.OBJECT,
-						value: {},
-				  };
-			let value: any = content.value;
-
-			if (content && (content.type === nodeValueTypes.OBJECT || content.type === nodeValueTypes.ARRAY)) {
-				value = structureNodes(path, heirsNodes) ?? null;
-			}
-			return { path, val: value };
+	let results: Array<{ path: string; val: any }> = Object.entries(json)
+		.map(([k, val]) => {
+			const p = PathInfo.get([path, k]).path;
+			return { path: p, val };
 		})
 		.filter((node) => {
 			if (!node) {
