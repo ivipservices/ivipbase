@@ -274,16 +274,14 @@ async function executeQuery(db, path, query, options = { snapshots: false, inclu
     let stop = async () => { };
     const originalPath = path;
     path = ivipbase_core_1.PathInfo.get([api.storage.settings.prefix, originalPath]).path;
+    const pathInfo = ivipbase_core_1.PathInfo.get(path);
     const context = {};
     context.database_cursor = ivipbase_core_1.ID.generate();
     const queryFilters = (_a = query.filters) !== null && _a !== void 0 ? _a : [];
     const querySort = (_b = query.order) !== null && _b !== void 0 ? _b : [];
-    const priorityKeys = queryFilters
-        .map((f) => f.key)
-        .concat(querySort.map((o) => o.key))
-        .filter((k, i, l) => k !== undefined && l.indexOf(k) === i);
     const nodes = await api.storage.getNodesBy(database, path, false, true, false).catch(() => Promise.resolve([]));
     // .then((nodes) => nodes.filter((n) => PathInfo.get(n.path).isChildOf(path) || PathInfo.get(n.path).isDescendantOf(path)));
+    const mainNodesPaths = nodes.filter(({ path }) => pathInfo.equals(path)).map((p) => p.path);
     const compare = (a, b, i) => {
         const o = querySort[i];
         if (!o) {
@@ -315,12 +313,14 @@ async function executeQuery(db, path, query, options = { snapshots: false, inclu
         return o.ascending ? 1 : -1;
         // }
     };
-    const json = (0, structureNodes_1.default)(path, nodes);
-    let results = Object.entries(json)
-        .map(([k, val]) => {
-        const p = ivipbase_core_1.PathInfo.get([path, k]).path;
-        return { path: p, val };
-    })
+    let results = mainNodesPaths
+        .reduce((acc, path) => {
+        const json = (0, structureNodes_1.default)(path, nodes);
+        return acc.concat(Object.entries(json).map(([k, val]) => {
+            const p = ivipbase_core_1.PathInfo.get([path, k]).path;
+            return { path: p, val };
+        }));
+    }, [])
         .filter((node) => {
         if (!node) {
             return false;

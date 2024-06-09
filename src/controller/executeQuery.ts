@@ -299,6 +299,7 @@ export async function executeQuery(
 
 	const originalPath = path;
 	path = PathInfo.get([api.storage.settings.prefix, originalPath]).path;
+	const pathInfo = PathInfo.get(path);
 
 	const context: any = {};
 	context.database_cursor = ID.generate();
@@ -306,13 +307,10 @@ export async function executeQuery(
 	const queryFilters: Array<Types.QueryFilter> = query.filters ?? [];
 	const querySort: Array<Types.QueryOrder> = query.order ?? [];
 
-	const priorityKeys = queryFilters
-		.map((f) => f.key)
-		.concat(querySort.map((o) => o.key))
-		.filter((k, i, l) => k !== undefined && l.indexOf(k) === i);
-
 	const nodes = await api.storage.getNodesBy(database, path, false, true, false).catch(() => Promise.resolve([]));
 	// .then((nodes) => nodes.filter((n) => PathInfo.get(n.path).isChildOf(path) || PathInfo.get(n.path).isDescendantOf(path)));
+
+	const mainNodesPaths = nodes.filter(({ path }) => pathInfo.equals(path)).map((p) => p.path);
 
 	const compare = (a: { path: string; val: any }, b: { path: string; val: any }, i: number): number => {
 		const o = querySort[i];
@@ -349,13 +347,16 @@ export async function executeQuery(
 		// }
 	};
 
-	const json = structureNodes(path, nodes);
-
-	let results: Array<{ path: string; val: any }> = Object.entries(json)
-		.map(([k, val]) => {
-			const p = PathInfo.get([path, k]).path;
-			return { path: p, val };
-		})
+	let results: Array<{ path: string; val: any }> = mainNodesPaths
+		.reduce((acc, path) => {
+			const json = structureNodes(path, nodes);
+			return acc.concat(
+				Object.entries(json).map(([k, val]) => {
+					const p = PathInfo.get([path, k]).path;
+					return { path: p, val };
+				}),
+			);
+		}, [] as Array<{ path: string; val: any }>)
 		.filter((node) => {
 			if (!node) {
 				return false;
