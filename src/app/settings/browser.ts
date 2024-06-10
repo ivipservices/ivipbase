@@ -119,7 +119,7 @@ export class IvipBaseSettings {
 
 	public description: string = "";
 	public logLevel: "log" | "warn" | "error" = "log";
-	public storage: StorageSettings = new DataStorageSettings();
+	public storage?: StorageSettings;
 
 	public protocol: "http" | "https" = "http";
 	public host: string = "localhost";

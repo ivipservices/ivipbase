@@ -1,9 +1,16 @@
 import { CustomStorage } from "./CustomStorage.js";
 import * as fs from "fs";
 import * as path from "path";
-import { dirname } from "path";
 import { ERROR_FACTORY } from "../erros/index.js";
-const dirnameRoot = dirname(require.resolve("."));
+const createDirectories = (dirPath) => {
+    const absolutePath = path.resolve(dirPath);
+    if (!fs.existsSync(path.dirname(absolutePath))) {
+        createDirectories(path.dirname(absolutePath));
+    }
+    if (!fs.existsSync(absolutePath)) {
+        return fs.mkdirSync(absolutePath, { recursive: true });
+    }
+};
 export class JsonFileStorageSettings {
     constructor(options = {}) {
         this.filePath = "";
@@ -13,21 +20,32 @@ export class JsonFileStorageSettings {
     }
 }
 export class JsonFileStorage extends CustomStorage {
-    constructor(database, options = {}) {
-        super();
+    constructor(database, options = {}, app) {
+        super({}, app);
         this.data = {};
         this.options = new JsonFileStorageSettings(options);
+        const localPath = typeof app.settings?.server?.localPath === "string" ? path.resolve(app.settings.server.localPath, "./db.json") : undefined;
+        const dbPath = this.options.filePath ?? localPath;
+        this.options.filePath = dbPath;
+        if (!dbPath || typeof dbPath !== "string") {
+            throw ERROR_FACTORY.create("invalid-argument" /* AppError.INVALID_ARGUMENT */, { message: "Invalid file path" });
+        }
+        this.filePath = dbPath;
+        createDirectories(path.dirname(dbPath));
+        if (!fs.existsSync(dbPath) || !fs.statSync(dbPath).isFile()) {
+            fs.writeFileSync(dbPath, "{}", "utf8");
+        }
         (Array.isArray(database) ? database : [database])
             .filter((name) => typeof name === "string" && name.trim() !== "")
             .forEach((name) => {
             this.data[name] = new Map();
         });
-        fs.access(this.options.filePath, fs.constants.F_OK, (err) => {
+        fs.access(this.filePath, fs.constants.F_OK, (err) => {
             if (err) {
                 this.emit("ready");
             }
             else {
-                fs.readFile(this.options.filePath, "utf8", (err, data) => {
+                fs.readFile(this.filePath, "utf8", (err, data) => {
                     if (err) {
                         throw `Erro ao ler o arquivo: ${err}`;
                     }
@@ -89,7 +107,7 @@ export class JsonFileStorage extends CustomStorage {
                 });
             }
             const jsonString = JSON.stringify(jsonData, null, 4);
-            fs.writeFileSync(this.options.filePath, jsonString, "utf8");
+            fs.writeFileSync(this.filePath, jsonString, "utf8");
         }, 1000);
     }
 }

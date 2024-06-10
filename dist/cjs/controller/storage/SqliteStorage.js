@@ -4,11 +4,22 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SqliteStorage = exports.SqliteSettings = void 0;
+const fs_1 = __importDefault(require("fs"));
 const ivipbase_core_1 = require("ivipbase-core");
 const erros_1 = require("../erros");
 const CustomStorage_1 = require("./CustomStorage");
 const MDE_1 = require("./MDE");
 const sqlite3_1 = __importDefault(require("sqlite3"));
+const path_1 = __importDefault(require("path"));
+const createDirectories = (dirPath) => {
+    const absolutePath = path_1.default.resolve(dirPath);
+    if (!fs_1.default.existsSync(path_1.default.dirname(absolutePath))) {
+        createDirectories(path_1.default.dirname(absolutePath));
+    }
+    if (!fs_1.default.existsSync(absolutePath)) {
+        return fs_1.default.mkdirSync(absolutePath, { recursive: true });
+    }
+};
 class SqliteSettings extends CustomStorage_1.CustomStorageSettings {
     constructor(options = {}) {
         var _a;
@@ -18,14 +29,19 @@ class SqliteSettings extends CustomStorage_1.CustomStorageSettings {
 }
 exports.SqliteSettings = SqliteSettings;
 class SqliteStorage extends CustomStorage_1.CustomStorage {
-    constructor(database, options = {}) {
-        var _a;
-        super(options);
+    constructor(database, options = {}, app) {
+        var _a, _b, _c;
+        super(options, app);
         this.database = database;
         this.sqlite = sqlite3_1.default.verbose();
         this.pending = {};
         this.dbName = "SqliteStorage";
-        this.db = new this.sqlite.Database((_a = options.memory) !== null && _a !== void 0 ? _a : ":memory:", sqlite3_1.default.OPEN_CREATE | sqlite3_1.default.OPEN_READWRITE);
+        const localPath = typeof ((_b = (_a = app.settings) === null || _a === void 0 ? void 0 : _a.server) === null || _b === void 0 ? void 0 : _b.localPath) === "string" ? path_1.default.resolve(app.settings.server.localPath, "./db.sqlite") : undefined;
+        const dbPath = (_c = options.memory) !== null && _c !== void 0 ? _c : localPath;
+        if (dbPath) {
+            createDirectories(path_1.default.dirname(dbPath));
+        }
+        this.db = new this.sqlite.Database(dbPath !== null && dbPath !== void 0 ? dbPath : ":memory:", sqlite3_1.default.OPEN_CREATE | sqlite3_1.default.OPEN_READWRITE);
         this.initialize();
     }
     async initialize() {

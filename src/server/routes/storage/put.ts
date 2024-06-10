@@ -3,6 +3,8 @@ import { Mime, getExtension } from "../../../utils";
 import { sendError, sendUnauthorizedError } from "../../shared/error";
 import fs from "fs";
 import parseDataURL from "data-urls";
+import getRawBody from "raw-body";
+import $path from "path";
 
 export type RequestQuery = null;
 export type RequestBody = {
@@ -29,15 +31,25 @@ export const addRoute = (env: LocalServer) => {
 			});
 		}
 
-		const path = req.params["0"];
+		const path = req.params[0];
 
-		if (!req.user) {
-			return sendUnauthorizedError(res, "storage/unauthorized", "Você deve estar logado para acessar este recurso");
-		}
+		// if (!req.user) {
+		// 	return sendUnauthorizedError(res, "storage/unauthorized", "Você deve estar logado para acessar este recurso");
+		// }
 
-		const dirUpload = path.join(env.settings.localPath, `./${dbName}/storage-uploads`);
+		const data = await new Promise<Buffer>((resolve, reject) =>
+			getRawBody(req, async (err, body) => {
+				if (err) {
+					reject(err);
+				} else {
+					resolve(body);
+				}
+			}),
+		);
+
+		const dirUpload = $path.resolve(env.settings.localPath, `./${dbName}/storage-uploads`);
 		if (!fs.existsSync(dirUpload)) {
-			fs.mkdirSync(dirUpload);
+			fs.mkdirSync(dirUpload, { recursive: true });
 		}
 
 		try {
@@ -49,7 +61,7 @@ export const addRoute = (env: LocalServer) => {
 				const { path: _path } = snapshot.val();
 
 				if (typeof _path === "string") {
-					const storage_path = path.resolve(env.settings.localPath, `./${dbName}`, _path);
+					const storage_path = $path.resolve(env.settings.localPath, `./${dbName}`, _path);
 					if (fs.existsSync(storage_path)) {
 						fs.unlinkSync(storage_path);
 					}
@@ -103,7 +115,7 @@ export const addRoute = (env: LocalServer) => {
 					size: data.length,
 				};
 
-				fs.appendFileSync(path.resolve(dirUpload, file.filename), data);
+				fs.appendFileSync($path.resolve(dirUpload, file.filename), data);
 			} else if (req.body.file) {
 				const stats = fs.statSync(req.body.file.path);
 
@@ -113,9 +125,16 @@ export const addRoute = (env: LocalServer) => {
 				};
 
 				const rs = fs.createReadStream(req.body.file.path);
-				const ws = fs.createWriteStream(path.resolve(dirUpload, file.filename));
+				const ws = fs.createWriteStream($path.resolve(dirUpload, file.filename));
 
 				rs.pipe(ws);
+			} else if (data instanceof Buffer) {
+				file = {
+					...file,
+					size: data.length,
+				};
+
+				fs.writeFileSync($path.resolve(dirUpload, file.filename), data);
 			} else {
 				return sendError(res, {
 					code: "storage/unknown",

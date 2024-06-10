@@ -30,12 +30,13 @@ export const addRoutes = (env: LocalServer) => {
 
 		const write = async (chunk: any) => {
 			const ok = res.write(chunk);
-			if (!ok) {
-				await new Promise((resolve) => res.once("drain", resolve));
-			}
+			// if (!ok) {
+			// 	await new Promise((resolve) => res.once("drain", resolve));
+			// }
 		};
 
 		const ref = env.db(dbName).ref(path);
+		res.setHeader("Content-Type", "text/plain");
 		res.setHeader("Content-Disposition", `attachment; filename=${ref.key || "export"}.json`); // Will be treated as a download in browser
 
 		try {

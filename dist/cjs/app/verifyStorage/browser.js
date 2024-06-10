@@ -9,14 +9,16 @@ function validSettings(options) {
     return options instanceof storage_1.DataStorageSettings || options instanceof storage_1.CustomStorage;
 }
 exports.validSettings = validSettings;
-function applySettings(dbname, options) {
+function applySettings(app) {
+    const dbname = app.settings.dbname;
+    const options = app.settings.storage;
     if (options instanceof storage_1.DataStorageSettings) {
-        return new storage_1.DataStorage(dbname, options);
+        return new storage_1.DataStorage(dbname, options, app);
     }
     else if (options instanceof storage_1.CustomStorage) {
         return options;
     }
-    return new storage_1.DataStorage(dbname, options);
+    return new storage_1.DataStorage(dbname, options, app);
 }
 exports.applySettings = applySettings;
 //# sourceMappingURL=browser.js.map

@@ -1,5 +1,5 @@
 import { DEFAULT_ENTRY_NAME } from "../internal.js";
-import { DataStorageSettings, validSettings } from "../verifyStorage/index.js";
+import { validSettings } from "../verifyStorage/index.js";
 class NotImplementedError extends Error {
     constructor(name) {
         super(`${name} is not implemented`);
@@ -31,7 +31,6 @@ export class IvipBaseSettings {
         };
         this.description = "";
         this.logLevel = "log";
-        this.storage = new DataStorageSettings();
         this.protocol = "http";
         this.host = "localhost";
         this.isServer = false;

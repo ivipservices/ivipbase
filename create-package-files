@@ -12,7 +12,6 @@ cat >dist/cjs/package.json <<JSON
         "./app/settings/index.js": "./app/settings/browser.js",
 		"./app/verifyStorage/index.js": "./app/verifyStorage/browser.js",
 		"./controller/storage/index.js": "./controller/storage/browser.js",
-        "./controller/request/index.js": "./controller/request/browser.js",
         "./utils/base64/index.js": "./utils/base64/browser.js",
         "./utils/localStorage/index.js": "./utils/localStorage/browser.js"
     }
@@ -35,7 +34,6 @@ cat >dist/esm/package.json <<JSON
         "./app/settings/index.js": "./app/settings/browser.js",
 		"./app/verifyStorage/index.js": "./app/verifyStorage/browser.js",
 		"./controller/storage/index.js": "./controller/storage/browser.js",
-        "./controller/request/index.js": "./controller/request/browser.js",
         "./utils/base64/index.js": "./utils/base64/browser.js",
         "./utils/localStorage/index.js": "./utils/localStorage/browser.js"
     }

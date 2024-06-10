@@ -518,15 +518,18 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         // console.log("set-added", JSON.stringify(added, null, 4));
         // console.log("set-modified", JSON.stringify(modified, null, 4));
         // console.log("set-removed", JSON.stringify(removed, null, 4));
+        const suppress_events = options.suppress_events === true;
         const batchError = [];
         const promises = [];
         for (let node of removed) {
-            this.emit("remove", {
-                dbName: database,
-                name: "remove",
-                path: ivipbase_core_1.PathInfo.get(ivipbase_core_1.PathInfo.get(node.path).keys.slice(1)).path,
-                value: (0, utils_2.removeNulls)(node.content.value),
-            });
+            if (!suppress_events) {
+                this.emit("remove", {
+                    dbName: database,
+                    name: "remove",
+                    path: ivipbase_core_1.PathInfo.get(ivipbase_core_1.PathInfo.get(node.path).keys.slice(1)).path,
+                    value: (0, utils_2.removeNulls)(node.content.value),
+                });
+            }
             promises.push(async () => {
                 try {
                     await Promise.race([this.settings.removeNode(database, node.path, node.content, node)]).catch((e) => {
@@ -540,13 +543,15 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
             });
         }
         for (let node of modified) {
-            this.emit("change", {
-                dbName: database,
-                name: "change",
-                path: ivipbase_core_1.PathInfo.get(ivipbase_core_1.PathInfo.get(node.path).keys.slice(1)).path,
-                value: (0, utils_2.removeNulls)(node.content.value),
-                previous: (0, utils_2.removeNulls)((_a = node.previous_content) === null || _a === void 0 ? void 0 : _a.value),
-            });
+            if (!suppress_events) {
+                this.emit("change", {
+                    dbName: database,
+                    name: "change",
+                    path: ivipbase_core_1.PathInfo.get(ivipbase_core_1.PathInfo.get(node.path).keys.slice(1)).path,
+                    value: (0, utils_2.removeNulls)(node.content.value),
+                    previous: (0, utils_2.removeNulls)((_a = node.previous_content) === null || _a === void 0 ? void 0 : _a.value),
+                });
+            }
             promises.push(async () => {
                 try {
                     await Promise.race([this.settings.setNode(database, node.path, (0, utils_2.removeNulls)(node.content), (0, utils_2.removeNulls)(node))]).catch((e) => {
@@ -557,12 +562,14 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
             });
         }
         for (let node of added) {
-            this.emit("add", {
-                dbName: database,
-                name: "add",
-                path: ivipbase_core_1.PathInfo.get(ivipbase_core_1.PathInfo.get(node.path).keys.slice(1)).path,
-                value: (0, utils_2.removeNulls)(node.content.value),
-            });
+            if (!suppress_events) {
+                this.emit("add", {
+                    dbName: database,
+                    name: "add",
+                    path: ivipbase_core_1.PathInfo.get(ivipbase_core_1.PathInfo.get(node.path).keys.slice(1)).path,
+                    value: (0, utils_2.removeNulls)(node.content.value),
+                });
+            }
             promises.push(async () => {
                 try {
                     await Promise.race([this.settings.setNode(database, node.path, (0, utils_2.removeNulls)(node.content), (0, utils_2.removeNulls)(node))]).catch((e) => {

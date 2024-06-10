@@ -239,7 +239,7 @@ export class Subscriptions extends SimpleEventEmitter {
 					timer = setTimeout(() => {
 						this.remove(dataPath, "mutated", callback);
 						resolve();
-					}, 1000);
+					}, 500);
 				};
 
 				this.add(dataPath, "mutated", callback);
@@ -247,7 +247,7 @@ export class Subscriptions extends SimpleEventEmitter {
 				timer = setTimeout(() => {
 					this.remove(dataPath, "mutated", callback);
 					resolve();
-				}, 1000);
+				}, 500);
 			});
 		}
 

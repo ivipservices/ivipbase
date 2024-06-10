@@ -20,12 +20,12 @@ export const isPossiblyServer = true;
 const createDirectories = (dirPath) => {
     // Usa path.resolve para garantir um caminho absoluto.
     const absolutePath = path.resolve(dirPath);
-    return fs.mkdirSync(absolutePath, { recursive: true });
-    if (!fs.existsSync(path.basename(absolutePath))) {
+    //return fs.mkdirSync(absolutePath, { recursive: true });
+    if (!fs.existsSync(path.dirname(absolutePath))) {
         createDirectories(path.dirname(absolutePath));
     }
     if (!fs.existsSync(absolutePath)) {
-        fs.mkdirSync(absolutePath, { recursive: true });
+        return fs.mkdirSync(absolutePath, { recursive: true });
     }
 };
 export class LocalServer extends AbstractLocalServer {

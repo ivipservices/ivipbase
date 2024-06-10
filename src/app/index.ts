@@ -57,7 +57,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 			this.isDeleted = options.isDeleted;
 		}
 
-		this.storage = applySettings(this.settings.dbname, this.settings.storage);
+		this.storage = applySettings(this);
 
 		this.isServer = typeof this.settings.server === "object";
 
@@ -483,7 +483,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 
 		this.settings = new IvipBaseSettings(joinObjects(this.settings.options, options));
 
-		this.storage = applySettings(this.settings.dbname, this.settings.storage);
+		this.storage = applySettings(this);
 
 		this.isServer = typeof this.settings.server === "object";
 

@@ -14,26 +14,28 @@ function validSettings(options) {
         options instanceof storage_1.SequelizeSettings);
 }
 exports.validSettings = validSettings;
-function applySettings(dbname, options) {
+function applySettings(app) {
+    const dbname = app.settings.dbname;
+    const options = app.settings.storage;
     if (options instanceof storage_1.DataStorageSettings) {
-        return new storage_1.DataStorage(dbname, options);
+        return new storage_1.DataStorage(dbname, options, app);
     }
     else if (options instanceof storage_1.MongodbSettings) {
-        return new storage_1.MongodbStorage(dbname, options);
+        return new storage_1.MongodbStorage(dbname, options, app);
     }
     else if (options instanceof storage_1.JsonFileStorageSettings) {
-        return new storage_1.JsonFileStorage(dbname, options);
+        return new storage_1.JsonFileStorage(dbname, options, app);
     }
     else if (options instanceof storage_1.SqliteSettings) {
-        return new storage_1.SqliteStorage(dbname, options);
+        return new storage_1.SqliteStorage(dbname, options, app);
     }
     else if (options instanceof storage_1.SequelizeSettings) {
-        return new storage_1.SequelizeStorage(dbname, options);
+        return new storage_1.SequelizeStorage(dbname, options, app);
     }
     else if (options instanceof storage_1.CustomStorage) {
         return options;
     }
-    return new storage_1.DataStorage(dbname);
+    return app.settings.isServer && app.settings.isPossiplyServer ? new storage_1.SqliteStorage(dbname, options, app) : new storage_1.DataStorage(dbname, {}, app);
 }
 exports.applySettings = applySettings;
 //# sourceMappingURL=index.js.map

@@ -8,6 +8,7 @@ const ivipbase_core_1 = require("ivipbase-core");
 const MDE_1 = require("../controller/storage/MDE");
 const utils_1 = require("../utils");
 const executeQuery_1 = __importDefault(require("../controller/executeQuery"));
+const ivip_utils_1 = require("ivip-utils");
 class StorageDBServer extends ivipbase_core_1.Api {
     constructor(db) {
         super();
@@ -75,6 +76,9 @@ class StorageDBServer extends ivipbase_core_1.Api {
         return results;
     }
     async export(path, stream, options) {
+        if ((options === null || options === void 0 ? void 0 : options.format) !== "json") {
+            throw new Error("Only json output is currently supported");
+        }
         const data = await this.get(path);
         const json = JSON.stringify(data.value);
         for (let i = 0; i < json.length; i += 1000) {
@@ -82,36 +86,43 @@ class StorageDBServer extends ivipbase_core_1.Api {
         }
     }
     async import(path, read, options) {
-        let json = "";
+        var _a;
         const chunkSize = 256 * 1024; // 256KB
-        const maxQueueBytes = 1024 * 1024; // 1MB
-        const state = {
-            data: "",
-            index: 0,
-            offset: 0,
-        };
-        const readNextChunk = async (append = false) => {
-            let data = await read(chunkSize);
-            if (data === null) {
-                if (state.data) {
-                    throw new Error(`Unexpected EOF at index ${state.offset + state.data.length}`);
+        const json = await read(chunkSize);
+        const method = (_a = options === null || options === void 0 ? void 0 : options.method) !== null && _a !== void 0 ? _a : "set";
+        if (!(0, ivip_utils_1.isJson)(json)) {
+            return;
+        }
+        const value = JSON.parse(json);
+        const resolveObject = async (path, obj) => {
+            const isAnyNodes = Object.values(obj).every((value) => (typeof value === "object" && value !== null) || Array.isArray(value));
+            if (isAnyNodes) {
+                for (const key in obj) {
+                    const value = obj[key];
+                    const newPath = ivipbase_core_1.PathInfo.get([path, key]).path;
+                    await resolveObject(newPath, value);
                 }
-                else {
-                    throw new Error("Unable to read data from stream");
-                }
-            }
-            else if (typeof data === "object") {
-                data = ivipbase_core_1.Utils.decodeString(data);
-            }
-            if (append) {
-                state.data += data;
             }
             else {
-                state.offset += state.data.length;
-                state.data = data;
-                state.index = 0;
+                if (method === "set") {
+                    await this.db.app.storage.set(this.db.database, path, value, options);
+                }
+                else {
+                    await this.db.app.storage.update(this.db.database, path, value, options);
+                }
             }
         };
+        if ((typeof value === "object" && value !== null) || Array.isArray(value)) {
+            await resolveObject(path, value);
+        }
+        else {
+            if (method === "set") {
+                await this.db.app.storage.set(this.db.database, path, value, options);
+            }
+            else {
+                await this.db.app.storage.update(this.db.database, path, value, options);
+            }
+        }
         return;
     }
     async reflect(path, type, args) {

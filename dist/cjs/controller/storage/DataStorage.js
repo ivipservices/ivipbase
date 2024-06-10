@@ -11,8 +11,8 @@ class DataStorageSettings extends CustomStorage_1.CustomStorageSettings {
 }
 exports.DataStorageSettings = DataStorageSettings;
 class DataStorage extends CustomStorage_1.CustomStorage {
-    constructor(database, options = {}) {
-        super(options);
+    constructor(database, options = {}, app) {
+        super(options, app);
         this.data = {};
         this.dbName = "TempStorage";
         (Array.isArray(database) ? database : [database])

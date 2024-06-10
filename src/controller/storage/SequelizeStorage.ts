@@ -3,6 +3,7 @@ import { AppError, ERROR_FACTORY } from "../erros";
 import { CustomStorage, CustomStorageSettings } from "./CustomStorage";
 import { StorageNode, StorageNodeInfo, VALUE_TYPES } from "./MDE";
 import { Sequelize, DataTypes, Op, Options } from "sequelize";
+import { IvipBaseApp } from "../../app";
 
 export class SequelizeSettings extends CustomStorageSettings implements Omit<CustomStorageSettings, "getMultiple" | "setNode" | "removeNode"> {
 	readonly uri?: string;
@@ -55,8 +56,8 @@ export class SequelizeStorage extends CustomStorage {
 	private sequelize: Sequelize;
 	private pending: { [db: string]: Map<string, SequelizeRow> } = {};
 
-	constructor(readonly database: string | string[], options: Partial<SequelizeSettings> = {}) {
-		super(options);
+	constructor(readonly database: string | string[], options: Partial<SequelizeSettings> = {}, app: IvipBaseApp) {
+		super(options, app);
 		this.dbName = "SequelizeStorage";
 
 		if (options.sequelize instanceof Sequelize) {

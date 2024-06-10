@@ -5,12 +5,14 @@
 import { initializeApp, getDatabase, getIPCPeer, DataStorageSettings, JsonFileStorageSettings, SqliteSettings, SequelizeSettings, MongodbSettings } from "../src";
 
 import cluster from "cluster";
+import fs from "fs";
+import path from "path";
 
 // if (cluster.isMaster) {
 // 	console.log(`Master ${process.pid} is running`);
 
 // 	// Fork workers.
-// 	for (let i = 0; i < 2; i++) {
+// 	for (let i = 0; i < 4; i++) {
 // 		cluster.fork();
 // 	}
 
@@ -43,9 +45,6 @@ const app = initializeApp({
 	// storage: new JsonFileStorageSettings({
 	// 	filePath: "./test_file.json",
 	// }),
-	storage: new SqliteSettings({
-		memory: "./db.sqlite",
-	}),
 	authentication: {
 		enabled: true,
 		defaultAdminPassword: "admin",
@@ -65,6 +64,15 @@ const app = initializeApp({
 app.ready(async () => {
 	const db = getDatabase(app);
 	console.log("Database ready!");
+
+	fs.readFile(path.join(__dirname, "paths.txt"), (err, data) => {
+		app.request({
+			route: "/storage/root/file",
+			data,
+			method: "PUT",
+		});
+	});
+
 	// db.ref("__auth__/accounts")
 	// 	.query()
 	// 	.filter("username", "==", "admin")

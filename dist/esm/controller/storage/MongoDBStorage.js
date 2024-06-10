@@ -32,8 +32,8 @@ export class MongodbSettings {
 }
 let timer;
 export class MongodbStorage extends CustomStorage {
-    constructor(database, options) {
-        super(options.mdeOptions);
+    constructor(database, options, app) {
+        super(options.mdeOptions, app);
         this.isConnected = false;
         this.database = {};
         this.pending = {};

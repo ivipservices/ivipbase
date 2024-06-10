@@ -3,6 +3,7 @@ import { AppError, ERROR_FACTORY } from "../erros";
 import { CustomStorage, CustomStorageSettings } from "./CustomStorage";
 import { StorageNode, StorageNodeInfo, VALUE_TYPES } from "./MDE";
 import { MongoClient, Collection, Db, MongoClientOptions } from "mongodb";
+import { IvipBaseApp } from "../../app";
 
 export class MongodbSettings {
 	host: string = "localhost";
@@ -57,8 +58,8 @@ export class MongodbStorage extends CustomStorage {
 	private pending: Record<string, Map<string, StorageNodeInfo & { refresh?: boolean; type?: "set" | "delete" }>> = {};
 	private resolvingPending: boolean = false;
 
-	constructor(database: string | string[], options: Partial<Omit<MongodbSettings, "database">>) {
-		super(options.mdeOptions);
+	constructor(database: string | string[], options: Partial<Omit<MongodbSettings, "database">>, app: IvipBaseApp) {
+		super(options.mdeOptions, app);
 		this.options = new MongodbSettings(options);
 		this.options.database = (Array.isArray(database) ? database : [this.database]).filter((name) => typeof name === "string" && name.trim() !== "").filter((a, i, l) => l.indexOf(a) === i) as any;
 		this.dbName = "MongoDB";

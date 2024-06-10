@@ -8,6 +8,7 @@ export const enum AppError {
 	DB_DISCONNECTED = "db-disconnected",
 	DB_CONNECTION_ERROR = "db-connection-error",
 	DB_NOT_FOUND = "db-not-found",
+	INVALID_ARGUMENT = "invalid-argument",
 }
 
 const ERRORS: ErrorMap<AppError> = {
@@ -18,6 +19,7 @@ const ERRORS: ErrorMap<AppError> = {
 	[AppError.DB_DISCONNECTED]: "Banco de dados '{$dbName}' desconectado",
 	[AppError.DB_CONNECTION_ERROR]: "Database connection error: {$error}",
 	[AppError.DB_NOT_FOUND]: "Banco de dados '{$dbName}' não encontrado",
+	[AppError.INVALID_ARGUMENT]: "Invalid argument: {$message}",
 };
 
 interface ErrorParams {
@@ -28,6 +30,7 @@ interface ErrorParams {
 	[AppError.DB_DISCONNECTED]: { dbName: string };
 	[AppError.DB_CONNECTION_ERROR]: { error: string };
 	[AppError.DB_NOT_FOUND]: { dbName: string };
+	[AppError.INVALID_ARGUMENT]: { message: string };
 }
 
 export const ERROR_FACTORY = new ErrorFactory<AppError, ErrorParams>("app", "iVipBase", ERRORS);

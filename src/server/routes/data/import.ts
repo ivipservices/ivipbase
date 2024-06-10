@@ -33,6 +33,7 @@ export const addRoutes = (env: LocalServer) => {
 		req.once("end", () => {
 			eof = true;
 		});
+
 		const read = async (length: number) => {
 			let chunk = req.read();
 			if (chunk === null && !eof) {

@@ -494,15 +494,18 @@ export default class MDE extends SimpleEventEmitter {
         // console.log("set-added", JSON.stringify(added, null, 4));
         // console.log("set-modified", JSON.stringify(modified, null, 4));
         // console.log("set-removed", JSON.stringify(removed, null, 4));
+        const suppress_events = options.suppress_events === true;
         const batchError = [];
         const promises = [];
         for (let node of removed) {
-            this.emit("remove", {
-                dbName: database,
-                name: "remove",
-                path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
-                value: removeNulls(node.content.value),
-            });
+            if (!suppress_events) {
+                this.emit("remove", {
+                    dbName: database,
+                    name: "remove",
+                    path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
+                    value: removeNulls(node.content.value),
+                });
+            }
             promises.push(async () => {
                 try {
                     await Promise.race([this.settings.removeNode(database, node.path, node.content, node)]).catch((e) => {
@@ -520,13 +523,15 @@ export default class MDE extends SimpleEventEmitter {
             });
         }
         for (let node of modified) {
-            this.emit("change", {
-                dbName: database,
-                name: "change",
-                path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
-                value: removeNulls(node.content.value),
-                previous: removeNulls(node.previous_content?.value),
-            });
+            if (!suppress_events) {
+                this.emit("change", {
+                    dbName: database,
+                    name: "change",
+                    path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
+                    value: removeNulls(node.content.value),
+                    previous: removeNulls(node.previous_content?.value),
+                });
+            }
             promises.push(async () => {
                 try {
                     await Promise.race([this.settings.setNode(database, node.path, removeNulls(node.content), removeNulls(node))]).catch((e) => {
@@ -537,12 +542,14 @@ export default class MDE extends SimpleEventEmitter {
             });
         }
         for (let node of added) {
-            this.emit("add", {
-                dbName: database,
-                name: "add",
-                path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
-                value: removeNulls(node.content.value),
-            });
+            if (!suppress_events) {
+                this.emit("add", {
+                    dbName: database,
+                    name: "add",
+                    path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
+                    value: removeNulls(node.content.value),
+                });
+            }
             promises.push(async () => {
                 try {
                     await Promise.race([this.settings.setNode(database, node.path, removeNulls(node.content), removeNulls(node))]).catch((e) => {

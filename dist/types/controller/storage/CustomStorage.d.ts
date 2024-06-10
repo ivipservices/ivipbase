@@ -1,15 +1,17 @@
 import { DebugLogger } from "ivipbase-core";
 import MDE, { MDESettings, StorageNode, StorageNodeInfo } from "./MDE";
+import { IvipBaseApp } from "../../app";
 export declare class CustomStorageSettings extends MDESettings implements Omit<MDESettings, "getMultiple" | "setNode" | "removeNode"> {
     constructor(options?: Partial<Omit<MDESettings, "getMultiple" | "setNode" | "removeNode">>);
 }
 export declare abstract class CustomStorage extends MDE {
+    readonly app: IvipBaseApp;
     private _dbName;
     private logLevel;
     private _debug;
-    constructor(options?: Partial<Omit<MDESettings, "getMultiple" | "setNode" | "removeNode"> & {
+    constructor(options: Partial<Omit<MDESettings, "getMultiple" | "setNode" | "removeNode"> & {
         logLevel: "verbose" | "log" | "warn" | "error";
-    }>);
+    }> | undefined, app: IvipBaseApp);
     get dbName(): string;
     set dbName(value: string);
     get debug(): DebugLogger;

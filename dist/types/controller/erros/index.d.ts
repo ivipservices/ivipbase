@@ -6,7 +6,8 @@ export declare const enum AppError {
     APP_DELETED = "app-deleted",
     DB_DISCONNECTED = "db-disconnected",
     DB_CONNECTION_ERROR = "db-connection-error",
-    DB_NOT_FOUND = "db-not-found"
+    DB_NOT_FOUND = "db-not-found",
+    INVALID_ARGUMENT = "invalid-argument"
 }
 interface ErrorParams {
     [AppError.NO_APP]: {
@@ -29,6 +30,9 @@ interface ErrorParams {
     };
     [AppError.DB_NOT_FOUND]: {
         dbName: string;
+    };
+    [AppError.INVALID_ARGUMENT]: {
+        message: string;
     };
 }
 export declare const ERROR_FACTORY: ErrorFactory<AppError, ErrorParams>;

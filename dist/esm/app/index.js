@@ -33,7 +33,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
         if (typeof options.isDeleted === "boolean") {
             this.isDeleted = options.isDeleted;
         }
-        this.storage = applySettings(this.settings.dbname, this.settings.storage);
+        this.storage = applySettings(this);
         this.isServer = typeof this.settings.server === "object";
         if (this.settings.isPossiplyServer) {
             this._ipc = getIPCPeer(this.name);
@@ -330,7 +330,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
         this._socket = null;
         this.isDeleted = false;
         this.settings = new IvipBaseSettings(joinObjects(this.settings.options, options));
-        this.storage = applySettings(this.settings.dbname, this.settings.storage);
+        this.storage = applySettings(this);
         this.isServer = typeof this.settings.server === "object";
         // this.auth.clear();
         this.databases.clear();

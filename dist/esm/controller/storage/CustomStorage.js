@@ -7,7 +7,7 @@ export class CustomStorageSettings extends MDESettings {
     }
 }
 export class CustomStorage extends MDE {
-    constructor(options = {}) {
+    constructor(options = {}, app) {
         const { logLevel, ..._options } = options;
         super({
             ..._options,
@@ -30,6 +30,7 @@ export class CustomStorage extends MDE {
                 return this.removeNode(database, path, content, node);
             },
         });
+        this.app = app;
         this._dbName = "CustomStorage";
         this.logLevel = "log";
         this.logLevel = logLevel || "log";

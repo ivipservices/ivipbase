@@ -221,13 +221,13 @@ class Subscriptions extends ivipbase_core_1.SimpleEventEmitter {
                     timer = setTimeout(() => {
                         this.remove(dataPath, "mutated", callback);
                         resolve();
-                    }, 1000);
+                    }, 500);
                 };
                 this.add(dataPath, "mutated", callback);
                 timer = setTimeout(() => {
                     this.remove(dataPath, "mutated", callback);
                     resolve();
-                }, 1000);
+                }, 500);
             });
         }
         const pathSubscriptions = this._eventSubscriptions[path] || [];

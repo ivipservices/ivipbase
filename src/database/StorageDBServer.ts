@@ -1,8 +1,9 @@
-import { Api, Types, Utils } from "ivipbase-core";
+import { Api, PathInfo, Types, Utils } from "ivipbase-core";
 import { VALUE_TYPES } from "../controller/storage/MDE";
 import type { DataBase } from ".";
 import { removeNulls } from "../utils";
 import executeQuery from "../controller/executeQuery";
+import { isJson } from "ivip-utils";
 
 export class StorageDBServer extends Api {
 	public cache: { [path: string]: any } = {};
@@ -135,6 +136,10 @@ export class StorageDBServer extends Api {
 	}
 
 	async export(path: string, stream: Types.StreamWriteFunction, options?: { format?: "json"; type_safe?: boolean }): Promise<void> {
+		if (options?.format !== "json") {
+			throw new Error("Only json output is currently supported");
+		}
+
 		const data = await this.get(path);
 		const json = JSON.stringify(data.value);
 
@@ -152,33 +157,44 @@ export class StorageDBServer extends Api {
 			method?: "set" | "update" | "merge";
 		},
 	): Promise<void> {
-		let json = "";
 		const chunkSize = 256 * 1024; // 256KB
-		const maxQueueBytes = 1024 * 1024; // 1MB
-		const state = {
-			data: "",
-			index: 0,
-			offset: 0,
-		};
-		const readNextChunk = async (append = false) => {
-			let data = await read(chunkSize);
-			if (data === null) {
-				if (state.data) {
-					throw new Error(`Unexpected EOF at index ${state.offset + state.data.length}`);
-				} else {
-					throw new Error("Unable to read data from stream");
+		const json = await read(chunkSize);
+		const method = options?.method ?? "set";
+
+		if (!isJson(json)) {
+			return;
+		}
+
+		const value = JSON.parse(json as any);
+
+		const resolveObject = async (path: string, obj: Record<any, any> | Array<any>) => {
+			const isAnyNodes = Object.values(obj).every((value) => (typeof value === "object" && value !== null) || Array.isArray(value));
+
+			if (isAnyNodes) {
+				for (const key in obj) {
+					const value: any = (obj as any)[key as string | number];
+					const newPath = PathInfo.get([path, key]).path;
+					await resolveObject(newPath, value);
 				}
-			} else if (typeof data === "object") {
-				data = Utils.decodeString(data);
-			}
-			if (append) {
-				state.data += data;
 			} else {
-				state.offset += state.data.length;
-				state.data = data;
-				state.index = 0;
+				if (method === "set") {
+					await this.db.app.storage.set(this.db.database, path, value, options);
+				} else {
+					await this.db.app.storage.update(this.db.database, path, value, options);
+				}
 			}
 		};
+
+		if ((typeof value === "object" && value !== null) || Array.isArray(value)) {
+			await resolveObject(path, value);
+		} else {
+			if (method === "set") {
+				await this.db.app.storage.set(this.db.database, path, value, options);
+			} else {
+				await this.db.app.storage.update(this.db.database, path, value, options);
+			}
+		}
+
 		return;
 	}
 

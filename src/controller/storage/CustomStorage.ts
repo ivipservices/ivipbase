@@ -1,6 +1,7 @@
 import { DebugLogger } from "ivipbase-core";
 import { AppError, ERROR_FACTORY } from "../erros";
 import MDE, { MDESettings, StorageNode, StorageNodeInfo } from "./MDE";
+import { IvipBaseApp } from "../../app";
 
 export class CustomStorageSettings extends MDESettings implements Omit<MDESettings, "getMultiple" | "setNode" | "removeNode"> {
 	constructor(options: Partial<Omit<MDESettings, "getMultiple" | "setNode" | "removeNode">> = {}) {
@@ -13,7 +14,7 @@ export abstract class CustomStorage extends MDE {
 	private logLevel: "verbose" | "log" | "warn" | "error" = "log";
 	private _debug: DebugLogger;
 
-	constructor(options: Partial<Omit<MDESettings, "getMultiple" | "setNode" | "removeNode"> & { logLevel: "verbose" | "log" | "warn" | "error" }> = {}) {
+	constructor(options: Partial<Omit<MDESettings, "getMultiple" | "setNode" | "removeNode"> & { logLevel: "verbose" | "log" | "warn" | "error" }> = {}, readonly app: IvipBaseApp) {
 		const { logLevel, ..._options } = options;
 		super({
 			..._options,

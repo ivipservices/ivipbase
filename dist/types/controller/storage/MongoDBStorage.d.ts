@@ -1,6 +1,7 @@
 import { CustomStorage, CustomStorageSettings } from "./CustomStorage";
 import { StorageNode, StorageNodeInfo } from "./MDE";
 import { MongoClientOptions } from "mongodb";
+import { IvipBaseApp } from "../../app";
 export declare class MongodbSettings {
     host: string;
     port: number;
@@ -19,7 +20,7 @@ export declare class MongodbStorage extends CustomStorage {
     private database;
     private pending;
     private resolvingPending;
-    constructor(database: string | string[], options: Partial<Omit<MongodbSettings, "database">>);
+    constructor(database: string | string[], options: Partial<Omit<MongodbSettings, "database">>, app: IvipBaseApp);
     private connect;
     private getCollectionBy;
     get mongoUri(): string;

@@ -21,11 +21,12 @@ const addRoutes = (env) => {
         const type_safe = req.query.type_safe !== "0";
         const write = async (chunk) => {
             const ok = res.write(chunk);
-            if (!ok) {
-                await new Promise((resolve) => res.once("drain", resolve));
-            }
+            // if (!ok) {
+            // 	await new Promise((resolve) => res.once("drain", resolve));
+            // }
         };
         const ref = env.db(dbName).ref(path);
+        res.setHeader("Content-Type", "text/plain");
         res.setHeader("Content-Disposition", `attachment; filename=${ref.key || "export"}.json`); // Will be treated as a download in browser
         try {
             await ref.export(write, { format, type_safe });

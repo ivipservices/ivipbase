@@ -7,6 +7,7 @@ const ERRORS = {
     ["db-disconnected" /* AppError.DB_DISCONNECTED */]: "Banco de dados '{$dbName}' desconectado",
     ["db-connection-error" /* AppError.DB_CONNECTION_ERROR */]: "Database connection error: {$error}",
     ["db-not-found" /* AppError.DB_NOT_FOUND */]: "Banco de dados '{$dbName}' não encontrado",
+    ["invalid-argument" /* AppError.INVALID_ARGUMENT */]: "Invalid argument: {$message}",
 };
 export const ERROR_FACTORY = new ErrorFactory("app", "iVipBase", ERRORS);
 //# sourceMappingURL=index.js.map

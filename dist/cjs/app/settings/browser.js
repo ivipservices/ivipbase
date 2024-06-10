@@ -35,7 +35,6 @@ class IvipBaseSettings {
         };
         this.description = "";
         this.logLevel = "log";
-        this.storage = new verifyStorage_1.DataStorageSettings();
         this.protocol = "http";
         this.host = "localhost";
         this.isServer = false;

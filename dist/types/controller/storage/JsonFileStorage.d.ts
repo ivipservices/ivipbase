@@ -1,14 +1,16 @@
 import { CustomStorage } from "./CustomStorage";
 import { StorageNode, StorageNodeInfo } from "./MDE";
+import { IvipBaseApp } from "../../app";
 export declare class JsonFileStorageSettings {
-    filePath: string;
+    filePath?: string;
     constructor(options?: Partial<JsonFileStorageSettings>);
 }
 export declare class JsonFileStorage extends CustomStorage {
     readonly options: JsonFileStorageSettings;
     private data;
     private timeForSaveFile?;
-    constructor(database: string | string[], options?: Partial<JsonFileStorageSettings>);
+    private filePath;
+    constructor(database: string | string[], options: Partial<JsonFileStorageSettings> | undefined, app: IvipBaseApp);
     getMultiple(database: string, { regex }: {
         regex: RegExp;
         query: string[];

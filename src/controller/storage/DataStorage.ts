@@ -2,6 +2,7 @@ import { Utils } from "ivipbase-core";
 import { AppError, ERROR_FACTORY } from "../erros";
 import { CustomStorage, CustomStorageSettings } from "./CustomStorage";
 import { StorageNode, StorageNodeInfo } from "./MDE";
+import { IvipBaseApp } from "../../app";
 
 export class DataStorageSettings extends CustomStorageSettings implements Omit<CustomStorageSettings, "getMultiple" | "setNode" | "removeNode"> {
 	constructor(options: Partial<Omit<CustomStorageSettings, "getMultiple" | "setNode" | "removeNode">> = {}) {
@@ -12,8 +13,8 @@ export class DataStorageSettings extends CustomStorageSettings implements Omit<C
 export class DataStorage extends CustomStorage {
 	private data: Record<string, Map<string, StorageNode>> = {};
 
-	constructor(database: string | string[], options: Partial<Omit<CustomStorageSettings, "getMultiple" | "setNode" | "removeNode">> = {}) {
-		super(options);
+	constructor(database: string | string[], options: Partial<Omit<CustomStorageSettings, "getMultiple" | "setNode" | "removeNode">> = {}, app: IvipBaseApp) {
+		super(options, app);
 		this.dbName = "TempStorage";
 
 		(Array.isArray(database) ? database : [database])

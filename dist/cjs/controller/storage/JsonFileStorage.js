@@ -27,9 +27,16 @@ exports.JsonFileStorage = exports.JsonFileStorageSettings = void 0;
 const CustomStorage_1 = require("./CustomStorage");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
-const path_1 = require("path");
 const erros_1 = require("../erros");
-const dirnameRoot = (0, path_1.dirname)(require.resolve("."));
+const createDirectories = (dirPath) => {
+    const absolutePath = path.resolve(dirPath);
+    if (!fs.existsSync(path.dirname(absolutePath))) {
+        createDirectories(path.dirname(absolutePath));
+    }
+    if (!fs.existsSync(absolutePath)) {
+        return fs.mkdirSync(absolutePath, { recursive: true });
+    }
+};
 class JsonFileStorageSettings {
     constructor(options = {}) {
         this.filePath = "";
@@ -40,21 +47,33 @@ class JsonFileStorageSettings {
 }
 exports.JsonFileStorageSettings = JsonFileStorageSettings;
 class JsonFileStorage extends CustomStorage_1.CustomStorage {
-    constructor(database, options = {}) {
-        super();
+    constructor(database, options = {}, app) {
+        var _a, _b, _c;
+        super({}, app);
         this.data = {};
         this.options = new JsonFileStorageSettings(options);
+        const localPath = typeof ((_b = (_a = app.settings) === null || _a === void 0 ? void 0 : _a.server) === null || _b === void 0 ? void 0 : _b.localPath) === "string" ? path.resolve(app.settings.server.localPath, "./db.json") : undefined;
+        const dbPath = (_c = this.options.filePath) !== null && _c !== void 0 ? _c : localPath;
+        this.options.filePath = dbPath;
+        if (!dbPath || typeof dbPath !== "string") {
+            throw erros_1.ERROR_FACTORY.create("invalid-argument" /* AppError.INVALID_ARGUMENT */, { message: "Invalid file path" });
+        }
+        this.filePath = dbPath;
+        createDirectories(path.dirname(dbPath));
+        if (!fs.existsSync(dbPath) || !fs.statSync(dbPath).isFile()) {
+            fs.writeFileSync(dbPath, "{}", "utf8");
+        }
         (Array.isArray(database) ? database : [database])
             .filter((name) => typeof name === "string" && name.trim() !== "")
             .forEach((name) => {
             this.data[name] = new Map();
         });
-        fs.access(this.options.filePath, fs.constants.F_OK, (err) => {
+        fs.access(this.filePath, fs.constants.F_OK, (err) => {
             if (err) {
                 this.emit("ready");
             }
             else {
-                fs.readFile(this.options.filePath, "utf8", (err, data) => {
+                fs.readFile(this.filePath, "utf8", (err, data) => {
                     if (err) {
                         throw `Erro ao ler o arquivo: ${err}`;
                     }
@@ -116,7 +135,7 @@ class JsonFileStorage extends CustomStorage_1.CustomStorage {
                 });
             }
             const jsonString = JSON.stringify(jsonData, null, 4);
-            fs.writeFileSync(this.options.filePath, jsonString, "utf8");
+            fs.writeFileSync(this.filePath, jsonString, "utf8");
         }, 1000);
     }
 }

@@ -1,8 +1,19 @@
+import fs from "fs";
 import { ID } from "ivipbase-core";
 import { ERROR_FACTORY } from "../erros/index.js";
 import { CustomStorage, CustomStorageSettings } from "./CustomStorage.js";
 import { VALUE_TYPES } from "./MDE/index.js";
 import sqlite3 from "sqlite3";
+import path from "path";
+const createDirectories = (dirPath) => {
+    const absolutePath = path.resolve(dirPath);
+    if (!fs.existsSync(path.dirname(absolutePath))) {
+        createDirectories(path.dirname(absolutePath));
+    }
+    if (!fs.existsSync(absolutePath)) {
+        return fs.mkdirSync(absolutePath, { recursive: true });
+    }
+};
 export class SqliteSettings extends CustomStorageSettings {
     constructor(options = {}) {
         super(options);
@@ -10,13 +21,18 @@ export class SqliteSettings extends CustomStorageSettings {
     }
 }
 export class SqliteStorage extends CustomStorage {
-    constructor(database, options = {}) {
-        super(options);
+    constructor(database, options = {}, app) {
+        super(options, app);
         this.database = database;
         this.sqlite = sqlite3.verbose();
         this.pending = {};
         this.dbName = "SqliteStorage";
-        this.db = new this.sqlite.Database(options.memory ?? ":memory:", sqlite3.OPEN_CREATE | sqlite3.OPEN_READWRITE);
+        const localPath = typeof app.settings?.server?.localPath === "string" ? path.resolve(app.settings.server.localPath, "./db.sqlite") : undefined;
+        const dbPath = options.memory ?? localPath;
+        if (dbPath) {
+            createDirectories(path.dirname(dbPath));
+        }
+        this.db = new this.sqlite.Database(dbPath ?? ":memory:", sqlite3.OPEN_CREATE | sqlite3.OPEN_READWRITE);
         this.initialize();
     }
     async initialize() {

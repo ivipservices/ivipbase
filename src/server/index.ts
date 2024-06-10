@@ -51,14 +51,14 @@ export type RouteRequest<ReqQuery = any, ReqBody = any, ResBody = any> = Request
 const createDirectories = (dirPath: string) => {
 	// Usa path.resolve para garantir um caminho absoluto.
 	const absolutePath = path.resolve(dirPath);
-	return fs.mkdirSync(absolutePath, { recursive: true });
+	//return fs.mkdirSync(absolutePath, { recursive: true });
 
-	if (!fs.existsSync(path.basename(absolutePath))) {
+	if (!fs.existsSync(path.dirname(absolutePath))) {
 		createDirectories(path.dirname(absolutePath));
 	}
 
 	if (!fs.existsSync(absolutePath)) {
-		fs.mkdirSync(absolutePath, { recursive: true });
+		return fs.mkdirSync(absolutePath, { recursive: true });
 	}
 };
 

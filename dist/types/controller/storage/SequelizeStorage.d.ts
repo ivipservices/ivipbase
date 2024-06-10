@@ -1,6 +1,7 @@
 import { CustomStorage, CustomStorageSettings } from "./CustomStorage";
 import { StorageNode, StorageNodeInfo } from "./MDE";
 import { Sequelize, Options } from "sequelize";
+import { IvipBaseApp } from "../../app";
 export declare class SequelizeSettings extends CustomStorageSettings implements Omit<CustomStorageSettings, "getMultiple" | "setNode" | "removeNode"> {
     readonly uri?: string;
     readonly database?: string;
@@ -14,7 +15,7 @@ export declare class SequelizeStorage extends CustomStorage {
     readonly database: string | string[];
     private sequelize;
     private pending;
-    constructor(database: string | string[], options?: Partial<SequelizeSettings>);
+    constructor(database: string | string[], options: Partial<SequelizeSettings> | undefined, app: IvipBaseApp);
     initialize(): Promise<void>;
     getMultiple(database: string, { regex }: {
         regex: RegExp;

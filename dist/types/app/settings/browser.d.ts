@@ -84,7 +84,7 @@ export declare class IvipBaseSettings {
     database: DatabaseSettings | DatabaseSettings[];
     description: string;
     logLevel: "log" | "warn" | "error";
-    storage: StorageSettings;
+    storage?: StorageSettings;
     protocol: "http" | "https";
     host: string;
     port?: number;

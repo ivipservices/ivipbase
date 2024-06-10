@@ -1,11 +1,24 @@
+import fs from "fs";
 import { ID } from "ivipbase-core";
 import { AppError, ERROR_FACTORY } from "../erros";
 import { CustomStorage, CustomStorageSettings } from "./CustomStorage";
 import { StorageNode, StorageNodeInfo, VALUE_TYPES } from "./MDE";
 import sqlite3 from "sqlite3";
+import { IvipBaseApp } from "../../app";
+import path from "path";
+
+const createDirectories = (dirPath: string) => {
+	const absolutePath = path.resolve(dirPath);
+	if (!fs.existsSync(path.dirname(absolutePath))) {
+		createDirectories(path.dirname(absolutePath));
+	}
+	if (!fs.existsSync(absolutePath)) {
+		return fs.mkdirSync(absolutePath, { recursive: true });
+	}
+};
 
 export class SqliteSettings extends CustomStorageSettings implements Omit<CustomStorageSettings, "getMultiple" | "setNode" | "removeNode"> {
-	readonly memory: string;
+	readonly memory?: string;
 
 	constructor(options: Partial<SqliteSettings> = {}) {
 		super(options);
@@ -31,10 +44,18 @@ export class SqliteStorage extends CustomStorage {
 	private db: sqlite3.Database;
 	private pending: { [db: string]: Map<string, SqliteRow> } = {};
 
-	constructor(readonly database: string | string[], options: Partial<SqliteSettings> = {}) {
-		super(options);
+	constructor(readonly database: string | string[], options: Partial<SqliteSettings> = {}, app: IvipBaseApp) {
+		super(options, app);
 		this.dbName = "SqliteStorage";
-		this.db = new this.sqlite.Database(options.memory ?? ":memory:", sqlite3.OPEN_CREATE | sqlite3.OPEN_READWRITE);
+
+		const localPath = typeof app.settings?.server?.localPath === "string" ? path.resolve(app.settings.server.localPath, "./db.sqlite") : undefined;
+		const dbPath = options.memory ?? localPath;
+
+		if (dbPath) {
+			createDirectories(path.dirname(dbPath));
+		}
+
+		this.db = new this.sqlite.Database(dbPath ?? ":memory:", sqlite3.OPEN_CREATE | sqlite3.OPEN_READWRITE);
 		this.initialize();
 	}
 

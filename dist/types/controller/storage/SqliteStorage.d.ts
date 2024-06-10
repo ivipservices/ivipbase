@@ -1,7 +1,8 @@
 import { CustomStorage, CustomStorageSettings } from "./CustomStorage";
 import { StorageNode, StorageNodeInfo } from "./MDE";
+import { IvipBaseApp } from "../../app";
 export declare class SqliteSettings extends CustomStorageSettings implements Omit<CustomStorageSettings, "getMultiple" | "setNode" | "removeNode"> {
-    readonly memory: string;
+    readonly memory?: string;
     constructor(options?: Partial<SqliteSettings>);
 }
 export declare class SqliteStorage extends CustomStorage {
@@ -9,7 +10,7 @@ export declare class SqliteStorage extends CustomStorage {
     private sqlite;
     private db;
     private pending;
-    constructor(database: string | string[], options?: Partial<SqliteSettings>);
+    constructor(database: string | string[], options: Partial<SqliteSettings> | undefined, app: IvipBaseApp);
     initialize(): Promise<void>;
     private _get;
     private _getOne;

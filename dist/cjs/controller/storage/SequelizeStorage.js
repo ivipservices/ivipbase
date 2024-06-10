@@ -30,8 +30,8 @@ class SequelizeSettings extends CustomStorage_1.CustomStorageSettings {
 }
 exports.SequelizeSettings = SequelizeSettings;
 class SequelizeStorage extends CustomStorage_1.CustomStorage {
-    constructor(database, options = {}) {
-        super(options);
+    constructor(database, options = {}, app) {
+        super(options, app);
         this.database = database;
         this.pending = {};
         this.dbName = "SequelizeStorage";
