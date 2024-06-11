@@ -90,6 +90,8 @@ O iVipBase é fácil de configurar e pode ser executado em qualquer lugar: na nu
 - [`getStorage` - API de armazenamento em nuvem](#getstorage---api-de-armazenamento-em-nuvem)
 - [`getFunctions` - API para funções de nuvem](#getfunctions---api-para-funções-de-nuvem)
 - [`getExtensions` - API para extensões de nuvem](#getextensions---api-para-extensões-de-nuvem)
+- [`getOptimized` - API para otimização de processos](#getoptimized---api-para-otimização-de-processos)
+    - [Exemplo:](#exemplo)
 - [`CustomStorage` - Armazenamento personalizado](#customstorage---armazenamento-personalizado)
   - [Armazenamento `Map` (`DataStorageSettings`)](#armazenamento-map-datastoragesettings)
   - [Conexão ao MongoDB (`MongodbSettings`)](#conexão-ao-mongodb-mongodbsettings)
@@ -1797,6 +1799,116 @@ user.fromJSON(json);
 # `getFunctions` - API para funções de nuvem
 
 # `getExtensions` - API para extensões de nuvem
+
+# `getOptimized` - API para otimização de processos
+
+> Esta propriedade está em discussão e ainda não foi implementada.
+
+O `getOptimized` é uma nova propriedade do **IVIPBASE** desenvolvida para otimizar processos que exigem interação entre diferentes bancos de dados dentro do mesmo APP Server do **IVIPBASE**. Em outras palavras, ele facilita múltiplas requisições entre diferentes aplicações que precisam realizar operações em vários bancos de dados no mesmo servidor de aplicação.
+
+Atualmente, o fluxo de trabalho envolveria várias etapas, como:
+1. O aplicativo **A** operando no banco de dados **A**.
+2. O aplicativo **A** enviando uma requisição para o aplicativo **B**.
+3. O aplicativo **B** recebendo a requisição do aplicativo **A**.
+4. O aplicativo **B** operando no banco de dados **B**.
+
+Com o `getOptimized`, esse processo é simplificado em uma única requisição. O aplicativo A faz uma solicitação ao `getOptimized`, que então executa uma função pré-configurada no painel do **IVIPBASE** e realiza as operações necessárias nos bancos de dados envolvidos.
+
+### Exemplo:
+
+Código do servidor **IVIPBASE**:
+
+```typescript
+import { initializeApp, initializeOptimized } from "ivipbase";
+
+const optimized_01 = initializeOptimized({
+    name: "otimizacao-01",
+    description: "Otimização de processos 01",
+    // ... outras opções
+    databases: ["A", "B"]
+});
+
+optimized_01.append("gerar-pix", async (userId, walletId, currencyId, amount) => {
+        // Operações para gerar um PIX
+        // ...
+        const transactionA = await optimized_01.getDataBase("A").ref("wallets").child(walletId).push({
+            userId, 
+            walletId, 
+            currencyId, 
+            amount,
+            status: "pending",
+            dataCreated: new Date().toISOString(),
+            dataUpdated: new Date().toISOString()
+        });
+
+        const transactionB = await optimized_01.getDataBase("B").ref("transactions").child(transactionA.key).push({
+            operation: "pix",
+            customId: transactionA.key,
+            userId, 
+            walletId, 
+            currencyId, 
+            amount,
+            status: "pending",
+            dataCreated: new Date().toISOString(),
+            dataUpdated: new Date().toISOString()
+        });
+        // ...
+        // Emitir evento "novo-pix"
+        optimized_01.emit("novo-pix", {
+            id: transactionA.key,
+            currencyId: currencyId,
+            amount: amount
+        });
+    }
+);
+
+const configuracoesApp = {
+    isServer: true,
+    host: "0.0.0.0",
+    port: 8080,
+    // ... outras opções
+    database: [{
+        name: "A",
+        description: "Banco de dados - A"
+    }, {
+        name: "B",
+        description: "Banco de dados - B"
+    }],
+    optimizations: [optimized_01]
+};
+
+const app = initializeApp(configuracoesApp);
+```
+
+Código do aplicativo **A**:
+
+```typescript
+import { getOptimized } from "ivipbase";
+
+// Aplicativo A:
+const gerarPIX = async (userId: string, walletId: string, amount: number, currencyId: string = "BRL")=>{
+    getOptimized("otimizacao-01").call("gerar-pix", userId, walletId, currencyId, amount);
+}
+
+```
+
+Código do aplicativo **B**:
+
+```typescript
+import { getOptimized } from "ivipbase";
+
+getOptimized("otimizacao-01").on("novo-pix", (transactionInfo) => {
+    console.log(transactionInfo.id);
+    console.log(transactionInfo.currencyId);
+    console.log(transactionInfo.amount);
+});
+```
+
+Neste exemplo:
+- O aplicativo A utiliza `getOptimized` para chamar a função *"gerar-pix"*.
+- O aplicativo B recebe o evento *"novo-pix"*, que é acionado pela função *"gerar-pix"* nos bastidores.
+
+Este método visa reduzir a complexidade e aumentar a eficiência das operações entre diferentes aplicativos e bancos de dados no mesmo servidor de aplicação.
 
 # `CustomStorage` - Armazenamento personalizado
 
