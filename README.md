@@ -91,7 +91,6 @@ O iVipBase é fácil de configurar e pode ser executado em qualquer lugar: na nu
 - [`getFunctions` - API para funções de nuvem](#getfunctions---api-para-funções-de-nuvem)
 - [`getExtensions` - API para extensões de nuvem](#getextensions---api-para-extensões-de-nuvem)
 - [`getOptimized` - API para otimização de processos](#getoptimized---api-para-otimização-de-processos)
-    - [Exemplo:](#exemplo)
 - [`CustomStorage` - Armazenamento personalizado](#customstorage---armazenamento-personalizado)
   - [Armazenamento `Map` (`DataStorageSettings`)](#armazenamento-map-datastoragesettings)
   - [Conexão ao MongoDB (`MongodbSettings`)](#conexão-ao-mongodb-mongodbsettings)
@@ -1814,7 +1813,7 @@ Atualmente, o fluxo de trabalho envolveria várias etapas, como:
 
 Com o `getOptimized`, esse processo é simplificado em uma única requisição. O aplicativo A faz uma solicitação ao `getOptimized`, que então executa uma função pré-configurada no painel do **IVIPBASE** e realiza as operações necessárias nos bancos de dados envolvidos.
 
-### Exemplo:
+**Exemplo:**
 
 Código do servidor **IVIPBASE**:
 
