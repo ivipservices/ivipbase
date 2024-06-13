@@ -1,14 +1,31 @@
+import { SimpleEventEmitter } from "ivipbase-core";
 import { IvipBaseApp, getApp, getAppsName, getFirstApp } from "../app";
 import { DataBase, hasDatabase } from "../database";
 import { StorageClient } from "./StorageClient";
 import { StorageReference } from "./StorageReference";
 import { StorageServer } from "./StorageServer";
 
-export class Storage {
+export class Storage extends SimpleEventEmitter {
+	private _ready = false;
 	private api: StorageServer | StorageClient;
 
 	constructor(readonly app: IvipBaseApp, readonly database: DataBase) {
+		super();
+
 		this.api = app.isServer ? new StorageServer(this) : new StorageClient(this);
+
+		this.app.ready(() => {
+			this._ready = true;
+			this.emit("ready");
+		});
+	}
+
+	async ready(callback?: (storage: Storage) => void) {
+		if (!this._ready) {
+			// Aguarda o evento ready
+			await new Promise((resolve) => this.once("ready", resolve));
+		}
+		callback?.(this);
 	}
 
 	root(): StorageReference {
@@ -60,7 +77,7 @@ export class Storage {
 		return this.api.listAll(ref);
 	}
 
-	list(ref: StorageReference | string, config: { maxResults?: number; page?: number }): Promise<{ prefixes: StorageReference[]; items: StorageReference[] }> {
+	list(ref: StorageReference | string, config: { maxResults?: number; page?: number }): Promise<{ more: boolean; page: number; prefixes: StorageReference[]; items: StorageReference[] }> {
 		return this.api.list(ref, config);
 	}
 }

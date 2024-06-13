@@ -88,6 +88,19 @@ O iVipBase é fácil de configurar e pode ser executado em qualquer lugar: na nu
     - [`User.toJSON` - Converter para JSON](#usertojson---converter-para-json)
     - [`User.fromJSON` - Converter de JSON](#userfromjson---converter-de-json)
 - [`getStorage` - API de armazenamento em nuvem](#getstorage---api-de-armazenamento-em-nuvem)
+  - [`ready` - Evento de inicialização](#ready---evento-de-inicialização-1)
+  - [`ref` - Referência de armazenamento](#ref---referência-de-armazenamento)
+  - [`put` - Enviar arquivo](#put---enviar-arquivo)
+  - [`putString` - Enviar string](#putstring---enviar-string)
+  - [`getDownloadURL` - Obter URL de download](#getdownloadurl---obter-url-de-download)
+  - [`delete` - Deletar arquivo/diretório](#delete---deletar-arquivodiretório)
+  - [`listAll` - Listar todos arquivos e diretórios](#listall---listar-todos-arquivos-e-diretórios)
+  - [`list` - Listar arquivos e diretórios](#list---listar-arquivos-e-diretórios)
+  - [`getMetadata` - Obter metadados](#getmetadata---obter-metadados)
+  - [`getBlob` - Obter blob](#getblob---obter-blob)
+  - [`getBytes` - Obter bytes](#getbytes---obter-bytes)
+  - [`getStream` - Obter stream](#getstream---obter-stream)
+  - [`getBuffer` - Obter buffer](#getbuffer---obter-buffer)
 - [`getFunctions` - API para funções de nuvem](#getfunctions---api-para-funções-de-nuvem)
 - [`getExtensions` - API para extensões de nuvem](#getextensions---api-para-extensões-de-nuvem)
 - [`getOptimized` - API para otimização de processos](#getoptimized---api-para-otimização-de-processos)
@@ -1794,6 +1807,224 @@ user.fromJSON(json);
 ```
 
 # `getStorage` - API de armazenamento em nuvem
+
+A API é semelhante à do Firebase, com adições. Para utilizá-la, será necessário empregar a função `getStorage`. Essa função é responsável por configurar a API de consumo com as predefinições no `initializeApp`. Requer um parâmetro, no qual você pode inserir a instância obtida por meio da função `initializeApp`, criando uma instância da classe `IvipBaseApp` ou dois parâmetros, uma string do nome do banco de dados e uma instância obtida por meio da função `initializeApp`. Caso o parâmetro não seja fornecido, o `getStorage` considerará a primeira aplicação criada e oprimeiro banco de dados que encontrar ou a aplicação padrão, se houver. Abaixo, seguem dois exemplos de uso do `getStorage`:
+
+```typescript
+import { initializeApp, getStorage } from "ivipbase";
+
+const app = initializeApp({
+    dbname: "mydb", // Cria ou abre um banco de dados com o nome "mydb"
+    logLevel: "log",
+    // ... outras opções
+});
+
+const storage = getStorage("mydb", app);
+// ou
+const storage = getStorage(app);
+// ou
+const storage = getStorage();
+
+storage.ready(() => {
+    // o armazenamento está pronto para uso
+});
+```
+
+Neste exemplo, o getStorage considera a aplicação padrão ou a primeira aplicação criada com um nome definido:
+
+```typescript
+import { getStorage } from "ivipbase";
+
+const storage = getStorage();
+storage.ready(() => {
+    // o armazenamento está pronto para uso
+});
+```
+
+Em caso de multiplos bancos de dados, você pode especificar o nome do banco de dados que deseja acessar:
+
+```typescript
+import { getStorage } from "ivipbase";
+
+const storage = getStorage("mydb");
+storage.ready(() => {
+    // o armazenamento está pronto para uso
+});
+```
+
+## `ready` - Evento de inicialização
+
+O evento `ready` é acionado quando a API de armazenamento em nuvem está pronta para uso. Abaixo, segue um exemplo de uso:
+
+```typescript
+storage.ready(() => {
+    console.log("API de armazenamento em nuvem pronta para uso");
+});
+```
+
+## `ref` - Referência de armazenamento
+
+Para obter uma referência de armazenamento, você pode usar a função `ref`. Ela requer um parâmetro: um caminho. Abaixo, segue um exemplo de uso:
+
+```typescript
+let ref = storage.ref("images");
+```
+
+## `put` - Enviar arquivo
+
+Para enviar um arquivo, você pode usar a função `put`. Ela requer dois parâmetros: um arquivo e/ou metadata. Abaixo, segue um exemplo de uso:
+
+```typescript
+let file = new File(["Hello, World!"], "image.jpg", { type: "text/plain" });
+
+ref.put(file)
+    .then(() => {
+        console.log("Arquivo enviado com sucesso");
+    })
+    .catch((error) => {
+        console.error("Erro ao enviar arquivo:", error);
+    });
+```
+
+É possível especificar um objeto de metadados para o arquivo:
+
+```typescript
+let metadata = {
+    contentType: "text/plain"
+};
+
+ref.put(file, metadata)
+    .then(() => {
+        console.log("Arquivo enviado com sucesso");
+    })
+    .catch((error) => {
+        console.error("Erro ao enviar arquivo:", error);
+    });
+```
+
+O método `put` retorna um objeto `UploadTask` que pode ser usado para monitorar o progresso do upload:
+
+```typescript
+let uploadTask = ref.put(file);
+uploadTask.on("state_changed", (snapshot) => {
+    let progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+    console.log("Progresso:", progress);
+}, (error) => {
+    console.error("Erro ao enviar arquivo:", error);
+}, () => {
+    console.log("Arquivo enviado com sucesso");
+});
+```
+
+## `putString` - Enviar string
+
+Para enviar uma string, você pode usar a função `putString`, sua funcionalidade é bem semelhante ao método `put`. Ela requer dois parâmetros: uma string e/ou o tipo. Abaixo, segue um exemplo de uso:
+
+```typescript
+// String bruta é o padrão se nenhum formato for fornecido
+let string = "Hello, World!";
+ref.putString(string).then(() => {
+    console.log("String enviada com sucesso");
+});
+
+// Formato base64
+let string = '5b6p5Y+344GX44G+44GX44Gf77yB44GK44KB44Gn44Go44GG77yB';
+ref.putString(string, 'base64').then((snapshot) => {
+    console.log('Uploaded a base64 string!');
+});
+
+// Formato base64url
+let string = '5b6p5Y-344GX44G-44GX44Gf77yB44GK44KB44Gn44Go44GG77yB';
+ref.putString(string, 'base64url').then((snapshot) => {
+    console.log('Uploaded a base64url string!');
+});
+
+// Formato data_url
+let string = 'data:text/plain;base64,5b6p5Y+344GX44G+44GX44Gf77yB44GK44KB44Gn44Go44GG77yB';
+ref.putString(string, 'data_url').then((snapshot) => {
+    console.log('Uploaded a data_url string!');
+});
+```
+
+## `getDownloadURL` - Obter URL de download
+
+Para obter a URL de download de um arquivo, você pode usar a função `getDownloadURL`. Abaixo, segue um exemplo de uso:
+
+```typescript
+ref.getDownloadURL()
+    .then((url) => {
+        console.log("URL de download:", url);
+    })
+    .catch((error) => {
+        console.error("Erro ao obter URL de download:", error);
+    });
+```
+
+## `delete` - Deletar arquivo/diretório
+
+Para deletar um arquivo ou diretório, você pode usar a função `delete`. Abaixo, segue um exemplo de uso:
+
+```typescript
+ref.delete()
+    .then(() => {
+        console.log("Arquivo deletado com sucesso");
+    })
+    .catch((error) => {
+        console.error("Erro ao deletar arquivo:", error);
+    });
+```
+
+## `listAll` - Listar todos arquivos e diretórios
+
+Para listar todos os arquivos e diretórios, você pode usar a função `listAll`. Abaixo, segue um exemplo de uso:
+
+```typescript
+ref.list()
+    .then(({prefixes, items}) => {
+        console.log("Arquivos listados:", items);
+        console.log("Diretórios listados:", prefixes);
+    })
+    .catch((error) => {
+        console.error("Erro ao listar arquivos:", error);
+    });
+```
+
+## `list` - Listar arquivos e diretórios
+
+Para listar arquivos e diretórios de forma paginada, você pode usar a função `list`. Abaixo, segue um exemplo de uso:
+
+```typescript
+ref.list({ maxResults: 10, page: 0 })
+    .then(({prefixes, items, more, page}) => {
+        console.log("Arquivos listados:", items);
+        console.log("Diretórios listados:", prefixes);
+        console.log("Mais páginas:", more);
+        console.log("Página atual:", page);
+    })
+    .catch((error) => {
+        console.error("Erro ao listar arquivos:", error);
+    });
+```
+
+## `getMetadata` - Obter metadados
+
+> Esta função está em discussão e ainda não foi implementada.
+
+## `getBlob` - Obter blob
+
+> Esta função está em discussão e ainda não foi implementada.
+
+## `getBytes` - Obter bytes
+
+> Esta função está em discussão e ainda não foi implementada.
+
+## `getStream` - Obter stream
+
+> Esta função está em discussão e ainda não foi implementada.
+
+## `getBuffer` - Obter buffer
+
+> Esta função está em discussão e ainda não foi implementada.
 
 # `getFunctions` - API para funções de nuvem
 

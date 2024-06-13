@@ -101,6 +101,7 @@ export class StorageReference extends SimpleEventEmitter {
 	put(data: Blob, metadata?: { contentType: string }): StorageReferencePutReturn;
 	put(data: Uint8Array, metadata?: { contentType: string }): StorageReferencePutReturn;
 	put(data: Buffer, metadata?: { contentType: string }): StorageReferencePutReturn;
+	put(data: File, metadata?: { contentType: string }): StorageReferencePutReturn;
 	put(data: any, metadata?: { contentType: string }) {
 		if (this.isWildcardPath) {
 			throw new Error("Cannot put data to a wildcard path");
