@@ -1,16 +1,30 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getStorage = exports.Storage = void 0;
+const ivipbase_core_1 = require("ivipbase-core");
 const app_1 = require("../app");
 const database_1 = require("../database");
 const StorageClient_1 = require("./StorageClient");
 const StorageReference_1 = require("./StorageReference");
 const StorageServer_1 = require("./StorageServer");
-class Storage {
+class Storage extends ivipbase_core_1.SimpleEventEmitter {
     constructor(app, database) {
+        super();
         this.app = app;
         this.database = database;
+        this._ready = false;
         this.api = app.isServer ? new StorageServer_1.StorageServer(this) : new StorageClient_1.StorageClient(this);
+        this.app.ready(() => {
+            this._ready = true;
+            this.emit("ready");
+        });
+    }
+    async ready(callback) {
+        if (!this._ready) {
+            // Aguarda o evento ready
+            await new Promise((resolve) => this.once("ready", resolve));
+        }
+        callback === null || callback === void 0 ? void 0 : callback(this);
     }
     root() {
         return new StorageReference_1.StorageReference(this, "");

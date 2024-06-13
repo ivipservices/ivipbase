@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.addRoutes = void 0;
 const error_1 = require("../../shared/error");
 const addRoutes = (env) => {
-    env.router.post(`/export/:dbName/*`, async (req, res) => {
+    env.router.post(`/import/:dbName/*`, async (req, res) => {
         var _a, _b;
         const { dbName } = req.params;
         if (!env.hasDatabase(dbName)) {

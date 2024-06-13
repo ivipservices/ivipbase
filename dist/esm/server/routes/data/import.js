@@ -1,6 +1,6 @@
 import { sendError, sendUnauthorizedError } from "../../shared/error.js";
 export const addRoutes = (env) => {
-    env.router.post(`/export/:dbName/*`, async (req, res) => {
+    env.router.post(`/import/:dbName/*`, async (req, res) => {
         const { dbName } = req.params;
         if (!env.hasDatabase(dbName)) {
             return sendError(res, {

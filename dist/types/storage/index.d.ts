@@ -1,11 +1,14 @@
+import { SimpleEventEmitter } from "ivipbase-core";
 import { IvipBaseApp } from "../app";
 import { DataBase } from "../database";
 import { StorageReference } from "./StorageReference";
-export declare class Storage {
+export declare class Storage extends SimpleEventEmitter {
     readonly app: IvipBaseApp;
     readonly database: DataBase;
+    private _ready;
     private api;
     constructor(app: IvipBaseApp, database: DataBase);
+    ready(callback?: (storage: Storage) => void): Promise<void>;
     root(): StorageReference;
     /**
      * Creates a reference to a node
@@ -41,6 +44,8 @@ export declare class Storage {
         maxResults?: number;
         page?: number;
     }): Promise<{
+        more: boolean;
+        page: number;
         prefixes: StorageReference[];
         items: StorageReference[];
     }>;

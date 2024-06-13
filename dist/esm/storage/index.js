@@ -1,13 +1,27 @@
+import { SimpleEventEmitter } from "ivipbase-core";
 import { IvipBaseApp, getApp, getAppsName, getFirstApp } from "../app/index.js";
 import { hasDatabase } from "../database/index.js";
 import { StorageClient } from "./StorageClient.js";
 import { StorageReference } from "./StorageReference.js";
 import { StorageServer } from "./StorageServer.js";
-export class Storage {
+export class Storage extends SimpleEventEmitter {
     constructor(app, database) {
+        super();
         this.app = app;
         this.database = database;
+        this._ready = false;
         this.api = app.isServer ? new StorageServer(this) : new StorageClient(this);
+        this.app.ready(() => {
+            this._ready = true;
+            this.emit("ready");
+        });
+    }
+    async ready(callback) {
+        if (!this._ready) {
+            // Aguarda o evento ready
+            await new Promise((resolve) => this.once("ready", resolve));
+        }
+        callback?.(this);
     }
     root() {
         return new StorageReference(this, "");

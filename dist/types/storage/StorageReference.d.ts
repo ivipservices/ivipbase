@@ -65,6 +65,9 @@ export declare class StorageReference extends SimpleEventEmitter {
     put(data: Buffer, metadata?: {
         contentType: string;
     }): StorageReferencePutReturn;
+    put(data: File, metadata?: {
+        contentType: string;
+    }): StorageReferencePutReturn;
     putString(data: string, type?: "base64" | "base64url" | "data_url" | "raw" | "text"): StorageReferencePutReturn;
     delete(): Promise<void>;
     getDownloadURL(): Promise<string | null>;
@@ -79,6 +82,8 @@ export declare class StorageReference extends SimpleEventEmitter {
         maxResults?: number;
         page?: number;
     }): Promise<{
+        more: boolean;
+        page: number;
         prefixes: StorageReference[];
         items: StorageReference[];
     }>;
