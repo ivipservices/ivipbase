@@ -192,7 +192,7 @@ class StorageDBServer extends ivipbase_core_1.Api {
                     info.value = nodeInfo.value;
                 }
                 info.address = typeof nodeInfo.address === "object" ? nodeInfo.address : undefined;
-                const isObjectOrArray = nodeInfo.exists && nodeInfo.address && [MDE_1.VALUE_TYPES.OBJECT, MDE_1.VALUE_TYPES.ARRAY].includes((_e = nodeInfo.type) !== null && _e !== void 0 ? _e : 0);
+                const isObjectOrArray = nodeInfo.exists && [MDE_1.VALUE_TYPES.OBJECT, MDE_1.VALUE_TYPES.ARRAY].includes((_e = nodeInfo.type) !== null && _e !== void 0 ? _e : 0);
                 if (args.child_count === true) {
                     info.children = { count: isObjectOrArray ? (_f = nodeInfo.childCount) !== null && _f !== void 0 ? _f : 0 : 0 };
                 }

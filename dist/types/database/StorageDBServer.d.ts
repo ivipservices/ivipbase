@@ -72,7 +72,14 @@ export declare class StorageDBServer extends Api {
         context?: any;
     }): Promise<{}>;
     exists(path: string): Promise<boolean>;
-    query(path: string, query: Types.Query, options?: Types.QueryOptions): ReturnType<Api["query"]>;
+    query(path: string, query: Types.Query, options?: Types.QueryOptions): Promise<{
+        results: Array<{
+            path: string;
+            val: any;
+        }> | string[];
+        context: any;
+        stop(): Promise<void>;
+    }>;
     export(path: string, stream: Types.StreamWriteFunction, options?: {
         format?: "json";
         type_safe?: boolean;

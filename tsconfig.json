@@ -5,29 +5,25 @@
     },
     "compilerOptions": {
         "lib": [
-            "esnext"
+            "es2020",
+            "esnext",
+            "dom",
+            "ES5"
         ],
-        "typeRoots": [
-            "./node_modules/@types",
-            "./types"
-        ],
-        "module": "es2020",
-        "target": "es2020",
+        "target": "ES2020",
+        "module": "ES2020",
         "moduleResolution": "node",
-        "allowImportingTsExtensions": true,
-        "esModuleInterop": true,
-        "skipLibCheck": true,
-        "strict": true,
-        "resolveJsonModule": true,
-        "allowJs": true,
-        "noEmit": true,
         "listEmittedFiles": true,
         "declaration": true,
         "declarationMap": true,
         "sourceMap": true,
         "forceConsistentCasingInFileNames": true,
+        "strict": true,
         "noImplicitAny": true,
+        "skipLibCheck": true,
+        "esModuleInterop": true,
         "pretty": true,
+        "resolveJsonModule": true,
         "noEmitOnError": true,
         "removeComments": false,
         "outDir": "./dist",
@@ -37,7 +33,8 @@
     "compileOnSave": false,
     "include": [
         "src/**/*.ts",
-        "test/**/*.ts"
+        "test/**/*.ts",
+        "globals.d.ts"
     ],
     "exclude": [
         "node_modules",

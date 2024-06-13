@@ -26,29 +26,9 @@ export const addRoute = (env: LocalServer) => {
 			return sendUnauthorizedError(res, "storage/unauthorized", "Você deve estar logado para acessar este recurso");
 		}
 
-		const dirUpload = path.join(env.settings.localPath, `./${dbName}/storage-uploads`);
-		if (!fs.existsSync(dirUpload)) {
-			fs.mkdirSync(dirUpload);
-		}
-
 		try {
-			const ref = env.db(dbName).ref(`__storage__`).child(path);
-
-			const snapshot = await ref.get();
-
-			if (snapshot.exists()) {
-				const { path: _path } = snapshot.val();
-
-				if (typeof _path === "string") {
-					const storage_path = path.resolve(env.settings.localPath, `./${dbName}`, _path);
-					if (fs.existsSync(storage_path)) {
-						fs.unlinkSync(storage_path);
-					}
-				}
-
-				await ref.remove();
-			}
-
+			const storage = env.storageFile(dbName);
+			await storage.delete(path);
 			res.send({ message: "Storage removed successfully." });
 		} catch (err) {
 			res.statusCode = 500;

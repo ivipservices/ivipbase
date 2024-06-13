@@ -189,7 +189,7 @@ export class StorageDBServer extends Api {
                     info.value = nodeInfo.value;
                 }
                 info.address = typeof nodeInfo.address === "object" ? nodeInfo.address : undefined;
-                const isObjectOrArray = nodeInfo.exists && nodeInfo.address && [VALUE_TYPES.OBJECT, VALUE_TYPES.ARRAY].includes(nodeInfo.type ?? 0);
+                const isObjectOrArray = nodeInfo.exists && [VALUE_TYPES.OBJECT, VALUE_TYPES.ARRAY].includes(nodeInfo.type ?? 0);
                 if (args.child_count === true) {
                     info.children = { count: isObjectOrArray ? nodeInfo.childCount ?? 0 : 0 };
                 }

@@ -1,1 +1,1 @@
-{"version":3,"file":"webmanager.d.ts","sourceRoot":"","sources":["../../../../src/server/routes/webmanager.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,WAAW,EAAE,MAAM,IAAI,CAAC;AAIjC,eAAO,MAAM,SAAS,QAAS,WAAW,SAmCzC,CAAC;AAEF,eAAe,SAAS,CAAC"}
+{"version":3,"file":"webmanager.d.ts","sourceRoot":"","sources":["../../../../src/server/routes/webmanager.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,WAAW,EAAE,MAAM,IAAI,CAAC;AAKjC,eAAO,MAAM,SAAS,QAAS,WAAW,SAmCzC,CAAC;AAEF,eAAe,SAAS,CAAC"}

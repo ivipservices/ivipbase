@@ -4,6 +4,7 @@ exports.LocalServer = exports.AbstractLocalServer = exports.isPossiblyServer = e
 const ivipbase_core_1 = require("ivipbase-core");
 const database_1 = require("../database");
 const utils_1 = require("../utils");
+const storage_1 = require("../storage");
 class ServerNotReadyError extends Error {
     constructor() {
         super("O servidor ainda não está pronto");
@@ -209,6 +210,7 @@ class AbstractLocalServer extends ivipbase_core_1.SimpleEventEmitter {
         };
         this.settings = new ServerSettings(settings);
         this.db = (dbName) => (0, database_1.getDatabase)(dbName, localApp);
+        this.storageFile = (dbName) => (0, storage_1.getStorage)(dbName, localApp);
         this.hasDatabase = (dbName) => (0, database_1.hasDatabase)(dbName);
         this.rules = (dbName) => {
             return this.db(dbName).rules;

@@ -24,7 +24,6 @@ export declare class NodeInfo {
     toString(): string;
 }
 export declare class CustomStorageNodeInfo extends NodeInfo {
-    address?: NodeAddress | null;
     revision: string;
     revision_nr: number;
     created: Date;

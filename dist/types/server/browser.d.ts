@@ -5,6 +5,7 @@ import { DbUserAccountDetails } from "./schema/user";
 import { DatabaseSettings, EmailRequest } from "../app/settings/browser";
 import type { RulesData } from "../database/services/rules";
 import { PathBasedRules } from "../database/services/rules";
+import { Storage } from "../storage";
 export declare class ServerNotReadyError extends Error {
     constructor();
 }
@@ -146,6 +147,7 @@ export declare abstract class AbstractLocalServer<LocalServer = any> extends Sim
     readonly log: DebugLogger;
     readonly debug: DebugLogger;
     readonly db: (dbName: string) => DataBase;
+    readonly storageFile: (dbName: string) => Storage;
     readonly hasDatabase: (dbName: string) => boolean;
     readonly rules: (dbName: string) => PathBasedRules;
     readonly securityRef: (dbName: string) => any;

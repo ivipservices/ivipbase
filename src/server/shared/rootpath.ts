@@ -1,13 +1,11 @@
 import path from "path";
+import dirname from "../../utils/es-dirname";
 
 // Este arquivo está em ./src/shared/rootpath.ts
 // Quando este código é executado, está em ./dist/cjs/shared/rootpath.js ou ./dist/esm/shared/rootpath.js
 // Portanto, a raiz do pacote está em ../../..
 
-const __filename = new URL(import.meta.url).pathname;
-const __dirname = path.dirname(__filename);
-
-let currentDir = __dirname;
+let currentDir = dirname();
 
 if (process.platform === "win32" && currentDir.startsWith("/")) {
 	// tsc-esm-fix não manipula corretamente as URLs de arquivo win32, a letra da unidade em import.meta.url é prefixada com uma barra: file:///C:/dir/file.js

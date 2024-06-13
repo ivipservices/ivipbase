@@ -1,7 +1,6 @@
-import { Mime, getExtension } from "../../../utils/index.js";
 import { sendError, sendUnauthorizedError } from "../../shared/error.js";
 import fs from "fs";
-import parseDataURL from "data-urls";
+import getRawBody from "raw-body";
 export const addRoute = (env) => {
     env.router.put(`/storage/:dbName/*`, async (req, res) => {
         const { dbName } = req.params;
@@ -11,74 +10,43 @@ export const addRoute = (env) => {
                 message: `Database '${dbName}' not found`,
             });
         }
-        const path = req.params["0"];
+        const path = req.params[0];
         if (!req.user) {
             return sendUnauthorizedError(res, "storage/unauthorized", "Você deve estar logado para acessar este recurso");
         }
-        const dirUpload = path.join(env.settings.localPath, `./${dbName}/storage-uploads`);
-        if (!fs.existsSync(dirUpload)) {
-            fs.mkdirSync(dirUpload);
-        }
+        const data = await new Promise((resolve, reject) => getRawBody(req, async (err, body) => {
+            if (err) {
+                reject(err);
+            }
+            else {
+                resolve(body);
+            }
+        }));
+        const format = req.query.format ?? req.body.format;
+        const contentType = req.query.contentType ?? req.body.contentType;
         try {
-            const ref = env.db(dbName).ref(`__storage__`).child(path);
-            const snapshot = await ref.get();
-            if (snapshot.exists()) {
-                const { path: _path } = snapshot.val();
-                if (typeof _path === "string") {
-                    const storage_path = path.resolve(env.settings.localPath, `./${dbName}`, _path);
-                    if (fs.existsSync(storage_path)) {
-                        fs.unlinkSync(storage_path);
-                    }
-                }
+            const storage = env.storageFile(dbName);
+            if (typeof format === "string" && ["base64", "base64url", "text", "raw", "data_url"].includes(format)) {
+                const p = await storage.putString(path, req.body.data ?? "", format);
+                return res.send(p);
             }
-            let extensionFile = getExtension(req.params[0]) || "";
-            let mimetype = "application/octet-binary";
-            if (typeof extensionFile === "string" && extensionFile.trim() !== "") {
-                mimetype = Mime.getType(req.params[0]);
-            }
-            let file = {
-                filename: `file-${Date.now()}`,
-                mimetype: mimetype,
-                size: 0,
-            };
-            if (typeof req.body.format === "string" && ["base64", "base64url", "text", "raw", "data_url"].includes(req.body.format)) {
-                let format = req.body.format, dataUrl = "";
-                mimetype = typeof req.body.contentType === "string" && Mime.getExtension(req.body.contentType) ? req.body.contentType : mimetype;
-                switch (format) {
-                    case "base64":
-                    case "base64url":
-                    case "raw":
-                        dataUrl = `data:${mimetype};${format},`;
-                        break;
-                    case "text":
-                        dataUrl = `data:text/plain;text,`;
-                        break;
-                }
-                dataUrl += req.body.data;
-                const body = parseDataURL(dataUrl)?.body;
-                if (!body) {
-                    return sendError(res, {
-                        code: "storage/unknown",
-                        message: "Invalid request",
+            else if (req.body.file && typeof req.body.file.path === "string") {
+                const tempData = await new Promise((resolve, reject) => {
+                    fs.readFile(req.body.file.path, (err, data) => {
+                        if (err) {
+                            reject(err);
+                        }
+                        else {
+                            resolve(data);
+                        }
                     });
-                }
-                const data = Buffer.from(body);
-                file = {
-                    ...file,
-                    mimetype: mimetype,
-                    size: data.length,
-                };
-                fs.appendFileSync(path.resolve(dirUpload, file.filename), data);
+                });
+                const p = await storage.put(path, tempData, contentType ? { contentType: contentType } : undefined);
+                return res.send(p);
             }
-            else if (req.body.file) {
-                const stats = fs.statSync(req.body.file.path);
-                file = {
-                    ...file,
-                    size: stats.size,
-                };
-                const rs = fs.createReadStream(req.body.file.path);
-                const ws = fs.createWriteStream(path.resolve(dirUpload, file.filename));
-                rs.pipe(ws);
+            else if (data instanceof Buffer) {
+                const p = await storage.put(path, data, contentType ? { contentType: contentType } : undefined);
+                return res.send(p);
             }
             else {
                 return sendError(res, {
@@ -86,16 +54,6 @@ export const addRoute = (env) => {
                     message: "Invalid request",
                 });
             }
-            const storage = {
-                path: `storage-uploads/${file.filename}`,
-                isFile: true,
-                metadata: {
-                    contentType: mimetype,
-                    size: file.size,
-                },
-            };
-            await ref.set(storage);
-            res.send({ message: "Upload storage successfully." });
         }
         catch (err) {
             res.statusCode = 500;

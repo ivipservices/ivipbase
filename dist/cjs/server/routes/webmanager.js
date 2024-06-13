@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.addRoutes = void 0;
 const rootpath_1 = require("../shared/rootpath");
 const path_1 = __importDefault(require("path"));
+const fs_1 = __importDefault(require("fs"));
 const addRoutes = (env) => {
     const webManagerDir = `webmanager`;
     // Add redirect from root to webmanager
@@ -33,7 +34,7 @@ const addRoutes = (env) => {
             const mainFilePath = path_1.default.join(assetsPath, "/", filePath);
             const posiplePath = [mainFilePath, mainFilePath + ".js", mainFilePath + ".jsx", path_1.default.join(mainFilePath, "/", "index.js"), path_1.default.join(mainFilePath, "/", "index.jsx")];
             for (const p of posiplePath) {
-                if (require("fs").existsSync(p) && require("fs").statSync(p).isFile()) {
+                if (fs_1.default.existsSync(p) && fs_1.default.statSync(p).isFile()) {
                     res.sendFile(p);
                     return;
                 }

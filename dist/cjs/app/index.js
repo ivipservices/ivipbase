@@ -16,6 +16,7 @@ const socket_io_client_1 = require("socket.io-client");
 const utils_1 = require("../utils");
 const error_1 = require("../controller/request/error");
 const ipc_1 = require("../ipc");
+const storage_1 = require("../storage");
 const CONNECTION_STATE_DISCONNECTED = "disconnected";
 const CONNECTION_STATE_CONNECTING = "connecting";
 const CONNECTION_STATE_CONNECTED = "connected";
@@ -29,6 +30,7 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         this.isDeleted = false;
         this.databases = new Map();
         this.auth = new Map();
+        this.storageFile = new Map();
         this._socket = null;
         this._ipc = undefined;
         this._connectionState = CONNECTION_STATE_DISCONNECTED;
@@ -92,6 +94,7 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
                     await db.ready();
                     if (!this.databases.has(dbName)) {
                         this.databases.set(dbName, db);
+                        this.storageFile.set(dbName, new storage_1.Storage(this, db));
                     }
                 }
             }
@@ -344,6 +347,7 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
         this.isServer = typeof this.settings.server === "object";
         // this.auth.clear();
         this.databases.clear();
+        this.storageFile.clear();
         this.emit("reset");
         await this.initialize();
         await this.ready();

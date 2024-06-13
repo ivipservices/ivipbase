@@ -177,7 +177,7 @@ export class SqliteStorage extends CustomStorage {
 		const list = await this._get(sql);
 
 		const result: StorageNodeInfo[] = pendingList
-			.concat(list)
+			.concat(list.filter((row) => "path" in row && regex.test(row["path"])))
 			.filter((row, i, l) => {
 				return l.findIndex((r) => r.path === row.path) === i;
 			})

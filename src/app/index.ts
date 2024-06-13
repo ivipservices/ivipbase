@@ -12,6 +12,8 @@ import { connect as connectSocket } from "socket.io-client";
 import { joinObjects } from "../utils";
 import { RequestError } from "../controller/request/error";
 import { IPCPeer, getIPCPeer } from "../ipc";
+import { Storage } from "../storage";
+import { AxiosProgressEvent } from "axios";
 
 type IOWebSocket = ReturnType<typeof connectSocket>;
 
@@ -31,6 +33,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 	server?: LocalServer;
 	readonly databases: Map<string, DataBase> = new Map();
 	readonly auth: Map<string, Auth> = new Map();
+	readonly storageFile: Map<string, Storage> = new Map();
 
 	private _connectionState:
 		| typeof CONNECTION_STATE_DISCONNECTED
@@ -144,6 +147,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 					await db.ready();
 					if (!this.databases.has(dbName)) {
 						this.databases.set(dbName, db);
+						this.storageFile.set(dbName, new Storage(this, db));
 					}
 				}
 			}
@@ -286,6 +290,8 @@ export class IvipBaseApp extends SimpleEventEmitter {
 		 * A method that overrides the default data send handler. Override for streaming.
 		 */
 		dataRequestCallback?: (length: number) => string | Types.TypedArrayLike | Promise<string | Types.TypedArrayLike>;
+		onUploadProgress?: (progressEvent: AxiosProgressEvent) => void;
+		onDownloadProgress?: (progressEvent: AxiosProgressEvent) => void;
 		/**
 		 * Whether to try the request even if there is no connection
 		 * @default false
@@ -489,6 +495,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 
 		// this.auth.clear();
 		this.databases.clear();
+		this.storageFile.clear();
 
 		this.emit("reset");
 

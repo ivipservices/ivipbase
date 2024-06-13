@@ -22,10 +22,6 @@ export const addRoute = (env: LocalServer) => {
 
 		const path = req.params["0"];
 
-		if (!req.user) {
-			return sendUnauthorizedError(res, "storage/unauthorized", "Você deve estar logado para acessar este recurso");
-		}
-
 		const dirUpload = path.join(env.settings.localPath, `./${dbName}/storage-uploads`);
 		if (!fs.existsSync(dirUpload)) {
 			fs.mkdirSync(dirUpload);

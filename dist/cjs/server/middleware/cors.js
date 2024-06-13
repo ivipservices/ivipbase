@@ -14,7 +14,7 @@ const getCorsOptions = (allowedOrigins) => {
     return {
         origin: allowedOrigins === "*" ? true : allowedOrigins === "" ? false : allowedOrigins.split(/,\s*/),
         methods: "GET,PUT,POST,DELETE,OPTIONS",
-        allowedHeaders: "Content-Type, Authorization, Content-Length, Accept, Origin, X-Requested-With, DataBase-Context",
+        allowedHeaders: "Content-Type, Authorization, Content-Length, Accept, Origin, X-Requested-With, DataBase-Context", // Cabeçalhos permitidos
     };
 };
 exports.getCorsOptions = getCorsOptions;
@@ -31,7 +31,7 @@ const getCorsHeaders = (allowedOrigins, currentOrigin) => {
         "Access-Control-Allow-Origin": origins,
         "Access-Control-Allow-Methods": corsOptions.methods,
         "Access-Control-Allow-Headers": corsOptions.allowedHeaders,
-        "Access-Control-Expose-Headers": "Date, DataBase-Context",
+        "Access-Control-Expose-Headers": "Date, DataBase-Context", // Cabeçalhos permitidos para serem acessados pelo cliente
     };
 };
 exports.getCorsHeaders = getCorsHeaders;

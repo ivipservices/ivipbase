@@ -16,9 +16,6 @@ const addRoute = (env) => {
             });
         }
         const path = req.params["0"];
-        if (!req.user) {
-            return (0, error_1.sendUnauthorizedError)(res, "storage/unauthorized", "Você deve estar logado para acessar este recurso");
-        }
         const dirUpload = path.join(env.settings.localPath, `./${dbName}/storage-uploads`);
         if (!fs_1.default.existsSync(dirUpload)) {
             fs_1.default.mkdirSync(dirUpload);

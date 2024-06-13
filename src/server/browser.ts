@@ -6,6 +6,7 @@ import { DatabaseSettings, EmailRequest } from "../app/settings/browser";
 import type { RulesData } from "../database/services/rules";
 import { PathBasedRules } from "../database/services/rules";
 import { joinObjects } from "../utils";
+import { Storage, getStorage } from "../storage";
 
 export class ServerNotReadyError extends Error {
 	constructor() {
@@ -291,6 +292,7 @@ export abstract class AbstractLocalServer<LocalServer = any> extends SimpleEvent
 	readonly log: DebugLogger;
 	readonly debug: DebugLogger;
 	readonly db: (dbName: string) => DataBase;
+	readonly storageFile: (dbName: string) => Storage;
 	readonly hasDatabase: (dbName: string) => boolean;
 	readonly rules: (dbName: string) => PathBasedRules;
 
@@ -325,6 +327,7 @@ export abstract class AbstractLocalServer<LocalServer = any> extends SimpleEvent
 		super();
 		this.settings = new ServerSettings<LocalServer>(settings);
 		this.db = (dbName) => getDatabase(dbName, localApp);
+		this.storageFile = (dbName) => getStorage(dbName, localApp);
 		this.hasDatabase = (dbName) => hasDatabase(dbName);
 		this.rules = (dbName) => {
 			return this.db(dbName).rules;

@@ -1,5 +1,49 @@
 import { IvipBaseApp } from "../app";
-import { Storage } from "./storage";
+import { DataBase } from "../database";
+import { StorageReference } from "./StorageReference";
+export declare class Storage {
+    readonly app: IvipBaseApp;
+    readonly database: DataBase;
+    private api;
+    constructor(app: IvipBaseApp, database: DataBase);
+    /**
+     * Creates a reference to a node
+     * @param path
+     * @returns reference to the requested node
+     */
+    ref(path: string): StorageReference;
+    put(ref: StorageReference, data: Blob | Uint8Array, metadata?: {
+        contentType: string;
+    }, onStateChanged?: (event: {
+        bytesTransferred: number;
+        totalBytes?: number;
+        state: string;
+        metadata: any;
+        task: string;
+        ref: StorageReference;
+    }) => void): Promise<string>;
+    putString(ref: StorageReference, data: string, type?: "base64" | "base64url" | "data_url" | "raw" | "text", onStateChanged?: (event: {
+        bytesTransferred: number;
+        totalBytes?: number;
+        state: string;
+        metadata: any;
+        task: string;
+        ref: StorageReference;
+    }) => void): Promise<string>;
+    delete(ref: StorageReference): Promise<void>;
+    getDownloadURL(ref: StorageReference): Promise<string | null>;
+    listAll(ref: StorageReference): Promise<{
+        prefixes: StorageReference[];
+        items: StorageReference[];
+    }>;
+    list(ref: StorageReference, config: {
+        maxResults?: number;
+        page?: number;
+    }): Promise<{
+        prefixes: StorageReference[];
+        items: StorageReference[];
+    }>;
+}
 export declare function getStorage(): Storage;
 export declare function getStorage(app: string | IvipBaseApp | undefined): Storage;
 export declare function getStorage(database: string): Storage;

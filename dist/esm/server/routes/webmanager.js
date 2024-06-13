@@ -1,5 +1,6 @@
 import { packageRootPath } from "../shared/rootpath.js";
 import path from "path";
+import fs from "fs";
 export const addRoutes = (env) => {
     const webManagerDir = `webmanager`;
     // Add redirect from root to webmanager
@@ -27,7 +28,7 @@ export const addRoutes = (env) => {
             const mainFilePath = path.join(assetsPath, "/", filePath);
             const posiplePath = [mainFilePath, mainFilePath + ".js", mainFilePath + ".jsx", path.join(mainFilePath, "/", "index.js"), path.join(mainFilePath, "/", "index.jsx")];
             for (const p of posiplePath) {
-                if (require("fs").existsSync(p) && require("fs").statSync(p).isFile()) {
+                if (fs.existsSync(p) && fs.statSync(p).isFile()) {
                     res.sendFile(p);
                     return;
                 }

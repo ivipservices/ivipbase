@@ -2,7 +2,9 @@
 //require("./MDE/test_ismael");
 //require("./MDE/test_initial_app");
 
-import { initializeApp, getDatabase, getIPCPeer, DataStorageSettings, JsonFileStorageSettings, SqliteSettings, SequelizeSettings, MongodbSettings } from "../src";
+import { initializeApp, getDatabase, getIPCPeer, DataStorageSettings, JsonFileStorageSettings, SqliteSettings, SequelizeSettings, MongodbSettings, getStorage } from "../src";
+
+import dirname from "../src/utils/es-dirname";
 
 import cluster from "cluster";
 import fs from "fs";
@@ -61,20 +63,13 @@ const app = initializeApp({
 	},
 });
 
-const __filename = new URL(import.meta.url).pathname.replace(/^\/+/, "").replace(/^\\+/, "");
-const __dirname = path.dirname(__filename);
-
 app.ready(async () => {
 	const db = getDatabase(app);
 	console.log("Database ready!");
 
-	fs.readFile(path.join(__dirname, "paths.txt"), (err, data) => {
-		app.request({
-			route: "/storage/root/file",
-			data,
-			method: "PUT",
-		});
-	});
+	// fs.readFile(path.join(dirname(), "paths.txt"), (err, data) => {
+	// 	getStorage().ref("file-teste").put(data, { contentType: "text/plain" });
+	// });
 
 	// db.ref("__auth__/accounts")
 	// 	.query()

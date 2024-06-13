@@ -89,7 +89,14 @@ export declare class StorageDBClient extends Api {
         cursor?: string;
     }>;
     exists(path: string): Promise<boolean>;
-    query(path: string, query: Types.Query, options?: Types.QueryOptions): ReturnType<Api["query"]>;
+    query(path: string, query: Types.Query, options?: Types.QueryOptions): Promise<{
+        results: Array<{
+            path: string;
+            val: any;
+        }> | string[];
+        context: any;
+        stop(): Promise<void>;
+    }>;
     reflect(path: string, type: "info" | "children", args: any): Promise<any>;
     export(path: string, write: Types.StreamWriteFunction, options?: {
         format?: "json";
@@ -104,6 +111,10 @@ export declare class StorageDBClient extends Api {
     setSchema(path: string, schema: string | Record<string, any>, warnOnly?: boolean): Promise<any>;
     getSchema(path: string): Promise<any>;
     getSchemas(): Promise<any>;
-    validateSchema(path: string, value: any, isUpdate: boolean): ReturnType<Api["validateSchema"]>;
+    validateSchema(path: string, value: any, isUpdate: boolean): Promise<{
+        ok: boolean;
+        reason?: string;
+        warning?: string;
+    }>;
 }
 //# sourceMappingURL=StorageDBClient.d.ts.map

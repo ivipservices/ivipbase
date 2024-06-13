@@ -295,18 +295,18 @@ const addWebsocketServer = (env) => {
             client.realtimeQueries[dbName] = {};
         }
         const eventHandler = async (e) => {
-            var _a;
+            var _a, _b, _c;
             try {
                 const client = getClientBySocketId(event.id, "query-subscribe");
                 if (client) {
                     if (!(await env.rules(dbName).isOperationAllowed((_a = client.user.get(dbName)) !== null && _a !== void 0 ? _a : {}, e.path, "get", { context, value: e.value })).allow) {
-                        return stop === null || stop === void 0 ? void 0 : stop();
+                        return (_b = opt.stop) === null || _b === void 0 ? void 0 : _b.call(opt);
                     }
                     const data = ivipbase_core_1.Transport.serialize(event);
                     client.socket.emit("query-event", data);
                 }
                 else {
-                    stop === null || stop === void 0 ? void 0 : stop();
+                    (_c = opt.stop) === null || _c === void 0 ? void 0 : _c.call(opt);
                 }
             }
             catch (err) {

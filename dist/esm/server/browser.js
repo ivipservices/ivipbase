@@ -1,6 +1,7 @@
 import { DebugLogger, SimpleEventEmitter } from "ivipbase-core";
 import { getDatabase, getDatabasesNames, hasDatabase } from "../database/index.js";
 import { joinObjects } from "../utils/index.js";
+import { getStorage } from "../storage/index.js";
 export class ServerNotReadyError extends Error {
     constructor() {
         super("O servidor ainda não está pronto");
@@ -199,6 +200,7 @@ export class AbstractLocalServer extends SimpleEventEmitter {
         };
         this.settings = new ServerSettings(settings);
         this.db = (dbName) => getDatabase(dbName, localApp);
+        this.storageFile = (dbName) => getStorage(dbName, localApp);
         this.hasDatabase = (dbName) => hasDatabase(dbName);
         this.rules = (dbName) => {
             return this.db(dbName).rules;

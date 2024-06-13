@@ -1,4 +1,4 @@
-import { sendError, sendUnauthorizedError } from "../../shared/error.js";
+import { sendError } from "../../shared/error.js";
 import fs from "fs";
 export const addRoute = (env) => {
     env.router.get(`/storage/:dbName/*`, async (req, res) => {
@@ -10,9 +10,6 @@ export const addRoute = (env) => {
             });
         }
         const path = req.params["0"];
-        if (!req.user) {
-            return sendUnauthorizedError(res, "storage/unauthorized", "Você deve estar logado para acessar este recurso");
-        }
         const dirUpload = path.join(env.settings.localPath, `./${dbName}/storage-uploads`);
         if (!fs.existsSync(dirUpload)) {
             fs.mkdirSync(dirUpload);

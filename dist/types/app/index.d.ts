@@ -6,6 +6,8 @@ import { DataBase } from "../database";
 import { Auth } from "../auth";
 import { connect as connectSocket } from "socket.io-client";
 import { IPCPeer } from "../ipc";
+import { Storage } from "../storage";
+import { AxiosProgressEvent } from "axios";
 type IOWebSocket = ReturnType<typeof connectSocket>;
 export declare class IvipBaseApp extends SimpleEventEmitter {
     _ready: boolean;
@@ -18,6 +20,7 @@ export declare class IvipBaseApp extends SimpleEventEmitter {
     server?: LocalServer;
     readonly databases: Map<string, DataBase>;
     readonly auth: Map<string, Auth>;
+    readonly storageFile: Map<string, Storage>;
     private _connectionState;
     private _socket;
     private _ipc;
@@ -80,6 +83,8 @@ export declare class IvipBaseApp extends SimpleEventEmitter {
          * A method that overrides the default data send handler. Override for streaming.
          */
         dataRequestCallback?: (length: number) => string | Types.TypedArrayLike | Promise<string | Types.TypedArrayLike>;
+        onUploadProgress?: (progressEvent: AxiosProgressEvent) => void;
+        onDownloadProgress?: (progressEvent: AxiosProgressEvent) => void;
         /**
          * Whether to try the request even if there is no connection
          * @default false

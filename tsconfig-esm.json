@@ -8,16 +8,13 @@
             "esnext",
             "dom"
         ],
-        "listEmittedFiles": true,
-        "rootDir": "./src",
         "target": "es2020",
         "module": "es2020",
         "moduleResolution": "node",
+        "listEmittedFiles": true,
         "declaration": true,
         "declarationMap": true,
         "sourceMap": true,
-        "outDir": "./dist/esm",
-        "declarationDir": "./dist/types",
         "forceConsistentCasingInFileNames": true,
         "strict": true,
         "noImplicitAny": true,
@@ -26,7 +23,10 @@
         "pretty": true,
         "resolveJsonModule": true,
         "noEmitOnError": true,
-        "removeComments": false
+        "removeComments": false,
+        "rootDir": "./src",
+        "outDir": "./dist/esm",
+        "declarationDir": "./dist/types"
     },
     "compileOnSave": false,
     "include": [

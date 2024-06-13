@@ -17,11 +17,13 @@ export default async function request(
 		context?: any;
 	} = { accessToken: null, data: null, dataReceivedCallback: null, dataRequestCallback: null, context: null },
 ): Promise<{ context: any; data: any }> {
-	let postData = options.data;
+	let postData = options.data,
+		isJson = false;
 	if (typeof postData === "undefined" || postData === null) {
 		postData = "";
 	} else if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(postData))) {
 		postData = JSON.stringify(postData);
+		isJson = true;
 	}
 	const headers: Record<string, string> = {
 		"DataBase-Context": JSON.stringify(options.context || null),
@@ -46,12 +48,12 @@ export default async function request(
 			postData += chunk;
 		}
 		request.data = postData;
-	} else if (typeof postData === "string" && postData.length > 0) {
+	} else if (typeof postData === "string" && isJson) {
 		headers["Content-Type"] = "application/json";
 		request.data = postData;
 	} else {
 		headers["Content-Type"] = "application/octet-stream";
-		headers["Content-Length"] = postData.length;
+		// headers["Content-Length"] = postData.length;
 		request.data = postData;
 	}
 	if (options.accessToken) {

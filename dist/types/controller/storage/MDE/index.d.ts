@@ -1,7 +1,8 @@
 import { DebugLogger, SimpleEventEmitter, Types } from "ivipbase-core";
 import { CustomStorageNodeInfo, StorageNode, StorageNodeInfo } from "./NodeInfo";
 import { VALUE_TYPES } from "./utils";
-export { VALUE_TYPES, StorageNode, StorageNodeInfo };
+export type { StorageNode, StorageNodeInfo };
+export { VALUE_TYPES };
 /**
  * Representa as configurações de um MDE.
  */

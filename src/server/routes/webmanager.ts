@@ -1,6 +1,7 @@
 import { LocalServer } from "..";
 import { packageRootPath } from "../shared/rootpath";
 import path from "path";
+import fs from "fs";
 
 export const addRoutes = (env: LocalServer) => {
 	const webManagerDir = `webmanager`;
@@ -29,7 +30,7 @@ export const addRoutes = (env: LocalServer) => {
 			const mainFilePath = path.join(assetsPath, "/", filePath);
 			const posiplePath = [mainFilePath, mainFilePath + ".js", mainFilePath + ".jsx", path.join(mainFilePath, "/", "index.js"), path.join(mainFilePath, "/", "index.jsx")];
 			for (const p of posiplePath) {
-				if (require("fs").existsSync(p) && require("fs").statSync(p).isFile()) {
+				if (fs.existsSync(p) && fs.statSync(p).isFile()) {
 					res.sendFile(p);
 					return;
 				}

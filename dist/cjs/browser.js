@@ -21,6 +21,7 @@ Object.defineProperty(exports, "DataStorageSettings", { enumerable: true, get: f
 __exportStar(require("./app"), exports);
 __exportStar(require("./database"), exports);
 __exportStar(require("./auth"), exports);
+__exportStar(require("./storage"), exports);
 __exportStar(require("./ipc"), exports);
 var ivipbase_core_1 = require("ivipbase-core");
 Object.defineProperty(exports, "PathInfo", { enumerable: true, get: function () { return ivipbase_core_1.PathInfo; } });
