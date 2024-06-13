@@ -96,8 +96,7 @@ const MenuItems = ({}) => {
 	);
 };
 
-const DataBaseEditor = () => {
-	const { dbName } = window.pageState();
+const DataBaseEditor = ({ dbName, authToken }) => {
 	const refDatabaseEditor = useRef();
 
 	useEffect(() => {
@@ -158,6 +157,52 @@ const DataBaseEditor = () => {
 				},
 			};
 		});
+
+		refDatabaseEditor.current.download((path) => {
+			if (typeof authToken !== "string" || authToken.trim() === "") {
+				return;
+			}
+
+			const link = document.createElement("a");
+
+			const url = `/export/${dbName}/${path}?format=json&auth_token=${authToken}`;
+			link.download = url;
+			link.href = url;
+			link.click();
+		});
+
+		refDatabaseEditor.current.upload((path) => {
+			let upload = document.getElementById("upload");
+
+			if (upload) {
+				document.body.removeChild(upload);
+			}
+
+			upload = document.createElement("input");
+			upload.style.display = "none";
+			upload.id = "upload";
+			document.body.appendChild(upload);
+			upload.type = "file";
+			upload.accept = ".json";
+
+			upload.onchange = async (event) => {
+				const file = event.target.files[0];
+				const reader = new FileReader();
+				reader.onload = async (event) => {
+					document.body.removeChild(upload);
+					const data = event.target.result;
+					let end = 0;
+					await db.ref(path).import((length) => {
+						return new Promise((resolve, reject) => {
+							end += length;
+							resolve(data.slice(end - length, end));
+						});
+					});
+				};
+				reader.readAsText(file);
+			};
+			upload.click();
+		});
 	}, [refDatabaseEditor.current]);
 
 	return (
@@ -170,6 +215,7 @@ const DataBaseEditor = () => {
 
 export const DataBase = () => {
 	const { dbName } = window.pageState();
+	const [authToken, setAuthToken] = useState(null);
 
 	useEffect(() => {
 		let event;
@@ -187,6 +233,8 @@ export const DataBase = () => {
 				if (!auth.currentUser) {
 					window.goToPage("login", { dbName });
 					event.stop();
+				} else {
+					setAuthToken(auth.currentUser.accessToken);
 				}
 			});
 		});
@@ -208,7 +256,10 @@ export const DataBase = () => {
 			}}
 		>
 			<PageView label="Dados">
-				<DataBaseEditor />
+				<DataBaseEditor
+					dbName={dbName}
+					authToken={authToken}
+				/>
 			</PageView>
 			<PageView
 				label="Regras"

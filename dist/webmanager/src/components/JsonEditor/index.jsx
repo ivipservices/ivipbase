@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, forwardRef, useImperativeHandle } from "react";
 import style from "./style.module.scss";
 import { Typography, Breadcrumbs, Link, TextField, IconButton } from "@mui/material";
-import { mdiPencil, mdiClose, mdiLink, mdiChevronRight } from "@mdi/js";
+import { mdiPencil, mdiClose, mdiLink, mdiChevronRight, mdiDownload, mdiUpload } from "@mdi/js";
 import SvgIcon from "../SvgIcon";
 import { PathInfo } from "ivipbase";
 import { getValueType, resolveArrayPath, valueToString } from "./utils.jsx";
@@ -15,6 +15,8 @@ export const JsonEditor = forwardRef(({ rootDir = "root", path = [] }, ref) => {
 	const [callbackChangeData, setCallbackChangeData] = useState(null);
 	const [callbackNewChildres, setCallbackNewChildres] = useState(null);
 	const [callbacksubscribeMutated, setCallbacksubscribeMutated] = useState(null);
+	const [callbackDownload, setCallbackDownload] = useState(null);
+	const [callbackUpload, setCallbackUpload] = useState(null);
 
 	const [editPath, setEditPath] = useState(false);
 
@@ -47,6 +49,12 @@ export const JsonEditor = forwardRef(({ rootDir = "root", path = [] }, ref) => {
 			},
 			subscribeMutated: (callback) => {
 				setCallbacksubscribeMutated(() => (typeof callback === "function" ? callback : null));
+			},
+			download: (callback) => {
+				setCallbackDownload(() => (typeof callback === "function" ? callback : null));
+			},
+			upload: (callback) => {
+				setCallbackUpload(() => (typeof callback === "function" ? callback : null));
 			},
 		}),
 		[],
@@ -266,18 +274,14 @@ export const JsonEditor = forwardRef(({ rootDir = "root", path = [] }, ref) => {
 						/>
 					)}
 				</Breadcrumbs>
-				<div
-					className={style["actions"]}
-					style={{
-						visibility: editPath ? "visible" : undefined,
-					}}
-				>
+				<div className={style["actions"]}>
 					{!editPath && (
 						<IconButton
 							size="small"
 							onClick={() => {
 								setEditPath(!editPath);
 							}}
+							disableRipple={true}
 						>
 							<SvgIcon path={mdiPencil} />
 						</IconButton>
@@ -288,8 +292,40 @@ export const JsonEditor = forwardRef(({ rootDir = "root", path = [] }, ref) => {
 							onClick={() => {
 								setEditPath(!editPath);
 							}}
+							style={{
+								visibility: "visible",
+							}}
+							disableRipple={true}
 						>
 							<SvgIcon path={mdiClose} />
+						</IconButton>
+					)}
+
+					{!editPath && (
+						<IconButton
+							size="small"
+							onClick={() => {
+								if (typeof callbackDownload === "function") {
+									callbackDownload(resolveArrayPath(currentPath));
+								}
+							}}
+							disableRipple={true}
+						>
+							<SvgIcon path={mdiDownload} />
+						</IconButton>
+					)}
+
+					{!editPath && (
+						<IconButton
+							size="small"
+							onClick={() => {
+								if (typeof callbackUpload === "function") {
+									callbackUpload(resolveArrayPath(currentPath));
+								}
+							}}
+							disableRipple={true}
+						>
+							<SvgIcon path={mdiUpload} />
 						</IconButton>
 					)}
 				</div>

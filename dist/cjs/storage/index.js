@@ -12,6 +12,9 @@ class Storage {
         this.database = database;
         this.api = app.isServer ? new StorageServer_1.StorageServer(this) : new StorageClient_1.StorageClient(this);
     }
+    root() {
+        return new StorageReference_1.StorageReference(this, "");
+    }
     /**
      * Creates a reference to a node
      * @param path

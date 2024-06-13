@@ -3,7 +3,8 @@ export class StorageClient {
     constructor(storage) {
         this.storage = storage;
     }
-    async put(ref, data, metadata, onStateChanged) {
+    async put(p, data, metadata, onStateChanged) {
+        const ref = p instanceof StorageReference ? p : new StorageReference(this.storage, p);
         return await this.storage.app.request({
             route: `/storage/${this.storage.database.name}/${ref.fullPath}` + (metadata?.contentType ? `?contentType=${metadata.contentType}` : ""),
             data,
@@ -22,7 +23,8 @@ export class StorageClient {
                 : undefined,
         });
     }
-    async putString(ref, data, type, onStateChanged) {
+    async putString(p, data, type, onStateChanged) {
+        const ref = p instanceof StorageReference ? p : new StorageReference(this.storage, p);
         return await this.storage.app.request({
             route: `/storage/${this.storage.database.name}/${ref.fullPath}?format=${type ?? "text"}`,
             data: {
@@ -44,21 +46,24 @@ export class StorageClient {
                 : undefined,
         });
     }
-    async delete(ref) {
+    async delete(p) {
+        const ref = p instanceof StorageReference ? p : new StorageReference(this.storage, p);
         await this.storage.app.request({
             route: `/storage/${this.storage.database.name}/${ref.fullPath}`,
             method: "DELETE",
         });
         return Promise.resolve();
     }
-    async getDownloadURL(ref) {
+    async getDownloadURL(p) {
+        const ref = p instanceof StorageReference ? p : new StorageReference(this.storage, p);
         const { path, isFile } = await this.storage.app.request({
             method: "GET",
             route: `storage-url/${this.storage.database.name}/${ref.fullPath}`,
         });
         return typeof path === "string" && isFile ? `${this.storage.app.url}/${path.replace(/^\/+/, "")}` : null;
     }
-    async listAll(ref) {
+    async listAll(p) {
+        const ref = p instanceof StorageReference ? p : new StorageReference(this.storage, p);
         const { items, prefixes, } = await this.storage.app.request({
             method: "GET",
             route: `storage-list/${this.storage.database.name}/${ref.fullPath}`,
@@ -72,7 +77,8 @@ export class StorageClient {
             }),
         };
     }
-    async list(ref, config) {
+    async list(p, config) {
+        const ref = p instanceof StorageReference ? p : new StorageReference(this.storage, p);
         const { items, prefixes, more, page, } = await this.storage.app.request({
             method: "GET",
             route: `storage-list/${this.storage.database.name}/${ref.fullPath}`,

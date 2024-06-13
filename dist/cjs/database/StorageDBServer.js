@@ -80,7 +80,7 @@ class StorageDBServer extends ivipbase_core_1.Api {
             throw new Error("Only json output is currently supported");
         }
         const data = await this.get(path);
-        const json = JSON.stringify(data.value);
+        const json = JSON.stringify(data.value, null, 4);
         for (let i = 0; i < json.length; i += 1000) {
             await stream(json.slice(i, i + 1000));
         }

@@ -1,11 +1,7 @@
 import type { LocalServer, RouteRequest } from "../../";
-import { Mime, getExtension } from "../../../utils";
 import { sendError, sendUnauthorizedError } from "../../shared/error";
 import fs from "fs";
-import parseDataURL from "data-urls";
 import getRawBody from "raw-body";
-import $path from "path";
-import { fileTypeFromBuffer } from "file-type";
 
 export type RequestQuery = {
 	format?: "base64" | "base64url" | "text" | "raw" | "data_url";

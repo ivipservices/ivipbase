@@ -9,6 +9,9 @@ export class Storage {
         this.database = database;
         this.api = app.isServer ? new StorageServer(this) : new StorageClient(this);
     }
+    root() {
+        return new StorageReference(this, "");
+    }
     /**
      * Creates a reference to a node
      * @param path

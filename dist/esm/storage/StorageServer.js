@@ -1,3 +1,4 @@
+import { StorageReference } from "./StorageReference.js";
 import path from "path";
 import fs from "fs";
 import { Mime, getExtension } from "../utils/index.js";
@@ -6,7 +7,8 @@ export class StorageServer {
     constructor(storage) {
         this.storage = storage;
     }
-    async put(ref, data, metadata, onStateChanged) {
+    async put(p, data, metadata, onStateChanged) {
+        const ref = p instanceof StorageReference ? p : new StorageReference(this.storage, p);
         const localPath = this.storage.app.settings.server?.localPath ?? "./data";
         const dbName = this.storage.database.name;
         const dataBuffer = Buffer.from(data);
@@ -17,14 +19,7 @@ export class StorageServer {
         const db_ref = this.storage.database.ref(`__storage__`).child(ref.fullPath);
         const snapshot = await db_ref.get();
         if (snapshot.exists()) {
-            const { path: _path } = snapshot.val();
-            if (typeof _path === "string") {
-                const storage_path = path.resolve(localPath, `./${dbName}`, _path);
-                if (fs.existsSync(storage_path)) {
-                    fs.unlinkSync(storage_path);
-                }
-                await db_ref.remove();
-            }
+            await this.delete(ref);
         }
         let extensionFile = getExtension(ref.fullPath) || "";
         let mimetype = metadata?.contentType ?? "application/octet-binary";
@@ -115,7 +110,8 @@ export class StorageServer {
         await db_ref.set(storage);
         return Promise.resolve(ref.fullPath);
     }
-    putString(ref, data, type, onStateChanged) {
+    putString(p, data, type, onStateChanged) {
+        const ref = p instanceof StorageReference ? p : new StorageReference(this.storage, p);
         if (type === "data_url") {
             const [_, base64] = data.split(",");
             data = base64;
@@ -128,7 +124,8 @@ export class StorageServer {
         const dataBuffer = Buffer.from(data, type === "base64" ? "base64" : "utf-8");
         return this.put(ref, dataBuffer, undefined, onStateChanged);
     }
-    async delete(ref) {
+    async delete(p) {
+        const ref = p instanceof StorageReference ? p : new StorageReference(this.storage, p);
         const localPath = this.storage.app.settings.server?.localPath ?? "./data";
         const dbName = this.storage.database.name;
         const dirUpload = path.resolve(localPath, `./${dbName}/storage-uploads`);
@@ -138,23 +135,41 @@ export class StorageServer {
         const db_ref = this.storage.database.ref(`__storage__`).child(ref.fullPath);
         const snapshot = await db_ref.get();
         if (snapshot.exists()) {
-            const { path: _path } = snapshot.val();
-            if (typeof _path === "string") {
-                const storage_path = path.resolve(localPath, `./${dbName}`, _path);
+            const getAllFiles = (data, list) => {
+                let { path: _path, isFile, metadata } = data;
+                isFile = typeof isFile === "boolean" ? isFile : typeof metadata === "object" && metadata?.contentType ? true : false;
+                if (typeof _path === "string" && isFile) {
+                    list.push(_path);
+                }
+                else {
+                    for (const key in data) {
+                        if (typeof data[key] === "object") {
+                            getAllFiles(data[key], list);
+                        }
+                    }
+                }
+                return list;
+            };
+            const listFiles = getAllFiles(snapshot.val(), []);
+            for (const filePath of listFiles) {
+                const storage_path = path.resolve(localPath, `./${dbName}`, filePath);
                 if (fs.existsSync(storage_path)) {
                     fs.unlinkSync(storage_path);
                 }
-                await db_ref.remove();
             }
+            await db_ref.remove();
         }
         return Promise.resolve();
     }
-    async getDownloadURL(ref) {
-        const { path, isFile } = await this.storage.database
+    async getDownloadURL(p) {
+        const ref = p instanceof StorageReference ? p : new StorageReference(this.storage, p);
+        const localPath = this.storage.app.settings.server?.localPath ?? "./data";
+        const dbName = this.storage.database.name;
+        let { path: _path, isFile, metadata, } = await this.storage.database
             .ref(`__storage__`)
             .child(ref.fullPath)
             .get({
-            include: ["path", "isFile"],
+            include: ["path", "isFile", "metadata", "metadata/contentType"],
         })
             .then((snap) => Promise.resolve(snap.val() ?? {
             path: null,
@@ -164,21 +179,31 @@ export class StorageServer {
             path: null,
             isFile: false,
         }));
-        return typeof path === "string" && isFile ? `${this.storage.app.url}/storage/${this.storage.database.name}/${ref.fullPath}` : null;
+        isFile = typeof isFile === "boolean" ? isFile : typeof metadata === "object" && metadata?.contentType ? true : false;
+        if (isFile) {
+            const storage_path = path.resolve(localPath, `./${dbName}`, _path);
+            if (!fs.existsSync(storage_path)) {
+                await this.delete(ref);
+                return null;
+            }
+        }
+        return typeof _path === "string" && isFile ? `${this.storage.app.url}/storage/${this.storage.database.name}/${ref.fullPath}` : null;
     }
-    async listAll(ref) {
+    async listAll(path) {
+        const ref = path instanceof StorageReference ? path : new StorageReference(this.storage, path);
         const snaps = await this.storage.database.query(`__storage__/${ref.fullPath}`).get({
-            include: ["path", "isFile"],
+            include: ["path", "isFile", "metadata", "metadata/contentType"],
         });
         const items = [];
         const prefixes = [];
         snaps.forEach((snap) => {
-            const { path, isFile } = snap.val();
+            let { path, isFile, metadata } = snap.val();
+            isFile = typeof isFile === "boolean" ? isFile : typeof metadata === "object" && metadata?.contentType ? true : false;
             if (typeof path === "string" && isFile) {
-                items.push(snap.ref.path.replace(`__storage__/${ref.fullPath}/`, ""));
+                items.push(snap.ref.path.replace(/^__storage__\//gi, "").replace(ref.fullPath, ""));
             }
             else {
-                prefixes.push(path.ref.path.replace(`__storage__/${ref.fullPath}/`, ""));
+                prefixes.push(path.ref.path.replace(/^__storage__\//gi, "").replace(ref.fullPath, ""));
             }
         });
         return {
@@ -198,7 +223,8 @@ export class StorageServer {
             }),
         };
     }
-    async list(ref, config) {
+    async list(path, config) {
+        const ref = path instanceof StorageReference ? path : new StorageReference(this.storage, path);
         const maxResults = config.maxResults ?? 10;
         const skip = (config.page ?? 0) * maxResults;
         const { items, prefixes } = await this.listAll(ref);

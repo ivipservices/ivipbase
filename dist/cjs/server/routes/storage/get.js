@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.addRoute = void 0;
 const error_1 = require("../../shared/error");
 const fs_1 = __importDefault(require("fs"));
+const path_1 = __importDefault(require("path"));
 const addRoute = (env) => {
     env.router.get(`/storage/:dbName/*`, async (req, res) => {
         const { dbName } = req.params;
@@ -15,14 +16,13 @@ const addRoute = (env) => {
                 message: `Database '${dbName}' not found`,
             });
         }
-        const path = req.params["0"];
-        const dirUpload = path.join(env.settings.localPath, `./${dbName}/storage-uploads`);
+        const dirUpload = path_1.default.join(env.settings.localPath, `./${dbName}/storage-uploads`);
         if (!fs_1.default.existsSync(dirUpload)) {
             fs_1.default.mkdirSync(dirUpload);
         }
         try {
-            const ref = env.db(dbName).ref(`__storage__`).child(path);
-            const { path: _path, metadata } = await ref
+            const ref = env.db(dbName).ref(`__storage__`).child(req.params["0"]);
+            let { path: _path, isFile, metadata, } = await ref
                 .get()
                 .then((snap) => {
                 var _a;
@@ -33,15 +33,22 @@ const addRoute = (env) => {
                 .catch(() => Promise.resolve({
                 path: null,
             }));
-            if (typeof _path === "string") {
-                const storage_path = path.resolve(env.settings.localPath, `./${dbName}`, _path);
+            isFile = typeof isFile === "boolean" ? isFile : typeof metadata === "object" && (metadata === null || metadata === void 0 ? void 0 : metadata.contentType) ? true : false;
+            if (typeof _path === "string" && isFile) {
+                const storage_path = path_1.default.resolve(env.settings.localPath, `./${dbName}`, _path);
                 if (fs_1.default.existsSync(storage_path)) {
                     res.type(metadata.contentType);
-                    return res.sendFile(_path, { root: path.resolve(env.settings.localPath, `./${dbName}`) });
+                    return res.sendFile(_path, { root: path_1.default.resolve(env.settings.localPath, `./${dbName}`) });
                 }
                 else {
                     await ref.remove();
                 }
+            }
+            else if (!isFile) {
+                return (0, error_1.sendError)(res, {
+                    code: "storage/unknown",
+                    message: "Is not a file!",
+                });
             }
             return (0, error_1.sendError)(res, {
                 code: "storage/unknown",

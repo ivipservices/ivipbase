@@ -3092,7 +3092,7 @@ function _request() {
             break;
           }
           // Stream data to the server instead of posting all from memory at once
-          headers["Content-Type"] = "text/plain"; // Prevent server middleware parsing the content as JSON
+          headers["Content-Type"] = "application/octet-stream"; // Prevent server middleware parsing the content as JSON
           postData = "";
           chunkSize = 1024 * 512; // Use large chunk size, we have to store everything in memory anyway.
         case 9:
@@ -3107,7 +3107,9 @@ function _request() {
           _context.next = 9;
           break;
         case 15:
-          request.data = postData;
+          request.data = Uint8Array.from(unescape(encodeURIComponent(postData)), function (x) {
+            return x.charCodeAt(0);
+          });
           _context.next = 19;
           break;
         case 18:
@@ -5502,7 +5504,10 @@ var checkIncludedPath = function checkIncludedPath(from, options) {
 };
 exports.checkIncludedPath = checkIncludedPath;
 var resolveObjetByIncluded = function resolveObjetByIncluded(path, obj, options) {
-  return Object.fromEntries(Object.entries(obj).filter(function (_ref) {
+  return Array.isArray(obj) ? obj.filter(function (_, k) {
+    var p = ivipbase_core_1.PathInfo.get([path, k]);
+    return (0, exports.checkIncludedPath)(p.path, options);
+  }) : Object.fromEntries(Object.entries(obj).filter(function (_ref) {
     var _ref2 = _slicedToArray(_ref, 2),
       k = _ref2[0],
       v = _ref2[1];
@@ -5542,6 +5547,7 @@ function structureNodes(path, nodes) {
     return value;
   }
   if (content.type === utils_1.nodeValueTypes.OBJECT || content.type === utils_1.nodeValueTypes.ARRAY) {
+    var val = content.type === utils_1.nodeValueTypes.ARRAY ? Array.isArray(content.value) ? content.value : [] : content.value;
     return nodes.filter(function (_ref6) {
       var p = _ref6.path;
       return pathInfo.isParentOf(p) || pathInfo.isAncestorOf(p);
@@ -5574,13 +5580,14 @@ function structureNodes(path, nodes) {
           _iterator.f();
         }
         if (content.type === utils_1.nodeValueTypes.OBJECT || content.type === utils_1.nodeValueTypes.ARRAY) {
-          targetObject[targetProperty] = (0, exports.resolveObjetByIncluded)(path, content.value, options);
+          var _val = content.type === utils_1.nodeValueTypes.ARRAY ? Array.isArray(content.value) ? content.value : [] : content.value;
+          targetObject[targetProperty] = (0, exports.resolveObjetByIncluded)(path, _val, options);
         } else {
           targetObject[targetProperty] = content.value;
         }
       }
       return acc;
-    }, (0, exports.resolveObjetByIncluded)(nodePath, content.value, options));
+    }, (0, exports.resolveObjetByIncluded)(nodePath, val, options));
   }
   return content.value;
   // if (nodes.length === 1) {
@@ -7228,7 +7235,7 @@ var StorageDBServer = /*#__PURE__*/function (_ivipbase_core_1$Api) {
               return this.get(path);
             case 4:
               data = _context9.sent;
-              json = JSON.stringify(data.value);
+              json = JSON.stringify(data.value, null, 4);
               i = 0;
             case 7:
               if (!(i < json.length)) {
@@ -10347,11 +10354,13 @@ var StorageClient = /*#__PURE__*/function () {
   return _createClass(StorageClient, [{
     key: "put",
     value: function () {
-      var _put = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(ref, data, metadata, onStateChanged) {
+      var _put = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(p, data, metadata, onStateChanged) {
+        var ref;
         return _regeneratorRuntime().wrap(function _callee$(_context) {
           while (1) switch (_context.prev = _context.next) {
             case 0:
-              _context.next = 2;
+              ref = p instanceof StorageReference_1.StorageReference ? p : new StorageReference_1.StorageReference(this.storage, p);
+              _context.next = 3;
               return this.storage.app.request({
                 route: "/storage/".concat(this.storage.database.name, "/").concat(ref.fullPath) + ((metadata === null || metadata === void 0 ? void 0 : metadata.contentType) ? "?contentType=".concat(metadata.contentType) : ""),
                 data: data,
@@ -10367,9 +10376,9 @@ var StorageClient = /*#__PURE__*/function () {
                   });
                 } : undefined
               });
-            case 2:
-              return _context.abrupt("return", _context.sent);
             case 3:
+              return _context.abrupt("return", _context.sent);
+            case 4:
             case "end":
               return _context.stop();
           }
@@ -10383,11 +10392,13 @@ var StorageClient = /*#__PURE__*/function () {
   }, {
     key: "putString",
     value: function () {
-      var _putString = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(ref, data, type, onStateChanged) {
+      var _putString = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(p, data, type, onStateChanged) {
+        var ref;
         return _regeneratorRuntime().wrap(function _callee2$(_context2) {
           while (1) switch (_context2.prev = _context2.next) {
             case 0:
-              _context2.next = 2;
+              ref = p instanceof StorageReference_1.StorageReference ? p : new StorageReference_1.StorageReference(this.storage, p);
+              _context2.next = 3;
               return this.storage.app.request({
                 route: "/storage/".concat(this.storage.database.name, "/").concat(ref.fullPath, "?format=").concat(type !== null && type !== void 0 ? type : "text"),
                 data: {
@@ -10406,9 +10417,9 @@ var StorageClient = /*#__PURE__*/function () {
                   });
                 } : undefined
               });
-            case 2:
-              return _context2.abrupt("return", _context2.sent);
             case 3:
+              return _context2.abrupt("return", _context2.sent);
+            case 4:
             case "end":
               return _context2.stop();
           }
@@ -10422,18 +10433,20 @@ var StorageClient = /*#__PURE__*/function () {
   }, {
     key: "delete",
     value: function () {
-      var _delete2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3(ref) {
+      var _delete2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3(p) {
+        var ref;
         return _regeneratorRuntime().wrap(function _callee3$(_context3) {
           while (1) switch (_context3.prev = _context3.next) {
             case 0:
-              _context3.next = 2;
+              ref = p instanceof StorageReference_1.StorageReference ? p : new StorageReference_1.StorageReference(this.storage, p);
+              _context3.next = 3;
               return this.storage.app.request({
                 route: "/storage/".concat(this.storage.database.name, "/").concat(ref.fullPath),
                 method: "DELETE"
               });
-            case 2:
-              return _context3.abrupt("return", Promise.resolve());
             case 3:
+              return _context3.abrupt("return", Promise.resolve());
+            case 4:
             case "end":
               return _context3.stop();
           }
@@ -10447,22 +10460,23 @@ var StorageClient = /*#__PURE__*/function () {
   }, {
     key: "getDownloadURL",
     value: function () {
-      var _getDownloadURL = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4(ref) {
-        var _yield$this$storage$a, path, isFile;
+      var _getDownloadURL = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4(p) {
+        var ref, _yield$this$storage$a, path, isFile;
         return _regeneratorRuntime().wrap(function _callee4$(_context4) {
           while (1) switch (_context4.prev = _context4.next) {
             case 0:
-              _context4.next = 2;
+              ref = p instanceof StorageReference_1.StorageReference ? p : new StorageReference_1.StorageReference(this.storage, p);
+              _context4.next = 3;
               return this.storage.app.request({
                 method: "GET",
                 route: "storage-url/".concat(this.storage.database.name, "/").concat(ref.fullPath)
               });
-            case 2:
+            case 3:
               _yield$this$storage$a = _context4.sent;
               path = _yield$this$storage$a.path;
               isFile = _yield$this$storage$a.isFile;
               return _context4.abrupt("return", typeof path === "string" && isFile ? "".concat(this.storage.app.url, "/").concat(path.replace(/^\/+/, "")) : null);
-            case 6:
+            case 7:
             case "end":
               return _context4.stop();
           }
@@ -10476,18 +10490,19 @@ var StorageClient = /*#__PURE__*/function () {
   }, {
     key: "listAll",
     value: function () {
-      var _listAll = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5(ref) {
+      var _listAll = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5(p) {
         var _this = this;
-        var _yield$this$storage$a2, items, prefixes;
+        var ref, _yield$this$storage$a2, items, prefixes;
         return _regeneratorRuntime().wrap(function _callee5$(_context5) {
           while (1) switch (_context5.prev = _context5.next) {
             case 0:
-              _context5.next = 2;
+              ref = p instanceof StorageReference_1.StorageReference ? p : new StorageReference_1.StorageReference(this.storage, p);
+              _context5.next = 3;
               return this.storage.app.request({
                 method: "GET",
                 route: "storage-list/".concat(this.storage.database.name, "/").concat(ref.fullPath)
               });
-            case 2:
+            case 3:
               _yield$this$storage$a2 = _context5.sent;
               items = _yield$this$storage$a2.items;
               prefixes = _yield$this$storage$a2.prefixes;
@@ -10499,7 +10514,7 @@ var StorageClient = /*#__PURE__*/function () {
                   return new StorageReference_1.StorageReference(_this.storage, path);
                 })
               });
-            case 6:
+            case 7:
             case "end":
               return _context5.stop();
           }
@@ -10513,19 +10528,20 @@ var StorageClient = /*#__PURE__*/function () {
   }, {
     key: "list",
     value: function () {
-      var _list = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee6(ref, config) {
+      var _list = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee6(p, config) {
         var _this2 = this;
-        var _yield$this$storage$a3, items, prefixes, more, page;
+        var ref, _yield$this$storage$a3, items, prefixes, more, page;
         return _regeneratorRuntime().wrap(function _callee6$(_context6) {
           while (1) switch (_context6.prev = _context6.next) {
             case 0:
-              _context6.next = 2;
+              ref = p instanceof StorageReference_1.StorageReference ? p : new StorageReference_1.StorageReference(this.storage, p);
+              _context6.next = 3;
               return this.storage.app.request({
                 method: "GET",
                 route: "storage-list/".concat(this.storage.database.name, "/").concat(ref.fullPath),
                 data: config
               });
-            case 2:
+            case 3:
               _yield$this$storage$a3 = _context6.sent;
               items = _yield$this$storage$a3.items;
               prefixes = _yield$this$storage$a3.prefixes;
@@ -10541,7 +10557,7 @@ var StorageClient = /*#__PURE__*/function () {
                   return new StorageReference_1.StorageReference(_this2.storage, path);
                 })
               });
-            case 8:
+            case 9:
             case "end":
               return _context6.stop();
           }
@@ -10748,6 +10764,7 @@ exports.StorageReference = StorageReference;
 (function (Buffer){(function (){
 "use strict";
 
+function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
 function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
@@ -10772,6 +10789,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.StorageServer = void 0;
+var StorageReference_1 = require("./StorageReference");
 var path_1 = __importDefault(require("path"));
 var fs_1 = __importDefault(require("fs"));
 var utils_1 = require("../utils");
@@ -10784,11 +10802,12 @@ var StorageServer = /*#__PURE__*/function () {
   return _createClass(StorageServer, [{
     key: "put",
     value: function () {
-      var _put = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(ref, data, metadata, onStateChanged) {
-        var _a, _b, _c, localPath, dbName, dataBuffer, dirUpload, db_ref, snapshot, _snapshot$val, _path, storage_path, extensionFile, mimetype, type, file, storage;
+      var _put = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(p, data, metadata, onStateChanged) {
+        var _a, _b, _c, ref, localPath, dbName, dataBuffer, dirUpload, db_ref, snapshot, extensionFile, mimetype, type, file, storage;
         return _regeneratorRuntime().wrap(function _callee$(_context) {
           while (1) switch (_context.prev = _context.next) {
             case 0:
+              ref = p instanceof StorageReference_1.StorageReference ? p : new StorageReference_1.StorageReference(this.storage, p);
               localPath = (_b = (_a = this.storage.app.settings.server) === null || _a === void 0 ? void 0 : _a.localPath) !== null && _b !== void 0 ? _b : "./data";
               dbName = this.storage.database.name;
               dataBuffer = Buffer.from(data);
@@ -10799,35 +10818,26 @@ var StorageServer = /*#__PURE__*/function () {
                 });
               }
               db_ref = this.storage.database.ref("__storage__").child(ref.fullPath);
-              _context.next = 8;
+              _context.next = 9;
               return db_ref.get();
-            case 8:
+            case 9:
               snapshot = _context.sent;
               if (!snapshot.exists()) {
-                _context.next = 16;
+                _context.next = 13;
                 break;
               }
-              _snapshot$val = snapshot.val(), _path = _snapshot$val.path;
-              if (!(typeof _path === "string")) {
-                _context.next = 16;
-                break;
-              }
-              storage_path = path_1["default"].resolve(localPath, "./".concat(dbName), _path);
-              if (fs_1["default"].existsSync(storage_path)) {
-                fs_1["default"].unlinkSync(storage_path);
-              }
-              _context.next = 16;
-              return db_ref.remove();
-            case 16:
+              _context.next = 13;
+              return this["delete"](ref);
+            case 13:
               extensionFile = (0, utils_1.getExtension)(ref.fullPath) || "";
               mimetype = (_c = metadata === null || metadata === void 0 ? void 0 : metadata.contentType) !== null && _c !== void 0 ? _c : "application/octet-binary";
               if (metadata === null || metadata === void 0 ? void 0 : metadata.contentType) {
-                _context.next = 23;
+                _context.next = 20;
                 break;
               }
-              _context.next = 21;
+              _context.next = 18;
               return (0, file_type_1.fileTypeFromBuffer)(dataBuffer);
-            case 21:
+            case 18:
               type = _context.sent;
               if (type === null || type === void 0 ? void 0 : type.mime) {
                 mimetype = type.mime;
@@ -10836,13 +10846,13 @@ var StorageServer = /*#__PURE__*/function () {
               } else {
                 mimetype = "application/octet-binary";
               }
-            case 23:
+            case 20:
               file = {
                 filename: "file-".concat(Date.now()),
                 mimetype: mimetype,
                 size: dataBuffer.length
               };
-              _context.next = 26;
+              _context.next = 23;
               return new Promise(function (resolve, reject) {
                 var stream = fs_1["default"].createWriteStream(path_1["default"].resolve(dirUpload, file.filename));
                 var chunkSize = 1024 * 1024; // 1MB
@@ -10900,7 +10910,7 @@ var StorageServer = /*#__PURE__*/function () {
                   reject(err);
                 });
               });
-            case 26:
+            case 23:
               // fs.writeFileSync(path.resolve(dirUpload, file.filename), dataBuffer);
               storage = {
                 path: "storage-uploads/".concat(file.filename),
@@ -10910,11 +10920,11 @@ var StorageServer = /*#__PURE__*/function () {
                   size: file.size
                 }
               };
-              _context.next = 29;
+              _context.next = 26;
               return db_ref.set(storage);
-            case 29:
+            case 26:
               return _context.abrupt("return", Promise.resolve(ref.fullPath));
-            case 30:
+            case 27:
             case "end":
               return _context.stop();
           }
@@ -10927,7 +10937,8 @@ var StorageServer = /*#__PURE__*/function () {
     }()
   }, {
     key: "putString",
-    value: function putString(ref, data, type, onStateChanged) {
+    value: function putString(p, data, type, onStateChanged) {
+      var ref = p instanceof StorageReference_1.StorageReference ? p : new StorageReference_1.StorageReference(this.storage, p);
       if (type === "data_url") {
         var _data$split = data.split(","),
           _data$split2 = _slicedToArray(_data$split, 2),
@@ -10945,11 +10956,12 @@ var StorageServer = /*#__PURE__*/function () {
   }, {
     key: "delete",
     value: function () {
-      var _delete2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(ref) {
-        var _a, _b, localPath, dbName, dirUpload, db_ref, snapshot, _snapshot$val2, _path, storage_path;
+      var _delete2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(p) {
+        var _a, _b, ref, localPath, dbName, dirUpload, db_ref, snapshot, getAllFiles, listFiles, _iterator, _step, filePath, storage_path;
         return _regeneratorRuntime().wrap(function _callee2$(_context2) {
           while (1) switch (_context2.prev = _context2.next) {
             case 0:
+              ref = p instanceof StorageReference_1.StorageReference ? p : new StorageReference_1.StorageReference(this.storage, p);
               localPath = (_b = (_a = this.storage.app.settings.server) === null || _a === void 0 ? void 0 : _a.localPath) !== null && _b !== void 0 ? _b : "./data";
               dbName = this.storage.database.name;
               dirUpload = path_1["default"].resolve(localPath, "./".concat(dbName, "/storage-uploads"));
@@ -10959,28 +10971,50 @@ var StorageServer = /*#__PURE__*/function () {
                 });
               }
               db_ref = this.storage.database.ref("__storage__").child(ref.fullPath);
-              _context2.next = 7;
+              _context2.next = 8;
               return db_ref.get();
-            case 7:
+            case 8:
               snapshot = _context2.sent;
               if (!snapshot.exists()) {
-                _context2.next = 15;
+                _context2.next = 16;
                 break;
               }
-              _snapshot$val2 = snapshot.val(), _path = _snapshot$val2.path;
-              if (!(typeof _path === "string")) {
-                _context2.next = 15;
-                break;
+              getAllFiles = function getAllFiles(data, list) {
+                var _path = data.path,
+                  isFile = data.isFile,
+                  metadata = data.metadata;
+                isFile = typeof isFile === "boolean" ? isFile : _typeof(metadata) === "object" && (metadata === null || metadata === void 0 ? void 0 : metadata.contentType) ? true : false;
+                if (typeof _path === "string" && isFile) {
+                  list.push(_path);
+                } else {
+                  for (var key in data) {
+                    if (_typeof(data[key]) === "object") {
+                      getAllFiles(data[key], list);
+                    }
+                  }
+                }
+                return list;
+              };
+              listFiles = getAllFiles(snapshot.val(), []);
+              _iterator = _createForOfIteratorHelper(listFiles);
+              try {
+                for (_iterator.s(); !(_step = _iterator.n()).done;) {
+                  filePath = _step.value;
+                  storage_path = path_1["default"].resolve(localPath, "./".concat(dbName), filePath);
+                  if (fs_1["default"].existsSync(storage_path)) {
+                    fs_1["default"].unlinkSync(storage_path);
+                  }
+                }
+              } catch (err) {
+                _iterator.e(err);
+              } finally {
+                _iterator.f();
               }
-              storage_path = path_1["default"].resolve(localPath, "./".concat(dbName), _path);
-              if (fs_1["default"].existsSync(storage_path)) {
-                fs_1["default"].unlinkSync(storage_path);
-              }
-              _context2.next = 15;
+              _context2.next = 16;
               return db_ref.remove();
-            case 15:
-              return _context2.abrupt("return", Promise.resolve());
             case 16:
+              return _context2.abrupt("return", Promise.resolve());
+            case 17:
             case "end":
               return _context2.stop();
           }
@@ -10994,14 +11028,17 @@ var StorageServer = /*#__PURE__*/function () {
   }, {
     key: "getDownloadURL",
     value: function () {
-      var _getDownloadURL = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3(ref) {
-        var _yield$this$storage$d, path, isFile;
+      var _getDownloadURL = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3(p) {
+        var _a, _b, ref, localPath, dbName, _yield$this$storage$d, _path, isFile, metadata, storage_path;
         return _regeneratorRuntime().wrap(function _callee3$(_context3) {
           while (1) switch (_context3.prev = _context3.next) {
             case 0:
-              _context3.next = 2;
+              ref = p instanceof StorageReference_1.StorageReference ? p : new StorageReference_1.StorageReference(this.storage, p);
+              localPath = (_b = (_a = this.storage.app.settings.server) === null || _a === void 0 ? void 0 : _a.localPath) !== null && _b !== void 0 ? _b : "./data";
+              dbName = this.storage.database.name;
+              _context3.next = 5;
               return this.storage.database.ref("__storage__").child(ref.fullPath).get({
-                include: ["path", "isFile"]
+                include: ["path", "isFile", "metadata", "metadata/contentType"]
               }).then(function (snap) {
                 var _a;
                 return Promise.resolve((_a = snap.val()) !== null && _a !== void 0 ? _a : {
@@ -11014,12 +11051,28 @@ var StorageServer = /*#__PURE__*/function () {
                   isFile: false
                 });
               });
-            case 2:
+            case 5:
               _yield$this$storage$d = _context3.sent;
-              path = _yield$this$storage$d.path;
+              _path = _yield$this$storage$d.path;
               isFile = _yield$this$storage$d.isFile;
-              return _context3.abrupt("return", typeof path === "string" && isFile ? "".concat(this.storage.app.url, "/storage/").concat(this.storage.database.name, "/").concat(ref.fullPath) : null);
-            case 6:
+              metadata = _yield$this$storage$d.metadata;
+              isFile = typeof isFile === "boolean" ? isFile : _typeof(metadata) === "object" && (metadata === null || metadata === void 0 ? void 0 : metadata.contentType) ? true : false;
+              if (!isFile) {
+                _context3.next = 16;
+                break;
+              }
+              storage_path = path_1["default"].resolve(localPath, "./".concat(dbName), _path);
+              if (fs_1["default"].existsSync(storage_path)) {
+                _context3.next = 16;
+                break;
+              }
+              _context3.next = 15;
+              return this["delete"](ref);
+            case 15:
+              return _context3.abrupt("return", null);
+            case 16:
+              return _context3.abrupt("return", typeof _path === "string" && isFile ? "".concat(this.storage.app.url, "/storage/").concat(this.storage.database.name, "/").concat(ref.fullPath) : null);
+            case 17:
             case "end":
               return _context3.stop();
           }
@@ -11033,27 +11086,30 @@ var StorageServer = /*#__PURE__*/function () {
   }, {
     key: "listAll",
     value: function () {
-      var _listAll = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4(ref) {
-        var snaps, items, prefixes;
+      var _listAll = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4(path) {
+        var ref, snaps, items, prefixes;
         return _regeneratorRuntime().wrap(function _callee4$(_context4) {
           while (1) switch (_context4.prev = _context4.next) {
             case 0:
-              _context4.next = 2;
+              ref = path instanceof StorageReference_1.StorageReference ? path : new StorageReference_1.StorageReference(this.storage, path);
+              _context4.next = 3;
               return this.storage.database.query("__storage__/".concat(ref.fullPath)).get({
-                include: ["path", "isFile"]
+                include: ["path", "isFile", "metadata", "metadata/contentType"]
               });
-            case 2:
+            case 3:
               snaps = _context4.sent;
               items = [];
               prefixes = [];
               snaps.forEach(function (snap) {
                 var _snap$val = snap.val(),
                   path = _snap$val.path,
-                  isFile = _snap$val.isFile;
+                  isFile = _snap$val.isFile,
+                  metadata = _snap$val.metadata;
+                isFile = typeof isFile === "boolean" ? isFile : _typeof(metadata) === "object" && (metadata === null || metadata === void 0 ? void 0 : metadata.contentType) ? true : false;
                 if (typeof path === "string" && isFile) {
-                  items.push(snap.ref.path.replace("__storage__/".concat(ref.fullPath, "/"), ""));
+                  items.push(snap.ref.path.replace(/^__storage__\//gi, "").replace(ref.fullPath, ""));
                 } else {
-                  prefixes.push(path.ref.path.replace("__storage__/".concat(ref.fullPath, "/"), ""));
+                  prefixes.push(path.ref.path.replace(/^__storage__\//gi, "").replace(ref.fullPath, ""));
                 }
               });
               return _context4.abrupt("return", {
@@ -11068,7 +11124,7 @@ var StorageServer = /*#__PURE__*/function () {
                   return ref.child(child);
                 })
               });
-            case 7:
+            case 8:
             case "end":
               return _context4.stop();
           }
@@ -11082,16 +11138,17 @@ var StorageServer = /*#__PURE__*/function () {
   }, {
     key: "list",
     value: function () {
-      var _list = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5(ref, config) {
-        var _a, _b, _c, maxResults, skip, _yield$this$listAll, items, prefixes, length;
+      var _list = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5(path, config) {
+        var _a, _b, _c, ref, maxResults, skip, _yield$this$listAll, items, prefixes, length;
         return _regeneratorRuntime().wrap(function _callee5$(_context5) {
           while (1) switch (_context5.prev = _context5.next) {
             case 0:
+              ref = path instanceof StorageReference_1.StorageReference ? path : new StorageReference_1.StorageReference(this.storage, path);
               maxResults = (_a = config.maxResults) !== null && _a !== void 0 ? _a : 10;
               skip = ((_b = config.page) !== null && _b !== void 0 ? _b : 0) * maxResults;
-              _context5.next = 4;
+              _context5.next = 5;
               return this.listAll(ref);
-            case 4:
+            case 5:
               _yield$this$listAll = _context5.sent;
               items = _yield$this$listAll.items;
               prefixes = _yield$this$listAll.prefixes;
@@ -11107,7 +11164,7 @@ var StorageServer = /*#__PURE__*/function () {
                   return index >= skip && index < maxResults + skip;
                 })
               });
-            case 9:
+            case 10:
             case "end":
               return _context5.stop();
           }
@@ -11123,7 +11180,7 @@ var StorageServer = /*#__PURE__*/function () {
 exports.StorageServer = StorageServer;
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"../controller/file-type":10,"../utils":39,"buffer":92,"fs":92,"path":157}],36:[function(require,module,exports){
+},{"../controller/file-type":10,"../utils":39,"./StorageReference":34,"buffer":92,"fs":92,"path":157}],36:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -11148,12 +11205,17 @@ var Storage = /*#__PURE__*/function () {
     this.database = database;
     this.api = app.isServer ? new StorageServer_1.StorageServer(this) : new StorageClient_1.StorageClient(this);
   }
-  /**
-   * Creates a reference to a node
-   * @param path
-   * @returns reference to the requested node
-   */
   return _createClass(Storage, [{
+    key: "root",
+    value: function root() {
+      return new StorageReference_1.StorageReference(this, "");
+    }
+    /**
+     * Creates a reference to a node
+     * @param path
+     * @returns reference to the requested node
+     */
+  }, {
     key: "ref",
     value: function ref(path) {
       return new StorageReference_1.StorageReference(this, path);

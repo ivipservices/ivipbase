@@ -3,7 +3,7 @@ import { StorageReference } from "./StorageReference";
 export declare class StorageClient {
     protected storage: Storage;
     constructor(storage: Storage);
-    put(ref: StorageReference, data: Blob | Uint8Array, metadata?: {
+    put(p: StorageReference | string, data: Blob | Uint8Array, metadata?: {
         contentType: string;
     }, onStateChanged?: (event: {
         bytesTransferred: number;
@@ -13,7 +13,7 @@ export declare class StorageClient {
         task: string;
         ref: StorageReference;
     }) => void): Promise<string>;
-    putString(ref: StorageReference, data: string, type?: "base64" | "base64url" | "data_url" | "raw" | "text", onStateChanged?: (event: {
+    putString(p: StorageReference | string, data: string, type?: "base64" | "base64url" | "data_url" | "raw" | "text", onStateChanged?: (event: {
         bytesTransferred: number;
         totalBytes?: number;
         state: string;
@@ -21,13 +21,13 @@ export declare class StorageClient {
         task: string;
         ref: StorageReference;
     }) => void): Promise<string>;
-    delete(ref: StorageReference): Promise<void>;
-    getDownloadURL(ref: StorageReference): Promise<string | null>;
-    listAll(ref: StorageReference): Promise<{
+    delete(p: StorageReference | string): Promise<void>;
+    getDownloadURL(p: StorageReference | string): Promise<string | null>;
+    listAll(p: StorageReference | string): Promise<{
         prefixes: StorageReference[];
         items: StorageReference[];
     }>;
-    list(ref: StorageReference, config: {
+    list(p: StorageReference | string, config: {
         maxResults?: number;
         page?: number;
     }): Promise<{

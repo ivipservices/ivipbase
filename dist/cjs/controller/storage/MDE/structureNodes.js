@@ -13,17 +13,22 @@ const checkIncludedPath = (from, options) => {
 };
 exports.checkIncludedPath = checkIncludedPath;
 const resolveObjetByIncluded = (path, obj, options) => {
-    return Object.fromEntries(Object.entries(obj)
-        .filter(([k, v]) => {
-        const p = ivipbase_core_1.PathInfo.get([path, k]);
-        return (0, exports.checkIncludedPath)(p.path, options);
-    })
-        .map(([k, v]) => {
-        if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(v))) {
-            return [k, (0, exports.resolveObjetByIncluded)(ivipbase_core_1.PathInfo.get([path, k]).path, v, options)];
-        }
-        return [k, v];
-    }));
+    return Array.isArray(obj)
+        ? obj.filter((_, k) => {
+            const p = ivipbase_core_1.PathInfo.get([path, k]);
+            return (0, exports.checkIncludedPath)(p.path, options);
+        })
+        : Object.fromEntries(Object.entries(obj)
+            .filter(([k, v]) => {
+            const p = ivipbase_core_1.PathInfo.get([path, k]);
+            return (0, exports.checkIncludedPath)(p.path, options);
+        })
+            .map(([k, v]) => {
+            if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(v))) {
+                return [k, (0, exports.resolveObjetByIncluded)(ivipbase_core_1.PathInfo.get([path, k]).path, v, options)];
+            }
+            return [k, v];
+        }));
 };
 exports.resolveObjetByIncluded = resolveObjetByIncluded;
 function structureNodes(path, nodes, options = {}) {
@@ -48,6 +53,7 @@ function structureNodes(path, nodes, options = {}) {
         return value;
     }
     if (content.type === utils_1.nodeValueTypes.OBJECT || content.type === utils_1.nodeValueTypes.ARRAY) {
+        const val = content.type === utils_1.nodeValueTypes.ARRAY ? (Array.isArray(content.value) ? content.value : []) : content.value;
         return nodes
             .filter(({ path: p }) => pathInfo.isParentOf(p) || pathInfo.isAncestorOf(p))
             .sort((a, b) => {
@@ -69,14 +75,15 @@ function structureNodes(path, nodes, options = {}) {
                     targetObject = targetObject[p];
                 }
                 if (content.type === utils_1.nodeValueTypes.OBJECT || content.type === utils_1.nodeValueTypes.ARRAY) {
-                    targetObject[targetProperty] = (0, exports.resolveObjetByIncluded)(path, content.value, options);
+                    const val = content.type === utils_1.nodeValueTypes.ARRAY ? (Array.isArray(content.value) ? content.value : []) : content.value;
+                    targetObject[targetProperty] = (0, exports.resolveObjetByIncluded)(path, val, options);
                 }
                 else {
                     targetObject[targetProperty] = content.value;
                 }
             }
             return acc;
-        }, (0, exports.resolveObjetByIncluded)(nodePath, content.value, options));
+        }, (0, exports.resolveObjetByIncluded)(nodePath, val, options));
     }
     return content.value;
     // if (nodes.length === 1) {

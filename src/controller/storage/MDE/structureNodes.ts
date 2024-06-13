@@ -26,19 +26,24 @@ export const resolveObjetByIncluded = <t extends Object>(
 		main_path: string;
 	},
 ): t => {
-	return Object.fromEntries(
-		Object.entries(obj)
-			.filter(([k, v]) => {
+	return Array.isArray(obj)
+		? obj.filter((_, k) => {
 				const p = PathInfo.get([path, k]);
 				return checkIncludedPath(p.path, options);
-			})
-			.map(([k, v]) => {
-				if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(v))) {
-					return [k, resolveObjetByIncluded(PathInfo.get([path, k]).path, v, options)];
-				}
-				return [k, v];
-			}),
-	) as any;
+		  })
+		: (Object.fromEntries(
+				Object.entries(obj)
+					.filter(([k, v]) => {
+						const p = PathInfo.get([path, k]);
+						return checkIncludedPath(p.path, options);
+					})
+					.map(([k, v]) => {
+						if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(v))) {
+							return [k, resolveObjetByIncluded(PathInfo.get([path, k]).path, v, options)];
+						}
+						return [k, v];
+					}),
+		  ) as any);
 };
 
 export default function structureNodes(
@@ -76,6 +81,8 @@ export default function structureNodes(
 	}
 
 	if (content.type === nodeValueTypes.OBJECT || content.type === nodeValueTypes.ARRAY) {
+		const val = content.type === nodeValueTypes.ARRAY ? (Array.isArray(content.value) ? content.value : []) : content.value;
+
 		return nodes
 			.filter(({ path: p }) => pathInfo.isParentOf(p) || pathInfo.isAncestorOf(p))
 			.sort((a, b) => {
@@ -101,13 +108,14 @@ export default function structureNodes(
 					}
 
 					if (content.type === nodeValueTypes.OBJECT || content.type === nodeValueTypes.ARRAY) {
-						targetObject[targetProperty] = resolveObjetByIncluded(path, content.value, options as any);
+						const val = content.type === nodeValueTypes.ARRAY ? (Array.isArray(content.value) ? content.value : []) : content.value;
+						targetObject[targetProperty] = resolveObjetByIncluded(path, val, options as any);
 					} else {
 						targetObject[targetProperty] = content.value;
 					}
 				}
 				return acc;
-			}, resolveObjetByIncluded(nodePath, content.value, options as any));
+			}, resolveObjetByIncluded(nodePath, val, options as any));
 	}
 
 	return content.value;

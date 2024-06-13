@@ -1,6 +1,5 @@
 import type { LocalServer, RouteRequest } from "../../";
 import { sendError, sendUnauthorizedError } from "../../shared/error";
-import fs from "fs";
 
 export type RequestQuery = {
 	maxResults?: string;

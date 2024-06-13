@@ -1,6 +1,5 @@
 import type { LocalServer, RouteRequest } from "../../";
-import { sendError, sendUnauthorizedError } from "../../shared/error";
-import fs from "fs";
+import { sendError } from "../../shared/error";
 
 export type RequestQuery = null;
 export type RequestBody = null;

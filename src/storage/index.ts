@@ -11,6 +11,10 @@ export class Storage {
 		this.api = app.isServer ? new StorageServer(this) : new StorageClient(this);
 	}
 
+	root(): StorageReference {
+		return new StorageReference(this, "");
+	}
+
 	/**
 	 * Creates a reference to a node
 	 * @param path
@@ -21,13 +25,13 @@ export class Storage {
 	}
 
 	put(
-		ref: StorageReference,
+		ref: StorageReference | string,
 		data: Blob | Uint8Array,
 		metadata?: { contentType: string },
 		onStateChanged?: (event: { bytesTransferred: number; totalBytes?: number; state: string; metadata: any; task: string; ref: StorageReference }) => void,
 	): Promise<string>;
 	put(
-		ref: StorageReference,
+		ref: StorageReference | string,
 		data: Uint8Array | Buffer,
 		metadata?: { contentType: string },
 		onStateChanged?: (event: { bytesTransferred: number; totalBytes?: number; state: string; metadata: any; task: string; ref: StorageReference }) => void,
@@ -36,7 +40,7 @@ export class Storage {
 	}
 
 	putString(
-		ref: StorageReference,
+		ref: StorageReference | string,
 		data: string,
 		type?: "base64" | "base64url" | "data_url" | "raw" | "text",
 		onStateChanged?: (event: { bytesTransferred: number; totalBytes?: number; state: string; metadata: any; task: string; ref: StorageReference }) => void,
@@ -44,19 +48,19 @@ export class Storage {
 		return this.api.putString(ref, data, type);
 	}
 
-	delete(ref: StorageReference): Promise<void> {
+	delete(ref: StorageReference | string): Promise<void> {
 		return this.api.delete(ref);
 	}
 
-	getDownloadURL(ref: StorageReference): Promise<string | null> {
+	getDownloadURL(ref: StorageReference | string): Promise<string | null> {
 		return this.api.getDownloadURL(ref);
 	}
 
-	listAll(ref: StorageReference): Promise<{ prefixes: StorageReference[]; items: StorageReference[] }> {
+	listAll(ref: StorageReference | string): Promise<{ prefixes: StorageReference[]; items: StorageReference[] }> {
 		return this.api.listAll(ref);
 	}
 
-	list(ref: StorageReference, config: { maxResults?: number; page?: number }): Promise<{ prefixes: StorageReference[]; items: StorageReference[] }> {
+	list(ref: StorageReference | string, config: { maxResults?: number; page?: number }): Promise<{ prefixes: StorageReference[]; items: StorageReference[] }> {
 		return this.api.list(ref, config);
 	}
 }

@@ -6,13 +6,14 @@ export declare class Storage {
     readonly database: DataBase;
     private api;
     constructor(app: IvipBaseApp, database: DataBase);
+    root(): StorageReference;
     /**
      * Creates a reference to a node
      * @param path
      * @returns reference to the requested node
      */
     ref(path: string): StorageReference;
-    put(ref: StorageReference, data: Blob | Uint8Array, metadata?: {
+    put(ref: StorageReference | string, data: Blob | Uint8Array, metadata?: {
         contentType: string;
     }, onStateChanged?: (event: {
         bytesTransferred: number;
@@ -22,7 +23,7 @@ export declare class Storage {
         task: string;
         ref: StorageReference;
     }) => void): Promise<string>;
-    putString(ref: StorageReference, data: string, type?: "base64" | "base64url" | "data_url" | "raw" | "text", onStateChanged?: (event: {
+    putString(ref: StorageReference | string, data: string, type?: "base64" | "base64url" | "data_url" | "raw" | "text", onStateChanged?: (event: {
         bytesTransferred: number;
         totalBytes?: number;
         state: string;
@@ -30,13 +31,13 @@ export declare class Storage {
         task: string;
         ref: StorageReference;
     }) => void): Promise<string>;
-    delete(ref: StorageReference): Promise<void>;
-    getDownloadURL(ref: StorageReference): Promise<string | null>;
-    listAll(ref: StorageReference): Promise<{
+    delete(ref: StorageReference | string): Promise<void>;
+    getDownloadURL(ref: StorageReference | string): Promise<string | null>;
+    listAll(ref: StorageReference | string): Promise<{
         prefixes: StorageReference[];
         items: StorageReference[];
     }>;
-    list(ref: StorageReference, config: {
+    list(ref: StorageReference | string, config: {
         maxResults?: number;
         page?: number;
     }): Promise<{

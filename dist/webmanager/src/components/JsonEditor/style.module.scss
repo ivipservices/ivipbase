@@ -35,14 +35,20 @@
 
         >.actions {
             display: flex;
-            visibility: hidden;
             flex-direction: row;
             padding: 0px 10px;
+            gap: 10px;
+
+            >* {
+                visibility: hidden;
+            }
         }
 
         &:hover {
             >.actions {
-                visibility: visible;
+                >* {
+                    visibility: visible;
+                }
             }
         }
     }

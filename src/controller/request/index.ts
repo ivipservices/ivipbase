@@ -39,7 +39,7 @@ export default async function request(
 	};
 	if (typeof options.dataRequestCallback === "function") {
 		// Stream data to the server instead of posting all from memory at once
-		headers["Content-Type"] = "text/plain"; // Prevent server middleware parsing the content as JSON
+		headers["Content-Type"] = "application/octet-stream"; // Prevent server middleware parsing the content as JSON
 
 		postData = "";
 		const chunkSize = 1024 * 512; // Use large chunk size, we have to store everything in memory anyway.
@@ -47,7 +47,7 @@ export default async function request(
 		while ((chunk = await options.dataRequestCallback(chunkSize))) {
 			postData += chunk;
 		}
-		request.data = postData;
+		request.data = Uint8Array.from(unescape(encodeURIComponent(postData)), (x) => x.charCodeAt(0));
 	} else if (typeof postData === "string" && isJson) {
 		headers["Content-Type"] = "application/json";
 		request.data = postData;

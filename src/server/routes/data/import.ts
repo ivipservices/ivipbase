@@ -10,7 +10,7 @@ export type ResponseBody = { success: boolean; reason?: string };
 export type Request = RouteRequest<RequestQuery, RequestBody, ResponseBody>;
 
 export const addRoutes = (env: LocalServer) => {
-	env.router.post(`/export/:dbName/*`, async (req: Request, res) => {
+	env.router.post(`/import/:dbName/*`, async (req: Request, res) => {
 		const { dbName } = req.params;
 
 		if (!env.hasDatabase(dbName)) {

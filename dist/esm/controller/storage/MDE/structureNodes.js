@@ -8,17 +8,22 @@ export const checkIncludedPath = (from, options) => {
     return exclude.findIndex((path) => p.equals(path) || p.isDescendantOf(path)) < 0 && isInclude;
 };
 export const resolveObjetByIncluded = (path, obj, options) => {
-    return Object.fromEntries(Object.entries(obj)
-        .filter(([k, v]) => {
-        const p = PathInfo.get([path, k]);
-        return checkIncludedPath(p.path, options);
-    })
-        .map(([k, v]) => {
-        if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(v))) {
-            return [k, resolveObjetByIncluded(PathInfo.get([path, k]).path, v, options)];
-        }
-        return [k, v];
-    }));
+    return Array.isArray(obj)
+        ? obj.filter((_, k) => {
+            const p = PathInfo.get([path, k]);
+            return checkIncludedPath(p.path, options);
+        })
+        : Object.fromEntries(Object.entries(obj)
+            .filter(([k, v]) => {
+            const p = PathInfo.get([path, k]);
+            return checkIncludedPath(p.path, options);
+        })
+            .map(([k, v]) => {
+            if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(v))) {
+                return [k, resolveObjetByIncluded(PathInfo.get([path, k]).path, v, options)];
+            }
+            return [k, v];
+        }));
 };
 export default function structureNodes(path, nodes, options = {}) {
     options.main_path = !options.main_path ? path : options.main_path;
@@ -41,6 +46,7 @@ export default function structureNodes(path, nodes, options = {}) {
         return value;
     }
     if (content.type === nodeValueTypes.OBJECT || content.type === nodeValueTypes.ARRAY) {
+        const val = content.type === nodeValueTypes.ARRAY ? (Array.isArray(content.value) ? content.value : []) : content.value;
         return nodes
             .filter(({ path: p }) => pathInfo.isParentOf(p) || pathInfo.isAncestorOf(p))
             .sort((a, b) => {
@@ -62,14 +68,15 @@ export default function structureNodes(path, nodes, options = {}) {
                     targetObject = targetObject[p];
                 }
                 if (content.type === nodeValueTypes.OBJECT || content.type === nodeValueTypes.ARRAY) {
-                    targetObject[targetProperty] = resolveObjetByIncluded(path, content.value, options);
+                    const val = content.type === nodeValueTypes.ARRAY ? (Array.isArray(content.value) ? content.value : []) : content.value;
+                    targetObject[targetProperty] = resolveObjetByIncluded(path, val, options);
                 }
                 else {
                     targetObject[targetProperty] = content.value;
                 }
             }
             return acc;
-        }, resolveObjetByIncluded(nodePath, content.value, options));
+        }, resolveObjetByIncluded(nodePath, val, options));
     }
     return content.value;
     // if (nodes.length === 1) {
