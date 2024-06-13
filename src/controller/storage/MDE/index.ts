@@ -6,7 +6,8 @@ import structureNodes from "./structureNodes";
 import destructureData from "./destructureData";
 import { joinObjects, removeNulls, replaceUndefined } from "../../../utils";
 
-export { VALUE_TYPES, StorageNode, StorageNodeInfo };
+export type { StorageNode, StorageNodeInfo };
+export { VALUE_TYPES };
 
 const DEBUG_MODE = false;
 

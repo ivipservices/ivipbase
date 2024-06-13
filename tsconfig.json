@@ -5,32 +5,39 @@
     },
     "compilerOptions": {
         "lib": [
-            "esnext",
-            "dom"
+            "esnext"
         ],
-        "listEmittedFiles": false,
+        "typeRoots": [
+            "./node_modules/@types",
+            "./types"
+        ],
+        "module": "es2020",
         "target": "es2020",
-        "module": "CommonJS",
         "moduleResolution": "node",
-        "outDir": "./dist/esm",
-        "rootDir": "./src",
-        "strict": true,
+        "allowImportingTsExtensions": true,
         "esModuleInterop": true,
-        "forceConsistentCasingInFileNames": true,
         "skipLibCheck": true,
-        "sourceMap": true,
-        "pretty": true,
+        "strict": true,
+        "resolveJsonModule": true,
+        "allowJs": true,
+        "noEmit": true,
+        "listEmittedFiles": true,
         "declaration": true,
         "declarationMap": true,
-        "declarationDir": "./dist/types",
-        "resolveJsonModule": true,
-        "noImplicitAny": false,
+        "sourceMap": true,
+        "forceConsistentCasingInFileNames": true,
+        "noImplicitAny": true,
+        "pretty": true,
         "noEmitOnError": true,
         "removeComments": false,
+        "outDir": "./dist",
+        "rootDir": "./",
+        "baseUrl": "."
     },
     "compileOnSave": false,
     "include": [
-        "src/**/*.ts"
+        "src/**/*.ts",
+        "test/**/*.ts"
     ],
     "exclude": [
         "node_modules",

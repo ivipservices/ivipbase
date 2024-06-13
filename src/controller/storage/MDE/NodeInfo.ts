@@ -71,7 +71,7 @@ export class NodeInfo {
 }
 
 export class CustomStorageNodeInfo extends NodeInfo {
-	address?: NodeAddress | null;
+	address?: NodeAddress | null = null;
 	revision: string;
 	revision_nr: number;
 	created: Date;

@@ -17,7 +17,8 @@ import fs from "fs";
 
 const createExpress = (express as any).default ?? express;
 
-export { ServerSettings, ServerInitialSettings };
+export { ServerSettings };
+export type { ServerInitialSettings };
 
 export const isPossiblyServer = true;
 

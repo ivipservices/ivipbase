@@ -342,12 +342,12 @@ export const addWebsocketServer = (env: LocalServer) => {
 				const client = getClientBySocketId(event.id, "query-subscribe");
 				if (client) {
 					if (!(await env.rules(dbName).isOperationAllowed(client.user.get(dbName) ?? ({} as any), e.path, "get", { context, value: e.value })).allow) {
-						return stop?.();
+						return opt.stop?.();
 					}
 					const data = Transport.serialize(event);
 					client.socket.emit("query-event", data);
 				} else {
-					stop?.();
+					opt.stop?.();
 				}
 			} catch (err) {
 				env.debug.error(`Unexpected error orccured trying to send event`);

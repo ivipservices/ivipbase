@@ -130,7 +130,20 @@ export class StorageDBServer extends Api {
 		return await this.db.app.storage.isPathExists(this.db.database, path);
 	}
 
-	async query(path: string, query: Types.Query, options: Types.QueryOptions = { snapshots: false }): ReturnType<Api["query"]> {
+	async query(
+		path: string,
+		query: Types.Query,
+		options: Types.QueryOptions = { snapshots: false },
+	): Promise<{
+		results:
+			| Array<{
+					path: string;
+					val: any;
+			  }>
+			| string[];
+		context: any;
+		stop(): Promise<void>;
+	}> {
 		const results = await executeQuery(this.db, path, query, options);
 		return results;
 	}

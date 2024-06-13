@@ -356,7 +356,20 @@ export class StorageDBClient extends Api {
 		return this._request({ route: `/exists/${this.db.database}/${path}` });
 	}
 
-	async query(path: string, query: Types.Query, options: Types.QueryOptions = { snapshots: false, monitor: { add: false, change: false, remove: false } }): ReturnType<Api["query"]> {
+	async query(
+		path: string,
+		query: Types.Query,
+		options: Types.QueryOptions = { snapshots: false, monitor: { add: false, change: false, remove: false } },
+	): Promise<{
+		results:
+			| Array<{
+					path: string;
+					val: any;
+			  }>
+			| string[];
+		context: any;
+		stop(): Promise<void>;
+	}> {
 		const request: { query: Types.Query; options: Types.QueryOptions; query_id?: string; client_id?: string } = {
 			query,
 			options,
@@ -476,7 +489,15 @@ export class StorageDBClient extends Api {
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	async validateSchema(path: string, value: any, isUpdate: boolean): ReturnType<Api["validateSchema"]> {
+	async validateSchema(
+		path: string,
+		value: any,
+		isUpdate: boolean,
+	): Promise<{
+		ok: boolean;
+		reason?: string;
+		warning?: string;
+	}> {
 		throw new Error(`Manual schema validation can only be used on standalone databases`);
 	}
 }

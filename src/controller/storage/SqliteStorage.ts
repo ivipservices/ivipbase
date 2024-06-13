@@ -172,28 +172,9 @@ export class SqliteStorage extends CustomStorage {
 
 		const pendingList: any[] = Array.from(this.pending[database].values()).filter((row) => regex.test(row.path));
 
-		const sql = `SELECT path, type, json_value, revision, revision_nr, created, modified FROM ${database} WHERE ${query.map((p) => `path ${p}`).join(" OR ")}`;
+		const sql = `SELECT path, type, text_value, binary_value, json_value, revision, revision_nr, created, modified FROM ${database} WHERE ${query.map((p) => `path ${p}`).join(" OR ")}`;
 
-		const rows = await this._get(sql);
-		const list = await Promise.all(
-			rows
-				.filter((row) => "path" in row && regex.test(row["path"]))
-				.map(async (row: any) => {
-					if ([VALUE_TYPES.STRING, VALUE_TYPES.REFERENCE, VALUE_TYPES.BINARY].includes(row.type) && !simplifyValues) {
-						return await this._getOne(`SELECT path, text_value, binary_value FROM ${database} WHERE path = '${row.path}'`)
-							.then(({ text_value, binary_value }) => {
-								row.text_value = text_value;
-								row.binary_value = binary_value;
-								return Promise.resolve(row);
-							})
-							.catch((err) => {
-								return Promise.resolve(row);
-							});
-					}
-
-					return Promise.resolve(row);
-				}),
-		);
+		const list = await this._get(sql);
 
 		const result: StorageNodeInfo[] = pendingList
 			.concat(list)

@@ -61,6 +61,9 @@ const app = initializeApp({
 	},
 });
 
+const __filename = new URL(import.meta.url).pathname.replace(/^\/+/, "").replace(/^\\+/, "");
+const __dirname = path.dirname(__filename);
+
 app.ready(async () => {
 	const db = getDatabase(app);
 	console.log("Database ready!");

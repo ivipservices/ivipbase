@@ -5,6 +5,7 @@ import fs from "fs";
 import parseDataURL from "data-urls";
 import getRawBody from "raw-body";
 import $path from "path";
+import { fileTypeFromBuffer } from "file-type";
 
 export type RequestQuery = null;
 export type RequestBody = {
@@ -129,8 +130,11 @@ export const addRoute = (env: LocalServer) => {
 
 				rs.pipe(ws);
 			} else if (data instanceof Buffer) {
+				const type = await fileTypeFromBuffer(data);
+
 				file = {
 					...file,
+					mimetype: type?.mime || mimetype,
 					size: data.length,
 				};
 

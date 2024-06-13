@@ -1,8 +1,12 @@
-import { resolve } from "path";
+import path from "path";
 
 // Este arquivo está em ./src/shared/rootpath.ts
 // Quando este código é executado, está em ./dist/cjs/shared/rootpath.js ou ./dist/esm/shared/rootpath.js
 // Portanto, a raiz do pacote está em ../../..
+
+const __filename = new URL(import.meta.url).pathname;
+const __dirname = path.dirname(__filename);
+
 let currentDir = __dirname;
 
 if (process.platform === "win32" && currentDir.startsWith("/")) {
@@ -12,6 +16,6 @@ if (process.platform === "win32" && currentDir.startsWith("/")) {
 // tsc-esm-fix também não usa decodeURI para remover caracteres codificados (como %20 para espaços)
 currentDir = decodeURI(currentDir);
 
-export const packageRootPath = resolve(currentDir, "../../..");
+export const packageRootPath = path.resolve(currentDir, "../../..");
 
 export default packageRootPath;
