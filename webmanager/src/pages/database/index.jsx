@@ -192,12 +192,15 @@ const DataBaseEditor = ({ dbName, authToken }) => {
 					document.body.removeChild(upload);
 					const data = event.target.result;
 					let end = 0;
-					await db.ref(path).import((length) => {
-						return new Promise((resolve, reject) => {
-							end += length;
-							resolve(data.slice(end - length, end));
-						});
-					});
+					await db.ref(path).import(
+						(length) => {
+							return new Promise((resolve, reject) => {
+								end += length;
+								resolve(data.slice(end - length, end));
+							});
+						},
+						{ suppress_events: true },
+					);
 				};
 				reader.readAsText(file);
 			};
