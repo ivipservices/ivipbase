@@ -160,6 +160,11 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         }
         callback === null || callback === void 0 ? void 0 : callback();
     }
+    destructureData(path, value, options = {}, type = "SET") {
+        type = typeof value !== "object" || value instanceof Array || value instanceof ArrayBuffer || value instanceof Date ? "UPDATE" : type;
+        path = ivipbase_core_1.PathInfo.get([this.settings.prefix, path]).path;
+        return (0, destructureData_1.default)(type, path, value, Object.assign(Object.assign({}, (options !== null && options !== void 0 ? options : {})), this.settings));
+    }
     /**
      * Converte um caminho em uma consulta de expressão regular e SQL LIKE pattern.
      *
@@ -508,11 +513,11 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         var _a;
         type = typeof value !== "object" || value instanceof Array || value instanceof ArrayBuffer || value instanceof Date ? "UPDATE" : type;
         path = ivipbase_core_1.PathInfo.get([this.settings.prefix, path]).path;
-        const nodes = destructureData_1.default.apply(this, [type, path, value, options]);
+        const nodes = (0, destructureData_1.default)(type, path, value, Object.assign(Object.assign({}, (options !== null && options !== void 0 ? options : {})), this.settings));
         //console.log("now", JSON.stringify(nodes.find((node) => node.path === "root/test") ?? {}, null, 4));
         const byNodes = await this.getNodesBy(database, path, false, true, true);
         //console.log("olt", JSON.stringify(byNodes.find((node) => node.path === "root/test") ?? {}, null, 4));
-        const { added, modified, removed } = prepareMergeNodes_1.default.apply(this, [path, byNodes, nodes]);
+        const { added, modified, removed } = (0, prepareMergeNodes_1.default)(path, byNodes, nodes);
         // console.log(JSON.stringify(modified, null, 4));
         // console.log("set", JSON.stringify(nodes, null, 4));
         // console.log("set-added", JSON.stringify(added, null, 4));

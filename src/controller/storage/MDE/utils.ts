@@ -1,7 +1,6 @@
 import { PathReference, ascii85, Lib } from "ivipbase-core";
 import { encodeString } from "ivip-utils";
 import { isDate } from "../../../utils";
-import { MDESettings } from ".";
 import { StorageNode } from "./NodeInfo";
 
 const { assert } = Lib;
@@ -196,7 +195,12 @@ export const promiseState = (p: Promise<any>): Promise<"pending" | "fulfilled" |
  * @returns {boolean} `true` se o valor pode ser armazenado inline, `false` caso contrário.
  * @throws {TypeError} Lança um erro se o tipo do valor não for suportado.
  */
-export function valueFitsInline(value: any, settings: MDESettings) {
+export function valueFitsInline(
+	value: any,
+	settings: {
+		maxInlineValueSize: number;
+	},
+) {
 	value = value == undefined ? null : value;
 	if (typeof value === "number" || typeof value === "boolean" || isDate(value)) {
 		return true;

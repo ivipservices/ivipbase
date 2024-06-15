@@ -1,8 +1,6 @@
-import { ID, PathInfo, Utils } from "ivipbase-core";
+import { ID, PathInfo } from "ivipbase-core";
 import { NodesPending, StorageNode, StorageNodeInfo } from "./NodeInfo";
-import { nodeValueTypes, valueFitsInline } from "./utils";
-import type MDE from ".";
-import { removeNulls } from "../../../utils";
+import { nodeValueTypes } from "./utils";
 
 /**
  * Responsável pela mesclagem de nodes soltos, apropriado para evitar conflitos de dados.
@@ -19,7 +17,6 @@ import { removeNulls } from "../../../utils";
  * }} Retorna uma lista de informações sobre os nodes de acordo com seu estado.
  */
 export default function prepareMergeNodes(
-	this: MDE,
 	path: string,
 	nodes: NodesPending[],
 	comparison: NodesPending[],
@@ -153,19 +150,19 @@ export default function prepareMergeNodes(
 	};
 
 	result = result
-		.filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
+		// .filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
 		.map(modifyRevision)
 		.sort(sortNodes);
 	added = added
-		.filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
+		// .filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
 		.map(modifyRevision)
 		.sort(sortNodes);
 	modified = modified
-		.filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
+		// .filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
 		.map(modifyRevision)
 		.sort(sortNodes);
 	removed = removed
-		.filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
+		// .filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
 		.map(modifyRevision)
 		.sort(sortNodes);
 

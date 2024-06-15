@@ -173,12 +173,21 @@ export class StorageDBServer extends Api {
 		const chunkSize = 256 * 1024; // 256KB
 		const json = await read(chunkSize);
 		const method = options?.method ?? "set";
+		options = { ...(options || {}), method, suppress_events: false };
 
-		if (!isJson(json)) {
+		if (typeof json === "string" && !isJson(json)) {
 			return;
 		}
 
 		const value = JSON.parse(json as any);
+
+		if (method === "set") {
+			await this.db.app.storage.set(this.db.database, path, value, options);
+		} else {
+			await this.db.app.storage.update(this.db.database, path, value, options);
+		}
+
+		return;
 
 		const resolveObject = async (path: string, obj: Record<any, any> | Array<any>) => {
 			const isAnyNodes = Object.values(obj).every((value) => (typeof value === "object" && value !== null) || Array.isArray(value));

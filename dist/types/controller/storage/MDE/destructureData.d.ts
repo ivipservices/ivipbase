@@ -1,8 +1,8 @@
 import { NodesPending } from "./NodeInfo";
-import type MDE from ".";
-export default function destructureData(this: MDE, type: Exclude<NodesPending["type"], "VERIFY" | undefined>, path: string, data: any, options?: {
+export default function destructureData(type: Exclude<NodesPending["type"], "VERIFY" | undefined>, path: string, data: any, options?: {
     assert_revision?: string;
     include_checks?: boolean;
     previous_result?: NodesPending[];
+    maxInlineValueSize: number;
 }): NodesPending[];
 //# sourceMappingURL=destructureData.d.ts.map

@@ -1,4 +1,3 @@
-import { MDESettings } from ".";
 import { StorageNode } from "./NodeInfo";
 export declare const nodeValueTypes: {
     readonly EMPTY: 0;
@@ -84,7 +83,9 @@ export declare const promiseState: (p: Promise<any>) => Promise<"pending" | "ful
  * @returns {boolean} `true` se o valor pode ser armazenado inline, `false` caso contrário.
  * @throws {TypeError} Lança um erro se o tipo do valor não for suportado.
  */
-export declare function valueFitsInline(value: any, settings: MDESettings): boolean;
+export declare function valueFitsInline(value: any, settings: {
+    maxInlineValueSize: number;
+}): boolean;
 /**
  * Obtém um valor tipado apropriado para armazenamento com base no tipo do valor fornecido.
  * @param val - O valor a ser processado.

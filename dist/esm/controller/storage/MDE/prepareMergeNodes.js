@@ -123,19 +123,19 @@ export default function prepareMergeNodes(path, nodes, comparison) {
         return aPath.isAncestorOf(bPath) || aPath.isParentOf(bPath) ? -1 : aPath.isDescendantOf(bPath) || aPath.isChildOf(bPath) ? 1 : 0;
     };
     result = result
-        .filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
+        // .filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
         .map(modifyRevision)
         .sort(sortNodes);
     added = added
-        .filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
+        // .filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
         .map(modifyRevision)
         .sort(sortNodes);
     modified = modified
-        .filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
+        // .filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
         .map(modifyRevision)
         .sort(sortNodes);
     removed = removed
-        .filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
+        // .filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
         .map(modifyRevision)
         .sort(sortNodes);
     // console.log("removed:", JSON.stringify(removed, null, 4));

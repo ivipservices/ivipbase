@@ -3586,8 +3586,14 @@ exports.CustomStorageNodeInfo = CustomStorageNodeInfo;
 },{"./utils":20,"ivipbase-core":154}],16:[function(require,module,exports){
 "use strict";
 
-function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
+function _defineProperty(e, r, t) { return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, { value: t, enumerable: !0, configurable: !0, writable: !0 }) : e[r] = t, e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
+function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
 Object.defineProperty(exports, "__esModule", {
@@ -3595,43 +3601,194 @@ Object.defineProperty(exports, "__esModule", {
 });
 var ivipbase_core_1 = require("ivipbase-core");
 var utils_1 = require("./utils");
-var utils_2 = require("../../../utils");
+var extactNodes = function extactNodes(type, obj) {
+  var path = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
+  var nodes = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : [];
+  var options = arguments.length > 4 ? arguments[4] : undefined;
+  var _a;
+  var revision = (_a = options === null || options === void 0 ? void 0 : options.assert_revision) !== null && _a !== void 0 ? _a : ivipbase_core_1.ID.generate();
+  var length = nodes.push({
+    path: ivipbase_core_1.PathInfo.get(path).path,
+    type: nodes.length <= 0 ? "UPDATE" : type,
+    content: {
+      type: (0, utils_1.getValueType)(obj),
+      value: _typeof(obj) === "object" ? Array.isArray(obj) ? [] : {} : obj,
+      revision: revision,
+      revision_nr: 1,
+      created: Date.now(),
+      modified: Date.now()
+    }
+  });
+  var parentValue = nodes[length - 1];
+  for (var k in obj) {
+    var fitsInline = (0, utils_1.valueFitsInline)(obj[k], options);
+    if (parentValue && fitsInline) {
+      if (parentValue.type === "VERIFY") {
+        parentValue.type = "UPDATE";
+      }
+      if (parentValue.content.value === null) {
+        parentValue.content.value = {};
+      }
+      parentValue.content.value[k] = (0, utils_1.getTypedChildValue)(obj[k]);
+    }
+    if (_typeof(obj[k]) === "object" && !fitsInline) {
+      extactNodes(type, obj[k], [].concat(_toConsumableArray(path), [k]), nodes, options);
+    } else {
+      nodes.push({
+        path: ivipbase_core_1.PathInfo.get([].concat(_toConsumableArray(path), [k])).path,
+        type: type,
+        content: {
+          type: (0, utils_1.getValueType)(obj),
+          value: fitsInline ? null : _typeof(obj[k]) === "object" ? Array.isArray(obj[k]) ? [] : {} : obj[k],
+          revision: revision,
+          revision_nr: 1,
+          created: Date.now(),
+          modified: Date.now()
+        }
+      });
+    }
+  }
+  return nodes;
+};
 function destructureData(type, path, data) {
-  var options = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
-  var _a, _b, _c, _d;
+  var options = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {
+    maxInlineValueSize: 200
+  };
+  var _a, _b;
   var result = (_a = options === null || options === void 0 ? void 0 : options.previous_result) !== null && _a !== void 0 ? _a : [];
   var pathInfo = ivipbase_core_1.PathInfo.get(path);
   var revision = (_b = options === null || options === void 0 ? void 0 : options.assert_revision) !== null && _b !== void 0 ? _b : ivipbase_core_1.ID.generate();
   options.assert_revision = revision;
   options.include_checks = typeof options.include_checks === "boolean" ? options.include_checks : true;
-  var resolveConflict = function resolveConflict(node) {
-    var comparison = result.find(function (n) {
-      return ivipbase_core_1.PathInfo.get(n.path).equals(node.path);
-    });
-    if (!comparison) {
+  if ((0, utils_1.valueFitsInline)(data, options)) {
+    data = _defineProperty({}, pathInfo.key, data);
+    pathInfo = pathInfo.parent;
+  }
+  if (options.include_checks) {
+    var parentPath = pathInfo.parent;
+    while (parentPath && parentPath.path.trim() !== "") {
+      var node = {
+        path: parentPath.path,
+        type: "VERIFY",
+        content: {
+          type: typeof parentPath.key === "number" ? utils_1.nodeValueTypes.ARRAY : utils_1.nodeValueTypes.OBJECT,
+          value: {},
+          revision: revision,
+          revision_nr: 1,
+          created: Date.now(),
+          modified: Date.now()
+        }
+      };
       result.push(node);
-      return;
-    } else if (node.type === "VERIFY") {
-      return;
+      parentPath = parentPath.parent;
     }
-    result = result.filter(function (n) {
-      return !ivipbase_core_1.PathInfo.get(n.path).equals(node.path);
-    });
-    if (comparison.content.type !== node.content.type) {
-      result.push(node);
-      return;
-    }
-    if (comparison.type === "VERIFY") {
-      comparison.type = "UPDATE";
-    }
-    node.content.value = (0, utils_2.joinObjects)(comparison.content.value, node.content.value);
-    result.push(node);
-  };
-  var include_checks = options.include_checks;
-  // if (options.include_checks) {
-  // 	while (typeof pathInfo.parentPath === "string" && pathInfo.parentPath.trim() !== "") {
-  // 		const node: NodesPending = {
-  // 			path: pathInfo.parentPath,
+  }
+  extactNodes(type, data, pathInfo.keys, result, options);
+  return result;
+  // const resolveConflict = (node: NodesPending) => {
+  // 	const comparison = result.find((n) => PathInfo.get(n.path).equals(node.path));
+  // 	if (!comparison) {
+  // 		result.push(node);
+  // 		return;
+  // 	} else if (node.type === "VERIFY") {
+  // 		return;
+  // 	}
+  // 	result = result.filter((n) => !PathInfo.get(n.path).equals(node.path));
+  // 	if (comparison.content.type !== node.content.type) {
+  // 		result.push(node);
+  // 		return;
+  // 	}
+  // 	if (comparison.type === "VERIFY") {
+  // 		comparison.type = "UPDATE";
+  // 	}
+  // 	node.content.value = joinObjects(comparison.content.value, node.content.value);
+  // 	result.push(node);
+  // };
+  // const include_checks = options.include_checks;
+  // // if (options.include_checks) {
+  // // 	while (typeof pathInfo.parentPath === "string" && pathInfo.parentPath.trim() !== "") {
+  // // 		const node: NodesPending = {
+  // // 			path: pathInfo.parentPath,
+  // // 			type: "VERIFY",
+  // // 			content: {
+  // // 				type: (typeof pathInfo.key === "number" ? nodeValueTypes.ARRAY : nodeValueTypes.OBJECT) as any,
+  // // 				value: {},
+  // // 				revision,
+  // // 				revision_nr: 1,
+  // // 				created: Date.now(),
+  // // 				modified: Date.now(),
+  // // 			},
+  // // 		};
+  // // 		resolveConflict(node);
+  // // 		pathInfo = PathInfo.get(pathInfo.parentPath);
+  // // 	}
+  // // }
+  // options.include_checks = false;
+  // let value = data;
+  // let valueType = getValueType(value);
+  // if (valueType === VALUE_TYPES.OBJECT || valueType === VALUE_TYPES.ARRAY) {
+  // 	value = {};
+  // 	valueType = Array.isArray(data) ? VALUE_TYPES.ARRAY : VALUE_TYPES.OBJECT;
+  // 	for (let key in data) {
+  // 		if (valueType === VALUE_TYPES.OBJECT && valueFitsInline(data[key], settings)) {
+  // 			value[key] = getTypedChildValue(data[key]);
+  // 			if (value[key] === null) {
+  // 				result = destructureData(type, PathInfo.get([path, valueType === VALUE_TYPES.OBJECT ? key : parseInt(key)]).path, null, { ...options, previous_result: result }, settings);
+  // 			}
+  // 			continue;
+  // 		}
+  // 		result = destructureData(type, PathInfo.get([path, valueType === VALUE_TYPES.OBJECT ? key : parseInt(key)]).path, data[key], { ...options, previous_result: result }, settings);
+  // 	}
+  // }
+  // const parentPath = PathInfo.get(pathInfo.parentPath as any);
+  // const isObjectFitsInline = [VALUE_TYPES.ARRAY, VALUE_TYPES.OBJECT].includes(valueType as any)
+  // 	? result.findIndex((n) => {
+  // 			return PathInfo.get(n.path).isChildOf(pathInfo) || PathInfo.get(n.path).isDescendantOf(pathInfo);
+  // 	  }) < 0 && Object.keys(value).length === 0
+  // 	: valueFitsInline(value, settings);
+  // if (parentPath.path && parentPath.path.trim() !== "") {
+  // 	const parentNode: NodesPending = result.find((node) => PathInfo.get(node.path).equals(parentPath)) ?? {
+  // 		path: parentPath.path,
+  // 		type: "UPDATE",
+  // 		content: {
+  // 			type: (typeof pathInfo.key === "number" ? nodeValueTypes.ARRAY : nodeValueTypes.OBJECT) as any,
+  // 			value: {},
+  // 			revision,
+  // 			revision_nr: 1,
+  // 			created: Date.now(),
+  // 			modified: Date.now(),
+  // 		},
+  // 	};
+  // 	parentNode.type = "UPDATE";
+  // 	if (parentNode.content.value === null || typeof parentNode.content.value !== "object") {
+  // 		parentNode.content.value = {};
+  // 	}
+  // 	if (parentNode.content.type === nodeValueTypes.OBJECT || parentNode.content.type === nodeValueTypes.ARRAY) {
+  // 		(parentNode.content.value as any)[pathInfo.key as string | number] = isObjectFitsInline ? getTypedChildValue(value) : null;
+  // 		result = result.filter((node) => !PathInfo.get(node.path).equals(parentPath));
+  // 		resolveConflict(parentNode);
+  // 	}
+  // }
+  // const node: NodesPending = {
+  // 	path,
+  // 	type: isObjectFitsInline ? "SET" : type,
+  // 	content: {
+  // 		type: valueType as any,
+  // 		value: isObjectFitsInline ? null : value,
+  // 		revision,
+  // 		revision_nr: 1,
+  // 		created: Date.now(),
+  // 		modified: Date.now(),
+  // 	},
+  // };
+  // resolveConflict(node);
+  // const verifyNodes: NodesPending[] = [];
+  // for (const node of result) {
+  // 	const pathInfo = PathInfo.get(node.path);
+  // 	const parentNode = result.find((n) => PathInfo.get(n.path).isParentOf(node.path)) ?? verifyNodes.find((n) => PathInfo.get(n.path).isParentOf(node.path));
+  // 	if (!parentNode && pathInfo.parentPath && pathInfo.parentPath.trim() !== "" && include_checks) {
+  // 		const verifyNode: NodesPending = {
+  // 			path: pathInfo.parentPath as any,
   // 			type: "VERIFY",
   // 			content: {
   // 				type: (typeof pathInfo.key === "number" ? nodeValueTypes.ARRAY : nodeValueTypes.OBJECT) as any,
@@ -3642,125 +3799,23 @@ function destructureData(type, path, data) {
   // 				modified: Date.now(),
   // 			},
   // 		};
-  // 		resolveConflict(node);
-  // 		pathInfo = PathInfo.get(pathInfo.parentPath);
+  // 		verifyNodes.push(verifyNode);
   // 	}
   // }
-  options.include_checks = false;
-  var value = data;
-  var valueType = (0, utils_1.getValueType)(value);
-  if (valueType === utils_1.VALUE_TYPES.OBJECT || valueType === utils_1.VALUE_TYPES.ARRAY) {
-    value = {};
-    valueType = Array.isArray(data) ? utils_1.VALUE_TYPES.ARRAY : utils_1.VALUE_TYPES.OBJECT;
-    for (var key in data) {
-      if (valueType === utils_1.VALUE_TYPES.OBJECT && (0, utils_1.valueFitsInline)(data[key], this.settings)) {
-        value[key] = (0, utils_1.getTypedChildValue)(data[key]);
-        if (value[key] === null) {
-          result = destructureData.apply(this, [type, ivipbase_core_1.PathInfo.get([path, valueType === utils_1.VALUE_TYPES.OBJECT ? key : parseInt(key)]).path, null, Object.assign(Object.assign({}, options), {
-            previous_result: result
-          })]);
-        }
-        continue;
-      }
-      result = destructureData.apply(this, [type, ivipbase_core_1.PathInfo.get([path, valueType === utils_1.VALUE_TYPES.OBJECT ? key : parseInt(key)]).path, data[key], Object.assign(Object.assign({}, options), {
-        previous_result: result
-      })]);
-    }
-  }
-  var parentPath = ivipbase_core_1.PathInfo.get(pathInfo.parentPath);
-  var isObjectFitsInline = [utils_1.VALUE_TYPES.ARRAY, utils_1.VALUE_TYPES.OBJECT].includes(valueType) ? result.findIndex(function (n) {
-    return ivipbase_core_1.PathInfo.get(n.path).isChildOf(pathInfo) || ivipbase_core_1.PathInfo.get(n.path).isDescendantOf(pathInfo);
-  }) < 0 && Object.keys(value).length === 0 : (0, utils_1.valueFitsInline)(value, this.settings);
-  if (parentPath.path && parentPath.path.trim() !== "") {
-    var parentNode = (_c = result.find(function (node) {
-      return ivipbase_core_1.PathInfo.get(node.path).equals(parentPath);
-    })) !== null && _c !== void 0 ? _c : {
-      path: parentPath.path,
-      type: "UPDATE",
-      content: {
-        type: typeof pathInfo.key === "number" ? utils_1.nodeValueTypes.ARRAY : utils_1.nodeValueTypes.OBJECT,
-        value: {},
-        revision: revision,
-        revision_nr: 1,
-        created: Date.now(),
-        modified: Date.now()
-      }
-    };
-    parentNode.type = "UPDATE";
-    if (parentNode.content.value === null || _typeof(parentNode.content.value) !== "object") {
-      parentNode.content.value = {};
-    }
-    if (parentNode.content.type === utils_1.nodeValueTypes.OBJECT || parentNode.content.type === utils_1.nodeValueTypes.ARRAY) {
-      parentNode.content.value[pathInfo.key] = isObjectFitsInline ? (0, utils_1.getTypedChildValue)(value) : null;
-      result = result.filter(function (node) {
-        return !ivipbase_core_1.PathInfo.get(node.path).equals(parentPath);
-      });
-      resolveConflict(parentNode);
-    }
-  }
-  var node = {
-    path: path,
-    type: isObjectFitsInline ? "SET" : type,
-    content: {
-      type: valueType,
-      value: isObjectFitsInline ? null : value,
-      revision: revision,
-      revision_nr: 1,
-      created: Date.now(),
-      modified: Date.now()
-    }
-  };
-  resolveConflict(node);
-  var verifyNodes = [];
-  var _iterator = _createForOfIteratorHelper(result),
-    _step;
-  try {
-    var _loop = function _loop() {
-      var node = _step.value;
-      var pathInfo = ivipbase_core_1.PathInfo.get(node.path);
-      var parentNode = (_d = result.find(function (n) {
-        return ivipbase_core_1.PathInfo.get(n.path).isParentOf(node.path);
-      })) !== null && _d !== void 0 ? _d : verifyNodes.find(function (n) {
-        return ivipbase_core_1.PathInfo.get(n.path).isParentOf(node.path);
-      });
-      if (!parentNode && pathInfo.parentPath && pathInfo.parentPath.trim() !== "" && include_checks) {
-        var verifyNode = {
-          path: pathInfo.parentPath,
-          type: "VERIFY",
-          content: {
-            type: typeof pathInfo.key === "number" ? utils_1.nodeValueTypes.ARRAY : utils_1.nodeValueTypes.OBJECT,
-            value: {},
-            revision: revision,
-            revision_nr: 1,
-            created: Date.now(),
-            modified: Date.now()
-          }
-        };
-        verifyNodes.push(verifyNode);
-      }
-    };
-    for (_iterator.s(); !(_step = _iterator.n()).done;) {
-      _loop();
-    }
-  } catch (err) {
-    _iterator.e(err);
-  } finally {
-    _iterator.f();
-  }
-  return verifyNodes.concat(result).map(function (node) {
-    node.path = node.path.replace(/\/+$/g, "");
-    return node;
-  });
+  // return verifyNodes.concat(result).map((node) => {
+  // 	node.path = node.path.replace(/\/+$/g, "");
+  // 	return node;
+  // });
 }
 exports["default"] = destructureData;
 
-},{"../../../utils":39,"./utils":20,"ivipbase-core":154}],17:[function(require,module,exports){
+},{"./utils":20,"ivipbase-core":154}],17:[function(require,module,exports){
 "use strict";
 
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
 function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
 function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
 function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
 function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
@@ -4028,7 +4083,16 @@ var MDE = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
         return _ready.apply(this, arguments);
       }
       return ready;
-    }()
+    }())
+  }, {
+    key: "destructureData",
+    value: function destructureData(path, value) {
+      var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+      var type = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : "SET";
+      type = _typeof(value) !== "object" || value instanceof Array || value instanceof ArrayBuffer || value instanceof Date ? "UPDATE" : type;
+      path = ivipbase_core_1.PathInfo.get([this.settings.prefix, path]).path;
+      return (0, destructureData_1["default"])(type, path, value, Object.assign(Object.assign({}, options !== null && options !== void 0 ? options : {}), this.settings));
+    }
     /**
      * Converte um caminho em uma consulta de expressão regular e SQL LIKE pattern.
      *
@@ -4037,7 +4101,6 @@ var MDE = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
      * @param {boolean} [allHeirs=false] - Se verdadeiro, exporta todos os descendentes em relação ao path especificado.
      * @returns {{regex: RegExp, query: string[]}} - O objeto contendo a expressão regular e a query resultante.
      */
-    )
   }, {
     key: "preparePathQuery",
     value: function preparePathQuery(path) {
@@ -4659,7 +4722,7 @@ var MDE = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
           _a,
           nodes,
           byNodes,
-          _prepareMergeNodes_1$,
+          _ref22,
           added,
           modified,
           removed,
@@ -4686,13 +4749,13 @@ var MDE = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
               type = _args17.length > 4 && _args17[4] !== undefined ? _args17[4] : "SET";
               type = _typeof(value) !== "object" || value instanceof Array || value instanceof ArrayBuffer || value instanceof Date ? "UPDATE" : type;
               path = ivipbase_core_1.PathInfo.get([this.settings.prefix, path]).path;
-              nodes = destructureData_1["default"].apply(this, [type, path, value, options]); //console.log("now", JSON.stringify(nodes.find((node) => node.path === "root/test") ?? {}, null, 4));
+              nodes = (0, destructureData_1["default"])(type, path, value, Object.assign(Object.assign({}, options !== null && options !== void 0 ? options : {}), this.settings)); //console.log("now", JSON.stringify(nodes.find((node) => node.path === "root/test") ?? {}, null, 4));
               _context17.next = 7;
               return this.getNodesBy(database, path, false, true, true);
             case 7:
               byNodes = _context17.sent;
               //console.log("olt", JSON.stringify(byNodes.find((node) => node.path === "root/test") ?? {}, null, 4));
-              _prepareMergeNodes_1$ = prepareMergeNodes_1["default"].apply(this, [path, byNodes, nodes]), added = _prepareMergeNodes_1$.added, modified = _prepareMergeNodes_1$.modified, removed = _prepareMergeNodes_1$.removed; // console.log(JSON.stringify(modified, null, 4));
+              _ref22 = (0, prepareMergeNodes_1["default"])(path, byNodes, nodes), added = _ref22.added, modified = _ref22.modified, removed = _ref22.removed; // console.log(JSON.stringify(modified, null, 4));
               // console.log("set", JSON.stringify(nodes, null, 4));
               // console.log("set-added", JSON.stringify(added, null, 4));
               // console.log("set-modified", JSON.stringify(modified, null, 4));
@@ -5306,16 +5369,16 @@ function prepareMergeNodes(path, nodes, comparison) {
     var _loop = function _loop() {
       var node = _step.value;
       var pathInfo = ivipbase_core_1.PathInfo.get(node.path);
-      var response = comparison.find(function (_ref5) {
-        var path = _ref5.path;
+      var response = comparison.find(function (_ref) {
+        var path = _ref.path;
         return ivipbase_core_1.PathInfo.get(path).equals(node.path);
       });
       if (response) {
         return 1; // continue
       }
       while (pathInfo && pathInfo.path.trim() !== "") {
-        response = comparison.find(function (_ref6) {
-          var path = _ref6.path;
+        response = comparison.find(function (_ref2) {
+          var path = _ref2.path;
           return ivipbase_core_1.PathInfo.get(path).equals(pathInfo.path);
         });
         if (response && response.type === "SET") {
@@ -5343,20 +5406,20 @@ function prepareMergeNodes(path, nodes, comparison) {
         var node = _step2.value;
         var pathInfo = ivipbase_core_1.PathInfo.get(node.path);
         if (node.content.type === utils_1.nodeValueTypes.EMPTY || node.content.value === null || node.content.value === undefined) {
-          var iten = (_a = nodes.find(function (_ref7) {
-            var path = _ref7.path;
+          var iten = (_a = nodes.find(function (_ref3) {
+            var path = _ref3.path;
             return ivipbase_core_1.PathInfo.get(path).equals(node.path);
           })) !== null && _a !== void 0 ? _a : node;
           removed.push(iten);
-          nodes = nodes.filter(function (_ref8) {
-            var path = _ref8.path;
+          nodes = nodes.filter(function (_ref4) {
+            var path = _ref4.path;
             return !ivipbase_core_1.PathInfo.get(path).equals(iten.path);
           });
           return 0; // continue
         }
         if (node.type === "VERIFY") {
-          if (nodes.findIndex(function (_ref9) {
-            var path = _ref9.path;
+          if (nodes.findIndex(function (_ref5) {
+            var path = _ref5.path;
             return ivipbase_core_1.PathInfo.get(node.path).equals(path);
           }) < 0) {
             result.push(node);
@@ -5364,8 +5427,8 @@ function prepareMergeNodes(path, nodes, comparison) {
           }
           return 0; // continue
         } else {
-          var currentNode = nodes.find(function (_ref10) {
-            var path = _ref10.path;
+          var currentNode = nodes.find(function (_ref6) {
+            var path = _ref6.path;
             return ivipbase_core_1.PathInfo.get(path).equals(node.path);
           });
           if (currentNode) {
@@ -5433,30 +5496,18 @@ function prepareMergeNodes(path, nodes, comparison) {
     var bPath = ivipbase_core_1.PathInfo.get(b.path);
     return aPath.isAncestorOf(bPath) || aPath.isParentOf(bPath) ? -1 : aPath.isDescendantOf(bPath) || aPath.isChildOf(bPath) ? 1 : 0;
   };
-  result = result.filter(function (n, i, l) {
-    return l.findIndex(function (_ref) {
-      var p = _ref.path;
-      return ivipbase_core_1.PathInfo.get(p).equals(n.path);
-    }) === i;
-  }).map(modifyRevision).sort(sortNodes);
-  added = added.filter(function (n, i, l) {
-    return l.findIndex(function (_ref2) {
-      var p = _ref2.path;
-      return ivipbase_core_1.PathInfo.get(p).equals(n.path);
-    }) === i;
-  }).map(modifyRevision).sort(sortNodes);
-  modified = modified.filter(function (n, i, l) {
-    return l.findIndex(function (_ref3) {
-      var p = _ref3.path;
-      return ivipbase_core_1.PathInfo.get(p).equals(n.path);
-    }) === i;
-  }).map(modifyRevision).sort(sortNodes);
-  removed = removed.filter(function (n, i, l) {
-    return l.findIndex(function (_ref4) {
-      var p = _ref4.path;
-      return ivipbase_core_1.PathInfo.get(p).equals(n.path);
-    }) === i;
-  }).map(modifyRevision).sort(sortNodes);
+  result = result
+  // .filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
+  .map(modifyRevision).sort(sortNodes);
+  added = added
+  // .filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
+  .map(modifyRevision).sort(sortNodes);
+  modified = modified
+  // .filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
+  .map(modifyRevision).sort(sortNodes);
+  removed = removed
+  // .filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
+  .map(modifyRevision).sort(sortNodes);
   // console.log("removed:", JSON.stringify(removed, null, 4));
   // console.log("RESULT:", path, JSON.stringify(result, null, 4));
   // console.log(path, JSON.stringify({ result, added, modified, removed }, null, 4));
@@ -7274,91 +7325,50 @@ var StorageDBServer = /*#__PURE__*/function (_ivipbase_core_1$Api) {
             case 3:
               json = _context11.sent;
               method = (_a = options === null || options === void 0 ? void 0 : options.method) !== null && _a !== void 0 ? _a : "set";
-              if ((0, ivip_utils_1.isJson)(json)) {
-                _context11.next = 7;
+              options = Object.assign(Object.assign({}, options || {}), {
+                method: method,
+                suppress_events: false
+              });
+              if (!(typeof json === "string" && !(0, ivip_utils_1.isJson)(json))) {
+                _context11.next = 8;
                 break;
               }
               return _context11.abrupt("return");
-            case 7:
+            case 8:
               value = JSON.parse(json);
-              resolveObject = /*#__PURE__*/function () {
-                var _ref = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee10(path, obj) {
-                  var isAnyNodes, key, _value, newPath;
-                  return _regeneratorRuntime().wrap(function _callee10$(_context10) {
-                    while (1) switch (_context10.prev = _context10.next) {
-                      case 0:
-                        isAnyNodes = Object.values(obj).every(function (value) {
-                          return _typeof(value) === "object" && value !== null || Array.isArray(value);
-                        });
-                        if (!isAnyNodes) {
-                          _context10.next = 13;
-                          break;
-                        }
-                        _context10.t0 = _regeneratorRuntime().keys(obj);
-                      case 3:
-                        if ((_context10.t1 = _context10.t0()).done) {
-                          _context10.next = 11;
-                          break;
-                        }
-                        key = _context10.t1.value;
-                        _value = obj[key];
-                        newPath = ivipbase_core_1.PathInfo.get([path, key]).path;
-                        _context10.next = 9;
-                        return resolveObject(newPath, _value);
-                      case 9:
-                        _context10.next = 3;
-                        break;
-                      case 11:
-                        _context10.next = 20;
-                        break;
-                      case 13:
-                        if (!(method === "set")) {
-                          _context10.next = 18;
-                          break;
-                        }
-                        _context10.next = 16;
-                        return _this2.db.app.storage.set(_this2.db.database, path, value, options);
-                      case 16:
-                        _context10.next = 20;
-                        break;
-                      case 18:
-                        _context10.next = 20;
-                        return _this2.db.app.storage.update(_this2.db.database, path, value, options);
-                      case 20:
-                      case "end":
-                        return _context10.stop();
-                    }
-                  }, _callee10);
-                }));
-                return function resolveObject(_x20, _x21) {
-                  return _ref.apply(this, arguments);
-                };
-              }();
-              if (!(_typeof(value) === "object" && value !== null || Array.isArray(value))) {
+              if (!(method === "set")) {
                 _context11.next = 14;
                 break;
               }
               _context11.next = 12;
-              return resolveObject(path, value);
+              return this.db.app.storage.set(this.db.database, path, value, options);
             case 12:
-              _context11.next = 21;
+              _context11.next = 16;
               break;
             case 14:
+              _context11.next = 16;
+              return this.db.app.storage.update(this.db.database, path, value, options);
+            case 16:
+              return _context11.abrupt("return");
+            case 21:
+              _context11.next = 30;
+              break;
+            case 23:
               if (!(method === "set")) {
-                _context11.next = 19;
+                _context11.next = 28;
                 break;
               }
-              _context11.next = 17;
+              _context11.next = 26;
               return this.db.app.storage.set(this.db.database, path, value, options);
-            case 17:
-              _context11.next = 21;
+            case 26:
+              _context11.next = 30;
               break;
-            case 19:
-              _context11.next = 21;
+            case 28:
+              _context11.next = 30;
               return this.db.app.storage.update(this.db.database, path, value, options);
-            case 21:
+            case 30:
               return _context11.abrupt("return");
-            case 22:
+            case 31:
             case "end":
               return _context11.stop();
           }

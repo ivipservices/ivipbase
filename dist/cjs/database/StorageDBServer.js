@@ -90,10 +90,18 @@ class StorageDBServer extends ivipbase_core_1.Api {
         const chunkSize = 256 * 1024; // 256KB
         const json = await read(chunkSize);
         const method = (_a = options === null || options === void 0 ? void 0 : options.method) !== null && _a !== void 0 ? _a : "set";
-        if (!(0, ivip_utils_1.isJson)(json)) {
+        options = Object.assign(Object.assign({}, (options || {})), { method, suppress_events: false });
+        if (typeof json === "string" && !(0, ivip_utils_1.isJson)(json)) {
             return;
         }
         const value = JSON.parse(json);
+        if (method === "set") {
+            await this.db.app.storage.set(this.db.database, path, value, options);
+        }
+        else {
+            await this.db.app.storage.update(this.db.database, path, value, options);
+        }
+        return;
         const resolveObject = async (path, obj) => {
             const isAnyNodes = Object.values(obj).every((value) => (typeof value === "object" && value !== null) || Array.isArray(value));
             if (isAnyNodes) {

@@ -1,7 +1,7 @@
 {
 	"type": "module",
 	"name": "ivipbase",
-	"version": "1.3.2",
+	"version": "1.3.3",
 	"description": "Componentes principais compartilhados do iVipBase, sem necessidade de instalação manual",
 	"comments": {
 		"browser": "As substituições de arquivo webpack/browserify foram movidas para package.json em dist/cjs e dist/esm. Veja README.md para mais informações",

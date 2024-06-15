@@ -19,19 +19,31 @@ const addRoutes = (env) => {
         }
         const format = req.query.format || "json";
         const suppress_events = req.query.suppress_events === "1";
-        req.pause(); // Switch to non-flowing mode so we can use .read() upon request
         let eof = false;
-        req.once("end", () => {
-            eof = true;
+        // req.pause(); // Switch to non-flowing mode so we can use .read() upon request
+        // req.once("end", () => {
+        // 	eof = true;
+        // });
+        const body = new Promise((resolve, reject) => {
+            let body = "";
+            req.on("data", (chunk) => {
+                body += chunk.toString("utf-8");
+            });
+            req.on("end", () => {
+                resolve(body);
+            });
+            req.on("error", (err) => {
+                reject(err);
+            });
         });
         const read = async (length) => {
+            return await body;
             let chunk = req.read();
             if (chunk === null && !eof) {
                 await new Promise((resolve) => req.once("readable", resolve));
                 chunk = req.read();
             }
-            // env.debug.verbose(`Received chunk: `, chunk);
-            return chunk;
+            return chunk instanceof Buffer ? chunk.toString("utf-8") : chunk;
         };
         const ref = env.db(dbName).ref(path);
         try {
