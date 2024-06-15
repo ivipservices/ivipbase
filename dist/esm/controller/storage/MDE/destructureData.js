@@ -34,7 +34,7 @@ const extactNodes = (type, obj, path = [], nodes = [], options) => {
                 path: PathInfo.get([...path, k]).path,
                 type: type,
                 content: {
-                    type: getValueType(obj),
+                    type: getValueType(obj[k]),
                     value: fitsInline ? null : typeof obj[k] === "object" ? (Array.isArray(obj[k]) ? [] : {}) : obj[k],
                     revision,
                     revision_nr: 1,

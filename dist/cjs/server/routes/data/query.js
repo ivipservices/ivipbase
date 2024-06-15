@@ -13,21 +13,21 @@ const addRoutes = (env) => {
                 message: `Database '${dbName}' not found`,
             });
         }
-        const path = req.params["0"];
-        const access = await env.rules(dbName).isOperationAllowed((_a = req.user) !== null && _a !== void 0 ? _a : {}, path, "exists", { context: req.context });
-        if (!access.allow) {
-            return (0, error_1.sendUnauthorizedError)(res, access.code, access.message);
-        }
-        const data = ivipbase_core_1.Transport.deserialize(req.body);
-        if (typeof data !== "object" || typeof data.query !== "object" || typeof data.options !== "object") {
-            return (0, error_1.sendError)(res, { code: "invalid_request", message: "Invalid query request" });
-        }
-        const query = data.query;
-        const options = data.options;
-        if (options.monitor === true) {
-            options.monitor = { add: true, change: true, remove: true };
-        }
         try {
+            const path = req.params["0"];
+            const access = await env.rules(dbName).isOperationAllowed((_a = req.user) !== null && _a !== void 0 ? _a : {}, path, "exists", { context: req.context });
+            if (!access.allow) {
+                return (0, error_1.sendUnauthorizedError)(res, access.code, access.message);
+            }
+            const data = ivipbase_core_1.Transport.deserialize(req.body);
+            if (typeof data !== "object" || typeof data.query !== "object" || typeof data.options !== "object") {
+                return (0, error_1.sendError)(res, { code: "invalid_request", message: "Invalid query request" });
+            }
+            const query = data.query;
+            const options = data.options;
+            if (options.monitor === true) {
+                options.monitor = { add: true, change: true, remove: true };
+            }
             const { results, context, isMore } = (await env.db(dbName).storage.query(path, query, options));
             if (!((_b = env.settings.transactions) === null || _b === void 0 ? void 0 : _b.log) && context && context.database_cursor) {
                 delete context.database_cursor;

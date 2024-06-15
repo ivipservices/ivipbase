@@ -9,21 +9,21 @@ export const addRoutes = (env) => {
                 message: `Database '${dbName}' not found`,
             });
         }
-        const path = req.params["0"];
-        const access = await env.rules(dbName).isOperationAllowed(req.user ?? {}, path, "exists", { context: req.context });
-        if (!access.allow) {
-            return sendUnauthorizedError(res, access.code, access.message);
-        }
-        const data = Transport.deserialize(req.body);
-        if (typeof data !== "object" || typeof data.query !== "object" || typeof data.options !== "object") {
-            return sendError(res, { code: "invalid_request", message: "Invalid query request" });
-        }
-        const query = data.query;
-        const options = data.options;
-        if (options.monitor === true) {
-            options.monitor = { add: true, change: true, remove: true };
-        }
         try {
+            const path = req.params["0"];
+            const access = await env.rules(dbName).isOperationAllowed(req.user ?? {}, path, "exists", { context: req.context });
+            if (!access.allow) {
+                return sendUnauthorizedError(res, access.code, access.message);
+            }
+            const data = Transport.deserialize(req.body);
+            if (typeof data !== "object" || typeof data.query !== "object" || typeof data.options !== "object") {
+                return sendError(res, { code: "invalid_request", message: "Invalid query request" });
+            }
+            const query = data.query;
+            const options = data.options;
+            if (options.monitor === true) {
+                options.monitor = { add: true, change: true, remove: true };
+            }
             const { results, context, isMore } = (await env.db(dbName).storage.query(path, query, options));
             if (!env.settings.transactions?.log && context && context.database_cursor) {
                 delete context.database_cursor;

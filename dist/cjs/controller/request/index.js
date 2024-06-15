@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const ivip_utils_1 = require("ivip-utils");
 const error_1 = require("./error");
 const axios_1 = __importDefault(require("axios"));
 /**
@@ -10,13 +11,12 @@ const axios_1 = __importDefault(require("axios"));
  */
 async function request(method, url, options = { accessToken: null, data: null, dataReceivedCallback: null, dataRequestCallback: null, context: null }) {
     var _a, _b, _c;
-    let postData = options.data, isJson = false;
+    let postData = options.data;
     if (typeof postData === "undefined" || postData === null) {
         postData = "";
     }
     else if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(postData))) {
         postData = JSON.stringify(postData);
-        isJson = true;
     }
     const headers = {
         "DataBase-Context": JSON.stringify(options.context || null),
@@ -41,9 +41,9 @@ async function request(method, url, options = { accessToken: null, data: null, d
         }
         request.data = Uint8Array.from(unescape(encodeURIComponent(postData)), (x) => x.charCodeAt(0));
     }
-    else if (typeof postData === "string" && isJson) {
+    else if ((0, ivip_utils_1.isJson)(postData)) {
         headers["Content-Type"] = "application/json";
-        request.data = postData;
+        request.data = typeof postData === "string" ? JSON.parse(postData) : postData;
     }
     else {
         headers["Content-Type"] = "application/octet-stream";

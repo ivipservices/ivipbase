@@ -37,7 +37,7 @@ const extactNodes = (type, obj, path = [], nodes = [], options) => {
                 path: ivipbase_core_1.PathInfo.get([...path, k]).path,
                 type: type,
                 content: {
-                    type: (0, utils_1.getValueType)(obj),
+                    type: (0, utils_1.getValueType)(obj[k]),
                     value: fitsInline ? null : typeof obj[k] === "object" ? (Array.isArray(obj[k]) ? [] : {}) : obj[k],
                     revision,
                     revision_nr: 1,

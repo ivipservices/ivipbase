@@ -1,3 +1,4 @@
+import { isJson } from "ivip-utils";
 import { RequestError } from "./error";
 import axios, { AxiosProgressEvent, AxiosRequestConfig } from "axios";
 
@@ -17,13 +18,11 @@ export default async function request(
 		context?: any;
 	} = { accessToken: null, data: null, dataReceivedCallback: null, dataRequestCallback: null, context: null },
 ): Promise<{ context: any; data: any }> {
-	let postData = options.data,
-		isJson = false;
+	let postData = options.data;
 	if (typeof postData === "undefined" || postData === null) {
 		postData = "";
 	} else if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(postData))) {
 		postData = JSON.stringify(postData);
-		isJson = true;
 	}
 	const headers: Record<string, string> = {
 		"DataBase-Context": JSON.stringify(options.context || null),
@@ -48,9 +47,9 @@ export default async function request(
 			postData += chunk;
 		}
 		request.data = Uint8Array.from(unescape(encodeURIComponent(postData)), (x) => x.charCodeAt(0));
-	} else if (typeof postData === "string" && isJson) {
+	} else if (isJson(postData)) {
 		headers["Content-Type"] = "application/json";
-		request.data = postData;
+		request.data = typeof postData === "string" ? JSON.parse(postData) : postData;
 	} else {
 		headers["Content-Type"] = "application/octet-stream";
 		// headers["Content-Length"] = postData.length;

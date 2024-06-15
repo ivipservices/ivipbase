@@ -3028,6 +3028,7 @@ var __importDefault = void 0 && (void 0).__importDefault || function (mod) {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+var ivip_utils_1 = require("ivip-utils");
 var error_1 = require("./error");
 var axios_1 = __importDefault(require("axios"));
 /**
@@ -3043,7 +3044,6 @@ function _request() {
       _b,
       _c,
       postData,
-      isJson,
       headers,
       request,
       chunkSize,
@@ -3068,12 +3068,11 @@ function _request() {
             dataRequestCallback: null,
             context: null
           };
-          postData = options.data, isJson = false;
+          postData = options.data;
           if (typeof postData === "undefined" || postData === null) {
             postData = "";
           } else if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(postData))) {
             postData = JSON.stringify(postData);
-            isJson = true;
           }
           headers = {
             "DataBase-Context": JSON.stringify(options.context || null)
@@ -3113,9 +3112,9 @@ function _request() {
           _context.next = 19;
           break;
         case 18:
-          if (typeof postData === "string" && isJson) {
+          if ((0, ivip_utils_1.isJson)(postData)) {
             headers["Content-Type"] = "application/json";
-            request.data = postData;
+            request.data = typeof postData === "string" ? JSON.parse(postData) : postData;
           } else {
             headers["Content-Type"] = "application/octet-stream";
             // headers["Content-Length"] = postData.length;
@@ -3191,7 +3190,7 @@ function _request() {
 }
 exports["default"] = request;
 
-},{"./error":11,"axios":42}],13:[function(require,module,exports){
+},{"./error":11,"axios":42,"ivip-utils":127}],13:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -3638,7 +3637,7 @@ var extactNodes = function extactNodes(type, obj) {
         path: ivipbase_core_1.PathInfo.get([].concat(_toConsumableArray(path), [k])).path,
         type: type,
         content: {
-          type: (0, utils_1.getValueType)(obj),
+          type: (0, utils_1.getValueType)(obj[k]),
           value: fitsInline ? null : _typeof(obj[k]) === "object" ? Array.isArray(obj[k]) ? [] : {} : obj[k],
           revision: revision,
           revision_nr: 1,

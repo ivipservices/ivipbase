@@ -3,6 +3,7 @@ import { NodesPending } from "./NodeInfo";
 import { VALUE_TYPES, getTypedChildValue, getValueType, nodeValueTypes, valueFitsInline } from "./utils";
 import type MDE from ".";
 import { joinObjects } from "../../../utils";
+import { kStringMaxLength } from "buffer";
 
 const extactNodes = (
 	type: Exclude<NodesPending["type"], "VERIFY" | undefined>,
@@ -52,7 +53,7 @@ const extactNodes = (
 				path: PathInfo.get([...path, k]).path,
 				type: type,
 				content: {
-					type: getValueType(obj) as any,
+					type: getValueType(obj[k]) as any,
 					value: fitsInline ? null : typeof obj[k] === "object" ? (Array.isArray(obj[k]) ? [] : {}) : obj[k],
 					revision,
 					revision_nr: 1,
