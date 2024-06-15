@@ -1,7 +1,7 @@
 {
 	"type": "module",
 	"name": "ivipbase",
-	"version": "1.3.1",
+	"version": "1.3.2",
 	"description": "Componentes principais compartilhados do iVipBase, sem necessidade de instalação manual",
 	"comments": {
 		"browser": "As substituições de arquivo webpack/browserify foram movidas para package.json em dist/cjs e dist/esm. Veja README.md para mais informações",
@@ -15,7 +15,7 @@
 		"dist/esm",
 		"dist/cjs",
 		"dist/types",
-		"dist/webmanager",
+		"webmanager",
 		"package.json",
 		"README.md"
 	],
@@ -55,7 +55,7 @@
 		"dev2": "nodemon ./src/server/services/database/Node/NodeResultWithPath.ts",
 		"dev3": "nodemon ./test/set.ts",
 		"dev4": "nodemon ./test/mde.ts",
-		"build": "npm run build:clean && npm run build:esm && npm run build:cjs && npm run build:packages && npm run browserify && npm run clone:webmanager && echo Done!",
+		"build": "npm run build:clean && npm run build:esm && npm run build:cjs && npm run build:packages && npm run browserify && echo Done!",
 		"build:clean": "rimraf dist",
 		"build:esm": "tsc -p tsconfig-esm.json && npx tsc-esm-fix --tsconfig tsconfig-esm.json ---target='dist/esm'",
 		"build:cjs": "tsc -p tsconfig-cjs.json",
