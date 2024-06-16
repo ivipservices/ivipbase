@@ -126,7 +126,10 @@ class IPCPeer extends ipc_1.IvipBaseIPCPeer {
         }
         else {
             // Send the message to the master who will forward it to the target worker(s)
-            (_a = process === null || process === void 0 ? void 0 : process.send) === null || _a === void 0 ? void 0 : _a.call(process, message);
+            try {
+                (_a = process === null || process === void 0 ? void 0 : process.send) === null || _a === void 0 ? void 0 : _a.call(process, message);
+            }
+            catch (_b) { }
         }
     }
     async exit(code = 0) {

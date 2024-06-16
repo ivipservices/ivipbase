@@ -16,7 +16,7 @@ const utils_1 = require("./utils");
  *   removed: StorageNodeInfo[];
  * }} Retorna uma lista de informações sobre os nodes de acordo com seu estado.
  */
-function prepareMergeNodes(path, nodes, comparison) {
+async function prepareMergeNodes(path, nodes, comparison) {
     var _a, _b, _c, _d;
     const revision = ivipbase_core_1.ID.generate();
     let result = [];
@@ -34,6 +34,7 @@ function prepareMergeNodes(path, nodes, comparison) {
     // console.log(path, JSON.stringify(nodes, null, 4));
     // console.log(nodes.find(({ path }) => path === "root/__auth__/accounts/admin"));
     for (let node of nodes) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
         let pathInfo = ivipbase_core_1.PathInfo.get(node.path);
         let response = comparison.find(({ path }) => ivipbase_core_1.PathInfo.get(path).equals(node.path));
         if (response) {
@@ -50,6 +51,7 @@ function prepareMergeNodes(path, nodes, comparison) {
         }
     }
     for (let node of comparison) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
         const pathInfo = ivipbase_core_1.PathInfo.get(node.path);
         if (node.content.type === utils_1.nodeValueTypes.EMPTY || node.content.value === null || node.content.value === undefined) {
             const iten = (_a = nodes.find(({ path }) => ivipbase_core_1.PathInfo.get(path).equals(node.path))) !== null && _a !== void 0 ? _a : node;

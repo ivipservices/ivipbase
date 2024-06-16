@@ -4,5 +4,5 @@ export default function destructureData(type: Exclude<NodesPending["type"], "VER
     include_checks?: boolean;
     previous_result?: NodesPending[];
     maxInlineValueSize: number;
-}): NodesPending[];
+}): Promise<NodesPending[]>;
 //# sourceMappingURL=destructureData.d.ts.map

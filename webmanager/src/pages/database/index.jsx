@@ -199,7 +199,7 @@ const DataBaseEditor = ({ dbName, authToken }) => {
 								resolve(data.slice(end - length, end));
 							});
 						},
-						{ suppress_events: true },
+						{ suppress_events: false },
 					);
 				};
 				reader.readAsText(file);

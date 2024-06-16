@@ -5,7 +5,7 @@ import type MDE from ".";
 import { joinObjects } from "../../../utils";
 import { kStringMaxLength } from "buffer";
 
-const extactNodes = (
+const extactNodes = async (
 	type: Exclude<NodesPending["type"], "VERIFY" | undefined>,
 	obj: any,
 	path: (string | number)[] = [],
@@ -15,6 +15,7 @@ const extactNodes = (
 		maxInlineValueSize: number;
 	},
 ) => {
+	await new Promise((resolve) => setTimeout(resolve, 0));
 	const revision = options?.assert_revision ?? ID.generate();
 	const length = nodes.push({
 		path: PathInfo.get(path).path,
@@ -47,7 +48,7 @@ const extactNodes = (
 		}
 
 		if (typeof obj[k] === "object" && !fitsInline) {
-			extactNodes(type, obj[k], [...path, k], nodes, options);
+			await extactNodes(type, obj[k], [...path, k], nodes, options);
 		} else {
 			nodes.push({
 				path: PathInfo.get([...path, k]).path,
@@ -66,7 +67,7 @@ const extactNodes = (
 	return nodes;
 };
 
-export default function destructureData(
+export default async function destructureData(
 	type: Exclude<NodesPending["type"], "VERIFY" | undefined>,
 	path: string,
 	data: any,
@@ -78,7 +79,7 @@ export default function destructureData(
 	} = {
 		maxInlineValueSize: 200,
 	},
-): NodesPending[] {
+): Promise<NodesPending[]> {
 	let result: NodesPending[] = options?.previous_result ?? [];
 	let pathInfo = PathInfo.get(path);
 	const revision = options?.assert_revision ?? ID.generate();
@@ -114,9 +115,15 @@ export default function destructureData(
 		}
 	}
 
-	extactNodes(type, data, pathInfo.keys, result, options);
+	await extactNodes(type, data, pathInfo.keys, result, options);
 
-	return result;
+	const sortNodes = (a: NodesPending, b: NodesPending) => {
+		const aPath = PathInfo.get(a.path);
+		const bPath = PathInfo.get(b.path);
+		return aPath.isAncestorOf(bPath) || aPath.isParentOf(bPath) ? -1 : aPath.isDescendantOf(bPath) || aPath.isChildOf(bPath) ? 1 : 0;
+	};
+
+	return result.sort(sortNodes);
 
 	// const resolveConflict = (node: NodesPending) => {
 	// 	const comparison = result.find((n) => PathInfo.get(n.path).equals(node.path));

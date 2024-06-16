@@ -95,7 +95,10 @@ export class IPCPeer extends IvipBaseIPCPeer {
         }
         else {
             // Send the message to the master who will forward it to the target worker(s)
-            process?.send?.(message);
+            try {
+                process?.send?.(message);
+            }
+            catch { }
         }
     }
     async exit(code = 0) {

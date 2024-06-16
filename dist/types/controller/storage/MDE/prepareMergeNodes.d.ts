@@ -13,12 +13,12 @@ import { NodesPending, StorageNode, StorageNodeInfo } from "./NodeInfo";
  *   removed: StorageNodeInfo[];
  * }} Retorna uma lista de informações sobre os nodes de acordo com seu estado.
  */
-export default function prepareMergeNodes(path: string, nodes: NodesPending[], comparison: NodesPending[]): {
+export default function prepareMergeNodes(path: string, nodes: NodesPending[], comparison: NodesPending[]): Promise<{
     result: StorageNodeInfo[];
     added: StorageNodeInfo[];
     modified: (StorageNodeInfo & {
         previous_content?: StorageNode;
     })[];
     removed: StorageNodeInfo[];
-};
+}>;
 //# sourceMappingURL=prepareMergeNodes.d.ts.map

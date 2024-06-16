@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const ivipbase_core_1 = require("ivipbase-core");
 const utils_1 = require("./utils");
-const extactNodes = (type, obj, path = [], nodes = [], options) => {
+const extactNodes = async (type, obj, path = [], nodes = [], options) => {
     var _a;
     const revision = (_a = options === null || options === void 0 ? void 0 : options.assert_revision) !== null && _a !== void 0 ? _a : ivipbase_core_1.ID.generate();
     const length = nodes.push({
@@ -19,6 +19,7 @@ const extactNodes = (type, obj, path = [], nodes = [], options) => {
     });
     const parentValue = nodes[length - 1];
     for (let k in obj) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
         const fitsInline = (0, utils_1.valueFitsInline)(obj[k], options);
         if (parentValue && fitsInline) {
             if (parentValue.type === "VERIFY") {
@@ -49,7 +50,7 @@ const extactNodes = (type, obj, path = [], nodes = [], options) => {
     }
     return nodes;
 };
-function destructureData(type, path, data, options = {
+async function destructureData(type, path, data, options = {
     maxInlineValueSize: 200,
 }) {
     var _a, _b;
@@ -83,7 +84,7 @@ function destructureData(type, path, data, options = {
             parentPath = parentPath.parent;
         }
     }
-    extactNodes(type, data, pathInfo.keys, result, options);
+    await extactNodes(type, data, pathInfo.keys, result, options);
     return result;
     // const resolveConflict = (node: NodesPending) => {
     // 	const comparison = result.find((n) => PathInfo.get(n.path).equals(node.path));

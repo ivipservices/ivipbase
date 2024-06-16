@@ -681,11 +681,17 @@ export default class MDE extends SimpleEventEmitter {
 		type = typeof value !== "object" || value instanceof Array || value instanceof ArrayBuffer || value instanceof Date ? "UPDATE" : type;
 
 		path = PathInfo.get([this.settings.prefix, path]).path;
-		const nodes = destructureData(type, path, value, { ...(options ?? {}), ...this.settings });
+
+		const suppress_events = options.suppress_events === true;
+
+		const batchError: NodesPending[] = [];
+		const promises: (() => Promise<any>)[] = [];
+
+		const nodes = await destructureData(type, path, value, { ...(options ?? {}), ...this.settings });
 		//console.log("now", JSON.stringify(nodes.find((node) => node.path === "root/test") ?? {}, null, 4));
 		const byNodes = await this.getNodesBy(database, path, false, true, true);
 		//console.log("olt", JSON.stringify(byNodes.find((node) => node.path === "root/test") ?? {}, null, 4));
-		const { added, modified, removed } = prepareMergeNodes(path, byNodes, nodes);
+		const { added, modified, removed } = await prepareMergeNodes(path, byNodes, nodes);
 
 		// console.log(JSON.stringify(modified, null, 4));
 
@@ -693,11 +699,6 @@ export default class MDE extends SimpleEventEmitter {
 		// console.log("set-added", JSON.stringify(added, null, 4));
 		// console.log("set-modified", JSON.stringify(modified, null, 4));
 		// console.log("set-removed", JSON.stringify(removed, null, 4));
-
-		const suppress_events = options.suppress_events === true;
-
-		const batchError: NodesPending[] = [];
-		const promises: (() => Promise<any>)[] = [];
 
 		for (let node of removed) {
 			if (!suppress_events) {

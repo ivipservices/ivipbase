@@ -86,7 +86,7 @@ export default class MDE extends SimpleEventEmitter {
     ready(callback?: () => void): Promise<void>;
     destructureData(path: string, value: any, options?: {
         assert_revision?: string;
-    }, type?: "SET" | "UPDATE"): NodesPending[];
+    }, type?: "SET" | "UPDATE"): Promise<NodesPending[]>;
     /**
      * Converte um caminho em uma consulta de expressão regular e SQL LIKE pattern.
      *

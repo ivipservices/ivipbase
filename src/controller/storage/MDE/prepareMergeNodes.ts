@@ -16,16 +16,21 @@ import { nodeValueTypes } from "./utils";
  *   removed: StorageNodeInfo[];
  * }} Retorna uma lista de informações sobre os nodes de acordo com seu estado.
  */
-export default function prepareMergeNodes(
+export default async function prepareMergeNodes(
 	path: string,
 	nodes: NodesPending[],
 	comparison: NodesPending[],
-): {
+	options?: Partial<{
+		onAdded?: (node: StorageNodeInfo) => Promise<void> | void;
+		onModified?: (node: StorageNodeInfo & { previous_content?: StorageNode }) => Promise<void> | void;
+		onRemoved?: (node: StorageNodeInfo) => Promise<void> | void;
+	}>,
+): Promise<{
 	result: StorageNodeInfo[];
 	added: StorageNodeInfo[];
 	modified: (StorageNodeInfo & { previous_content?: StorageNode })[];
 	removed: StorageNodeInfo[];
-} {
+}> {
 	const revision = ID.generate();
 	let result: NodesPending[] = [];
 	let added: NodesPending[] = [];
@@ -42,37 +47,63 @@ export default function prepareMergeNodes(
 		return node;
 	});
 
+	const modifyRevision = (node: (typeof modified)[number]) => {
+		if (node.previous_content) {
+			node.content.created = node.previous_content.created;
+			node.content.revision_nr = node.previous_content.revision_nr;
+		}
+
+		if (node.type === "SET" || node.type === "UPDATE") {
+			node.content.modified = Date.now();
+		}
+
+		node.content.revision = revision;
+		node.content.revision_nr = node.content.revision_nr + 1;
+		return node;
+	};
+
 	// console.log(path, JSON.stringify(nodes, null, 4));
 	// console.log(nodes.find(({ path }) => path === "root/__auth__/accounts/admin"));
 
-	for (let node of nodes) {
-		let pathInfo = PathInfo.get(node.path);
-		let response = comparison.find(({ path }) => PathInfo.get(path).equals(node.path));
+	const editedNodes = comparison
+		.filter(({ type }) => type === "SET")
+		.map(({ path }) => PathInfo.get(path))
+		.reduce((acc: PathInfo[], path) => {
+			acc.push(path);
+			return acc.filter((p) => !(p.isChildOf(path) || p.isDescendantOf(path)));
+		}, []);
 
-		if (response) {
-			continue;
-		}
+	const removeNodes = comparison
+		.filter((node) => {
+			return node.content.type === nodeValueTypes.EMPTY || node.content.value === null || node.content.value === undefined;
+		})
+		.map(({ path }) => PathInfo.get(path))
+		.reduce((acc: PathInfo[], path) => {
+			acc.push(path);
+			return acc.filter((p) => !(p.isChildOf(path) || p.isDescendantOf(path)));
+		}, []);
 
-		while (pathInfo && pathInfo.path.trim() !== "") {
-			response = comparison.find(({ path }) => PathInfo.get(path).equals(pathInfo.path));
-
-			if (response && response.type === "SET") {
-				removed.push(node);
-				nodes = nodes.filter((n) => !PathInfo.get(n.path).equals(node.path));
-				break;
-			}
-
-			pathInfo = PathInfo.get(pathInfo.parentPath as any);
+	for (let i = 0; i < nodes.length; i++) {
+		const node = nodes[i];
+		const p = PathInfo.get(node.path);
+		const isRemove =
+			editedNodes.findIndex((path) => p.isChildOf(path) || p.isDescendantOf(path)) >= 0 || removeNodes.findIndex((path) => p.equals(path) || p.isChildOf(path) || p.isDescendantOf(path)) >= 0;
+		if (isRemove) {
+			await new Promise((resolve) => setTimeout(resolve, 0));
+			removed.push(node);
+			nodes.splice(i, 1);
+			try {
+				if (typeof options?.onRemoved === "function") {
+					await options.onRemoved(modifyRevision(node));
+				}
+			} catch (e) {}
 		}
 	}
 
-	for (let node of comparison) {
-		const pathInfo = PathInfo.get(node.path);
+	for (let i = 0; i < comparison.length; i++) {
+		const node = comparison[i];
 
 		if (node.content.type === nodeValueTypes.EMPTY || node.content.value === null || node.content.value === undefined) {
-			const iten = nodes.find(({ path }) => PathInfo.get(path).equals(node.path)) ?? node;
-			removed.push(iten);
-			nodes = nodes.filter(({ path }) => !PathInfo.get(path).equals(iten.path));
 			continue;
 		}
 
@@ -80,9 +111,15 @@ export default function prepareMergeNodes(
 			if (nodes.findIndex(({ path }) => PathInfo.get(node.path).equals(path)) < 0) {
 				result.push(node);
 				added.push(node);
+				try {
+					if (typeof options?.onAdded === "function") {
+						await options.onAdded(modifyRevision(node));
+					}
+				} catch (e) {}
 			}
 			continue;
 		} else {
+			await new Promise((resolve) => setTimeout(resolve, 0));
 			const currentNode = nodes.find(({ path }) => PathInfo.get(path).equals(node.path));
 
 			if (currentNode) {
@@ -118,30 +155,25 @@ export default function prepareMergeNodes(
 				if (n) {
 					if (JSON.stringify(n.content.value) !== JSON.stringify(n.previous_content?.value)) {
 						modified.push(n);
+						try {
+							if (typeof options?.onModified === "function") {
+								await options.onModified(modifyRevision(n));
+							}
+						} catch (e) {}
 					}
 					result.push(n);
 				}
 			} else {
 				added.push(node);
 				result.push(node);
+				try {
+					if (typeof options?.onAdded === "function") {
+						await options.onAdded(modifyRevision(node));
+					}
+				} catch (e) {}
 			}
 		}
 	}
-
-	const modifyRevision = (node: (typeof modified)[number]) => {
-		if (node.previous_content) {
-			node.content.created = node.previous_content.created;
-			node.content.revision_nr = node.previous_content.revision_nr;
-		}
-
-		if (node.type === "SET" || node.type === "UPDATE") {
-			node.content.modified = Date.now();
-		}
-
-		node.content.revision = revision;
-		node.content.revision_nr = node.content.revision_nr + 1;
-		return node;
-	};
 
 	const sortNodes = (a: NodesPending, b: NodesPending) => {
 		const aPath = PathInfo.get(a.path);

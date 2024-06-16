@@ -14,7 +14,7 @@ import { nodeValueTypes } from "./utils.js";
  *   removed: StorageNodeInfo[];
  * }} Retorna uma lista de informações sobre os nodes de acordo com seu estado.
  */
-export default function prepareMergeNodes(path, nodes, comparison) {
+export default async function prepareMergeNodes(path, nodes, comparison) {
     const revision = ID.generate();
     let result = [];
     let added = [];
@@ -31,6 +31,7 @@ export default function prepareMergeNodes(path, nodes, comparison) {
     // console.log(path, JSON.stringify(nodes, null, 4));
     // console.log(nodes.find(({ path }) => path === "root/__auth__/accounts/admin"));
     for (let node of nodes) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
         let pathInfo = PathInfo.get(node.path);
         let response = comparison.find(({ path }) => PathInfo.get(path).equals(node.path));
         if (response) {
@@ -47,6 +48,7 @@ export default function prepareMergeNodes(path, nodes, comparison) {
         }
     }
     for (let node of comparison) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
         const pathInfo = PathInfo.get(node.path);
         if (node.content.type === nodeValueTypes.EMPTY || node.content.value === null || node.content.value === undefined) {
             const iten = nodes.find(({ path }) => PathInfo.get(path).equals(node.path)) ?? node;

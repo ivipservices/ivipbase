@@ -135,7 +135,8 @@ const isDate = (value) => {
     }
     if (typeof value === "string" && /^\d+$/.test(value) !== true) {
         const parsedDate = Date.parse(value);
-        return !isNaN(parsedDate) && new Date(parsedDate).toISOString().startsWith(value);
+        const iso8601Regex = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d+)?(Z|([+-]\d{2}:\d{2}))?$/;
+        return !isNaN(parsedDate) && (new Date(parsedDate).toISOString().startsWith(value) || iso8601Regex.test(value));
     }
     return false;
 };
