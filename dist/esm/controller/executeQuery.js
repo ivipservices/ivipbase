@@ -1,4 +1,5 @@
 import { ID, PathInfo } from "ivipbase-core";
+import { processReadNodeValue } from "./storage/MDE/utils.js";
 import { isDate, removeNulls } from "../utils/index.js";
 import structureNodes, { resolveObjetByIncluded } from "./storage/MDE/structureNodes.js";
 const noop = () => { };
@@ -245,9 +246,6 @@ export async function executeQuery(db, path, query, options = { snapshots: false
     context.database_cursor = ID.generate();
     const queryFilters = query.filters ?? [];
     const querySort = query.order ?? [];
-    const nodes = await api.storage.getNodesBy(database, path, false, true, false).catch(() => Promise.resolve([]));
-    // .then((nodes) => nodes.filter((n) => PathInfo.get(n.path).isChildOf(path) || PathInfo.get(n.path).isDescendantOf(path)));
-    const mainNodesPaths = nodes.filter(({ path }) => pathInfo.equals(path)).map((p) => p.path);
     const compare = (a, b, i) => {
         const o = querySort[i];
         if (!o) {
@@ -279,41 +277,88 @@ export async function executeQuery(db, path, query, options = { snapshots: false
         return o.ascending ? 1 : -1;
         // }
     };
-    let results = [];
-    for (const path of mainNodesPaths) {
-        const json = structureNodes(path, nodes);
-        const list = Object.entries(json)
-            .map(([k, val]) => {
-            const p = PathInfo.get([path, k]).path;
-            return { path: p, val };
-        })
-            .filter((node) => {
-            if (!node) {
-                return false;
+    const nodes = await api.storage.getNodesBy(database, path, false, true, false).catch(() => Promise.resolve([]));
+    // .then((nodes) => nodes.filter((n) => PathInfo.get(n.path).isChildOf(path) || PathInfo.get(n.path).isDescendantOf(path)));
+    const itemDict = nodes.reduce((acc, node) => {
+        acc[node.path] = node;
+        return acc;
+    }, {});
+    const tree = {};
+    for (const node of nodes) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        const p = PathInfo.get(node.path);
+        const parentPath = p.parentPath;
+        if (parentPath && parentPath in itemDict) {
+            const parent = itemDict[parentPath];
+            if (!parent?.children) {
+                parent.children = [];
             }
-            return executeFilters(path, node.path, node.val, queryFilters);
-        });
-        results = results.concat(list);
+            parent.children.push(node);
+        }
+        if (p.isChildOf(path)) {
+            tree[p.path] = node;
+        }
     }
-    results.sort((a, b) => {
-        return compare(a, b, 0);
+    const getDescendants = (node, descendants = []) => {
+        if (node && Array.isArray(node.children)) {
+            node.children.forEach((child) => {
+                descendants.push(child);
+                getDescendants(child, descendants);
+            });
+        }
+        return descendants;
+    };
+    for (const path in tree) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        const node = itemDict[path];
+        if (!node) {
+            continue;
+        }
+        const childrens = node.children ?? [];
+        const value = childrens.reduce((acc, node) => {
+            if (typeof acc !== "object" || acc === null) {
+                return acc;
+            }
+            const pathInfo = PathInfo.get(node.path);
+            acc[pathInfo.key] = node.content.value ?? null;
+            return acc;
+        }, node.content.value);
+        if (!executeFilters(path, node.path, processReadNodeValue(value), queryFilters)) {
+            delete tree[path];
+        }
+    }
+    let results = Object.keys(tree)
+        .sort((a, b) => {
+        const nodeA = itemDict[a];
+        const nodeB = itemDict[b];
+        return compare({
+            path: nodeA.path,
+            val: processReadNodeValue(nodeA.content.value),
+        }, {
+            path: nodeB.path,
+            val: processReadNodeValue(nodeB.content.value),
+        }, 0);
+    })
+        .map((path) => {
+        return { path, val: null };
     });
     const take = query.take > 0 ? query.take : results.length;
     const totalLength = results.length;
     results = results.slice(query.skip * take, query.skip * take + take);
     const isMore = totalLength > query.skip * take + take;
     if (options.snapshots) {
-        results = results.map(({ path, val }) => {
+        for (let i = 0; i < results.length; i++) {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            const { path } = results[i];
+            const nodes = getDescendants(itemDict[path], [itemDict[path]]);
+            const val = removeNulls(structureNodes(path, nodes, {
+                include: options.include,
+                exclude: options.exclude,
+                main_path: path,
+            }));
             const node_path = path.replace(new RegExp(`^${api.storage.settings.prefix.replace(/\//gi, "\\/")}`), "").replace(/^(\/)+/gi, "");
-            val = removeNulls(["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(val))
-                ? resolveObjetByIncluded(path, val, {
-                    include: options.include,
-                    exclude: options.exclude,
-                    main_path: path,
-                })
-                : val);
-            return { path: node_path, val };
-        });
+            results[i] = { path: node_path, val };
+        }
     }
     stop = executeQueryRealtime(db, originalPath, query, options, results.map(({ path }) => path.replace(new RegExp(`^${api.storage.settings.prefix.replace(/\//gi, "\\/")}`), "").replace(/^(\/)+/gi, "")));
     return {

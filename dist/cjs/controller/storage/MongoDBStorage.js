@@ -185,7 +185,7 @@ class MongodbStorage extends CustomStorage_1.CustomStorage {
             await this.database[database].collection.updateOne({ path: path }, { $set: JSON.parse(JSON.stringify(node)) }, { upsert: true });
         }
         catch (_a) {
-            this.pending[database].set(path, Object.assign(Object.assign({}, node), { refresh: true, type: "set" }));
+            this.pending[database].set(path, { path, content, refresh: true, type: "set" });
             return this.resolvePending();
         }
         this.pending[database].delete(path);
@@ -202,7 +202,7 @@ class MongodbStorage extends CustomStorage_1.CustomStorage {
             await this.database[database].collection.deleteMany({ path: pathRegex });
         }
         catch (_a) {
-            this.pending[database].set(path, Object.assign(Object.assign({}, node), { refresh: true, type: "delete" }));
+            this.pending[database].set(path, { path, content, refresh: true, type: "delete" });
             return this.resolvePending();
         }
         this.pending[database].delete(path);

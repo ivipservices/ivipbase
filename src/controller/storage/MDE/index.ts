@@ -214,6 +214,8 @@ export default class MDE extends SimpleEventEmitter {
 		const querys: string[] = [];
 		const pathsLike: string[] = [];
 
+		path = path.replace(/(\/+)$/, "");
+
 		/**
 		 * Substitui o caminho por uma expressão regular.
 		 * @param path - O caminho a ser convertido em expressão regular.
@@ -246,15 +248,15 @@ export default class MDE extends SimpleEventEmitter {
 		querys.push(`LIKE '${replacePathToLike(path).replace(/\/$/gi, "")}'`);
 
 		if (onlyChildren) {
-			pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1})`));
+			pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^\\/\\[\\]]*))|(\\[([0-9]*)\\])){1})`));
 			pathsLike.forEach((exp) => querys.push(`LIKE '${exp}/%'`));
 			pathsLike.forEach((exp) => pathsLike.push(`${exp}/%`));
 		} else if (allHeirs === true) {
-			pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1,})`));
+			pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^\\/\\[\\]]*))|(\\[([0-9]*)\\])){1,})`));
 			pathsLike.forEach((exp) => querys.push(`LIKE '${exp}/%'`));
 			pathsLike.forEach((exp) => pathsLike.push(`${exp}/%`));
 		} else if (typeof allHeirs === "number") {
-			pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^/\\[\\]]*))|(\\[([0-9]*)\\])){1,${allHeirs}})`));
+			pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^\\/\\[\\]]*))|(\\[([0-9]*)\\])){1,${allHeirs}})`));
 			// pathsLike.forEach((exp) => querys.push(`LIKE '${exp}/%'`));
 			// pathsLike.forEach((exp) => pathsLike.push(`${exp}/%`));
 			const p = pathsLike;
@@ -270,7 +272,7 @@ export default class MDE extends SimpleEventEmitter {
 
 		// Obtém o caminho pai e adiciona a expressão regular correspondente ao array.
 		if (includeAncestor) {
-			while (parent) {
+			while (parent && parent.path.trim() !== "") {
 				pathsRegex.push(replasePathToRegex(parent.path));
 				pathsLike.push(replacePathToLike(parent.path).replace(/\/$/gi, ""));
 				querys.push(`LIKE '${replacePathToLike(parent.path).replace(/\/$/gi, "")}'`);
@@ -283,7 +285,12 @@ export default class MDE extends SimpleEventEmitter {
 		}
 
 		// Cria a expressão regular completa combinando as expressões individuais no array.
-		const fullRegex: RegExp = new RegExp(`^(${pathsRegex.map((e) => e.replace(/\/$/gi, "/?")).join("$)|(")}$)`);
+		const fullRegex: RegExp = new RegExp(
+			`^(${pathsRegex
+				.filter((p) => p.trim() !== "")
+				.map((e) => e.replace(/\/$/gi, "/?"))
+				.join("$)|(")}$)`,
+		);
 
 		return {
 			regex: fullRegex,
