@@ -103,24 +103,33 @@ class StorageDBServer extends ivipbase_core_1.Api {
         }
         return;
         const resolveObject = async (path, obj) => {
-            const isAnyNodes = Object.values(obj).every((value) => (typeof value === "object" && value !== null) || Array.isArray(value));
-            if (isAnyNodes) {
-                for (const key in obj) {
-                    const value = obj[key];
-                    const newPath = ivipbase_core_1.PathInfo.get([path, key]).path;
-                    await resolveObject(newPath, value);
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            const isArray = Array.isArray(obj);
+            const oltValue = isArray ? [] : {};
+            const resolveBy = [];
+            for (const k in obj) {
+                const key = isArray ? parseInt(k) : k;
+                if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(obj[key]))) {
+                    resolveBy.push(key);
                 }
+                oltValue[key] = Array.isArray(obj[key]) ? [] : typeof obj[key] === "object" && obj[key] !== null ? {} : obj[key];
             }
-            else {
+            console.log(path, oltValue);
+            if (Object.keys(oltValue).length > 0) {
                 if (method === "set") {
-                    await this.db.app.storage.set(this.db.database, path, value, options);
+                    await this.db.app.storage.set(this.db.database, path, oltValue, options);
                 }
                 else {
-                    await this.db.app.storage.update(this.db.database, path, value, options);
+                    await this.db.app.storage.update(this.db.database, path, oltValue, options);
                 }
             }
+            for (const key of resolveBy) {
+                const value = obj[key];
+                const newPath = ivipbase_core_1.PathInfo.get([path, key]).path;
+                await resolveObject(newPath, value);
+            }
         };
-        if ((typeof value === "object" && value !== null) || Array.isArray(value)) {
+        if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(value))) {
             await resolveObject(path, value);
         }
         else {

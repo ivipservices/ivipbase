@@ -4,6 +4,7 @@ const ivipbase_core_1 = require("ivipbase-core");
 const utils_1 = require("./utils");
 const extactNodes = async (type, obj, path = [], nodes = [], options) => {
     var _a;
+    await new Promise((resolve) => setTimeout(resolve, 0));
     const revision = (_a = options === null || options === void 0 ? void 0 : options.assert_revision) !== null && _a !== void 0 ? _a : ivipbase_core_1.ID.generate();
     const length = nodes.push({
         path: ivipbase_core_1.PathInfo.get(path).path,
@@ -19,7 +20,6 @@ const extactNodes = async (type, obj, path = [], nodes = [], options) => {
     });
     const parentValue = nodes[length - 1];
     for (let k in obj) {
-        await new Promise((resolve) => setTimeout(resolve, 0));
         const fitsInline = (0, utils_1.valueFitsInline)(obj[k], options);
         if (parentValue && fitsInline) {
             if (parentValue.type === "VERIFY") {
@@ -31,7 +31,7 @@ const extactNodes = async (type, obj, path = [], nodes = [], options) => {
             parentValue.content.value[k] = (0, utils_1.getTypedChildValue)(obj[k]);
         }
         if (typeof obj[k] === "object" && !fitsInline) {
-            extactNodes(type, obj[k], [...path, k], nodes, options);
+            await extactNodes(type, obj[k], [...path, k], nodes, options);
         }
         else {
             nodes.push({
@@ -85,7 +85,12 @@ async function destructureData(type, path, data, options = {
         }
     }
     await extactNodes(type, data, pathInfo.keys, result, options);
-    return result;
+    const sortNodes = (a, b) => {
+        const aPath = ivipbase_core_1.PathInfo.get(a.path);
+        const bPath = ivipbase_core_1.PathInfo.get(b.path);
+        return aPath.isAncestorOf(bPath) || aPath.isParentOf(bPath) ? -1 : aPath.isDescendantOf(bPath) || aPath.isChildOf(bPath) ? 1 : 0;
+    };
+    return result.sort(sortNodes);
     // const resolveConflict = (node: NodesPending) => {
     // 	const comparison = result.find((n) => PathInfo.get(n.path).equals(node.path));
     // 	if (!comparison) {

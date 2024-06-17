@@ -14,7 +14,7 @@ import { nodeValueTypes } from "./utils.js";
  *   removed: StorageNodeInfo[];
  * }} Retorna uma lista de informações sobre os nodes de acordo com seu estado.
  */
-export default async function prepareMergeNodes(path, nodes, comparison) {
+export default async function prepareMergeNodes(path, nodes, comparison, options) {
     const revision = ID.generate();
     let result = [];
     let added = [];
@@ -28,43 +28,54 @@ export default async function prepareMergeNodes(path, nodes, comparison) {
         node.path = node.path.replace(/\/+$/g, "");
         return node;
     });
+    const modifyRevision = (node) => {
+        if (node.previous_content) {
+            node.content.created = node.previous_content.created;
+            node.content.revision_nr = node.previous_content.revision_nr;
+        }
+        if (node.type === "SET" || node.type === "UPDATE") {
+            node.content.modified = Date.now();
+        }
+        node.content.revision = revision;
+        node.content.revision_nr = node.content.revision_nr + 1;
+        return node;
+    };
     // console.log(path, JSON.stringify(nodes, null, 4));
     // console.log(nodes.find(({ path }) => path === "root/__auth__/accounts/admin"));
-    for (let node of nodes) {
-        await new Promise((resolve) => setTimeout(resolve, 0));
-        let pathInfo = PathInfo.get(node.path);
-        let response = comparison.find(({ path }) => PathInfo.get(path).equals(node.path));
-        if (response) {
-            continue;
-        }
-        while (pathInfo && pathInfo.path.trim() !== "") {
-            response = comparison.find(({ path }) => PathInfo.get(path).equals(pathInfo.path));
-            if (response && response.type === "SET") {
-                removed.push(node);
-                nodes = nodes.filter((n) => !PathInfo.get(n.path).equals(node.path));
-                break;
-            }
-            pathInfo = PathInfo.get(pathInfo.parentPath);
-        }
-    }
-    for (let node of comparison) {
-        await new Promise((resolve) => setTimeout(resolve, 0));
-        const pathInfo = PathInfo.get(node.path);
+    let editedNodes = [];
+    let removeNodes = [];
+    const findNode = (path) => {
+        const p = path instanceof PathInfo ? path : PathInfo.get(path);
+        const isRemove = editedNodes.findIndex((path) => p.isChildOf(path) || p.isDescendantOf(path)) >= 0 || removeNodes.findIndex((path) => p.equals(path) || p.isChildOf(path) || p.isDescendantOf(path)) >= 0;
+        return isRemove ? undefined : nodes.find(({ path }) => p.equals(path));
+    };
+    for (let i = 0; i < comparison.length; i++) {
+        const node = comparison[i];
         if (node.content.type === nodeValueTypes.EMPTY || node.content.value === null || node.content.value === undefined) {
-            const iten = nodes.find(({ path }) => PathInfo.get(path).equals(node.path)) ?? node;
-            removed.push(iten);
-            nodes = nodes.filter(({ path }) => !PathInfo.get(path).equals(iten.path));
+            removeNodes.push(PathInfo.get(node.path));
+            removeNodes = removeNodes.filter((p) => !(p.isChildOf(path) || p.isDescendantOf(path)));
             continue;
         }
+        if (node.type === "SET") {
+            editedNodes.push(PathInfo.get(node.path));
+            editedNodes = editedNodes.filter((p) => !(p.isChildOf(path) || p.isDescendantOf(path)));
+        }
+        const currentNode = findNode(node.path);
         if (node.type === "VERIFY") {
-            if (nodes.findIndex(({ path }) => PathInfo.get(node.path).equals(path)) < 0) {
+            if (currentNode) {
                 result.push(node);
                 added.push(node);
+                try {
+                    if (typeof options?.onAdded === "function") {
+                        await options.onAdded(modifyRevision(node));
+                    }
+                }
+                catch (e) { }
             }
             continue;
         }
         else {
-            const currentNode = nodes.find(({ path }) => PathInfo.get(path).equals(node.path));
+            await new Promise((resolve) => setTimeout(resolve, 0));
             if (currentNode) {
                 let n;
                 if (node.type === "SET") {
@@ -97,6 +108,12 @@ export default async function prepareMergeNodes(path, nodes, comparison) {
                 if (n) {
                     if (JSON.stringify(n.content.value) !== JSON.stringify(n.previous_content?.value)) {
                         modified.push(n);
+                        try {
+                            if (typeof options?.onModified === "function") {
+                                await options.onModified(modifyRevision(n));
+                            }
+                        }
+                        catch (e) { }
                     }
                     result.push(n);
                 }
@@ -104,21 +121,30 @@ export default async function prepareMergeNodes(path, nodes, comparison) {
             else {
                 added.push(node);
                 result.push(node);
+                try {
+                    if (typeof options?.onAdded === "function") {
+                        await options.onAdded(modifyRevision(node));
+                    }
+                }
+                catch (e) { }
             }
         }
     }
-    const modifyRevision = (node) => {
-        if (node.previous_content) {
-            node.content.created = node.previous_content.created;
-            node.content.revision_nr = node.previous_content.revision_nr;
+    for (let i = 0; i < nodes.length; i++) {
+        const node = nodes[i];
+        const p = PathInfo.get(node.path);
+        const isRemove = editedNodes.findIndex((path) => p.isChildOf(path) || p.isDescendantOf(path)) >= 0 || removeNodes.findIndex((path) => p.equals(path) || p.isChildOf(path) || p.isDescendantOf(path)) >= 0;
+        if (isRemove) {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            removed.push(node);
+            try {
+                if (typeof options?.onRemoved === "function") {
+                    await options.onRemoved(modifyRevision(node));
+                }
+            }
+            catch (e) { }
         }
-        if (node.type === "SET" || node.type === "UPDATE") {
-            node.content.modified = Date.now();
-        }
-        node.content.revision = revision;
-        node.content.revision_nr = node.content.revision_nr + 1;
-        return node;
-    };
+    }
     const sortNodes = (a, b) => {
         const aPath = PathInfo.get(a.path);
         const bPath = PathInfo.get(b.path);

@@ -766,6 +766,7 @@ export default class MDE extends SimpleEventEmitter {
 		}
 
 		for (let p of promises) {
+			await new Promise((resolve) => setTimeout(resolve, 0));
 			try {
 				await p();
 			} catch {}

@@ -13,7 +13,13 @@ import { NodesPending, StorageNode, StorageNodeInfo } from "./NodeInfo";
  *   removed: StorageNodeInfo[];
  * }} Retorna uma lista de informações sobre os nodes de acordo com seu estado.
  */
-export default function prepareMergeNodes(path: string, nodes: NodesPending[], comparison: NodesPending[]): Promise<{
+export default function prepareMergeNodes(path: string, nodes: NodesPending[], comparison: NodesPending[], options?: Partial<{
+    onAdded?: (node: StorageNodeInfo) => Promise<void> | void;
+    onModified?: (node: StorageNodeInfo & {
+        previous_content?: StorageNode;
+    }) => Promise<void> | void;
+    onRemoved?: (node: StorageNodeInfo) => Promise<void> | void;
+}>): Promise<{
     result: StorageNodeInfo[];
     added: StorageNodeInfo[];
     modified: (StorageNodeInfo & {

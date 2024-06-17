@@ -347,25 +347,27 @@ export async function executeQuery(
 		// }
 	};
 
-	let results: Array<{ path: string; val: any }> = mainNodesPaths
-		.reduce((acc, path) => {
-			const json = structureNodes(path, nodes);
-			return acc.concat(
-				Object.entries(json).map(([k, val]) => {
-					const p = PathInfo.get([path, k]).path;
-					return { path: p, val };
-				}),
-			);
-		}, [] as Array<{ path: string; val: any }>)
-		.filter((node) => {
-			if (!node) {
-				return false;
-			}
-			return executeFilters(path, node.path, node.val, queryFilters);
-		})
-		.sort((a, b) => {
-			return compare(a, b, 0);
-		});
+	let results: Array<{ path: string; val: any }> = [];
+
+	for (const path of mainNodesPaths) {
+		const json = structureNodes(path, nodes);
+		const list = Object.entries(json)
+			.map(([k, val]) => {
+				const p = PathInfo.get([path, k]).path;
+				return { path: p, val };
+			})
+			.filter((node) => {
+				if (!node) {
+					return false;
+				}
+				return executeFilters(path, node.path, node.val, queryFilters);
+			});
+		results = results.concat(list);
+	}
+
+	results.sort((a, b) => {
+		return compare(a, b, 0);
+	});
 
 	const take = query.take > 0 ? query.take : results.length;
 	const totalLength = results.length;

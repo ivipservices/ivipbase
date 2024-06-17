@@ -313,21 +313,23 @@ async function executeQuery(db, path, query, options = { snapshots: false, inclu
         return o.ascending ? 1 : -1;
         // }
     };
-    let results = mainNodesPaths
-        .reduce((acc, path) => {
+    let results = [];
+    for (const path of mainNodesPaths) {
         const json = (0, structureNodes_1.default)(path, nodes);
-        return acc.concat(Object.entries(json).map(([k, val]) => {
+        const list = Object.entries(json)
+            .map(([k, val]) => {
             const p = ivipbase_core_1.PathInfo.get([path, k]).path;
             return { path: p, val };
-        }));
-    }, [])
-        .filter((node) => {
-        if (!node) {
-            return false;
-        }
-        return (0, exports.executeFilters)(path, node.path, node.val, queryFilters);
-    })
-        .sort((a, b) => {
+        })
+            .filter((node) => {
+            if (!node) {
+                return false;
+            }
+            return (0, exports.executeFilters)(path, node.path, node.val, queryFilters);
+        });
+        results = results.concat(list);
+    }
+    results.sort((a, b) => {
         return compare(a, b, 0);
     });
     const take = query.take > 0 ? query.take : results.length;

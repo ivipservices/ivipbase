@@ -65,50 +65,34 @@ export default async function prepareMergeNodes(
 	// console.log(path, JSON.stringify(nodes, null, 4));
 	// console.log(nodes.find(({ path }) => path === "root/__auth__/accounts/admin"));
 
-	const editedNodes = comparison
-		.filter(({ type }) => type === "SET")
-		.map(({ path }) => PathInfo.get(path))
-		.reduce((acc: PathInfo[], path) => {
-			acc.push(path);
-			return acc.filter((p) => !(p.isChildOf(path) || p.isDescendantOf(path)));
-		}, []);
+	let editedNodes: PathInfo[] = [];
+	let removeNodes: PathInfo[] = [];
 
-	const removeNodes = comparison
-		.filter((node) => {
-			return node.content.type === nodeValueTypes.EMPTY || node.content.value === null || node.content.value === undefined;
-		})
-		.map(({ path }) => PathInfo.get(path))
-		.reduce((acc: PathInfo[], path) => {
-			acc.push(path);
-			return acc.filter((p) => !(p.isChildOf(path) || p.isDescendantOf(path)));
-		}, []);
-
-	for (let i = 0; i < nodes.length; i++) {
-		const node = nodes[i];
-		const p = PathInfo.get(node.path);
+	const findNode = (path: string | PathInfo) => {
+		const p = path instanceof PathInfo ? path : PathInfo.get(path);
 		const isRemove =
 			editedNodes.findIndex((path) => p.isChildOf(path) || p.isDescendantOf(path)) >= 0 || removeNodes.findIndex((path) => p.equals(path) || p.isChildOf(path) || p.isDescendantOf(path)) >= 0;
-		if (isRemove) {
-			await new Promise((resolve) => setTimeout(resolve, 0));
-			removed.push(node);
-			nodes.splice(i, 1);
-			try {
-				if (typeof options?.onRemoved === "function") {
-					await options.onRemoved(modifyRevision(node));
-				}
-			} catch (e) {}
-		}
-	}
+		return isRemove ? undefined : nodes.find(({ path }) => p.equals(path));
+	};
 
 	for (let i = 0; i < comparison.length; i++) {
 		const node = comparison[i];
 
 		if (node.content.type === nodeValueTypes.EMPTY || node.content.value === null || node.content.value === undefined) {
+			removeNodes.push(PathInfo.get(node.path));
+			removeNodes = removeNodes.filter((p) => !(p.isChildOf(path) || p.isDescendantOf(path)));
 			continue;
 		}
 
+		if (node.type === "SET") {
+			editedNodes.push(PathInfo.get(node.path));
+			editedNodes = editedNodes.filter((p) => !(p.isChildOf(path) || p.isDescendantOf(path)));
+		}
+
+		const currentNode = findNode(node.path);
+
 		if (node.type === "VERIFY") {
-			if (nodes.findIndex(({ path }) => PathInfo.get(node.path).equals(path)) < 0) {
+			if (currentNode) {
 				result.push(node);
 				added.push(node);
 				try {
@@ -120,8 +104,6 @@ export default async function prepareMergeNodes(
 			continue;
 		} else {
 			await new Promise((resolve) => setTimeout(resolve, 0));
-			const currentNode = nodes.find(({ path }) => PathInfo.get(path).equals(node.path));
-
 			if (currentNode) {
 				let n: (typeof modified)[number] | undefined;
 
@@ -172,6 +154,22 @@ export default async function prepareMergeNodes(
 					}
 				} catch (e) {}
 			}
+		}
+	}
+
+	for (let i = 0; i < nodes.length; i++) {
+		const node = nodes[i];
+		const p = PathInfo.get(node.path);
+		const isRemove =
+			editedNodes.findIndex((path) => p.isChildOf(path) || p.isDescendantOf(path)) >= 0 || removeNodes.findIndex((path) => p.equals(path) || p.isChildOf(path) || p.isDescendantOf(path)) >= 0;
+		if (isRemove) {
+			await new Promise((resolve) => setTimeout(resolve, 0));
+			removed.push(node);
+			try {
+				if (typeof options?.onRemoved === "function") {
+					await options.onRemoved(modifyRevision(node));
+				}
+			} catch (e) {}
 		}
 	}
 

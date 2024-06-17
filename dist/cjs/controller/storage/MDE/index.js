@@ -513,6 +513,9 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         var _a;
         type = typeof value !== "object" || value instanceof Array || value instanceof ArrayBuffer || value instanceof Date ? "UPDATE" : type;
         path = ivipbase_core_1.PathInfo.get([this.settings.prefix, path]).path;
+        const suppress_events = options.suppress_events === true;
+        const batchError = [];
+        const promises = [];
         const nodes = await (0, destructureData_1.default)(type, path, value, Object.assign(Object.assign({}, (options !== null && options !== void 0 ? options : {})), this.settings));
         //console.log("now", JSON.stringify(nodes.find((node) => node.path === "root/test") ?? {}, null, 4));
         const byNodes = await this.getNodesBy(database, path, false, true, true);
@@ -523,9 +526,6 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         // console.log("set-added", JSON.stringify(added, null, 4));
         // console.log("set-modified", JSON.stringify(modified, null, 4));
         // console.log("set-removed", JSON.stringify(removed, null, 4));
-        const suppress_events = options.suppress_events === true;
-        const batchError = [];
-        const promises = [];
         for (let node of removed) {
             if (!suppress_events) {
                 this.emit("remove", {
@@ -585,6 +585,7 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
             });
         }
         for (let p of promises) {
+            await new Promise((resolve) => setTimeout(resolve, 0));
             try {
                 await p();
             }
