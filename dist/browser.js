@@ -2872,7 +2872,7 @@ function _executeQuery() {
             // }
           };
           _context6.next = 16;
-          return api.storage.getNodesBy(database, path, false, true, false)["catch"](function () {
+          return api.storage.getNodesBy(database, path, false, options.snapshots ? true : 2, false)["catch"](function () {
             return Promise.resolve([]);
           });
         case 16:

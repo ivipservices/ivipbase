@@ -342,7 +342,7 @@ export async function executeQuery(
 		// }
 	};
 
-	const nodes = await api.storage.getNodesBy(database, path, false, true, false).catch(() => Promise.resolve([]));
+	const nodes = await api.storage.getNodesBy(database, path, false, options.snapshots ? true : 2, false).catch(() => Promise.resolve([]));
 	// .then((nodes) => nodes.filter((n) => PathInfo.get(n.path).isChildOf(path) || PathInfo.get(n.path).isDescendantOf(path)));
 	const mainNodesPaths = nodes.filter(({ path }) => pathInfo.equals(path)).map((p) => p.path);
 
