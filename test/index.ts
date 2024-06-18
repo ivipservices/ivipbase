@@ -31,66 +31,66 @@ import path from "path";
 	const app = initializeApp({
 		port: 8080,
 		isServer: true,
-		// database: [
-		// 	{
-		// 		name: "root",
-		// 		description: "Root database",
-		// 	},
-		// 	{
-		// 		name: "development",
-		// 		description: "Development database",
-		// 	},
-		// 	{
-		// 		name: "production",
-		// 		description: "Production database",
-		// 	},
-		// ],
 		database: [
 			{
 				name: "root",
 				description: "Root database",
-				authentication: {
-					enabled: true,
-					defaultAdminPassword: "AL4isOIoM3yM1EP71Fr3gR5Q",
-				},
 			},
 			{
-				name: "chat-test",
-				description: "Chat test database",
-				authentication: {
-					enabled: true,
-					defaultAdminPassword: "Qz7c76J7AgXqnS3WX18H9BCZ",
-				},
+				name: "development",
+				description: "Development database",
 			},
 			{
-				name: "ivipcoin:development",
-				description: "Development database for ivipcoin",
-				authentication: {
-					enabled: true,
-					defaultAdminPassword: "2f7135aKo9fah7xwmLU4cX7F",
-				},
-			},
-			{
-				name: "ivipcoin:production",
-				description: "Production database for ivipcoin",
-				authentication: {
-					enabled: true,
-					defaultAdminPassword: "Y3gkoRRPEI1Szb8Vu318bnOu",
-				},
+				name: "production",
+				description: "Production database",
 			},
 		],
+		// database: [
+		// 	{
+		// 		name: "root",
+		// 		description: "Root database",
+		// 		authentication: {
+		// 			enabled: true,
+		// 			defaultAdminPassword: "AL4isOIoM3yM1EP71Fr3gR5Q",
+		// 		},
+		// 	},
+		// 	{
+		// 		name: "chat-test",
+		// 		description: "Chat test database",
+		// 		authentication: {
+		// 			enabled: true,
+		// 			defaultAdminPassword: "Qz7c76J7AgXqnS3WX18H9BCZ",
+		// 		},
+		// 	},
+		// 	{
+		// 		name: "ivipcoin:development",
+		// 		description: "Development database for ivipcoin",
+		// 		authentication: {
+		// 			enabled: true,
+		// 			defaultAdminPassword: "2f7135aKo9fah7xwmLU4cX7F",
+		// 		},
+		// 	},
+		// 	{
+		// 		name: "ivipcoin:production",
+		// 		description: "Production database for ivipcoin",
+		// 		authentication: {
+		// 			enabled: true,
+		// 			defaultAdminPassword: "Y3gkoRRPEI1Szb8Vu318bnOu",
+		// 		},
+		// 	},
+		// ],
 		// storage: new JsonFileStorageSettings({
 		// 	filePath: "./test_file.json",
 		// }),
-		storage: new MongodbSettings({
-			host: "85.31.60.71",
-			port: 27017,
-			username: "admin",
-			password: "4awK1a_OU03GVnX2c_UU8-Kafseroui3h45jferfs",
-			options: {
-				directConnection: true,
-			},
-		}),
+		// storage: new MongodbSettings({
+		// 	host: "85.31.60.71",
+		// 	port: 27017,
+		// 	username: "admin",
+		// 	password: "4awK1a_OU03GVnX2c_UU8-Kafseroui3h45jferfs",
+		// 	options: {
+		// 		directConnection: true,
+		// 	},
+		// }),
 		authentication: {
 			enabled: true,
 			defaultAdminPassword: "admin",

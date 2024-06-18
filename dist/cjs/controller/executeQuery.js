@@ -25,8 +25,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.executeQuery = exports.executeQueryRealtime = exports.executeFilters = void 0;
 const ivipbase_core_1 = require("ivipbase-core");
-const utils_1 = require("./storage/MDE/utils");
-const utils_2 = require("../utils");
+const utils_1 = require("../utils");
 const structureNodes_1 = __importStar(require("./storage/MDE/structureNodes"));
 const noop = () => { };
 const executeFilters = (mainPath, currentPath, value, queryFilters) => {
@@ -36,9 +35,9 @@ const executeFilters = (mainPath, currentPath, value, queryFilters) => {
     return filters.every((f) => {
         var _a, _b;
         let val = (_b = (_a = value[f.key]) !== null && _a !== void 0 ? _a : params[f.key]) !== null && _b !== void 0 ? _b : null;
-        val = (0, utils_2.isDate)(val) ? new Date(val).getTime() : val;
+        val = (0, utils_1.isDate)(val) ? new Date(val).getTime() : val;
         const op = f.op;
-        const compare = (0, utils_2.isDate)(f.compare) ? new Date(f.compare).getTime() : f.compare;
+        const compare = (0, utils_1.isDate)(f.compare) ? new Date(f.compare).getTime() : f.compare;
         switch (op) {
             case "<":
                 return val < compare;
@@ -157,7 +156,7 @@ const executeQueryRealtime = (db, path, query, options, matchedPaths) => {
             let isMatch = ["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(newValue)) && (0, exports.executeFilters)(originalPath, path, newValue, queryFilters);
             if (options.snapshots) {
                 newValue = ["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(newValue))
-                    ? (_a = (0, utils_2.removeNulls)((0, structureNodes_1.resolveObjetByIncluded)(path, newValue, {
+                    ? (_a = (0, utils_1.removeNulls)((0, structureNodes_1.resolveObjetByIncluded)(path, newValue, {
                         include: options.include,
                         exclude: options.exclude,
                         main_path: main_path.path,
@@ -204,7 +203,7 @@ const executeQueryRealtime = (db, path, query, options, matchedPaths) => {
             if (isAdd) {
                 if (options.snapshots) {
                     newValue = ["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(newValue))
-                        ? (_c = (0, utils_2.removeNulls)((0, structureNodes_1.resolveObjetByIncluded)(path, newValue, {
+                        ? (_c = (0, utils_1.removeNulls)((0, structureNodes_1.resolveObjetByIncluded)(path, newValue, {
                             include: options.include,
                             exclude: options.exclude,
                             main_path: main_path.path,
@@ -263,7 +262,7 @@ exports.executeQueryRealtime = executeQueryRealtime;
  * @returns Retorna uma promise que resolve com os dados ou caminhos correspondentes em `results`
  */
 async function executeQuery(db, path, query, options = { snapshots: false, include: undefined, exclude: undefined, child_objects: undefined, eventHandler: noop }) {
-    var _a, _b, _c;
+    var _a, _b;
     if (typeof options !== "object") {
         options = {};
     }
@@ -288,8 +287,8 @@ async function executeQuery(db, path, query, options = { snapshots: false, inclu
         const trailKeys = ivipbase_core_1.PathInfo.get(typeof o.key === "number" ? `[${o.key}]` : o.key).keys;
         let left = trailKeys.reduce((val, key) => (val !== null && typeof val === "object" && key && key in val ? val[key] : null), a.val);
         let right = trailKeys.reduce((val, key) => (val !== null && typeof val === "object" && key && key in val ? val[key] : null), b.val);
-        left = (0, utils_2.isDate)(left) ? new Date(left).getTime() : left;
-        right = (0, utils_2.isDate)(right) ? new Date(right).getTime() : right;
+        left = (0, utils_1.isDate)(left) ? new Date(left).getTime() : left;
+        right = (0, utils_1.isDate)(right) ? new Date(right).getTime() : right;
         if (left === null) {
             return right === null ? 0 : o.ascending ? -1 : 1;
         }
@@ -313,70 +312,17 @@ async function executeQuery(db, path, query, options = { snapshots: false, inclu
     };
     const nodes = await api.storage.getNodesBy(database, path, false, true, false).catch(() => Promise.resolve([]));
     // .then((nodes) => nodes.filter((n) => PathInfo.get(n.path).isChildOf(path) || PathInfo.get(n.path).isDescendantOf(path)));
-    const itemDict = nodes.reduce((acc, node) => {
-        acc[node.path] = node;
-        return acc;
-    }, {});
-    const tree = {};
-    for (const node of nodes) {
+    const mainNodesPaths = nodes.filter(({ path }) => pathInfo.equals(path)).map((p) => p.path);
+    let results = [];
+    for (const path of mainNodesPaths) {
         await new Promise((resolve) => setTimeout(resolve, 0));
-        const p = ivipbase_core_1.PathInfo.get(node.path);
-        const parentPath = p.parentPath;
-        if (parentPath && parentPath in itemDict) {
-            const parent = itemDict[parentPath];
-            if (!(parent === null || parent === void 0 ? void 0 : parent.children)) {
-                parent.children = [];
-            }
-            parent.children.push(node);
-        }
-        if (p.isChildOf(path)) {
-            tree[p.path] = node;
-        }
+        const json = (0, structureNodes_1.default)(path, nodes);
+        results = results.concat(Object.entries(json).map(([k, val]) => {
+            const p = ivipbase_core_1.PathInfo.get([path, k]).path;
+            return { path: p, val };
+        }));
     }
-    const getDescendants = (node, descendants = []) => {
-        if (node && Array.isArray(node.children)) {
-            node.children.forEach((child) => {
-                descendants.push(child);
-                getDescendants(child, descendants);
-            });
-        }
-        return descendants;
-    };
-    for (const path in tree) {
-        await new Promise((resolve) => setTimeout(resolve, 0));
-        const node = itemDict[path];
-        if (!node) {
-            continue;
-        }
-        const childrens = (_c = node.children) !== null && _c !== void 0 ? _c : [];
-        const value = childrens.reduce((acc, node) => {
-            var _a;
-            if (typeof acc !== "object" || acc === null) {
-                return acc;
-            }
-            const pathInfo = ivipbase_core_1.PathInfo.get(node.path);
-            acc[pathInfo.key] = (_a = node.content.value) !== null && _a !== void 0 ? _a : null;
-            return acc;
-        }, node.content.value);
-        if (!(0, exports.executeFilters)(path, node.path, (0, utils_1.processReadNodeValue)(value), queryFilters)) {
-            delete tree[path];
-        }
-    }
-    let results = Object.keys(tree)
-        .sort((a, b) => {
-        const nodeA = itemDict[a];
-        const nodeB = itemDict[b];
-        return compare({
-            path: nodeA.path,
-            val: (0, utils_1.processReadNodeValue)(nodeA.content.value),
-        }, {
-            path: nodeB.path,
-            val: (0, utils_1.processReadNodeValue)(nodeB.content.value),
-        }, 0);
-    })
-        .map((path) => {
-        return { path, val: null };
-    });
+    results = results.filter((node) => (0, exports.executeFilters)(path, node.path, node.val, queryFilters)).sort((a, b) => compare(a, b, 0));
     const take = query.take > 0 ? query.take : results.length;
     const totalLength = results.length;
     results = results.slice(query.skip * take, query.skip * take + take);
@@ -384,20 +330,22 @@ async function executeQuery(db, path, query, options = { snapshots: false, inclu
     if (options.snapshots) {
         for (let i = 0; i < results.length; i++) {
             await new Promise((resolve) => setTimeout(resolve, 0));
-            const { path } = results[i];
-            const nodes = getDescendants(itemDict[path], [itemDict[path]]);
-            const val = (0, utils_2.removeNulls)((0, structureNodes_1.default)(path, nodes, {
-                include: options.include,
-                exclude: options.exclude,
-                main_path: path,
-            }));
+            let { path, val } = results[i];
+            val = (0, utils_1.removeNulls)(["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(val))
+                ? (0, structureNodes_1.resolveObjetByIncluded)(path, val, {
+                    include: options.include,
+                    exclude: options.exclude,
+                    main_path: path,
+                })
+                : val);
             const node_path = path.replace(new RegExp(`^${api.storage.settings.prefix.replace(/\//gi, "\\/")}`), "").replace(/^(\/)+/gi, "");
             results[i] = { path: node_path, val };
         }
     }
-    stop = (0, exports.executeQueryRealtime)(db, originalPath, query, options, results.map(({ path }) => path.replace(new RegExp(`^${api.storage.settings.prefix.replace(/\//gi, "\\/")}`), "").replace(/^(\/)+/gi, "")));
+    const paths = results.map(({ path }) => path.replace(new RegExp(`^${api.storage.settings.prefix.replace(/\//gi, "\\/")}`), "").replace(/^(\/)+/gi, ""));
+    stop = (0, exports.executeQueryRealtime)(db, originalPath, query, options, paths);
     return {
-        results: options.snapshots ? results : results.map(({ path }) => path.replace(new RegExp(`^${api.storage.settings.prefix.replace(/\//gi, "\\/")}`), "").replace(/^(\/)+/gi, "")),
+        results: options.snapshots ? results : paths,
         context,
         stop,
         isMore,

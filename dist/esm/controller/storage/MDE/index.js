@@ -281,20 +281,21 @@ export default class MDE extends SimpleEventEmitter {
         }
         catch { }
         // console.log("getNodesBy::2::", JSON.stringify(result, null, 4));
-        let nodes = result.filter(({ path: p, content }) => PathInfo.get(path).equals(p) && (content.type !== nodeValueTypes.EMPTY || content.value !== null || content.value !== undefined));
-        if (nodes.length <= 0) {
-            nodes = result.filter(({ path: p }) => PathInfo.get(path).isChildOf(p));
-        }
-        else if (onlyChildren) {
-            nodes = result.filter(({ path: p }) => PathInfo.get(path).equals(p) || PathInfo.get(path).isParentOf(p));
-        }
-        else if (allHeirs === true || typeof allHeirs === "number") {
-            nodes = result.filter(({ path: p }) => PathInfo.get(path).equals(p) || PathInfo.get(path).isAncestorOf(p));
-        }
-        if (includeAncestor) {
-            nodes = result.filter(({ path: p }) => PathInfo.get(p).isParentOf(path) || PathInfo.get(p).isAncestorOf(path)).concat(nodes);
-        }
-        return nodes.filter(({ path }, i, l) => l.findIndex(({ path: p }) => p === path) === i);
+        const pathInfo = PathInfo.get(path);
+        return result.filter(({ path: p, content }) => {
+            const path = PathInfo.get(p);
+            let includes = true;
+            if (includes && onlyChildren) {
+                includes = pathInfo.equals(p) || pathInfo.isParentOf(p);
+            }
+            else if (includes && (allHeirs === true || typeof allHeirs === "number")) {
+                includes = pathInfo.equals(p) || pathInfo.isParentOf(p) || pathInfo.isAncestorOf(p);
+            }
+            if (!includes && includeAncestor) {
+                includes = path.isParentOf(pathInfo) || path.isAncestorOf(pathInfo);
+            }
+            return includes && (content.type !== nodeValueTypes.EMPTY || content.value !== null || content.value !== undefined);
+        });
     }
     /**
      * Obtém o node pai de um caminho específico.

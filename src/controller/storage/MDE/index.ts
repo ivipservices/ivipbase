@@ -360,22 +360,24 @@ export default class MDE extends SimpleEventEmitter {
 		} catch {}
 
 		// console.log("getNodesBy::2::", JSON.stringify(result, null, 4));
+		const pathInfo = PathInfo.get(path);
 
-		let nodes = result.filter(({ path: p, content }) => PathInfo.get(path).equals(p) && (content.type !== nodeValueTypes.EMPTY || content.value !== null || content.value !== undefined));
+		return result.filter(({ path: p, content }) => {
+			const path = PathInfo.get(p);
+			let includes = true;
 
-		if (nodes.length <= 0) {
-			nodes = result.filter(({ path: p }) => PathInfo.get(path).isChildOf(p));
-		} else if (onlyChildren) {
-			nodes = result.filter(({ path: p }) => PathInfo.get(path).equals(p) || PathInfo.get(path).isParentOf(p));
-		} else if (allHeirs === true || typeof allHeirs === "number") {
-			nodes = result.filter(({ path: p }) => PathInfo.get(path).equals(p) || PathInfo.get(path).isAncestorOf(p));
-		}
+			if (includes && onlyChildren) {
+				includes = pathInfo.equals(p) || pathInfo.isParentOf(p);
+			} else if (includes && (allHeirs === true || typeof allHeirs === "number")) {
+				includes = pathInfo.equals(p) || pathInfo.isParentOf(p) || pathInfo.isAncestorOf(p);
+			}
 
-		if (includeAncestor) {
-			nodes = result.filter(({ path: p }) => PathInfo.get(p).isParentOf(path) || PathInfo.get(p).isAncestorOf(path)).concat(nodes);
-		}
+			if (!includes && includeAncestor) {
+				includes = path.isParentOf(pathInfo) || path.isAncestorOf(pathInfo);
+			}
 
-		return nodes.filter(({ path }, i, l) => l.findIndex(({ path: p }) => p === path) === i);
+			return includes && (content.type !== nodeValueTypes.EMPTY || content.value !== null || content.value !== undefined);
+		});
 	}
 
 	/**

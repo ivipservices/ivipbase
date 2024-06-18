@@ -2419,6 +2419,10 @@ exports.ErrorFactory = ErrorFactory;
 },{}],9:[function(require,module,exports){
 "use strict";
 
+function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
+function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
 function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
@@ -2462,8 +2466,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.executeQuery = exports.executeQueryRealtime = exports.executeFilters = void 0;
 var ivipbase_core_1 = require("ivipbase-core");
-var utils_1 = require("./storage/MDE/utils");
-var utils_2 = require("../utils");
+var utils_1 = require("../utils");
 var structureNodes_1 = __importStar(require("./storage/MDE/structureNodes"));
 var noop = function noop() {};
 var executeFilters = function executeFilters(mainPath, currentPath, value, queryFilters) {
@@ -2475,9 +2478,9 @@ var executeFilters = function executeFilters(mainPath, currentPath, value, query
   return filters.every(function (f) {
     var _a, _b;
     var val = (_b = (_a = value[f.key]) !== null && _a !== void 0 ? _a : params[f.key]) !== null && _b !== void 0 ? _b : null;
-    val = (0, utils_2.isDate)(val) ? new Date(val).getTime() : val;
+    val = (0, utils_1.isDate)(val) ? new Date(val).getTime() : val;
     var op = f.op;
-    var compare = (0, utils_2.isDate)(f.compare) ? new Date(f.compare).getTime() : f.compare;
+    var compare = (0, utils_1.isDate)(f.compare) ? new Date(f.compare).getTime() : f.compare;
     switch (op) {
       case "<":
         return val < compare;
@@ -2618,7 +2621,7 @@ var executeQueryRealtime = function executeQueryRealtime(db, path, query, option
             case 7:
               isMatch = ["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(newValue)) && (0, exports.executeFilters)(originalPath, path, newValue, queryFilters);
               if (options.snapshots) {
-                newValue = ["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(newValue)) ? (_a = (0, utils_2.removeNulls)((0, structureNodes_1.resolveObjetByIncluded)(path, newValue, {
+                newValue = ["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(newValue)) ? (_a = (0, utils_1.removeNulls)((0, structureNodes_1.resolveObjetByIncluded)(path, newValue, {
                   include: options.include,
                   exclude: options.exclude,
                   main_path: main_path.path
@@ -2682,7 +2685,7 @@ var executeQueryRealtime = function executeQueryRealtime(db, path, query, option
       var isAdd = typeof (options === null || options === void 0 ? void 0 : options.monitor) === "boolean" ? options.monitor : (_b = (_a = options === null || options === void 0 ? void 0 : options.monitor) === null || _a === void 0 ? void 0 : _a.add) !== null && _b !== void 0 ? _b : false;
       if (isAdd) {
         if (options.snapshots) {
-          newValue = ["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(newValue)) ? (_c = (0, utils_2.removeNulls)((0, structureNodes_1.resolveObjetByIncluded)(path, newValue, {
+          newValue = ["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(newValue)) ? (_c = (0, utils_1.removeNulls)((0, structureNodes_1.resolveObjetByIncluded)(path, newValue, {
             include: options.include,
             exclude: options.exclude,
             main_path: main_path.path
@@ -2771,7 +2774,6 @@ function _executeQuery() {
     var options,
       _a,
       _b,
-      _c,
       api,
       database,
       stop,
@@ -2782,33 +2784,25 @@ function _executeQuery() {
       querySort,
       compare,
       nodes,
-      itemDict,
-      tree,
+      mainNodesPaths,
+      results,
       _iterator,
       _step,
-      _node,
-      p,
-      parentPath,
-      parent,
-      getDescendants,
-      _path,
-      node,
-      childrens,
-      value,
-      results,
+      _loop,
       take,
       totalLength,
       isMore,
       i,
-      _path2,
-      _nodes,
+      _results$i,
+      _path,
       val,
       node_path,
-      _args5 = arguments;
-    return _regeneratorRuntime().wrap(function _callee5$(_context5) {
-      while (1) switch (_context5.prev = _context5.next) {
+      paths,
+      _args6 = arguments;
+    return _regeneratorRuntime().wrap(function _callee5$(_context6) {
+      while (1) switch (_context6.prev = _context6.next) {
         case 0:
-          options = _args5.length > 3 && _args5[3] !== undefined ? _args5[3] : {
+          options = _args6.length > 3 && _args6[3] !== undefined ? _args6[3] : {
             snapshots: false,
             include: undefined,
             exclude: undefined,
@@ -2856,8 +2850,8 @@ function _executeQuery() {
             var right = trailKeys.reduce(function (val, key) {
               return val !== null && _typeof(val) === "object" && key && key in val ? val[key] : null;
             }, b.val);
-            left = (0, utils_2.isDate)(left) ? new Date(left).getTime() : left;
-            right = (0, utils_2.isDate)(right) ? new Date(right).getTime() : right;
+            left = (0, utils_1.isDate)(left) ? new Date(left).getTime() : left;
+            right = (0, utils_1.isDate)(right) ? new Date(right).getTime() : right;
             if (left === null) {
               return right === null ? 0 : o.ascending ? -1 : 1;
             }
@@ -2877,181 +2871,135 @@ function _executeQuery() {
             return o.ascending ? 1 : -1;
             // }
           };
-          _context5.next = 16;
+          _context6.next = 16;
           return api.storage.getNodesBy(database, path, false, true, false)["catch"](function () {
             return Promise.resolve([]);
           });
         case 16:
-          nodes = _context5.sent;
+          nodes = _context6.sent;
           // .then((nodes) => nodes.filter((n) => PathInfo.get(n.path).isChildOf(path) || PathInfo.get(n.path).isDescendantOf(path)));
-          itemDict = nodes.reduce(function (acc, node) {
-            acc[node.path] = node;
-            return acc;
-          }, {});
-          tree = {};
-          _iterator = _createForOfIteratorHelper(nodes);
-          _context5.prev = 20;
+          mainNodesPaths = nodes.filter(function (_ref5) {
+            var path = _ref5.path;
+            return pathInfo.equals(path);
+          }).map(function (p) {
+            return p.path;
+          });
+          results = [];
+          _iterator = _createForOfIteratorHelper(mainNodesPaths);
+          _context6.prev = 20;
+          _loop = /*#__PURE__*/_regeneratorRuntime().mark(function _loop() {
+            var path, json;
+            return _regeneratorRuntime().wrap(function _loop$(_context5) {
+              while (1) switch (_context5.prev = _context5.next) {
+                case 0:
+                  path = _step.value;
+                  _context5.next = 3;
+                  return new Promise(function (resolve) {
+                    return setTimeout(resolve, 0);
+                  });
+                case 3:
+                  json = (0, structureNodes_1["default"])(path, nodes);
+                  results = results.concat(Object.entries(json).map(function (_ref7) {
+                    var _ref8 = _slicedToArray(_ref7, 2),
+                      k = _ref8[0],
+                      val = _ref8[1];
+                    var p = ivipbase_core_1.PathInfo.get([path, k]).path;
+                    return {
+                      path: p,
+                      val: val
+                    };
+                  }));
+                case 5:
+                case "end":
+                  return _context5.stop();
+              }
+            }, _loop);
+          });
           _iterator.s();
-        case 22:
+        case 23:
           if ((_step = _iterator.n()).done) {
-            _context5.next = 32;
+            _context6.next = 27;
             break;
           }
-          _node = _step.value;
-          _context5.next = 26;
-          return new Promise(function (resolve) {
-            return setTimeout(resolve, 0);
-          });
-        case 26:
-          p = ivipbase_core_1.PathInfo.get(_node.path);
-          parentPath = p.parentPath;
-          if (parentPath && parentPath in itemDict) {
-            parent = itemDict[parentPath];
-            if (!(parent === null || parent === void 0 ? void 0 : parent.children)) {
-              parent.children = [];
-            }
-            parent.children.push(_node);
-          }
-          if (p.isChildOf(path)) {
-            tree[p.path] = _node;
-          }
-        case 30:
-          _context5.next = 22;
+          return _context6.delegateYield(_loop(), "t0", 25);
+        case 25:
+          _context6.next = 23;
           break;
+        case 27:
+          _context6.next = 32;
+          break;
+        case 29:
+          _context6.prev = 29;
+          _context6.t1 = _context6["catch"](20);
+          _iterator.e(_context6.t1);
         case 32:
-          _context5.next = 37;
-          break;
-        case 34:
-          _context5.prev = 34;
-          _context5.t0 = _context5["catch"](20);
-          _iterator.e(_context5.t0);
-        case 37:
-          _context5.prev = 37;
+          _context6.prev = 32;
           _iterator.f();
-          return _context5.finish(37);
-        case 40:
-          getDescendants = function getDescendants(node) {
-            var descendants = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
-            if (node && Array.isArray(node.children)) {
-              node.children.forEach(function (child) {
-                descendants.push(child);
-                getDescendants(child, descendants);
-              });
-            }
-            return descendants;
-          };
-          _context5.t1 = _regeneratorRuntime().keys(tree);
-        case 42:
-          if ((_context5.t2 = _context5.t1()).done) {
-            _context5.next = 54;
-            break;
-          }
-          _path = _context5.t2.value;
-          _context5.next = 46;
-          return new Promise(function (resolve) {
-            return setTimeout(resolve, 0);
-          });
-        case 46:
-          node = itemDict[_path];
-          if (node) {
-            _context5.next = 49;
-            break;
-          }
-          return _context5.abrupt("continue", 42);
-        case 49:
-          childrens = (_c = node.children) !== null && _c !== void 0 ? _c : [];
-          value = childrens.reduce(function (acc, node) {
-            var _a;
-            if (_typeof(acc) !== "object" || acc === null) {
-              return acc;
-            }
-            var pathInfo = ivipbase_core_1.PathInfo.get(node.path);
-            acc[pathInfo.key] = (_a = node.content.value) !== null && _a !== void 0 ? _a : null;
-            return acc;
-          }, node.content.value);
-          if (!(0, exports.executeFilters)(_path, node.path, (0, utils_1.processReadNodeValue)(value), queryFilters)) {
-            delete tree[_path];
-          }
-          _context5.next = 42;
-          break;
-        case 54:
-          results = Object.keys(tree).sort(function (a, b) {
-            var nodeA = itemDict[a];
-            var nodeB = itemDict[b];
-            return compare({
-              path: nodeA.path,
-              val: (0, utils_1.processReadNodeValue)(nodeA.content.value)
-            }, {
-              path: nodeB.path,
-              val: (0, utils_1.processReadNodeValue)(nodeB.content.value)
-            }, 0);
-          }).map(function (path) {
-            return {
-              path: path,
-              val: null
-            };
+          return _context6.finish(32);
+        case 35:
+          results = results.filter(function (node) {
+            return (0, exports.executeFilters)(path, node.path, node.val, queryFilters);
+          }).sort(function (a, b) {
+            return compare(a, b, 0);
           });
           take = query.take > 0 ? query.take : results.length;
           totalLength = results.length;
           results = results.slice(query.skip * take, query.skip * take + take);
           isMore = totalLength > query.skip * take + take;
           if (!options.snapshots) {
-            _context5.next = 72;
+            _context6.next = 52;
             break;
           }
           i = 0;
-        case 61:
+        case 42:
           if (!(i < results.length)) {
-            _context5.next = 72;
+            _context6.next = 52;
             break;
           }
-          _context5.next = 64;
+          _context6.next = 45;
           return new Promise(function (resolve) {
             return setTimeout(resolve, 0);
           });
-        case 64:
-          _path2 = results[i].path;
-          _nodes = getDescendants(itemDict[_path2], [itemDict[_path2]]);
-          val = (0, utils_2.removeNulls)((0, structureNodes_1["default"])(_path2, _nodes, {
+        case 45:
+          _results$i = results[i], _path = _results$i.path, val = _results$i.val;
+          val = (0, utils_1.removeNulls)(["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(val)) ? (0, structureNodes_1.resolveObjetByIncluded)(_path, val, {
             include: options.include,
             exclude: options.exclude,
-            main_path: _path2
-          }));
-          node_path = _path2.replace(new RegExp("^".concat(api.storage.settings.prefix.replace(/\//gi, "\\/"))), "").replace(/^(\/)+/gi, "");
+            main_path: _path
+          }) : val);
+          node_path = _path.replace(new RegExp("^".concat(api.storage.settings.prefix.replace(/\//gi, "\\/"))), "").replace(/^(\/)+/gi, "");
           results[i] = {
             path: node_path,
             val: val
           };
-        case 69:
+        case 49:
           i++;
-          _context5.next = 61;
+          _context6.next = 42;
           break;
-        case 72:
-          stop = (0, exports.executeQueryRealtime)(db, originalPath, query, options, results.map(function (_ref5) {
-            var path = _ref5.path;
+        case 52:
+          paths = results.map(function (_ref6) {
+            var path = _ref6.path;
             return path.replace(new RegExp("^".concat(api.storage.settings.prefix.replace(/\//gi, "\\/"))), "").replace(/^(\/)+/gi, "");
-          }));
-          return _context5.abrupt("return", {
-            results: options.snapshots ? results : results.map(function (_ref6) {
-              var path = _ref6.path;
-              return path.replace(new RegExp("^".concat(api.storage.settings.prefix.replace(/\//gi, "\\/"))), "").replace(/^(\/)+/gi, "");
-            }),
+          });
+          stop = (0, exports.executeQueryRealtime)(db, originalPath, query, options, paths);
+          return _context6.abrupt("return", {
+            results: options.snapshots ? results : paths,
             context: context,
             stop: stop,
             isMore: isMore
           });
-        case 74:
+        case 55:
         case "end":
-          return _context5.stop();
+          return _context6.stop();
       }
-    }, _callee5, null, [[20, 34, 37, 40]]);
+    }, _callee5, null, [[20, 29, 32, 35]]);
   }));
   return _executeQuery.apply(this, arguments);
 }
 exports.executeQuery = executeQuery;
 exports["default"] = executeQuery;
 
-},{"../utils":39,"./storage/MDE/structureNodes":19,"./storage/MDE/utils":20,"ivipbase-core":154}],10:[function(require,module,exports){
+},{"../utils":39,"./storage/MDE/structureNodes":19,"ivipbase-core":154}],10:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -4354,7 +4302,7 @@ var MDE = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
           simplifyValues,
           expression,
           result,
-          nodes,
+          pathInfo,
           _args6 = arguments;
         return _regeneratorRuntime().wrap(function _callee6$(_context6) {
           while (1) switch (_context6.prev = _context6.next) {
@@ -4377,41 +4325,23 @@ var MDE = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
               _context6.t0 = _context6["catch"](6);
             case 14:
               // console.log("getNodesBy::2::", JSON.stringify(result, null, 4));
-              nodes = result.filter(function (_ref9) {
+              pathInfo = ivipbase_core_1.PathInfo.get(path);
+              return _context6.abrupt("return", result.filter(function (_ref9) {
                 var p = _ref9.path,
                   content = _ref9.content;
-                return ivipbase_core_1.PathInfo.get(path).equals(p) && (content.type !== utils_1.nodeValueTypes.EMPTY || content.value !== null || content.value !== undefined);
-              });
-              if (nodes.length <= 0) {
-                nodes = result.filter(function (_ref10) {
-                  var p = _ref10.path;
-                  return ivipbase_core_1.PathInfo.get(path).isChildOf(p);
-                });
-              } else if (onlyChildren) {
-                nodes = result.filter(function (_ref11) {
-                  var p = _ref11.path;
-                  return ivipbase_core_1.PathInfo.get(path).equals(p) || ivipbase_core_1.PathInfo.get(path).isParentOf(p);
-                });
-              } else if (allHeirs === true || typeof allHeirs === "number") {
-                nodes = result.filter(function (_ref12) {
-                  var p = _ref12.path;
-                  return ivipbase_core_1.PathInfo.get(path).equals(p) || ivipbase_core_1.PathInfo.get(path).isAncestorOf(p);
-                });
-              }
-              if (includeAncestor) {
-                nodes = result.filter(function (_ref13) {
-                  var p = _ref13.path;
-                  return ivipbase_core_1.PathInfo.get(p).isParentOf(path) || ivipbase_core_1.PathInfo.get(p).isAncestorOf(path);
-                }).concat(nodes);
-              }
-              return _context6.abrupt("return", nodes.filter(function (_ref14, i, l) {
-                var path = _ref14.path;
-                return l.findIndex(function (_ref15) {
-                  var p = _ref15.path;
-                  return p === path;
-                }) === i;
+                var path = ivipbase_core_1.PathInfo.get(p);
+                var includes = true;
+                if (includes && onlyChildren) {
+                  includes = pathInfo.equals(p) || pathInfo.isParentOf(p);
+                } else if (includes && (allHeirs === true || typeof allHeirs === "number")) {
+                  includes = pathInfo.equals(p) || pathInfo.isParentOf(p) || pathInfo.isAncestorOf(p);
+                }
+                if (!includes && includeAncestor) {
+                  includes = path.isParentOf(pathInfo) || path.isAncestorOf(pathInfo);
+                }
+                return includes && (content.type !== utils_1.nodeValueTypes.EMPTY || content.value !== null || content.value !== undefined);
               }));
-            case 18:
+            case 16:
             case "end":
               return _context6.stop();
           }
@@ -4505,8 +4435,8 @@ var MDE = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
               return this.getNodesBy(database, pathInfo.path, true, false);
             case 6:
               nodes = _context8.sent;
-              mainNode = nodes.find(function (_ref16) {
-                var p = _ref16.path;
+              mainNode = nodes.find(function (_ref10) {
+                var p = _ref10.path;
                 return ivipbase_core_1.PathInfo.get(p).equals(pathInfo.path) || ivipbase_core_1.PathInfo.get(p).isParentOf(pathInfo.path);
               });
               defaultNode = new NodeInfo_1.CustomStorageNodeInfo({
@@ -4540,8 +4470,8 @@ var MDE = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
                   value = null;
                 }
               }
-              containsChild = nodes.findIndex(function (_ref17) {
-                var p = _ref17.path;
+              containsChild = nodes.findIndex(function (_ref11) {
+                var p = _ref11.path;
                 return pathInfo.isParentOf(p);
               }) >= 0;
               isArrayChild = !containsChild && mainNode.content.type === utils_1.nodeValueTypes.ARRAY;
@@ -4562,8 +4492,8 @@ var MDE = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
               // 	info.value = (typeof info.key === "string" ? info.value[info.key] : typeof info.index === "number" ? info.value[info.index] : null) ?? null;
               // }
               if (include_child_count && (containsChild || isArrayChild)) {
-                info.childCount = nodes.reduce(function (c, _ref18) {
-                  var p = _ref18.path;
+                info.childCount = nodes.reduce(function (c, _ref12) {
+                  var p = _ref12.path;
                   return c + (pathInfo.isParentOf(p) ? 1 : 0);
                 }, Object.keys(info.value).length);
               }
@@ -4593,7 +4523,7 @@ var MDE = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
       var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
       var pathInfo = ivipbase_core_1.PathInfo.get([this.settings.prefix, path]);
       var next = /*#__PURE__*/function () {
-        var _ref19 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee9(callback) {
+        var _ref13 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee9(callback) {
           var _a, _b, _c, nodes, mainNode, isContinue, isArray, value, keys, childNodes, _iterator, _step, node, _key, key, info;
           return _regeneratorRuntime().wrap(function _callee9$(_context9) {
             while (1) switch (_context9.prev = _context9.next) {
@@ -4602,8 +4532,8 @@ var MDE = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
                 return _this3.getNodesBy(database, pathInfo.path, true, false);
               case 2:
                 nodes = _context9.sent;
-                mainNode = nodes.find(function (_ref20) {
-                  var p = _ref20.path;
+                mainNode = nodes.find(function (_ref14) {
+                  var p = _ref14.path;
                   return ivipbase_core_1.PathInfo.get(p).equals(pathInfo.path);
                 });
                 isContinue = true;
@@ -4725,7 +4655,7 @@ var MDE = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
           }, _callee9, null, [[16, 35, 38, 41]]);
         }));
         return function next(_x20) {
-          return _ref19.apply(this, arguments);
+          return _ref13.apply(this, arguments);
         };
       }();
       return {
@@ -4746,8 +4676,8 @@ var MDE = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
               return this.getNodesBy(database, path, onlyChildren, true);
             case 4:
               nodes = _context10.sent;
-              main_node = nodes.find(function (_ref21) {
-                var p = _ref21.path;
+              main_node = nodes.find(function (_ref15) {
+                var p = _ref15.path;
                 return ivipbase_core_1.PathInfo.get(p).equals(path) || ivipbase_core_1.PathInfo.get(p).isParentOf(path);
               });
               if (main_node) {
