@@ -3833,7 +3833,8 @@ function _destructureData() {
           revision = (_b = options === null || options === void 0 ? void 0 : options.assert_revision) !== null && _b !== void 0 ? _b : ivipbase_core_1.ID.generate();
           options.assert_revision = revision;
           options.include_checks = typeof options.include_checks === "boolean" ? options.include_checks : true;
-          if ((0, utils_1.valueFitsInline)(data, options)) {
+          if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(data)) !== true) {
+            type = "UPDATE";
             data = _defineProperty({}, pathInfo.key, data);
             pathInfo = pathInfo.parent;
           }

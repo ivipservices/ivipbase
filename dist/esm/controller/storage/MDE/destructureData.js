@@ -55,7 +55,8 @@ export default async function destructureData(type, path, data, options = {
     const revision = options?.assert_revision ?? ID.generate();
     options.assert_revision = revision;
     options.include_checks = typeof options.include_checks === "boolean" ? options.include_checks : true;
-    if (valueFitsInline(data, options)) {
+    if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(data)) !== true) {
+        type = "UPDATE";
         data = {
             [pathInfo.key]: data,
         };
