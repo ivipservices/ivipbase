@@ -8,6 +8,7 @@ interface StorageReferencePutReturn {
 	resume(): void;
 	cancel(): void;
 	on(event: "state_changed", callback: (snapshot: { bytesTransferred: number; totalBytes?: number; state: string; metadata: any; task: string; ref: StorageReference }) => void): void;
+	async(): Promise<StorageReference>;
 }
 
 export class StorageReference extends SimpleEventEmitter {
@@ -102,14 +103,14 @@ export class StorageReference extends SimpleEventEmitter {
 	put(data: Uint8Array, metadata?: { contentType: string }): StorageReferencePutReturn;
 	put(data: Buffer, metadata?: { contentType: string }): StorageReferencePutReturn;
 	put(data: File, metadata?: { contentType: string }): StorageReferencePutReturn;
-	put(data: any, metadata?: { contentType: string }) {
+	put(data: any, metadata?: { contentType: string }): StorageReferencePutReturn {
 		if (this.isWildcardPath) {
 			throw new Error("Cannot put data to a wildcard path");
 		}
 
 		const self = this;
 
-		this.storage.put(this, data, metadata, (snapshot) => {
+		const promise = this.storage.put(this, data, metadata, (snapshot) => {
 			self.emit("state_changed", snapshot);
 		});
 
@@ -119,6 +120,10 @@ export class StorageReference extends SimpleEventEmitter {
 			cancel() {},
 			on(event: "state_changed", callback: (snapshot: { bytesTransferred: number; totalBytes?: number; state: string; metadata: any; task: string; ref: StorageReference }) => void) {
 				return self.on(event, callback);
+			},
+			async async() {
+				await promise;
+				return self;
 			},
 		};
 	}
@@ -130,7 +135,7 @@ export class StorageReference extends SimpleEventEmitter {
 
 		const self = this;
 
-		this.storage.putString(this, data, type, (snapshot) => {
+		const promise = this.storage.putString(this, data, type, (snapshot) => {
 			self.emit("state_changed", snapshot);
 		});
 
@@ -140,6 +145,10 @@ export class StorageReference extends SimpleEventEmitter {
 			cancel() {},
 			on(event: "state_changed", callback: (snapshot: { bytesTransferred: number; totalBytes?: number; state: string; metadata: any; task: string; ref: StorageReference }) => void) {
 				return self.on(event, callback);
+			},
+			async async() {
+				await promise;
+				return self;
 			},
 		};
 	}

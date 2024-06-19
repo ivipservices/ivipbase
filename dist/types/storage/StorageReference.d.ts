@@ -14,6 +14,7 @@ interface StorageReferencePutReturn {
         task: string;
         ref: StorageReference;
     }) => void): void;
+    async(): Promise<StorageReference>;
 }
 export declare class StorageReference extends SimpleEventEmitter {
     protected storage: Storage;

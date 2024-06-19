@@ -1,6 +1,6 @@
 import { IvipBaseApp, getApp, getAppsName, getFirstApp } from "../app";
 import { hasDatabase } from "../database";
-import { SimpleEventEmitter } from "ivipbase-core";
+import { SimpleEventEmitter, Types } from "ivipbase-core";
 import localStorage from "../utils/localStorage";
 import { sanitizeEmailPrefix } from "../utils";
 import Base64 from "../utils/base64";
@@ -414,6 +414,20 @@ export class Auth extends SimpleEventEmitter {
 		this.initialize();
 	}
 
+	on<d = AuthUser>(event: "signin", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+	on<d = string | undefined>(event: "signout", callback: (data?: d) => void): Types.SimpleEventEmitterProperty;
+	on<d = any>(event: "ready", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+	on(event: string, callback: any) {
+		return super.on(event, callback);
+	}
+
+	emit(event: "signin", data: AuthUser): this;
+	emit(event: "signout", data?: string | undefined): this;
+	emit(event: "ready", data?: any): this;
+	emit(event: string, data?: any) {
+		return super.emit(event, data);
+	}
+
 	async initialize() {
 		this._ready = false;
 
@@ -686,7 +700,7 @@ export class Auth extends SimpleEventEmitter {
 	onAuthStateChanged(callback: (user: AuthUser | null) => void): {
 		stop: () => void;
 	} {
-		const byCallback = (user: AuthUser | null) => {
+		const byCallback = (user?: AuthUser | null) => {
 			callback(user instanceof AuthUser ? user : null);
 		};
 
@@ -711,7 +725,7 @@ export class Auth extends SimpleEventEmitter {
 	onIdTokenChanged(callback: (token: string | null) => void): {
 		stop: () => void;
 	} {
-		const byCallback = (user: AuthUser | null) => {
+		const byCallback = (user?: AuthUser | null) => {
 			callback(user instanceof AuthUser ? user?.accessToken ?? null : null);
 		};
 		this.on("signin", byCallback);

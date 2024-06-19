@@ -75,7 +75,7 @@ class StorageReference extends ivipbase_core_1.SimpleEventEmitter {
             throw new Error("Cannot put data to a wildcard path");
         }
         const self = this;
-        this.storage.put(this, data, metadata, (snapshot) => {
+        const promise = this.storage.put(this, data, metadata, (snapshot) => {
             self.emit("state_changed", snapshot);
         });
         return {
@@ -85,6 +85,10 @@ class StorageReference extends ivipbase_core_1.SimpleEventEmitter {
             on(event, callback) {
                 return self.on(event, callback);
             },
+            async async() {
+                await promise;
+                return self;
+            },
         };
     }
     putString(data, type = "text") {
@@ -92,7 +96,7 @@ class StorageReference extends ivipbase_core_1.SimpleEventEmitter {
             throw new Error("Cannot put data to a wildcard path");
         }
         const self = this;
-        this.storage.putString(this, data, type, (snapshot) => {
+        const promise = this.storage.putString(this, data, type, (snapshot) => {
             self.emit("state_changed", snapshot);
         });
         return {
@@ -101,6 +105,10 @@ class StorageReference extends ivipbase_core_1.SimpleEventEmitter {
             cancel() { },
             on(event, callback) {
                 return self.on(event, callback);
+            },
+            async async() {
+                await promise;
+                return self;
             },
         };
     }

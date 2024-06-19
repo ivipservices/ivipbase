@@ -1,5 +1,5 @@
 import { IvipBaseApp } from "../app";
-import { SimpleEventEmitter } from "ivipbase-core";
+import { SimpleEventEmitter, Types } from "ivipbase-core";
 export interface AuthProviderSignInResult {
     user: AuthUser;
     accessToken: string;
@@ -244,6 +244,12 @@ export declare class Auth extends SimpleEventEmitter {
      */
     private _user;
     constructor(database: string, app: IvipBaseApp);
+    on<d = AuthUser>(event: "signin", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+    on<d = string | undefined>(event: "signout", callback: (data?: d) => void): Types.SimpleEventEmitterProperty;
+    on<d = any>(event: "ready", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+    emit(event: "signin", data: AuthUser): this;
+    emit(event: "signout", data?: string | undefined): this;
+    emit(event: "ready", data?: any): this;
     initialize(): Promise<void>;
     /**
      * Aguarda até que o módulo Auth esteja pronto.

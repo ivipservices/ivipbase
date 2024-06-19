@@ -291,6 +291,12 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
         });
         this.initialize();
     }
+    on(event, callback) {
+        return super.on(event, callback);
+    }
+    emit(event, data) {
+        return super.emit(event, data);
+    }
     async initialize() {
         this._ready = false;
         this.app.onConnect(async (socket) => {
