@@ -2271,7 +2271,7 @@ var __exportStar = void 0 && (void 0).__exportStar || function (m, exports) {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.ID = exports.ascii85 = exports.PathReference = exports.Utils = exports.SimpleCache = exports.SimpleEventEmitter = exports.PathInfo = exports.DataStorageSettings = exports.CustomStorage = void 0;
+exports.TypeMappings = exports.EventSubscription = exports.EventPublisher = exports.EventStream = exports.MutationsDataSnapshot = exports.DataSnapshot = exports.DataReferencesArray = exports.DataSnapshotsArray = exports.QueryDataRetrievalOptions = exports.DataRetrievalOptions = exports.DataReferenceQuery = exports.DataReference = exports.ObjectCollection = exports.PartialArray = exports.SimpleObservable = exports.SchemaDefinition = exports.ID = exports.ascii85 = exports.Utils = exports.SimpleCache = exports.SimpleEventEmitter = exports.PathReference = exports.PathInfo = exports.DataStorageSettings = exports.CustomStorage = void 0;
 var storage_1 = require("./controller/storage");
 Object.defineProperty(exports, "CustomStorage", {
   enumerable: true,
@@ -2297,6 +2297,12 @@ Object.defineProperty(exports, "PathInfo", {
     return ivipbase_core_1.PathInfo;
   }
 });
+Object.defineProperty(exports, "PathReference", {
+  enumerable: true,
+  get: function get() {
+    return ivipbase_core_1.PathReference;
+  }
+});
 Object.defineProperty(exports, "SimpleEventEmitter", {
   enumerable: true,
   get: function get() {
@@ -2315,12 +2321,6 @@ Object.defineProperty(exports, "Utils", {
     return ivipbase_core_1.Utils;
   }
 });
-Object.defineProperty(exports, "PathReference", {
-  enumerable: true,
-  get: function get() {
-    return ivipbase_core_1.PathReference;
-  }
-});
 Object.defineProperty(exports, "ascii85", {
   enumerable: true,
   get: function get() {
@@ -2331,6 +2331,106 @@ Object.defineProperty(exports, "ID", {
   enumerable: true,
   get: function get() {
     return ivipbase_core_1.ID;
+  }
+});
+Object.defineProperty(exports, "SchemaDefinition", {
+  enumerable: true,
+  get: function get() {
+    return ivipbase_core_1.SchemaDefinition;
+  }
+});
+Object.defineProperty(exports, "SimpleObservable", {
+  enumerable: true,
+  get: function get() {
+    return ivipbase_core_1.SimpleObservable;
+  }
+});
+Object.defineProperty(exports, "PartialArray", {
+  enumerable: true,
+  get: function get() {
+    return ivipbase_core_1.PartialArray;
+  }
+});
+Object.defineProperty(exports, "ObjectCollection", {
+  enumerable: true,
+  get: function get() {
+    return ivipbase_core_1.ObjectCollection;
+  }
+});
+var ivipbase_core_2 = require("ivipbase-core");
+Object.defineProperty(exports, "DataReference", {
+  enumerable: true,
+  get: function get() {
+    return ivipbase_core_2.DataReference;
+  }
+});
+Object.defineProperty(exports, "DataReferenceQuery", {
+  enumerable: true,
+  get: function get() {
+    return ivipbase_core_2.DataReferenceQuery;
+  }
+});
+Object.defineProperty(exports, "DataRetrievalOptions", {
+  enumerable: true,
+  get: function get() {
+    return ivipbase_core_2.DataRetrievalOptions;
+  }
+});
+Object.defineProperty(exports, "QueryDataRetrievalOptions", {
+  enumerable: true,
+  get: function get() {
+    return ivipbase_core_2.QueryDataRetrievalOptions;
+  }
+});
+Object.defineProperty(exports, "DataSnapshotsArray", {
+  enumerable: true,
+  get: function get() {
+    return ivipbase_core_2.DataSnapshotsArray;
+  }
+});
+Object.defineProperty(exports, "DataReferencesArray", {
+  enumerable: true,
+  get: function get() {
+    return ivipbase_core_2.DataReferencesArray;
+  }
+});
+var ivipbase_core_3 = require("ivipbase-core");
+Object.defineProperty(exports, "DataSnapshot", {
+  enumerable: true,
+  get: function get() {
+    return ivipbase_core_3.DataSnapshot;
+  }
+});
+Object.defineProperty(exports, "MutationsDataSnapshot", {
+  enumerable: true,
+  get: function get() {
+    return ivipbase_core_3.MutationsDataSnapshot;
+  }
+});
+var ivipbase_core_4 = require("ivipbase-core");
+Object.defineProperty(exports, "EventStream", {
+  enumerable: true,
+  get: function get() {
+    return ivipbase_core_4.EventStream;
+  }
+});
+Object.defineProperty(exports, "EventPublisher", {
+  enumerable: true,
+  get: function get() {
+    return ivipbase_core_4.EventPublisher;
+  }
+});
+Object.defineProperty(exports, "EventSubscription", {
+  enumerable: true,
+  get: function get() {
+    return ivipbase_core_4.EventSubscription;
+  }
+});
+var ivipbase_core_5 = require("ivipbase-core");
+Object.defineProperty(exports, "TypeMappings", {
+  enumerable: true,
+  get: function get() {
+    return ivipbase_core_5.TypeMappings;
   }
 });
 
@@ -8457,7 +8557,7 @@ var DataBase = /*#__PURE__*/function (_ivipbase_core_1$Data) {
         rules: {}
       }, defaultRules.rules, mainRules.rules, dbRules.rules)
     });
-    _this.storage = !app.settings.isConnectionDefined || app.isServer || !app.settings.isValidClient ? new StorageDBServer_1.StorageDBServer(_this) : new StorageDBClient_1.StorageDBClient(_this);
+    _this.storage = app.isServer || !app.settings.isValidClient ? new StorageDBServer_1.StorageDBServer(_this) : new StorageDBClient_1.StorageDBClient(_this);
     app.storage.on("add", function (e) {
       //console.log(e);
       if (e.dbName !== database) {

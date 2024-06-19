@@ -34,7 +34,7 @@ class DataBase extends ivipbase_core_1.DataBase {
             authEnabled: (_s = (_p = (_o = dbInfo === null || dbInfo === void 0 ? void 0 : dbInfo.authentication) === null || _o === void 0 ? void 0 : _o.enabled) !== null && _p !== void 0 ? _p : (_r = (_q = this.app.settings) === null || _q === void 0 ? void 0 : _q.server) === null || _r === void 0 ? void 0 : _r.auth.enabled) !== null && _s !== void 0 ? _s : false,
             rules: (0, utils_1.joinObjects)({ rules: {} }, defaultRules.rules, mainRules.rules, dbRules.rules),
         });
-        this.storage = !app.settings.isConnectionDefined || app.isServer || !app.settings.isValidClient ? new StorageDBServer_1.StorageDBServer(this) : new StorageDBClient_1.StorageDBClient(this);
+        this.storage = app.isServer || !app.settings.isValidClient ? new StorageDBServer_1.StorageDBServer(this) : new StorageDBClient_1.StorageDBClient(this);
         app.storage.on("add", (e) => {
             //console.log(e);
             if (e.dbName !== database) {
