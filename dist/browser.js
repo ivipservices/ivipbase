@@ -5773,6 +5773,11 @@ var resolveObjetByIncluded = function resolveObjetByIncluded(path, obj, options)
   return Array.isArray(obj) ? obj.filter(function (_, k) {
     var p = ivipbase_core_1.PathInfo.get([path, k]);
     return (0, exports.checkIncludedPath)(p.path, options);
+  }).map(function (v, k) {
+    if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(v))) {
+      return (0, exports.resolveObjetByIncluded)(ivipbase_core_1.PathInfo.get([path, k]).path, v, options);
+    }
+    return v;
   }) : Object.fromEntries(Object.entries(obj).filter(function (_ref) {
     var _ref2 = _slicedToArray(_ref, 2),
       k = _ref2[0],
@@ -6157,7 +6162,12 @@ function processReadNodeValue(node) {
   switch (node.type) {
     case exports.VALUE_TYPES.ARRAY:
       {
-        node.value = [];
+        node.value = (Array.isArray(node.value) ? node.value : []).map(function (item) {
+          if (item !== null && _typeof(item) === "object" && "type" in item) {
+            return getTypedChildValue(item);
+          }
+          return item;
+        });
         break;
       }
     case exports.VALUE_TYPES.OBJECT:

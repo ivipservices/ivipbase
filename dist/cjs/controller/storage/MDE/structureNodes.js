@@ -14,9 +14,16 @@ const checkIncludedPath = (from, options) => {
 exports.checkIncludedPath = checkIncludedPath;
 const resolveObjetByIncluded = (path, obj, options) => {
     return Array.isArray(obj)
-        ? obj.filter((_, k) => {
+        ? obj
+            .filter((_, k) => {
             const p = ivipbase_core_1.PathInfo.get([path, k]);
             return (0, exports.checkIncludedPath)(p.path, options);
+        })
+            .map((v, k) => {
+            if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(v))) {
+                return (0, exports.resolveObjetByIncluded)(ivipbase_core_1.PathInfo.get([path, k]).path, v, options);
+            }
+            return v;
         })
         : Object.fromEntries(Object.entries(obj)
             .filter(([k, v]) => {

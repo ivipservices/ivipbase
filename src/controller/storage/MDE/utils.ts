@@ -291,7 +291,12 @@ export function processReadNodeValue(node: StorageNode): StorageNode {
 
 	switch (node.type) {
 		case VALUE_TYPES.ARRAY: {
-			node.value = [];
+			node.value = (Array.isArray(node.value) ? node.value : []).map((item) => {
+				if (item !== null && typeof item === "object" && "type" in item) {
+					return getTypedChildValue(item);
+				}
+				return item;
+			});
 			break;
 		}
 		case VALUE_TYPES.OBJECT: {

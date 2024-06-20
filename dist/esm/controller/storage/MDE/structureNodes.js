@@ -9,9 +9,16 @@ export const checkIncludedPath = (from, options) => {
 };
 export const resolveObjetByIncluded = (path, obj, options) => {
     return Array.isArray(obj)
-        ? obj.filter((_, k) => {
+        ? obj
+            .filter((_, k) => {
             const p = PathInfo.get([path, k]);
             return checkIncludedPath(p.path, options);
+        })
+            .map((v, k) => {
+            if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(v))) {
+                return resolveObjetByIncluded(PathInfo.get([path, k]).path, v, options);
+            }
+            return v;
         })
         : Object.fromEntries(Object.entries(obj)
             .filter(([k, v]) => {

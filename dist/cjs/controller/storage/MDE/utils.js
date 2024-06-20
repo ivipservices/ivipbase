@@ -296,7 +296,12 @@ function processReadNodeValue(node) {
     node = JSON.parse(JSON.stringify(node));
     switch (node.type) {
         case exports.VALUE_TYPES.ARRAY: {
-            node.value = [];
+            node.value = (Array.isArray(node.value) ? node.value : []).map((item) => {
+                if (item !== null && typeof item === "object" && "type" in item) {
+                    return getTypedChildValue(item);
+                }
+                return item;
+            });
             break;
         }
         case exports.VALUE_TYPES.OBJECT: {
