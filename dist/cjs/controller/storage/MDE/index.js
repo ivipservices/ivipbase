@@ -300,19 +300,25 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         catch (_a) { }
         // console.log("getNodesBy::2::", JSON.stringify(result, null, 4));
         const pathInfo = ivipbase_core_1.PathInfo.get(path);
+        const mainNode = result.find(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(path));
+        const parentNode = result.find(({ path: p }) => ivipbase_core_1.PathInfo.get(p).isParentOf(path));
+        const isMainChild = !mainNode && parentNode;
         return result.filter(({ path: p, content }) => {
             const path = ivipbase_core_1.PathInfo.get(p);
             let includes = true;
-            if (includes && onlyChildren) {
+            if (isMainChild) {
+                includes = path.isParentOf(pathInfo);
+            }
+            else if (onlyChildren) {
                 includes = pathInfo.equals(p) || pathInfo.isParentOf(p);
             }
-            else if (includes && (allHeirs === true || typeof allHeirs === "number")) {
+            else if (allHeirs === true || typeof allHeirs === "number") {
                 includes = pathInfo.equals(p) || pathInfo.isParentOf(p) || pathInfo.isAncestorOf(p);
             }
             if (!includes && includeAncestor) {
                 includes = path.isParentOf(pathInfo) || path.isAncestorOf(pathInfo);
             }
-            return includes && (content.type !== utils_1.nodeValueTypes.EMPTY || content.value !== null || content.value !== undefined);
+            return includes && content.type !== utils_1.nodeValueTypes.EMPTY && content.value !== null && content.value !== undefined;
         });
     }
     /**
@@ -349,7 +355,9 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         const pathInfo = include_prefix ? ivipbase_core_1.PathInfo.get([this.settings.prefix, path]) : ivipbase_core_1.PathInfo.get(path);
         const mainPath = include_prefix ? pathInfo.path.replace(this.settings.prefix + "/", "") : pathInfo.path;
         const nodes = await this.getNodesBy(database, pathInfo.path, true, false);
-        const mainNode = nodes.find(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(pathInfo.path) || ivipbase_core_1.PathInfo.get(p).isParentOf(pathInfo.path));
+        const egualsNode = nodes.find(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(pathInfo.path));
+        const parentNode = nodes.find(({ path: p }) => ivipbase_core_1.PathInfo.get(p).isParentOf(pathInfo.path));
+        const mainNode = egualsNode !== null && egualsNode !== void 0 ? egualsNode : parentNode;
         const defaultNode = new NodeInfo_1.CustomStorageNodeInfo({
             path: mainPath,
             key: typeof pathInfo.key === "string" ? pathInfo.key : undefined,

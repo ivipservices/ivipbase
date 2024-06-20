@@ -1,7 +1,7 @@
 {
 	"type": "module",
 	"name": "ivipbase",
-	"version": "1.3.44",
+	"version": "1.4.21",
 	"description": "Componentes principais compartilhados do iVipBase, sem necessidade de instalação manual",
 	"comments": {
 		"browser": "As substituições de arquivo webpack/browserify foram movidas para package.json em dist/cjs e dist/esm. Veja README.md para mais informações",
@@ -31,10 +31,10 @@
 		"./dist/esm/index.js": "./dist/esm/browser.js",
 		"./dist/cjs/server/index.js": "./dist/cjs/server/browser.js",
 		"./dist/esm/server/index.js": "./dist/esm/server/browser.js",
-		"./dist/cjs/database/services/sandbox/index.ts": "./dist/cjs/database/services/sandbox/browser.ts",
-		"./dist/esm/database/services/sandbox/index.ts": "./dist/esm/database/services/sandbox/browser.ts",
-		"./dist/cjs/ipc/IPCPeer/index.ts": "./dist/cjs/ipc/IPCPeer/browser.ts",
-		"./dist/esm/ipc/IPCPeer/index.ts": "./dist/esm/ipc/IPCPeer/browser.ts",
+		"./dist/cjs/database/services/sandbox/index.js": "./dist/cjs/database/services/sandbox/browser.js",
+		"./dist/esm/database/services/sandbox/index.js": "./dist/esm/database/services/sandbox/browser.js",
+		"./dist/cjs/ipc/IPCPeer/index.js": "./dist/cjs/ipc/IPCPeer/browser.js",
+		"./dist/esm/ipc/IPCPeer/index.js": "./dist/esm/ipc/IPCPeer/browser.js",
 		"./dist/cjs/app/settings/index.js": "./dist/cjs/app/settings/browser.js",
 		"./dist/esm/app/settings/index.js": "./dist/esm/app/settings/browser.js",
 		"./dist/cjs/app/verifyStorage/index.js": "./dist/cjs/app/verifyStorage/browser.js",
@@ -46,7 +46,9 @@
 		"./dist/cjs/utils/base64/index.js": "./dist/cjs/utils/base64/browser.js",
 		"./dist/esm/utils/base64/index.js": "./dist/esm/utils/base64/browser.js",
 		"./dist/cjs/utils/localStorage/index.js": "./dist/cjs/utils/localStorage/browser.js",
-		"./dist/esm/utils/localStorage/index.js": "./dist/esm/utils/localStorage/browser.js"
+		"./dist/esm/utils/localStorage/index.js": "./dist/esm/utils/localStorage/browser.js",
+		"./dist/cjs/storage/storageController/index.js": "./dist/cjs/storage/storageController/browser.js",
+		"./dist/esm/storage/storageController/index.js": "./dist/esm/storage/storageController/browser.js"
 	},
 	"private": false,
 	"repository": "github:ivipservices/ivipbase",

@@ -36,7 +36,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
             this.isDeleted = options.isDeleted;
         }
         this.storage = applySettings(this);
-        this.isServer = typeof this.settings.server === "object";
+        this.isServer = typeof this.settings.server === "object" && this.settings.server !== null && this.settings.isServer;
         if (this.settings.isPossiplyServer) {
             this._ipc = getIPCPeer(this.name);
         }

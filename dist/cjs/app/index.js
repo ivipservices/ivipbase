@@ -42,7 +42,7 @@ class IvipBaseApp extends ivipbase_core_1.SimpleEventEmitter {
             this.isDeleted = options.isDeleted;
         }
         this.storage = (0, verifyStorage_1.applySettings)(this);
-        this.isServer = typeof this.settings.server === "object";
+        this.isServer = typeof this.settings.server === "object" && this.settings.server !== null && this.settings.isServer;
         if (this.settings.isPossiplyServer) {
             this._ipc = (0, ipc_1.getIPCPeer)(this.name);
         }

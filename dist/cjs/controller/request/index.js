@@ -52,6 +52,7 @@ async function request(method, url, options = { accessToken: null, data: null, d
     }
     if (options.accessToken) {
         headers["Authorization"] = `Bearer ${options.accessToken}`;
+        //request.params["auth_token"] = options.accessToken;
     }
     const res = await (0, axios_1.default)(request).catch((err) => {
         // console.error(err);

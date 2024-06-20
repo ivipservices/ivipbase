@@ -13,7 +13,7 @@ export const checkIncludedPath = (
 	const include = (options?.include ?? []).map((p) => PathInfo.get([options.main_path, p]));
 	const exclude = (options?.exclude ?? []).map((p) => PathInfo.get([options.main_path, p]));
 	const p = PathInfo.get(from);
-	const isInclude = include.length > 0 ? include.findIndex((path) => p.equals(path) || p.isDescendantOf(path)) >= 0 : true;
+	const isInclude = include.length > 0 ? include.findIndex((path) => p.isParentOf(path) || p.equals(path) || p.isDescendantOf(path)) >= 0 : true;
 	return exclude.findIndex((path) => p.equals(path) || p.isDescendantOf(path)) < 0 && isInclude;
 };
 
@@ -57,14 +57,16 @@ export default function structureNodes(
 ): any {
 	options.main_path = !options.main_path ? path : options.main_path;
 	const pathInfo = PathInfo.get(path);
-	const mainNode = nodes.find(({ path: p }) => pathInfo.equals(p) || pathInfo.isChildOf(p));
+	const mainNode = nodes.find(({ path: p }) => pathInfo.equals(p));
+	const parentNode = nodes.find(({ path: p }) => pathInfo.isChildOf(p));
+	const nodeInfo = mainNode ?? parentNode;
 
-	if (!mainNode) {
+	if (!nodeInfo) {
 		return undefined;
 	}
 
 	let value: any = undefined;
-	let { path: nodePath, content } = mainNode;
+	let { path: nodePath, content } = nodeInfo;
 	content = processReadNodeValue(content);
 
 	if (pathInfo.isChildOf(nodePath)) {

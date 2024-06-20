@@ -4,13 +4,14 @@
     "browser": {
         "./index.js": "./browser.js",
 		"./server/index.js": "./server/browser.js",
-        "./database/services/sandbox/index.ts": "./database/services/sandbox/browser.js",
+        "./database/services/sandbox/index.js": "./database/services/sandbox/browser.js",
 		"./ipc/IPCPeer/index.js": "./ipc/IPCPeer/browser.js",
         "./app/settings/index.js": "./app/settings/browser.js",
 		"./app/verifyStorage/index.js": "./app/verifyStorage/browser.js",
 		"./controller/storage/index.js": "./controller/storage/browser.js",
 		"./controller/file-type/index.js": "./controller/file-type/browser.js",
         "./utils/base64/index.js": "./utils/base64/browser.js",
-        "./utils/localStorage/index.js": "./utils/localStorage/browser.js"
+        "./utils/localStorage/index.js": "./utils/localStorage/browser.js",
+        "./storage/storageController/index.js": "./storage/storageController/browser.js"
     }
 }

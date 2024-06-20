@@ -124,7 +124,7 @@ class StorageDBClient extends ivipbase_core_1.Api {
                 (_b = auth === null || auth === void 0 ? void 0 : auth.currentUser) === null || _b === void 0 ? void 0 : _b.reload();
                 if (this.isConnected && err.isNetworkError) {
                     // This is a network error, but the websocket thinks we are still connected.
-                    this.db.debug.warn(`A network error occurred loading ${options.route}`);
+                    this.db.debug.warn(`A network error occurred loading ${options.route} | Error: ${err.message}`);
                     // Start reconnection flow
                     // this._handleDetectedDisconnect(err);
                 }

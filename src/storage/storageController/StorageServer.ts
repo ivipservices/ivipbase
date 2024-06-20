@@ -1,9 +1,9 @@
-import { Storage } from ".";
-import { StorageReference } from "./StorageReference";
+import { Storage } from "..";
+import { StorageReference } from "../StorageReference";
 import path from "path";
 import fs from "fs";
-import { Mime, getExtension } from "../utils";
-import { fileTypeFromBuffer } from "../controller/file-type";
+import { Mime, getExtension } from "../../utils";
+import { fileTypeFromBuffer } from "../../controller/file-type";
 
 export class StorageServer {
 	constructor(protected storage: Storage) {}

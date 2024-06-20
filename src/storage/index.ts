@@ -1,9 +1,8 @@
 import { SimpleEventEmitter } from "ivipbase-core";
 import { IvipBaseApp, getApp, getAppsName, getFirstApp } from "../app";
 import { DataBase, hasDatabase } from "../database";
-import { StorageClient } from "./StorageClient";
 import { StorageReference } from "./StorageReference";
-import { StorageServer } from "./StorageServer";
+import { StorageClient, StorageServer } from "./storageController";
 
 export class Storage extends SimpleEventEmitter {
 	private _ready = false;

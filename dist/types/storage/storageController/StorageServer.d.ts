@@ -1,6 +1,6 @@
 /// <reference types="node" />
-import { Storage } from ".";
-import { StorageReference } from "./StorageReference";
+import { Storage } from "..";
+import { StorageReference } from "../StorageReference";
 export declare class StorageServer {
     protected storage: Storage;
     constructor(storage: Storage);

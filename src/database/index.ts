@@ -47,7 +47,7 @@ export class DataBase extends DataBaseCore {
 			rules: joinObjects({ rules: {} }, defaultRules.rules, mainRules.rules, dbRules.rules),
 		});
 
-		this.storage = app.isServer || !app.settings.isValidClient ? new StorageDBServer(this) : new StorageDBClient(this);
+		this.storage = app.isServer ? new StorageDBServer(this) : new StorageDBClient(this);
 
 		app.storage.on("add", (e: { dbName: string; name: string; path: string; value: any }) => {
 			//console.log(e);

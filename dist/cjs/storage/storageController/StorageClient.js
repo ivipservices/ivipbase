@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.StorageClient = void 0;
-const StorageReference_1 = require("./StorageReference");
+const StorageReference_1 = require("../StorageReference");
 class StorageClient {
     constructor(storage) {
         this.storage = storage;

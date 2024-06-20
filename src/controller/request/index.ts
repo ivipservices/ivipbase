@@ -57,6 +57,7 @@ export default async function request(
 	}
 	if (options.accessToken) {
 		headers["Authorization"] = `Bearer ${options.accessToken}`;
+		//request.params["auth_token"] = options.accessToken;
 	}
 
 	const res = await axios(request).catch((err) => {

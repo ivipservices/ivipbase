@@ -4,16 +4,15 @@ exports.getStorage = exports.Storage = void 0;
 const ivipbase_core_1 = require("ivipbase-core");
 const app_1 = require("../app");
 const database_1 = require("../database");
-const StorageClient_1 = require("./StorageClient");
 const StorageReference_1 = require("./StorageReference");
-const StorageServer_1 = require("./StorageServer");
+const storageController_1 = require("./storageController");
 class Storage extends ivipbase_core_1.SimpleEventEmitter {
     constructor(app, database) {
         super();
         this.app = app;
         this.database = database;
         this._ready = false;
-        this.api = app.isServer ? new StorageServer_1.StorageServer(this) : new StorageClient_1.StorageClient(this);
+        this.api = app.isServer ? new storageController_1.StorageServer(this) : new storageController_1.StorageClient(this);
         this.app.ready(() => {
             this._ready = true;
             this.emit("ready");

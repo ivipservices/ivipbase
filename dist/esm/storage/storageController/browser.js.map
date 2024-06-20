@@ -1,0 +1,1 @@
+{"version":3,"file":"browser.js","sourceRoot":"","sources":["../../../../src/storage/storageController/browser.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,aAAa,EAAE,MAAM,iBAAiB,CAAC;AAEhD,MAAM,aAAc,SAAQ,aAAa;IACxC,YAAsB,OAAgB;QACrC,KAAK,CAAC,OAAO,CAAC,CAAC;QADM,YAAO,GAAP,OAAO,CAAS;IAEtC,CAAC;CACD;AAED,OAAO,EAAE,aAAa,EAAE,aAAa,EAAE,CAAC"}

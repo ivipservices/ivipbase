@@ -2,7 +2,7 @@
 //require("./MDE/test_ismael");
 //require("./MDE/test_initial_app");
 
-import { initializeApp, getDatabase, getIPCPeer, DataStorageSettings, JsonFileStorageSettings, SqliteSettings, SequelizeSettings, MongodbSettings, getStorage, PathInfo } from "../src";
+import { initializeApp, getDatabase, getIPCPeer, DataStorageSettings, JsonFileStorageSettings, SqliteSettings, SequelizeSettings, MongodbSettings, getStorage, PathInfo, getAuth } from "../src";
 
 import dirname from "../src/utils/es-dirname";
 

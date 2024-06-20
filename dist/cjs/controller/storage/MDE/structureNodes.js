@@ -8,7 +8,7 @@ const checkIncludedPath = (from, options) => {
     const include = ((_a = options === null || options === void 0 ? void 0 : options.include) !== null && _a !== void 0 ? _a : []).map((p) => ivipbase_core_1.PathInfo.get([options.main_path, p]));
     const exclude = ((_b = options === null || options === void 0 ? void 0 : options.exclude) !== null && _b !== void 0 ? _b : []).map((p) => ivipbase_core_1.PathInfo.get([options.main_path, p]));
     const p = ivipbase_core_1.PathInfo.get(from);
-    const isInclude = include.length > 0 ? include.findIndex((path) => p.equals(path) || p.isDescendantOf(path)) >= 0 : true;
+    const isInclude = include.length > 0 ? include.findIndex((path) => p.isParentOf(path) || p.equals(path) || p.isDescendantOf(path)) >= 0 : true;
     return exclude.findIndex((path) => p.equals(path) || p.isDescendantOf(path)) < 0 && isInclude;
 };
 exports.checkIncludedPath = checkIncludedPath;
@@ -35,12 +35,14 @@ function structureNodes(path, nodes, options = {}) {
     var _a;
     options.main_path = !options.main_path ? path : options.main_path;
     const pathInfo = ivipbase_core_1.PathInfo.get(path);
-    const mainNode = nodes.find(({ path: p }) => pathInfo.equals(p) || pathInfo.isChildOf(p));
-    if (!mainNode) {
+    const mainNode = nodes.find(({ path: p }) => pathInfo.equals(p));
+    const parentNode = nodes.find(({ path: p }) => pathInfo.isChildOf(p));
+    const nodeInfo = mainNode !== null && mainNode !== void 0 ? mainNode : parentNode;
+    if (!nodeInfo) {
         return undefined;
     }
     let value = undefined;
-    let { path: nodePath, content } = mainNode;
+    let { path: nodePath, content } = nodeInfo;
     content = (0, utils_1.processReadNodeValue)(content);
     if (pathInfo.isChildOf(nodePath)) {
         if ((content.type === utils_1.nodeValueTypes.OBJECT || content.type === utils_1.nodeValueTypes.ARRAY) &&

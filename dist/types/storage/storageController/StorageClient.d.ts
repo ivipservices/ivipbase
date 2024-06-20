@@ -1,5 +1,5 @@
-import { Storage } from ".";
-import { StorageReference } from "./StorageReference";
+import { Storage } from "..";
+import { StorageReference } from "../StorageReference";
 export declare class StorageClient {
     protected storage: Storage;
     constructor(storage: Storage);

@@ -1,4 +1,4 @@
-import { StorageReference } from "./StorageReference.js";
+import { StorageReference } from "../StorageReference.js";
 export class StorageClient {
     constructor(storage) {
         this.storage = storage;

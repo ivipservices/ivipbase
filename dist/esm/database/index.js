@@ -30,7 +30,7 @@ export class DataBase extends DataBaseCore {
             authEnabled: dbInfo?.authentication?.enabled ?? this.app.settings?.server?.auth.enabled ?? false,
             rules: joinObjects({ rules: {} }, defaultRules.rules, mainRules.rules, dbRules.rules),
         });
-        this.storage = app.isServer || !app.settings.isValidClient ? new StorageDBServer(this) : new StorageDBClient(this);
+        this.storage = app.isServer ? new StorageDBServer(this) : new StorageDBClient(this);
         app.storage.on("add", (e) => {
             //console.log(e);
             if (e.dbName !== database) {

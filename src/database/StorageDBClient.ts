@@ -175,7 +175,7 @@ export class StorageDBClient extends Api {
 				auth?.currentUser?.reload();
 				if (this.isConnected && err.isNetworkError) {
 					// This is a network error, but the websocket thinks we are still connected.
-					this.db.debug.warn(`A network error occurred loading ${options.route}`);
+					this.db.debug.warn(`A network error occurred loading ${options.route} | Error: ${err.message}`);
 
 					// Start reconnection flow
 					// this._handleDetectedDisconnect(err);
