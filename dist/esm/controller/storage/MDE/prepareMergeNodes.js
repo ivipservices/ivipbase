@@ -51,7 +51,7 @@ export default async function prepareMergeNodes(path, nodes, comparison, options
     };
     for (let i = 0; i < comparison.length; i++) {
         const node = comparison[i];
-        if (node.content.type === nodeValueTypes.EMPTY || node.content.value === null || node.content.value === undefined) {
+        if (node.type !== "VERIFY" && (node.content.type === nodeValueTypes.EMPTY || node.content.value === null || node.content.value === undefined)) {
             removeNodes.push(PathInfo.get(node.path));
             removeNodes = removeNodes.filter((p) => !(p.isChildOf(path) || p.isDescendantOf(path)));
             continue;
@@ -62,7 +62,7 @@ export default async function prepareMergeNodes(path, nodes, comparison, options
         }
         const currentNode = findNode(node.path);
         if (node.type === "VERIFY") {
-            if (currentNode) {
+            if (!currentNode) {
                 result.push(node);
                 added.push(node);
                 try {

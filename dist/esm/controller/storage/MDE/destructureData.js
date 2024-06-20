@@ -3,8 +3,9 @@ import { getTypedChildValue, getValueType, nodeValueTypes, valueFitsInline } fro
 const extactNodes = async (type, obj, path = [], nodes = [], options) => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     const revision = options?.assert_revision ?? ID.generate();
+    const pathInfo = PathInfo.get(path);
     const length = nodes.push({
-        path: PathInfo.get(path).path,
+        path: pathInfo.path,
         type: nodes.length <= 0 ? "UPDATE" : type,
         content: {
             type: getValueType(obj),
@@ -15,19 +16,29 @@ const extactNodes = async (type, obj, path = [], nodes = [], options) => {
             modified: Date.now(),
         },
     });
-    const parentValue = nodes[length - 1];
+    const parentIndex = nodes.findIndex((n) => PathInfo.get(n.path).isParentOf(pathInfo));
+    const parentValue = parentIndex >= 0 ? nodes[parentIndex] : null;
+    const fitsInline = valueFitsInline(obj, options);
+    if (parentValue) {
+        parentValue.type = parentValue.type === "VERIFY" ? "UPDATE" : type;
+        if (parentValue.content.value === null) {
+            parentValue.content.value = parentValue.content.type === nodeValueTypes.ARRAY ? [] : {};
+        }
+        parentValue.content.value[pathInfo.key] = fitsInline ? getTypedChildValue(obj) : null;
+    }
+    const currentNode = nodes[length - 1];
     for (let k in obj) {
         const fitsInline = valueFitsInline(obj[k], options);
-        if (parentValue && fitsInline) {
-            if (parentValue.type === "VERIFY") {
-                parentValue.type = "UPDATE";
+        if (currentNode && fitsInline) {
+            if (currentNode.type === "VERIFY") {
+                currentNode.type = "UPDATE";
             }
-            if (parentValue.content.value === null) {
-                parentValue.content.value = {};
+            if (currentNode.content.value === null) {
+                currentNode.content.value = {};
             }
-            parentValue.content.value[k] = getTypedChildValue(obj[k]);
+            currentNode.content.value[k] = getTypedChildValue(obj[k]);
         }
-        if (typeof obj[k] === "object" && !fitsInline) {
+        if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(obj[k])) && !fitsInline) {
             await extactNodes(type, obj[k], [...path, k], nodes, options);
         }
         else {

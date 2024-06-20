@@ -707,6 +707,7 @@ export default class MDE extends SimpleEventEmitter {
 		const nodes = await destructureData(type, path, value, { ...(options ?? {}), ...this.settings });
 		//console.log("now", JSON.stringify(nodes.find((node) => node.path === "root/test") ?? {}, null, 4));
 		const byNodes = await this.getNodesBy(database, path, false, true, true);
+		// console.log(JSON.stringify(byNodes, null, 4));
 		//console.log("olt", JSON.stringify(byNodes.find((node) => node.path === "root/test") ?? {}, null, 4));
 		const { added, modified, removed } = await prepareMergeNodes(path, byNodes, nodes);
 

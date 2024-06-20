@@ -532,6 +532,7 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         const nodes = await (0, destructureData_1.default)(type, path, value, Object.assign(Object.assign({}, (options !== null && options !== void 0 ? options : {})), this.settings));
         //console.log("now", JSON.stringify(nodes.find((node) => node.path === "root/test") ?? {}, null, 4));
         const byNodes = await this.getNodesBy(database, path, false, true, true);
+        // console.log(JSON.stringify(byNodes, null, 4));
         //console.log("olt", JSON.stringify(byNodes.find((node) => node.path === "root/test") ?? {}, null, 4));
         const { added, modified, removed } = await (0, prepareMergeNodes_1.default)(path, byNodes, nodes);
         // console.log(JSON.stringify(modified, null, 4));

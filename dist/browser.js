@@ -3755,10 +3755,14 @@ var extactNodes = /*#__PURE__*/function () {
       options,
       _a,
       revision,
+      pathInfo,
       length,
+      parentIndex,
       parentValue,
-      k,
       fitsInline,
+      currentNode,
+      k,
+      _fitsInline,
       _args = arguments;
     return _regeneratorRuntime().wrap(function _callee$(_context) {
       while (1) switch (_context.prev = _context.next) {
@@ -3772,8 +3776,9 @@ var extactNodes = /*#__PURE__*/function () {
           });
         case 5:
           revision = (_a = options === null || options === void 0 ? void 0 : options.assert_revision) !== null && _a !== void 0 ? _a : ivipbase_core_1.ID.generate();
+          pathInfo = ivipbase_core_1.PathInfo.get(path);
           length = nodes.push({
-            path: ivipbase_core_1.PathInfo.get(path).path,
+            path: pathInfo.path,
             type: nodes.length <= 0 ? "UPDATE" : type,
             content: {
               type: (0, utils_1.getValueType)(obj),
@@ -3784,52 +3789,64 @@ var extactNodes = /*#__PURE__*/function () {
               modified: Date.now()
             }
           });
-          parentValue = nodes[length - 1];
+          parentIndex = nodes.findIndex(function (n) {
+            return ivipbase_core_1.PathInfo.get(n.path).isParentOf(pathInfo);
+          });
+          parentValue = parentIndex >= 0 ? nodes[parentIndex] : null;
+          fitsInline = (0, utils_1.valueFitsInline)(obj, options);
+          if (parentValue) {
+            parentValue.type = parentValue.type === "VERIFY" ? "UPDATE" : type;
+            if (parentValue.content.value === null) {
+              parentValue.content.value = parentValue.content.type === utils_1.nodeValueTypes.ARRAY ? [] : {};
+            }
+            parentValue.content.value[pathInfo.key] = fitsInline ? (0, utils_1.getTypedChildValue)(obj) : null;
+          }
+          currentNode = nodes[length - 1];
           _context.t0 = _regeneratorRuntime().keys(obj);
-        case 9:
+        case 14:
           if ((_context.t1 = _context.t0()).done) {
-            _context.next = 21;
+            _context.next = 26;
             break;
           }
           k = _context.t1.value;
-          fitsInline = (0, utils_1.valueFitsInline)(obj[k], options);
-          if (parentValue && fitsInline) {
-            if (parentValue.type === "VERIFY") {
-              parentValue.type = "UPDATE";
+          _fitsInline = (0, utils_1.valueFitsInline)(obj[k], options);
+          if (currentNode && _fitsInline) {
+            if (currentNode.type === "VERIFY") {
+              currentNode.type = "UPDATE";
             }
-            if (parentValue.content.value === null) {
-              parentValue.content.value = {};
+            if (currentNode.content.value === null) {
+              currentNode.content.value = {};
             }
-            parentValue.content.value[k] = (0, utils_1.getTypedChildValue)(obj[k]);
+            currentNode.content.value[k] = (0, utils_1.getTypedChildValue)(obj[k]);
           }
-          if (!(_typeof(obj[k]) === "object" && !fitsInline)) {
-            _context.next = 18;
+          if (!(["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(obj[k])) && !_fitsInline)) {
+            _context.next = 23;
             break;
           }
-          _context.next = 16;
+          _context.next = 21;
           return extactNodes(type, obj[k], [].concat(_toConsumableArray(path), [k]), nodes, options);
-        case 16:
-          _context.next = 19;
+        case 21:
+          _context.next = 24;
           break;
-        case 18:
+        case 23:
           nodes.push({
             path: ivipbase_core_1.PathInfo.get([].concat(_toConsumableArray(path), [k])).path,
             type: type,
             content: {
               type: (0, utils_1.getValueType)(obj[k]),
-              value: fitsInline ? null : _typeof(obj[k]) === "object" ? Array.isArray(obj[k]) ? [] : {} : obj[k],
+              value: _fitsInline ? null : _typeof(obj[k]) === "object" ? Array.isArray(obj[k]) ? [] : {} : obj[k],
               revision: revision,
               revision_nr: 1,
               created: Date.now(),
               modified: Date.now()
             }
           });
-        case 19:
-          _context.next = 9;
+        case 24:
+          _context.next = 14;
           break;
-        case 21:
+        case 26:
           return _context.abrupt("return", nodes);
-        case 22:
+        case 27:
         case "end":
           return _context.stop();
       }
@@ -5521,7 +5538,7 @@ function _prepareMergeNodes() {
             break;
           }
           node = comparison[i];
-          if (!(node.content.type === utils_1.nodeValueTypes.EMPTY || node.content.value === null || node.content.value === undefined)) {
+          if (!(node.type !== "VERIFY" && (node.content.type === utils_1.nodeValueTypes.EMPTY || node.content.value === null || node.content.value === undefined))) {
             _context2.next = 18;
             break;
           }
@@ -5542,7 +5559,7 @@ function _prepareMergeNodes() {
             _context2.next = 35;
             break;
           }
-          if (!currentNode) {
+          if (currentNode) {
             _context2.next = 32;
             break;
           }
