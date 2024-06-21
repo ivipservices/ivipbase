@@ -188,19 +188,6 @@ export default class MDE extends SimpleEventEmitter {
 		callback?.();
 	}
 
-	destructureData(
-		path: string,
-		value: any,
-		options: {
-			assert_revision?: string;
-		} = {},
-		type: "SET" | "UPDATE" = "SET",
-	) {
-		type = typeof value !== "object" || value instanceof Array || value instanceof ArrayBuffer || value instanceof Date ? "UPDATE" : type;
-		path = PathInfo.get([this.settings.prefix, path]).path;
-		return destructureData(type, path, value, { ...(options ?? {}), ...this.settings });
-	}
-
 	/**
 	 * Converte um caminho em uma consulta de expressão regular e SQL LIKE pattern.
 	 *
@@ -704,16 +691,17 @@ export default class MDE extends SimpleEventEmitter {
 		const batchError: NodesPending[] = [];
 		const promises: (() => Promise<any>)[] = [];
 
-		const nodes = await destructureData(type, path, value, { ...(options ?? {}), ...this.settings });
-		//console.log("now", JSON.stringify(nodes.find((node) => node.path === "root/test") ?? {}, null, 4));
 		const byNodes = await this.getNodesBy(database, path, false, true, true);
 		// console.log(JSON.stringify(byNodes, null, 4));
 		//console.log("olt", JSON.stringify(byNodes.find((node) => node.path === "root/test") ?? {}, null, 4));
-		const { added, modified, removed } = await prepareMergeNodes(path, byNodes, nodes);
+
+		const { added, modified, removed, result } = await destructureData(type, path, value, { ...(options ?? {}), ...this.settings }, byNodes);
+		//console.log("now", JSON.stringify(nodes.find((node) => node.path === "root/test") ?? {}, null, 4));
+		// const { added, modified, removed } = await prepareMergeNodes(path, byNodes, nodes);
 
 		// console.log(JSON.stringify(modified, null, 4));
 
-		// console.log("set", JSON.stringify(nodes, null, 4));
+		console.log(type, JSON.stringify(result, null, 4));
 		// console.log("set-added", JSON.stringify(added, null, 4));
 		// console.log("set-modified", JSON.stringify(modified, null, 4));
 		// console.log("set-removed", JSON.stringify(removed, null, 4));
