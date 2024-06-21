@@ -200,8 +200,6 @@ export default async function destructureData(
 			for (let i = 0; i < nodes.length; i++) {
 				const node = nodes[i];
 
-				console.log(node.path);
-
 				if (node.type !== "VERIFY" && (node.content.type === nodeValueTypes.EMPTY || node.content.value === null || node.content.value === undefined)) {
 					removeNodes.push(PathInfo.get(node.path));
 					removeNodes = removeNodes.filter((p) => !(p.isChildOf(path) || p.isDescendantOf(path)));

@@ -1,23 +1,25 @@
 import { ID, PathInfo } from "ivipbase-core";
 import { getTypedChildValue, getValueType, nodeValueTypes, valueFitsInline } from "./utils.js";
-const extactNodes = async (type, obj, path = [], nodes = [], options) => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
+const modifyRevision = (revision) => {
+    revision = revision ?? ID.generate();
+    return (node) => {
+        if (node.previous_content) {
+            node.content.created = node.previous_content.created;
+            node.content.revision_nr = node.previous_content.revision_nr;
+        }
+        if (node.type === "SET" || node.type === "UPDATE") {
+            node.content.modified = Date.now();
+        }
+        node.content.revision = revision;
+        node.content.revision_nr = node.content.revision_nr + 1;
+        return node;
+    };
+};
+const extactNodes = async (type, obj, path = [], controllers, options, parentValue = undefined) => {
+    if (Math.random() > 0.4)
+        await new Promise((resolve) => setTimeout(resolve, 0));
     const revision = options?.assert_revision ?? ID.generate();
     const pathInfo = PathInfo.get(path);
-    const length = nodes.push({
-        path: pathInfo.path,
-        type: nodes.length <= 0 ? "UPDATE" : type,
-        content: {
-            type: getValueType(obj),
-            value: typeof obj === "object" ? (Array.isArray(obj) ? [] : {}) : obj,
-            revision,
-            revision_nr: 1,
-            created: Date.now(),
-            modified: Date.now(),
-        },
-    });
-    const parentIndex = nodes.findIndex((n) => PathInfo.get(n.path).isParentOf(pathInfo));
-    const parentValue = parentIndex >= 0 ? nodes[parentIndex] : null;
     const fitsInline = valueFitsInline(obj, options);
     if (parentValue) {
         parentValue.type = parentValue.type === "VERIFY" ? "UPDATE" : type;
@@ -26,7 +28,18 @@ const extactNodes = async (type, obj, path = [], nodes = [], options) => {
         }
         parentValue.content.value[pathInfo.key] = fitsInline ? getTypedChildValue(obj) : null;
     }
-    const currentNode = nodes[length - 1];
+    const currentNode = {
+        path: pathInfo.path,
+        type: type,
+        content: {
+            type: getValueType(obj),
+            value: typeof obj === "object" ? (Array.isArray(obj) ? [] : {}) : obj,
+            revision,
+            revision_nr: 1,
+            created: Date.now(),
+            modified: Date.now(),
+        },
+    };
     for (let k in obj) {
         const fitsInline = valueFitsInline(obj[k], options);
         if (currentNode && fitsInline) {
@@ -39,33 +52,43 @@ const extactNodes = async (type, obj, path = [], nodes = [], options) => {
             currentNode.content.value[k] = getTypedChildValue(obj[k]);
         }
         if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(obj[k])) && !fitsInline) {
-            await extactNodes(type, obj[k], [...path, k], nodes, options);
+            await extactNodes(type, obj[k], [...path, k], controllers, options, currentNode);
         }
         else {
-            nodes.push({
-                path: PathInfo.get([...path, k]).path,
-                type: type,
-                content: {
-                    type: getValueType(obj[k]),
-                    value: fitsInline ? null : typeof obj[k] === "object" ? (Array.isArray(obj[k]) ? [] : {}) : obj[k],
-                    revision,
-                    revision_nr: 1,
-                    created: Date.now(),
-                    modified: Date.now(),
+            const value = fitsInline ? null : typeof obj[k] === "object" ? (Array.isArray(obj[k]) ? [] : {}) : obj[k];
+            controllers.resolveNodesConflict([
+                {
+                    path: PathInfo.get([...path, k]).path,
+                    type: type,
+                    content: {
+                        type: getValueType(value),
+                        value,
+                        revision,
+                        revision_nr: 1,
+                        created: Date.now(),
+                        modified: Date.now(),
+                    },
                 },
-            });
+            ]);
         }
     }
-    return nodes;
+    controllers.resolveNodesConflict([currentNode]);
 };
 export default async function destructureData(type, path, data, options = {
     maxInlineValueSize: 200,
-}) {
+}, byNodes) {
     let result = options?.previous_result ?? [];
     let pathInfo = PathInfo.get(path);
     const revision = options?.assert_revision ?? ID.generate();
     options.assert_revision = revision;
     options.include_checks = typeof options.include_checks === "boolean" ? options.include_checks : true;
+    let added = [];
+    let modified = [];
+    let removed = [];
+    byNodes = byNodes.map((node) => {
+        node.path = node.path.replace(/\/+$/g, "");
+        return node;
+    });
     if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(data)) !== true) {
         type = "UPDATE";
         data = {
@@ -73,6 +96,102 @@ export default async function destructureData(type, path, data, options = {
         };
         pathInfo = pathInfo.parent;
     }
+    let editedNodes = [];
+    let removeNodes = [];
+    const controllers = {
+        appendEditedNode(path) {
+            const p = path instanceof PathInfo ? path : PathInfo.get(path);
+            editedNodes.push(p);
+            editedNodes = editedNodes.filter((p) => !(p.isChildOf(path) || p.isDescendantOf(path)));
+        },
+        appendRemoveNode(path) {
+            const p = path instanceof PathInfo ? path : PathInfo.get(path);
+            removeNodes.push(p);
+            removeNodes = removeNodes.filter((p) => !(p.isChildOf(path) || p.isDescendantOf(path)));
+        },
+        findNode(path) {
+            if (!path) {
+                return undefined;
+            }
+            const p = path instanceof PathInfo ? path : PathInfo.get(path);
+            const isRemove = editedNodes.findIndex((path) => p.isChildOf(path) || p.isDescendantOf(path)) >= 0 ||
+                removeNodes.findIndex((path) => p.equals(path) || p.isChildOf(path) || p.isDescendantOf(path)) >= 0;
+            const index = isRemove ? -1 : byNodes.findIndex(({ path }) => p.equals(path));
+            return index >= 0 ? byNodes[index] : undefined;
+        },
+        async pushAddedNode(node) {
+            result.push(node);
+            added.push(node);
+        },
+        async pushRemovedNode(node) {
+            this.appendRemoveNode(node.path);
+        },
+        async pushModifiedNode(node, isModified = true) {
+            if (isModified) {
+                modified.push(node);
+            }
+            result.push(node);
+        },
+        resolveNodesConflict(nodes) {
+            for (let i = 0; i < nodes.length; i++) {
+                const node = nodes[i];
+                if (node.type !== "VERIFY" && (node.content.type === nodeValueTypes.EMPTY || node.content.value === null || node.content.value === undefined)) {
+                    removeNodes.push(PathInfo.get(node.path));
+                    removeNodes = removeNodes.filter((p) => !(p.isChildOf(path) || p.isDescendantOf(path)));
+                    continue;
+                }
+                if (node.type === "SET") {
+                    editedNodes.push(PathInfo.get(node.path));
+                    editedNodes = editedNodes.filter((p) => !(p.isChildOf(path) || p.isDescendantOf(path)));
+                }
+                const currentNode = this.findNode(node.path);
+                if (node.type === "VERIFY") {
+                    if (!currentNode) {
+                        this.pushAddedNode(node);
+                    }
+                    continue;
+                }
+                else {
+                    if (currentNode) {
+                        let n;
+                        if (node.type === "SET") {
+                            n = { ...node, previous_content: currentNode.content };
+                        }
+                        else {
+                            n = {
+                                path: node.path,
+                                type: "UPDATE",
+                                content: {
+                                    type: node.content.type,
+                                    value: null,
+                                    created: node.content.created,
+                                    modified: Date.now(),
+                                    revision,
+                                    revision_nr: node.content.revision_nr + 1,
+                                },
+                                previous_content: currentNode.content,
+                            };
+                            if (n.content.type === nodeValueTypes.OBJECT || n.content.type === nodeValueTypes.ARRAY) {
+                                n.content.value = {
+                                    ...(typeof currentNode.content.value === "object" ? currentNode.content.value ?? {} : {}),
+                                    ...(typeof node.content.value === "object" ? node.content.value ?? {} : {}),
+                                };
+                            }
+                            else {
+                                n.content.value = node.content.value;
+                            }
+                        }
+                        if (n) {
+                            this.pushModifiedNode(n, JSON.stringify(n.content.value) !== JSON.stringify(n.previous_content?.value));
+                        }
+                    }
+                    else {
+                        this.pushAddedNode(node);
+                    }
+                }
+            }
+        },
+    };
     if (options.include_checks) {
         let parentPath = pathInfo.parent;
         while (parentPath && parentPath.path.trim() !== "") {
@@ -88,17 +207,48 @@ export default async function destructureData(type, path, data, options = {
                     modified: Date.now(),
                 },
             };
-            result.push(node);
+            const currentNode = controllers.findNode(node.path);
+            if (!currentNode) {
+                controllers.resolveNodesConflict([node]);
+            }
             parentPath = parentPath.parent;
         }
     }
-    await extactNodes(type, data, pathInfo.keys, result, options);
+    await extactNodes(type, data, pathInfo.keys, controllers, options, controllers.findNode(pathInfo.parent));
+    for (let i = 0; i < byNodes.length; i++) {
+        const node = byNodes[i];
+        const p = PathInfo.get(node.path);
+        const isRemove = editedNodes.findIndex((path) => p.isChildOf(path) || p.isDescendantOf(path)) >= 0 || removeNodes.findIndex((path) => p.equals(path) || p.isChildOf(path) || p.isDescendantOf(path)) >= 0;
+        if (isRemove) {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            removed.push(node);
+        }
+    }
     const sortNodes = (a, b) => {
         const aPath = PathInfo.get(a.path);
         const bPath = PathInfo.get(b.path);
         return aPath.isAncestorOf(bPath) || aPath.isParentOf(bPath) ? -1 : aPath.isDescendantOf(bPath) || aPath.isChildOf(bPath) ? 1 : 0;
     };
-    return result.sort(sortNodes);
+    result = result
+        // .filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
+        .map(modifyRevision(revision))
+        .sort(sortNodes);
+    added = added
+        // .filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
+        .map(modifyRevision(revision))
+        .sort(sortNodes);
+    modified = modified
+        // .filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
+        .map(modifyRevision(revision))
+        .sort(sortNodes);
+    removed = removed
+        // .filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
+        .map(modifyRevision(revision))
+        .sort(sortNodes);
+    // console.log("removed:", JSON.stringify(removed, null, 4));
+    // console.log("RESULT:", path, JSON.stringify(result, null, 4));
+    // console.log(path, JSON.stringify({ result, added, modified, removed }, null, 4));
+    return { result, added, modified, removed };
     // const resolveConflict = (node: NodesPending) => {
     // 	const comparison = result.find((n) => PathInfo.get(n.path).equals(node.path));
     // 	if (!comparison) {

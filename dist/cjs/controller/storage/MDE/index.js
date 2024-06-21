@@ -19,7 +19,6 @@ const ivipbase_core_1 = require("ivipbase-core");
 const NodeInfo_1 = require("./NodeInfo");
 const utils_1 = require("./utils");
 Object.defineProperty(exports, "VALUE_TYPES", { enumerable: true, get: function () { return utils_1.VALUE_TYPES; } });
-const prepareMergeNodes_1 = __importDefault(require("./prepareMergeNodes"));
 const structureNodes_1 = __importDefault(require("./structureNodes"));
 const destructureData_1 = __importDefault(require("./destructureData"));
 const utils_2 = require("../../../utils");
@@ -159,11 +158,6 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
             await new Promise((resolve) => this.once("ready", resolve));
         }
         callback === null || callback === void 0 ? void 0 : callback();
-    }
-    destructureData(path, value, options = {}, type = "SET") {
-        type = typeof value !== "object" || value instanceof Array || value instanceof ArrayBuffer || value instanceof Date ? "UPDATE" : type;
-        path = ivipbase_core_1.PathInfo.get([this.settings.prefix, path]).path;
-        return (0, destructureData_1.default)(type, path, value, Object.assign(Object.assign({}, (options !== null && options !== void 0 ? options : {})), this.settings));
     }
     /**
      * Converte um caminho em uma consulta de expressão regular e SQL LIKE pattern.
@@ -529,14 +523,14 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         const suppress_events = options.suppress_events === true;
         const batchError = [];
         const promises = [];
-        const nodes = await (0, destructureData_1.default)(type, path, value, Object.assign(Object.assign({}, (options !== null && options !== void 0 ? options : {})), this.settings));
-        //console.log("now", JSON.stringify(nodes.find((node) => node.path === "root/test") ?? {}, null, 4));
         const byNodes = await this.getNodesBy(database, path, false, true, true);
         // console.log(JSON.stringify(byNodes, null, 4));
         //console.log("olt", JSON.stringify(byNodes.find((node) => node.path === "root/test") ?? {}, null, 4));
-        const { added, modified, removed } = await (0, prepareMergeNodes_1.default)(path, byNodes, nodes);
+        const { added, modified, removed, result } = await (0, destructureData_1.default)(type, path, value, Object.assign(Object.assign({}, (options !== null && options !== void 0 ? options : {})), this.settings), byNodes);
+        //console.log("now", JSON.stringify(nodes.find((node) => node.path === "root/test") ?? {}, null, 4));
+        // const { added, modified, removed } = await prepareMergeNodes(path, byNodes, nodes);
         // console.log(JSON.stringify(modified, null, 4));
-        // console.log("set", JSON.stringify(nodes, null, 4));
+        // console.log(type, JSON.stringify(result, null, 4));
         // console.log("set-added", JSON.stringify(added, null, 4));
         // console.log("set-modified", JSON.stringify(modified, null, 4));
         // console.log("set-removed", JSON.stringify(removed, null, 4));

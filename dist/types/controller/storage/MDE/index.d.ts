@@ -1,5 +1,5 @@
 import { DebugLogger, SimpleEventEmitter, Types } from "ivipbase-core";
-import { CustomStorageNodeInfo, NodesPending, StorageNode, StorageNodeInfo } from "./NodeInfo";
+import { CustomStorageNodeInfo, StorageNode, StorageNodeInfo } from "./NodeInfo";
 import { VALUE_TYPES } from "./utils";
 export type { StorageNode, StorageNodeInfo };
 export { VALUE_TYPES };
@@ -84,9 +84,6 @@ export default class MDE extends SimpleEventEmitter {
      * @returns retorna uma promise que resolve quando estiver pronto
      */
     ready(callback?: () => void): Promise<void>;
-    destructureData(path: string, value: any, options?: {
-        assert_revision?: string;
-    }, type?: "SET" | "UPDATE"): Promise<NodesPending[]>;
     /**
      * Converte um caminho em uma consulta de expressão regular e SQL LIKE pattern.
      *

@@ -701,7 +701,7 @@ export default class MDE extends SimpleEventEmitter {
 
 		// console.log(JSON.stringify(modified, null, 4));
 
-		console.log(type, JSON.stringify(result, null, 4));
+		// console.log(type, JSON.stringify(result, null, 4));
 		// console.log("set-added", JSON.stringify(added, null, 4));
 		// console.log("set-modified", JSON.stringify(modified, null, 4));
 		// console.log("set-removed", JSON.stringify(removed, null, 4));
