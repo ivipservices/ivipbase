@@ -123,3 +123,44 @@ export const isDate = (value: any): value is Date => {
 
 	return false;
 };
+
+type AllowEventLoopCallback<K, V> = (value: V, key: K) => boolean | void | Promise<boolean | void>;
+
+export async function allowEventLoop<V>(items: Array<V>, callback: AllowEventLoopCallback<number, V>, options?: { length_cycles?: number }): Promise<void>;
+
+export async function allowEventLoop<K extends string, V>(items: Record<K, V>, callback: AllowEventLoopCallback<K, V>, options?: { length_cycles?: number }): Promise<void>;
+
+export async function allowEventLoop<K extends string | number, V>(
+	itens: Array<V> | Record<K, V>,
+	callback: AllowEventLoopCallback<K, V>,
+	options: {
+		length_cycles?: number;
+	} = {},
+): Promise<void> {
+	const { length_cycles = 1 } = options ?? {};
+	let currency_index = 0;
+
+	if (Array.isArray(itens)) {
+		for (let i = 0; i < itens.length; i++) {
+			const callbackResult = await Promise.race([callback(itens[i], i as K)]);
+			if (callbackResult === true) {
+				break;
+			}
+			if (currency_index % length_cycles === 0) {
+				await new Promise((resolve) => setTimeout(resolve, 0));
+			}
+			currency_index++;
+		}
+	} else if (typeof itens === "object" && itens !== null) {
+		for (let key in itens) {
+			const callbackResult = await Promise.race([callback(itens[key], key)]);
+			if (callbackResult === true) {
+				break;
+			}
+			if (currency_index % length_cycles === 0) {
+				await new Promise((resolve) => setTimeout(resolve, 0));
+			}
+			currency_index++;
+		}
+	}
+}
