@@ -286,7 +286,11 @@ export function processReadNodeValue(node) {
     node = JSON.parse(JSON.stringify(node));
     switch (node.type) {
         case VALUE_TYPES.ARRAY: {
-            node.value = (Array.isArray(node.value) ? node.value : []).map((item) => {
+            node.value = (Array.isArray(node.value)
+                ? node.value
+                : Object.entries(node.value ?? {}).map(([key, val]) => {
+                    return val;
+                })).map((item) => {
                 if (item !== null && typeof item === "object" && "type" in item) {
                     return getTypedChildValue(item);
                 }

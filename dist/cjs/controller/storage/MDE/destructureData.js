@@ -178,6 +178,9 @@ async function destructureData(type, path, data, options = {
                             };
                             if (n.content.type === utils_1.nodeValueTypes.OBJECT || n.content.type === utils_1.nodeValueTypes.ARRAY) {
                                 n.content.value = Object.assign(Object.assign({}, (typeof currentNode.content.value === "object" ? (_a = currentNode.content.value) !== null && _a !== void 0 ? _a : {} : {})), (typeof node.content.value === "object" ? (_b = node.content.value) !== null && _b !== void 0 ? _b : {} : {}));
+                                if (n.content.type === utils_1.nodeValueTypes.ARRAY) {
+                                    n.content.value = Object.values(n.content.value);
+                                }
                             }
                             else {
                                 n.content.value = node.content.value;

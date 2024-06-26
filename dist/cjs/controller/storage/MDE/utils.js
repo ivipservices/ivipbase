@@ -272,6 +272,7 @@ exports.getTypedChildValue = getTypedChildValue;
  * @throws {Error} Lança um erro se o tipo de registro autônomo for inválido.
  */
 function processReadNodeValue(node) {
+    var _a;
     const getTypedChildValue = (val) => {
         // Valor tipado armazenado em um registro pai
         if (val.type === exports.VALUE_TYPES.BINARY) {
@@ -296,7 +297,11 @@ function processReadNodeValue(node) {
     node = JSON.parse(JSON.stringify(node));
     switch (node.type) {
         case exports.VALUE_TYPES.ARRAY: {
-            node.value = (Array.isArray(node.value) ? node.value : []).map((item) => {
+            node.value = (Array.isArray(node.value)
+                ? node.value
+                : Object.entries((_a = node.value) !== null && _a !== void 0 ? _a : {}).map(([key, val]) => {
+                    return val;
+                })).map((item) => {
                 if (item !== null && typeof item === "object" && "type" in item) {
                     return getTypedChildValue(item);
                 }

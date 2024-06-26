@@ -4046,6 +4046,9 @@ function _destructureData() {
                       };
                       if (n.content.type === utils_1.nodeValueTypes.OBJECT || n.content.type === utils_1.nodeValueTypes.ARRAY) {
                         n.content.value = Object.assign(Object.assign({}, _typeof(currentNode.content.value) === "object" ? (_a = currentNode.content.value) !== null && _a !== void 0 ? _a : {} : {}), _typeof(node.content.value) === "object" ? (_b = node.content.value) !== null && _b !== void 0 ? _b : {} : {});
+                        if (n.content.type === utils_1.nodeValueTypes.ARRAY) {
+                          n.content.value = Object.values(n.content.value);
+                        }
                       } else {
                         n.content.value = node.content.value;
                       }
@@ -5819,6 +5822,12 @@ exports["default"] = structureNodes;
 },{"./utils":18,"ivipbase-core":152}],18:[function(require,module,exports){
 "use strict";
 
+function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
+function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
 Object.defineProperty(exports, "__esModule", {
   value: true
@@ -6088,6 +6097,7 @@ exports.getTypedChildValue = getTypedChildValue;
  * @throws {Error} Lança um erro se o tipo de registro autônomo for inválido.
  */
 function processReadNodeValue(node) {
+  var _a;
   var getTypedChildValue = function getTypedChildValue(val) {
     // Valor tipado armazenado em um registro pai
     if (val.type === exports.VALUE_TYPES.BINARY) {
@@ -6109,7 +6119,12 @@ function processReadNodeValue(node) {
   switch (node.type) {
     case exports.VALUE_TYPES.ARRAY:
       {
-        node.value = (Array.isArray(node.value) ? node.value : []).map(function (item) {
+        node.value = (Array.isArray(node.value) ? node.value : Object.entries((_a = node.value) !== null && _a !== void 0 ? _a : {}).map(function (_ref) {
+          var _ref2 = _slicedToArray(_ref, 2),
+            key = _ref2[0],
+            val = _ref2[1];
+          return val;
+        })).map(function (item) {
           if (item !== null && _typeof(item) === "object" && "type" in item) {
             return getTypedChildValue(item);
           }
