@@ -244,6 +244,10 @@ export default async function destructureData(
 									...(typeof currentNode.content.value === "object" ? currentNode.content.value ?? {} : {}),
 									...(typeof node.content.value === "object" ? node.content.value ?? {} : {}),
 								};
+
+								if (n.content.type === nodeValueTypes.ARRAY) {
+									n.content.value = Object.values(n.content.value);
+								}
 							} else {
 								n.content.value = node.content.value as any;
 							}
