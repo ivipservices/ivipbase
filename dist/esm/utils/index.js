@@ -104,4 +104,32 @@ export const isDate = (value) => {
     }
     return false;
 };
+export async function allowEventLoop(itens, callback, options = {}) {
+    const { length_cycles = 1 } = options ?? {};
+    let currency_index = 0;
+    if (Array.isArray(itens)) {
+        for (let i = 0; i < itens.length; i++) {
+            const callbackResult = await Promise.race([callback(itens[i], i)]);
+            if (callbackResult === true) {
+                break;
+            }
+            if (currency_index % length_cycles === 0) {
+                await new Promise((resolve) => setTimeout(resolve, 0));
+            }
+            currency_index++;
+        }
+    }
+    else if (typeof itens === "object" && itens !== null) {
+        for (let key in itens) {
+            const callbackResult = await Promise.race([callback(itens[key], key)]);
+            if (callbackResult === true) {
+                break;
+            }
+            if (currency_index % length_cycles === 0) {
+                await new Promise((resolve) => setTimeout(resolve, 0));
+            }
+            currency_index++;
+        }
+    }
+}
 //# sourceMappingURL=index.js.map

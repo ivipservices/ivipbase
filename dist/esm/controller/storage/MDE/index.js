@@ -1,9 +1,8 @@
 import { DebugLogger, ID, PathInfo, SchemaDefinition, SimpleEventEmitter } from "ivipbase-core";
 import { CustomStorageNodeInfo, NodeAddress } from "./NodeInfo.js";
 import { VALUE_TYPES, getTypeFromStoredValue, getValueType, nodeValueTypes, processReadNodeValue } from "./utils.js";
-import structureNodes from "./structureNodes.js";
-import destructureData from "./destructureData.js";
 import { removeNulls } from "../../../utils/index.js";
+import NTree from "./NTree.js";
 export { VALUE_TYPES };
 const DEBUG_MODE = false;
 const NOOP = () => { };
@@ -183,25 +182,31 @@ export default class MDE extends SimpleEventEmitter {
         querys.push(`LIKE '${replacePathToLike(path).replace(/\/$/gi, "")}'`);
         if (onlyChildren) {
             pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^\\/\\[\\]]*))|(\\[([0-9]*)\\])){1})`));
-            pathsLike.forEach((exp) => querys.push(`LIKE '${exp}/%'`));
-            pathsLike.forEach((exp) => pathsLike.push(`${exp}/%`));
+            pathsLike.forEach((exp) => {
+                querys.push(`LIKE '${exp}/%'`);
+                querys.push(`LIKE '${exp}[%]'`);
+            });
+            pathsLike.forEach((exp) => {
+                pathsLike.push(`${exp}/%`);
+                pathsLike.push(`${exp}[%]`);
+            });
         }
         else if (allHeirs === true) {
             pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^\\/\\[\\]]*))|(\\[([0-9]*)\\])){1,})`));
-            pathsLike.forEach((exp) => querys.push(`LIKE '${exp}/%'`));
-            pathsLike.forEach((exp) => pathsLike.push(`${exp}/%`));
+            pathsLike.forEach((exp) => querys.push(`LIKE '${exp}%'`));
+            pathsLike.forEach((exp) => pathsLike.push(`${exp}%`));
         }
         else if (typeof allHeirs === "number") {
             pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^\\/\\[\\]]*))|(\\[([0-9]*)\\])){1,${allHeirs}})`));
-            // pathsLike.forEach((exp) => querys.push(`LIKE '${exp}/%'`));
-            // pathsLike.forEach((exp) => pathsLike.push(`${exp}/%`));
-            const p = pathsLike;
-            let m = "/%";
-            for (let i = 0; i < allHeirs; i++) {
-                p.forEach((exp) => querys.push(`LIKE '${exp}${m}'`));
-                p.forEach((exp) => pathsLike.push(`${exp}${m}`));
-                m += "/%";
-            }
+            pathsLike.forEach((exp) => querys.push(`LIKE '${exp}%'`));
+            pathsLike.forEach((exp) => pathsLike.push(`${exp}%`));
+            // const p = pathsLike;
+            // let m = "/%";
+            // for (let i = 0; i < allHeirs; i++) {
+            // 	p.forEach((exp) => querys.push(`LIKE '${exp}${m}'`));
+            // 	p.forEach((exp) => pathsLike.push(`${exp}${m}`));
+            // 	m += "/%";
+            // }
         }
         let parent = PathInfo.get(path).parent;
         // Obtém o caminho pai e adiciona a expressão regular correspondente ao array.
@@ -475,13 +480,21 @@ export default class MDE extends SimpleEventEmitter {
         const { include_info_node, onlyChildren, ..._options } = options ?? {};
         path = PathInfo.get([this.settings.prefix, path]).path;
         const nodes = await this.getNodesBy(database, path, onlyChildren, true);
-        const main_node = nodes.find(({ path: p }) => PathInfo.get(p).equals(path) || PathInfo.get(p).isParentOf(path));
+        const nodesTree = NTree.createBy(database, nodes);
+        await nodesTree.ready();
+        const main_node = nodesTree.getNodeBy(path);
         if (!main_node) {
             return undefined;
         }
-        // console.log(JSON.stringify(nodes, null, 4));
-        const value = removeNulls(structureNodes(path, nodes, _options)) ?? null;
+        const value = await nodesTree.get(path, _options);
         return !include_info_node ? value : { ...main_node.content, value };
+        // const main_node = nodes.find(({ path: p }) => PathInfo.get(p).equals(path) || PathInfo.get(p).isParentOf(path));
+        // if (!main_node) {
+        // 	return undefined;
+        // }
+        // // console.log(JSON.stringify(nodes, null, 4));
+        // const value = removeNulls(structureNodes(path, nodes, _options)) ?? null;
+        // return !include_info_node ? value : { ...main_node.content, value };
     }
     /**
      * Define um valor no armazenamento com o caminho especificado.
@@ -494,7 +507,7 @@ export default class MDE extends SimpleEventEmitter {
      * @returns {Promise<void>}
      */
     async set(database, path, value, options = {}, type = "SET") {
-        type = typeof value !== "object" || value instanceof Array || value instanceof ArrayBuffer || value instanceof Date ? "UPDATE" : type;
+        // type = typeof value !== "object" || value instanceof Array || value instanceof ArrayBuffer || value instanceof Date ? "UPDATE" : type;
         path = PathInfo.get([this.settings.prefix, path]).path;
         const suppress_events = options.suppress_events === true;
         const batchError = [];
@@ -502,26 +515,20 @@ export default class MDE extends SimpleEventEmitter {
         const byNodes = await this.getNodesBy(database, path, false, true, true);
         // console.log(JSON.stringify(byNodes, null, 4));
         //console.log("olt", JSON.stringify(byNodes.find((node) => node.path === "root/test") ?? {}, null, 4));
-        const { added, modified, removed, result } = await destructureData(type, path, value, { ...(options ?? {}), ...this.settings }, byNodes);
-        //console.log("now", JSON.stringify(nodes.find((node) => node.path === "root/test") ?? {}, null, 4));
-        // const { added, modified, removed } = await prepareMergeNodes(path, byNodes, nodes);
-        // console.log(JSON.stringify(modified, null, 4));
-        // console.log(type, JSON.stringify(result, null, 4));
-        // console.log("set-added", JSON.stringify(added, null, 4));
-        // console.log("set-modified", JSON.stringify(modified, null, 4));
-        // console.log("set-removed", JSON.stringify(removed, null, 4));
-        for (let node of removed) {
+        const nodesTree = NTree.createBy(database, byNodes);
+        await nodesTree.ready();
+        nodesTree.on("remove", (node) => {
             if (!suppress_events) {
                 this.emit("remove", {
-                    dbName: database,
+                    dbName: node.dbName,
                     name: "remove",
-                    path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
-                    value: removeNulls(node.content.value),
+                    path: node.path.replace(new RegExp(`^${this.settings.prefix.replace(/\//gi, "\\/")}`), "").replace(/^(\/)+/gi, ""),
+                    value: node.value,
                 });
             }
-            promises.push(async () => {
+            promises.push((async () => {
                 try {
-                    await Promise.race([this.settings.removeNode(database, node.path, node.content, node)]).catch((e) => {
+                    await Promise.race([this.settings.removeNode(node.dbName, node.path, node.content, node)]).catch((e) => {
                         batchError.push({
                             path: node.path,
                             content: {
@@ -533,52 +540,125 @@ export default class MDE extends SimpleEventEmitter {
                     });
                 }
                 catch { }
-            });
-        }
-        for (let node of modified) {
+            })());
+        });
+        nodesTree.on("change", (node) => {
             if (!suppress_events) {
                 this.emit("change", {
-                    dbName: database,
+                    dbName: node.dbName,
                     name: "change",
-                    path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
-                    value: removeNulls(node.content.value),
-                    previous: removeNulls(node.previous_content?.value),
+                    path: node.path.replace(new RegExp(`^${this.settings.prefix.replace(/\//gi, "\\/")}`), "").replace(/^(\/)+/gi, ""),
+                    value: node.value,
+                    previous: node.previous,
                 });
             }
-            promises.push(async () => {
+            promises.push((async () => {
                 try {
-                    await Promise.race([this.settings.setNode(database, node.path, removeNulls(node.content), removeNulls(node))]).catch((e) => {
+                    await Promise.race([this.settings.setNode(node.dbName, node.path, removeNulls(node.content), removeNulls(node))]).catch((e) => {
                         batchError.push(node);
                     });
                 }
                 catch { }
-            });
-        }
-        for (let node of added) {
+            })());
+        });
+        nodesTree.on("add", (node) => {
             if (!suppress_events) {
                 this.emit("add", {
-                    dbName: database,
+                    dbName: node.dbName,
                     name: "add",
-                    path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
-                    value: removeNulls(node.content.value),
+                    path: node.path.replace(new RegExp(`^${this.settings.prefix.replace(/\//gi, "\\/")}`), "").replace(/^(\/)+/gi, ""),
+                    value: node.value,
                 });
             }
-            promises.push(async () => {
+            promises.push((async () => {
                 try {
-                    await Promise.race([this.settings.setNode(database, node.path, removeNulls(node.content), removeNulls(node))]).catch((e) => {
+                    await Promise.race([this.settings.setNode(node.dbName, node.path, removeNulls(node.content), removeNulls(node))]).catch((e) => {
                         batchError.push(node);
                     });
                 }
                 catch { }
-            });
+            })());
+        });
+        if (type === "SET") {
+            await nodesTree.set(path, value, this.settings);
         }
-        for (let p of promises) {
-            await new Promise((resolve) => setTimeout(resolve, 0));
-            try {
-                await p();
-            }
-            catch { }
+        else {
+            await nodesTree.update(path, value, this.settings);
         }
+        await Promise.all(promises);
+        // const { added, modified, removed, result } = await destructureData(type, path, value, { ...(options ?? {}), ...this.settings }, byNodes);
+        // //console.log("now", JSON.stringify(nodes.find((node) => node.path === "root/test") ?? {}, null, 4));
+        // // const { added, modified, removed } = await prepareMergeNodes(path, byNodes, nodes);
+        // // console.log(JSON.stringify(modified, null, 4));
+        // // console.log(type, JSON.stringify(result, null, 4));
+        // // console.log("set-added", JSON.stringify(added, null, 4));
+        // // console.log("set-modified", JSON.stringify(modified, null, 4));
+        // // console.log("set-removed", JSON.stringify(removed, null, 4));
+        // for (let node of removed) {
+        // 	if (!suppress_events) {
+        // 		this.emit("remove", {
+        // 			dbName: database,
+        // 			name: "remove",
+        // 			path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
+        // 			value: removeNulls(node.content.value),
+        // 		});
+        // 	}
+        // 	promises.push(async () => {
+        // 		try {
+        // 			await Promise.race([this.settings.removeNode(database, node.path, node.content, node)]).catch((e) => {
+        // 				batchError.push({
+        // 					path: node.path,
+        // 					content: {
+        // 						...node.content,
+        // 						type: 0,
+        // 						value: null,
+        // 					},
+        // 				});
+        // 			});
+        // 		} catch {}
+        // 	});
+        // }
+        // for (let node of modified) {
+        // 	if (!suppress_events) {
+        // 		this.emit("change", {
+        // 			dbName: database,
+        // 			name: "change",
+        // 			path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
+        // 			value: removeNulls(node.content.value),
+        // 			previous: removeNulls(node.previous_content?.value),
+        // 		});
+        // 	}
+        // 	promises.push(async () => {
+        // 		try {
+        // 			await Promise.race([this.settings.setNode(database, node.path, removeNulls(node.content), removeNulls(node))]).catch((e) => {
+        // 				batchError.push(node);
+        // 			});
+        // 		} catch {}
+        // 	});
+        // }
+        // for (let node of added) {
+        // 	if (!suppress_events) {
+        // 		this.emit("add", {
+        // 			dbName: database,
+        // 			name: "add",
+        // 			path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
+        // 			value: removeNulls(node.content.value),
+        // 		});
+        // 	}
+        // 	promises.push(async () => {
+        // 		try {
+        // 			await Promise.race([this.settings.setNode(database, node.path, removeNulls(node.content), removeNulls(node))]).catch((e) => {
+        // 				batchError.push(node);
+        // 			});
+        // 		} catch {}
+        // 	});
+        // }
+        // for (let p of promises) {
+        // 	await new Promise((resolve) => setTimeout(resolve, 0));
+        // 	try {
+        // 		await p();
+        // 	} catch {}
+        // }
     }
     async update(database, path, value, options = {}) {
         // const beforeValue = await this.get(database, path);

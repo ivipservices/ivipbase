@@ -26,7 +26,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isDate = exports.getExtension = exports.sanitizeEmailPrefix = exports.replaceUndefined = exports.joinObjects = exports.removeNulls = exports.pathValueToObject = exports.assert = exports.Mime = void 0;
+exports.allowEventLoop = exports.isDate = exports.getExtension = exports.sanitizeEmailPrefix = exports.replaceUndefined = exports.joinObjects = exports.removeNulls = exports.pathValueToObject = exports.assert = exports.Mime = void 0;
 const ivipbase_core_1 = require("ivipbase-core");
 __exportStar(require("./base64"), exports);
 exports.Mime = __importStar(require("./Mime"));
@@ -141,4 +141,33 @@ const isDate = (value) => {
     return false;
 };
 exports.isDate = isDate;
+async function allowEventLoop(itens, callback, options = {}) {
+    const { length_cycles = 1 } = options !== null && options !== void 0 ? options : {};
+    let currency_index = 0;
+    if (Array.isArray(itens)) {
+        for (let i = 0; i < itens.length; i++) {
+            const callbackResult = await Promise.race([callback(itens[i], i)]);
+            if (callbackResult === true) {
+                break;
+            }
+            if (currency_index % length_cycles === 0) {
+                await new Promise((resolve) => setTimeout(resolve, 0));
+            }
+            currency_index++;
+        }
+    }
+    else if (typeof itens === "object" && itens !== null) {
+        for (let key in itens) {
+            const callbackResult = await Promise.race([callback(itens[key], key)]);
+            if (callbackResult === true) {
+                break;
+            }
+            if (currency_index % length_cycles === 0) {
+                await new Promise((resolve) => setTimeout(resolve, 0));
+            }
+            currency_index++;
+        }
+    }
+}
+exports.allowEventLoop = allowEventLoop;
 //# sourceMappingURL=index.js.map

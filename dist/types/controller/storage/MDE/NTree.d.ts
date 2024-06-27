@@ -1,31 +1,92 @@
-import { PathInfo, SimpleEventEmitter } from "ivipbase-core";
+import { PathInfo, SimpleEventEmitter, Types } from "ivipbase-core";
 import { StorageNodeInfo } from "./NodeInfo";
 export declare class NTree extends SimpleEventEmitter {
+    readonly database: string;
     private nodes;
+    private _ready;
     private rootPath;
-    private removedNodes;
-    private addedNodes;
-    private updatedNodes;
     private indexes;
     private tree;
-    constructor(nodes: StorageNodeInfo[]);
+    constructor(database: string, nodes: StorageNodeInfo[]);
+    once<d = {
+        dbName: string;
+        name: "remove";
+        path: string;
+        value: any;
+        previous: undefined;
+    }>(event: "remove", callback: (data: d) => void): Promise<d>;
+    once<d = {
+        dbName: string;
+        name: "change";
+        path: string;
+        value: any;
+        previous: any;
+    }>(event: "change", callback: (data: d) => void): Promise<d>;
+    once<d = {
+        dbName: string;
+        name: "add";
+        path: string;
+        value: any;
+        previous: undefined;
+    }>(event: "add", callback: (data: d) => void): Promise<d>;
+    once<d = undefined>(event: "ready", callback: (data: d) => void): Promise<d>;
+    on<d = {
+        dbName: string;
+        name: "remove";
+        path: string;
+        content: StorageNodeInfo["content"];
+        value: any;
+        previous: undefined;
+    }>(event: "remove", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+    on<d = {
+        dbName: string;
+        name: "change";
+        path: string;
+        content: StorageNodeInfo["content"];
+        value: any;
+        previous: any;
+    }>(event: "change", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+    on<d = {
+        dbName: string;
+        name: "add";
+        path: string;
+        content: StorageNodeInfo["content"];
+        value: any;
+        previous: undefined;
+    }>(event: "add", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+    on<d = undefined>(event: "ready", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+    emit(event: "remove", data: StorageNodeInfo): this;
+    emit(event: "change", data: StorageNodeInfo & {
+        previous_content?: StorageNodeInfo["content"];
+    }): this;
+    emit(event: "add", data: StorageNodeInfo): this;
+    emit(event: "ready", data?: any): this;
+    ready(callback?: () => void): Promise<void>;
     get path(): string;
-    applyNodes(nodes: StorageNodeInfo[]): NTree;
-    static createBy(nodes: StorageNodeInfo[]): NTree;
+    pushIndex(node: StorageNodeInfo): void;
+    applyNodes(nodes: StorageNodeInfo[]): Promise<NTree>;
+    static createBy(database: string, nodes: StorageNodeInfo[]): NTree;
     hasNode(path: string | (string | number | PathInfo)[]): boolean;
     getNodeBy(path: string | (string | number | PathInfo)[]): StorageNodeInfo | undefined;
-    getChildNodesBy(path: string | (string | number | PathInfo)[]): StorageNodeInfo[];
-    strucuture(path: string | (string | number | PathInfo)[], options?: {
+    getChildPathsBy(path: string | (string | number | PathInfo)[]): Promise<string[]>;
+    getChildNodesBy(path: string | (string | number | PathInfo)[]): Promise<StorageNodeInfo[]>;
+    get(path: string | (string | number | PathInfo)[], options?: {
         include?: Array<string | number>;
         exclude?: Array<string | number>;
         main_path?: string;
-    }): null | any;
-    destructure(type: "SET" | "UPDATE", path: string | (string | number | PathInfo)[], data: any, options?: {
+    }): Promise<null | any>;
+    remove(path: string | (string | number | PathInfo)[]): Promise<void>;
+    verifyParents(path: string | (string | number | PathInfo)[], options: {
         assert_revision?: string;
-        include_checks?: boolean;
-        previous_result?: StorageNodeInfo[];
+    }): Promise<void>;
+    set(path: string | (string | number | PathInfo)[], data: any, options?: {
         maxInlineValueSize: number;
-    }): NTree;
+    }): Promise<void>;
+    update(path: string | (string | number | PathInfo)[], data: any, options?: {
+        maxInlineValueSize: number;
+    }): Promise<void>;
+    private destructure;
+    findChildsBy(path: string | (string | number | PathInfo)[], query: Types.Query): Promise<void>;
 }
 export default NTree;
 //# sourceMappingURL=NTree.d.ts.map

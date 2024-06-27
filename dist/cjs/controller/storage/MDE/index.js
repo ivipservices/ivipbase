@@ -19,9 +19,8 @@ const ivipbase_core_1 = require("ivipbase-core");
 const NodeInfo_1 = require("./NodeInfo");
 const utils_1 = require("./utils");
 Object.defineProperty(exports, "VALUE_TYPES", { enumerable: true, get: function () { return utils_1.VALUE_TYPES; } });
-const structureNodes_1 = __importDefault(require("./structureNodes"));
-const destructureData_1 = __importDefault(require("./destructureData"));
 const utils_2 = require("../../../utils");
+const NTree_1 = __importDefault(require("./NTree"));
 const DEBUG_MODE = false;
 const NOOP = () => { };
 /**
@@ -201,25 +200,31 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         querys.push(`LIKE '${replacePathToLike(path).replace(/\/$/gi, "")}'`);
         if (onlyChildren) {
             pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^\\/\\[\\]]*))|(\\[([0-9]*)\\])){1})`));
-            pathsLike.forEach((exp) => querys.push(`LIKE '${exp}/%'`));
-            pathsLike.forEach((exp) => pathsLike.push(`${exp}/%`));
+            pathsLike.forEach((exp) => {
+                querys.push(`LIKE '${exp}/%'`);
+                querys.push(`LIKE '${exp}[%]'`);
+            });
+            pathsLike.forEach((exp) => {
+                pathsLike.push(`${exp}/%`);
+                pathsLike.push(`${exp}[%]`);
+            });
         }
         else if (allHeirs === true) {
             pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^\\/\\[\\]]*))|(\\[([0-9]*)\\])){1,})`));
-            pathsLike.forEach((exp) => querys.push(`LIKE '${exp}/%'`));
-            pathsLike.forEach((exp) => pathsLike.push(`${exp}/%`));
+            pathsLike.forEach((exp) => querys.push(`LIKE '${exp}%'`));
+            pathsLike.forEach((exp) => pathsLike.push(`${exp}%`));
         }
         else if (typeof allHeirs === "number") {
             pathsRegex.forEach((exp) => pathsRegex.push(`${exp}(((\/([^\\/\\[\\]]*))|(\\[([0-9]*)\\])){1,${allHeirs}})`));
-            // pathsLike.forEach((exp) => querys.push(`LIKE '${exp}/%'`));
-            // pathsLike.forEach((exp) => pathsLike.push(`${exp}/%`));
-            const p = pathsLike;
-            let m = "/%";
-            for (let i = 0; i < allHeirs; i++) {
-                p.forEach((exp) => querys.push(`LIKE '${exp}${m}'`));
-                p.forEach((exp) => pathsLike.push(`${exp}${m}`));
-                m += "/%";
-            }
+            pathsLike.forEach((exp) => querys.push(`LIKE '${exp}%'`));
+            pathsLike.forEach((exp) => pathsLike.push(`${exp}%`));
+            // const p = pathsLike;
+            // let m = "/%";
+            // for (let i = 0; i < allHeirs; i++) {
+            // 	p.forEach((exp) => querys.push(`LIKE '${exp}${m}'`));
+            // 	p.forEach((exp) => pathsLike.push(`${exp}${m}`));
+            // 	m += "/%";
+            // }
         }
         let parent = ivipbase_core_1.PathInfo.get(path).parent;
         // Obtém o caminho pai e adiciona a expressão regular correspondente ao array.
@@ -494,17 +499,24 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         };
     }
     async get(database, path, options) {
-        var _a;
-        const _b = options !== null && options !== void 0 ? options : {}, { include_info_node, onlyChildren } = _b, _options = __rest(_b, ["include_info_node", "onlyChildren"]);
+        const _a = options !== null && options !== void 0 ? options : {}, { include_info_node, onlyChildren } = _a, _options = __rest(_a, ["include_info_node", "onlyChildren"]);
         path = ivipbase_core_1.PathInfo.get([this.settings.prefix, path]).path;
         const nodes = await this.getNodesBy(database, path, onlyChildren, true);
-        const main_node = nodes.find(({ path: p }) => ivipbase_core_1.PathInfo.get(p).equals(path) || ivipbase_core_1.PathInfo.get(p).isParentOf(path));
+        const nodesTree = NTree_1.default.createBy(database, nodes);
+        await nodesTree.ready();
+        const main_node = nodesTree.getNodeBy(path);
         if (!main_node) {
             return undefined;
         }
-        // console.log(JSON.stringify(nodes, null, 4));
-        const value = (_a = (0, utils_2.removeNulls)((0, structureNodes_1.default)(path, nodes, _options))) !== null && _a !== void 0 ? _a : null;
+        const value = await nodesTree.get(path, _options);
         return !include_info_node ? value : Object.assign(Object.assign({}, main_node.content), { value });
+        // const main_node = nodes.find(({ path: p }) => PathInfo.get(p).equals(path) || PathInfo.get(p).isParentOf(path));
+        // if (!main_node) {
+        // 	return undefined;
+        // }
+        // // console.log(JSON.stringify(nodes, null, 4));
+        // const value = removeNulls(structureNodes(path, nodes, _options)) ?? null;
+        // return !include_info_node ? value : { ...main_node.content, value };
     }
     /**
      * Define um valor no armazenamento com o caminho especificado.
@@ -517,8 +529,7 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
      * @returns {Promise<void>}
      */
     async set(database, path, value, options = {}, type = "SET") {
-        var _a;
-        type = typeof value !== "object" || value instanceof Array || value instanceof ArrayBuffer || value instanceof Date ? "UPDATE" : type;
+        // type = typeof value !== "object" || value instanceof Array || value instanceof ArrayBuffer || value instanceof Date ? "UPDATE" : type;
         path = ivipbase_core_1.PathInfo.get([this.settings.prefix, path]).path;
         const suppress_events = options.suppress_events === true;
         const batchError = [];
@@ -526,26 +537,20 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
         const byNodes = await this.getNodesBy(database, path, false, true, true);
         // console.log(JSON.stringify(byNodes, null, 4));
         //console.log("olt", JSON.stringify(byNodes.find((node) => node.path === "root/test") ?? {}, null, 4));
-        const { added, modified, removed, result } = await (0, destructureData_1.default)(type, path, value, Object.assign(Object.assign({}, (options !== null && options !== void 0 ? options : {})), this.settings), byNodes);
-        //console.log("now", JSON.stringify(nodes.find((node) => node.path === "root/test") ?? {}, null, 4));
-        // const { added, modified, removed } = await prepareMergeNodes(path, byNodes, nodes);
-        // console.log(JSON.stringify(modified, null, 4));
-        // console.log(type, JSON.stringify(result, null, 4));
-        // console.log("set-added", JSON.stringify(added, null, 4));
-        // console.log("set-modified", JSON.stringify(modified, null, 4));
-        // console.log("set-removed", JSON.stringify(removed, null, 4));
-        for (let node of removed) {
+        const nodesTree = NTree_1.default.createBy(database, byNodes);
+        await nodesTree.ready();
+        nodesTree.on("remove", (node) => {
             if (!suppress_events) {
                 this.emit("remove", {
-                    dbName: database,
+                    dbName: node.dbName,
                     name: "remove",
-                    path: ivipbase_core_1.PathInfo.get(ivipbase_core_1.PathInfo.get(node.path).keys.slice(1)).path,
-                    value: (0, utils_2.removeNulls)(node.content.value),
+                    path: node.path.replace(new RegExp(`^${this.settings.prefix.replace(/\//gi, "\\/")}`), "").replace(/^(\/)+/gi, ""),
+                    value: node.value,
                 });
             }
-            promises.push(async () => {
+            promises.push((async () => {
                 try {
-                    await Promise.race([this.settings.removeNode(database, node.path, node.content, node)]).catch((e) => {
+                    await Promise.race([this.settings.removeNode(node.dbName, node.path, node.content, node)]).catch((e) => {
                         batchError.push({
                             path: node.path,
                             content: Object.assign(Object.assign({}, node.content), { type: 0, value: null }),
@@ -553,52 +558,125 @@ class MDE extends ivipbase_core_1.SimpleEventEmitter {
                     });
                 }
                 catch (_a) { }
-            });
-        }
-        for (let node of modified) {
+            })());
+        });
+        nodesTree.on("change", (node) => {
             if (!suppress_events) {
                 this.emit("change", {
-                    dbName: database,
+                    dbName: node.dbName,
                     name: "change",
-                    path: ivipbase_core_1.PathInfo.get(ivipbase_core_1.PathInfo.get(node.path).keys.slice(1)).path,
-                    value: (0, utils_2.removeNulls)(node.content.value),
-                    previous: (0, utils_2.removeNulls)((_a = node.previous_content) === null || _a === void 0 ? void 0 : _a.value),
+                    path: node.path.replace(new RegExp(`^${this.settings.prefix.replace(/\//gi, "\\/")}`), "").replace(/^(\/)+/gi, ""),
+                    value: node.value,
+                    previous: node.previous,
                 });
             }
-            promises.push(async () => {
+            promises.push((async () => {
                 try {
-                    await Promise.race([this.settings.setNode(database, node.path, (0, utils_2.removeNulls)(node.content), (0, utils_2.removeNulls)(node))]).catch((e) => {
+                    await Promise.race([this.settings.setNode(node.dbName, node.path, (0, utils_2.removeNulls)(node.content), (0, utils_2.removeNulls)(node))]).catch((e) => {
                         batchError.push(node);
                     });
                 }
                 catch (_a) { }
-            });
-        }
-        for (let node of added) {
+            })());
+        });
+        nodesTree.on("add", (node) => {
             if (!suppress_events) {
                 this.emit("add", {
-                    dbName: database,
+                    dbName: node.dbName,
                     name: "add",
-                    path: ivipbase_core_1.PathInfo.get(ivipbase_core_1.PathInfo.get(node.path).keys.slice(1)).path,
-                    value: (0, utils_2.removeNulls)(node.content.value),
+                    path: node.path.replace(new RegExp(`^${this.settings.prefix.replace(/\//gi, "\\/")}`), "").replace(/^(\/)+/gi, ""),
+                    value: node.value,
                 });
             }
-            promises.push(async () => {
+            promises.push((async () => {
                 try {
-                    await Promise.race([this.settings.setNode(database, node.path, (0, utils_2.removeNulls)(node.content), (0, utils_2.removeNulls)(node))]).catch((e) => {
+                    await Promise.race([this.settings.setNode(node.dbName, node.path, (0, utils_2.removeNulls)(node.content), (0, utils_2.removeNulls)(node))]).catch((e) => {
                         batchError.push(node);
                     });
                 }
                 catch (_a) { }
-            });
+            })());
+        });
+        if (type === "SET") {
+            await nodesTree.set(path, value, this.settings);
         }
-        for (let p of promises) {
-            await new Promise((resolve) => setTimeout(resolve, 0));
-            try {
-                await p();
-            }
-            catch (_b) { }
+        else {
+            await nodesTree.update(path, value, this.settings);
         }
+        await Promise.all(promises);
+        // const { added, modified, removed, result } = await destructureData(type, path, value, { ...(options ?? {}), ...this.settings }, byNodes);
+        // //console.log("now", JSON.stringify(nodes.find((node) => node.path === "root/test") ?? {}, null, 4));
+        // // const { added, modified, removed } = await prepareMergeNodes(path, byNodes, nodes);
+        // // console.log(JSON.stringify(modified, null, 4));
+        // // console.log(type, JSON.stringify(result, null, 4));
+        // // console.log("set-added", JSON.stringify(added, null, 4));
+        // // console.log("set-modified", JSON.stringify(modified, null, 4));
+        // // console.log("set-removed", JSON.stringify(removed, null, 4));
+        // for (let node of removed) {
+        // 	if (!suppress_events) {
+        // 		this.emit("remove", {
+        // 			dbName: database,
+        // 			name: "remove",
+        // 			path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
+        // 			value: removeNulls(node.content.value),
+        // 		});
+        // 	}
+        // 	promises.push(async () => {
+        // 		try {
+        // 			await Promise.race([this.settings.removeNode(database, node.path, node.content, node)]).catch((e) => {
+        // 				batchError.push({
+        // 					path: node.path,
+        // 					content: {
+        // 						...node.content,
+        // 						type: 0,
+        // 						value: null,
+        // 					},
+        // 				});
+        // 			});
+        // 		} catch {}
+        // 	});
+        // }
+        // for (let node of modified) {
+        // 	if (!suppress_events) {
+        // 		this.emit("change", {
+        // 			dbName: database,
+        // 			name: "change",
+        // 			path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
+        // 			value: removeNulls(node.content.value),
+        // 			previous: removeNulls(node.previous_content?.value),
+        // 		});
+        // 	}
+        // 	promises.push(async () => {
+        // 		try {
+        // 			await Promise.race([this.settings.setNode(database, node.path, removeNulls(node.content), removeNulls(node))]).catch((e) => {
+        // 				batchError.push(node);
+        // 			});
+        // 		} catch {}
+        // 	});
+        // }
+        // for (let node of added) {
+        // 	if (!suppress_events) {
+        // 		this.emit("add", {
+        // 			dbName: database,
+        // 			name: "add",
+        // 			path: PathInfo.get(PathInfo.get(node.path).keys.slice(1)).path,
+        // 			value: removeNulls(node.content.value),
+        // 		});
+        // 	}
+        // 	promises.push(async () => {
+        // 		try {
+        // 			await Promise.race([this.settings.setNode(database, node.path, removeNulls(node.content), removeNulls(node))]).catch((e) => {
+        // 				batchError.push(node);
+        // 			});
+        // 		} catch {}
+        // 	});
+        // }
+        // for (let p of promises) {
+        // 	await new Promise((resolve) => setTimeout(resolve, 0));
+        // 	try {
+        // 		await p();
+        // 	} catch {}
+        // }
     }
     async update(database, path, value, options = {}) {
         // const beforeValue = await this.get(database, path);

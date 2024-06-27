@@ -1,5 +1,5 @@
 import { PathReference, ascii85, Lib } from "ivipbase-core";
-import { encodeString } from "ivip-utils";
+import { encodeString, isNumber } from "ivip-utils";
 import { isDate } from "../../../utils";
 import { StorageNode } from "./NodeInfo";
 
@@ -291,13 +291,20 @@ export function processReadNodeValue(node: StorageNode): StorageNode {
 
 	switch (node.type) {
 		case VALUE_TYPES.ARRAY: {
+			const val: any[] = new Array();
 			node.value = (
 				Array.isArray(node.value)
-					? node.value
-					: Object.entries(node.value ?? {}).map(([key, val]) => {
-							return val;
-					  })
-			).map((item) => {
+					? node.value.reduce((a, c, i) => {
+							a[i] = c;
+							return a;
+					  }, val)
+					: Object.entries(node.value ?? {}).reduce((a, [i, c]) => {
+							if (/^\d+$/gi.test(i) || typeof i === "number") {
+								a[i as any] = c;
+							}
+							return a;
+					  }, val)
+			).map((item: any) => {
 				if (item !== null && typeof item === "object" && "type" in item) {
 					return getTypedChildValue(item);
 				}

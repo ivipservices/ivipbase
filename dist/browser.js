@@ -3622,6 +3622,1003 @@ exports.DataStorage = DataStorage;
 },{"../erros":7,"./CustomStorage":12,"ivipbase-core":152}],14:[function(require,module,exports){
 "use strict";
 
+function _defineProperty(e, r, t) { return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, { value: t, enumerable: !0, configurable: !0, writable: !0 }) : e[r] = t, e; }
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return e; }; var t, e = {}, r = Object.prototype, n = r.hasOwnProperty, o = Object.defineProperty || function (t, e, r) { t[e] = r.value; }, i = "function" == typeof Symbol ? Symbol : {}, a = i.iterator || "@@iterator", c = i.asyncIterator || "@@asyncIterator", u = i.toStringTag || "@@toStringTag"; function define(t, e, r) { return Object.defineProperty(t, e, { value: r, enumerable: !0, configurable: !0, writable: !0 }), t[e]; } try { define({}, ""); } catch (t) { define = function define(t, e, r) { return t[e] = r; }; } function wrap(t, e, r, n) { var i = e && e.prototype instanceof Generator ? e : Generator, a = Object.create(i.prototype), c = new Context(n || []); return o(a, "_invoke", { value: makeInvokeMethod(t, r, c) }), a; } function tryCatch(t, e, r) { try { return { type: "normal", arg: t.call(e, r) }; } catch (t) { return { type: "throw", arg: t }; } } e.wrap = wrap; var h = "suspendedStart", l = "suspendedYield", f = "executing", s = "completed", y = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var p = {}; define(p, a, function () { return this; }); var d = Object.getPrototypeOf, v = d && d(d(values([]))); v && v !== r && n.call(v, a) && (p = v); var g = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(p); function defineIteratorMethods(t) { ["next", "throw", "return"].forEach(function (e) { define(t, e, function (t) { return this._invoke(e, t); }); }); } function AsyncIterator(t, e) { function invoke(r, o, i, a) { var c = tryCatch(t[r], t, o); if ("throw" !== c.type) { var u = c.arg, h = u.value; return h && "object" == _typeof(h) && n.call(h, "__await") ? e.resolve(h.__await).then(function (t) { invoke("next", t, i, a); }, function (t) { invoke("throw", t, i, a); }) : e.resolve(h).then(function (t) { u.value = t, i(u); }, function (t) { return invoke("throw", t, i, a); }); } a(c.arg); } var r; o(this, "_invoke", { value: function value(t, n) { function callInvokeWithMethodAndArg() { return new e(function (e, r) { invoke(t, n, e, r); }); } return r = r ? r.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(e, r, n) { var o = h; return function (i, a) { if (o === f) throw Error("Generator is already running"); if (o === s) { if ("throw" === i) throw a; return { value: t, done: !0 }; } for (n.method = i, n.arg = a;;) { var c = n.delegate; if (c) { var u = maybeInvokeDelegate(c, n); if (u) { if (u === y) continue; return u; } } if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) { if (o === h) throw o = s, n.arg; n.dispatchException(n.arg); } else "return" === n.method && n.abrupt("return", n.arg); o = f; var p = tryCatch(e, r, n); if ("normal" === p.type) { if (o = n.done ? s : l, p.arg === y) continue; return { value: p.arg, done: n.done }; } "throw" === p.type && (o = s, n.method = "throw", n.arg = p.arg); } }; } function maybeInvokeDelegate(e, r) { var n = r.method, o = e.iterator[n]; if (o === t) return r.delegate = null, "throw" === n && e.iterator["return"] && (r.method = "return", r.arg = t, maybeInvokeDelegate(e, r), "throw" === r.method) || "return" !== n && (r.method = "throw", r.arg = new TypeError("The iterator does not provide a '" + n + "' method")), y; var i = tryCatch(o, e.iterator, r.arg); if ("throw" === i.type) return r.method = "throw", r.arg = i.arg, r.delegate = null, y; var a = i.arg; return a ? a.done ? (r[e.resultName] = a.value, r.next = e.nextLoc, "return" !== r.method && (r.method = "next", r.arg = t), r.delegate = null, y) : a : (r.method = "throw", r.arg = new TypeError("iterator result is not an object"), r.delegate = null, y); } function pushTryEntry(t) { var e = { tryLoc: t[0] }; 1 in t && (e.catchLoc = t[1]), 2 in t && (e.finallyLoc = t[2], e.afterLoc = t[3]), this.tryEntries.push(e); } function resetTryEntry(t) { var e = t.completion || {}; e.type = "normal", delete e.arg, t.completion = e; } function Context(t) { this.tryEntries = [{ tryLoc: "root" }], t.forEach(pushTryEntry, this), this.reset(!0); } function values(e) { if (e || "" === e) { var r = e[a]; if (r) return r.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) { var o = -1, i = function next() { for (; ++o < e.length;) if (n.call(e, o)) return next.value = e[o], next.done = !1, next; return next.value = t, next.done = !0, next; }; return i.next = i; } } throw new TypeError(_typeof(e) + " is not iterable"); } return GeneratorFunction.prototype = GeneratorFunctionPrototype, o(g, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), o(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, u, "GeneratorFunction"), e.isGeneratorFunction = function (t) { var e = "function" == typeof t && t.constructor; return !!e && (e === GeneratorFunction || "GeneratorFunction" === (e.displayName || e.name)); }, e.mark = function (t) { return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, define(t, u, "GeneratorFunction")), t.prototype = Object.create(g), t; }, e.awrap = function (t) { return { __await: t }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, c, function () { return this; }), e.AsyncIterator = AsyncIterator, e.async = function (t, r, n, o, i) { void 0 === i && (i = Promise); var a = new AsyncIterator(wrap(t, r, n, o), i); return e.isGeneratorFunction(r) ? a : a.next().then(function (t) { return t.done ? t.value : a.next(); }); }, defineIteratorMethods(g), define(g, u, "Generator"), define(g, a, function () { return this; }), define(g, "toString", function () { return "[object Generator]"; }), e.keys = function (t) { var e = Object(t), r = []; for (var n in e) r.push(n); return r.reverse(), function next() { for (; r.length;) { var t = r.pop(); if (t in e) return next.value = t, next.done = !1, next; } return next.done = !0, next; }; }, e.values = values, Context.prototype = { constructor: Context, reset: function reset(e) { if (this.prev = 0, this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(resetTryEntry), !e) for (var r in this) "t" === r.charAt(0) && n.call(this, r) && !isNaN(+r.slice(1)) && (this[r] = t); }, stop: function stop() { this.done = !0; var t = this.tryEntries[0].completion; if ("throw" === t.type) throw t.arg; return this.rval; }, dispatchException: function dispatchException(e) { if (this.done) throw e; var r = this; function handle(n, o) { return a.type = "throw", a.arg = e, r.next = n, o && (r.method = "next", r.arg = t), !!o; } for (var o = this.tryEntries.length - 1; o >= 0; --o) { var i = this.tryEntries[o], a = i.completion; if ("root" === i.tryLoc) return handle("end"); if (i.tryLoc <= this.prev) { var c = n.call(i, "catchLoc"), u = n.call(i, "finallyLoc"); if (c && u) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } else if (c) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); } else { if (!u) throw Error("try statement without catch or finally"); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } } } }, abrupt: function abrupt(t, e) { for (var r = this.tryEntries.length - 1; r >= 0; --r) { var o = this.tryEntries[r]; if (o.tryLoc <= this.prev && n.call(o, "finallyLoc") && this.prev < o.finallyLoc) { var i = o; break; } } i && ("break" === t || "continue" === t) && i.tryLoc <= e && e <= i.finallyLoc && (i = null); var a = i ? i.completion : {}; return a.type = t, a.arg = e, i ? (this.method = "next", this.next = i.finallyLoc, y) : this.complete(a); }, complete: function complete(t, e) { if ("throw" === t.type) throw t.arg; return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && e && (this.next = e), y; }, finish: function finish(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.finallyLoc === t) return this.complete(r.completion, r.afterLoc), resetTryEntry(r), y; } }, "catch": function _catch(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.tryLoc === t) { var n = r.completion; if ("throw" === n.type) { var o = n.arg; resetTryEntry(r); } return o; } } throw Error("illegal catch attempt"); }, delegateYield: function delegateYield(e, r, n) { return this.delegate = { iterator: values(e), resultName: r, nextLoc: n }, "next" === this.method && (this.arg = t), y; } }, e; }
+function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
+function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _get() { return _get = "undefined" != typeof Reflect && Reflect.get ? Reflect.get.bind() : function (e, t, r) { var p = _superPropBase(e, t); if (p) { var n = Object.getOwnPropertyDescriptor(p, t); return n.get ? n.get.call(arguments.length < 3 ? e : r) : n.value; } }, _get.apply(null, arguments); }
+function _superPropBase(t, o) { for (; !{}.hasOwnProperty.call(t, o) && null !== (t = _getPrototypeOf(t));); return t; }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
+function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.NTree = void 0;
+var ivipbase_core_1 = require("ivipbase-core");
+var utils_1 = require("./utils");
+var utils_2 = require("../../../utils");
+var checkIncludedPath = function checkIncludedPath(from, options) {
+  var _a, _b;
+  var include = ((_a = options === null || options === void 0 ? void 0 : options.include) !== null && _a !== void 0 ? _a : []).map(function (p) {
+    return ivipbase_core_1.PathInfo.get([options.main_path, p]);
+  });
+  var exclude = ((_b = options === null || options === void 0 ? void 0 : options.exclude) !== null && _b !== void 0 ? _b : []).map(function (p) {
+    return ivipbase_core_1.PathInfo.get([options.main_path, p]);
+  });
+  var p = ivipbase_core_1.PathInfo.get(from);
+  var isInclude = include.length > 0 ? include.findIndex(function (path) {
+    return p.isParentOf(path) || p.equals(path) || p.isDescendantOf(path);
+  }) >= 0 : true;
+  return exclude.findIndex(function (path) {
+    return p.equals(path) || p.isDescendantOf(path);
+  }) < 0 && isInclude;
+};
+var resolveObjetByIncluded = function resolveObjetByIncluded(path, obj, options) {
+  return Array.isArray(obj) ? obj.filter(function (_, k) {
+    var p = ivipbase_core_1.PathInfo.get([path, k]);
+    return checkIncludedPath(p.path, options);
+  }).map(function (v, k) {
+    if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(v))) {
+      return resolveObjetByIncluded(ivipbase_core_1.PathInfo.get([path, k]).path, v, options);
+    }
+    return v;
+  }) : Object.fromEntries(Object.entries(obj).filter(function (_ref) {
+    var _ref2 = _slicedToArray(_ref, 2),
+      k = _ref2[0],
+      v = _ref2[1];
+    var p = ivipbase_core_1.PathInfo.get([path, k]);
+    return checkIncludedPath(p.path, options);
+  }).map(function (_ref3) {
+    var _ref4 = _slicedToArray(_ref3, 2),
+      k = _ref4[0],
+      v = _ref4[1];
+    if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(v))) {
+      return [k, resolveObjetByIncluded(ivipbase_core_1.PathInfo.get([path, k]).path, v, options)];
+    }
+    return [k, v];
+  }));
+};
+var Node = /*#__PURE__*/function () {
+  function Node() {
+    var path = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : "";
+    _classCallCheck(this, Node);
+    this.path = path;
+    this.childrens = [];
+  }
+  return _createClass(Node, [{
+    key: "pushChild",
+    value: function pushChild(path) {
+      if (!this.childrens.includes(path)) {
+        this.childrens.push(path);
+      }
+      return this;
+    }
+  }]);
+}();
+var NTree = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
+  function NTree(database, nodes) {
+    var _this;
+    _classCallCheck(this, NTree);
+    _this = _callSuper(this, NTree);
+    _this.database = database;
+    _this.nodes = nodes;
+    _this._ready = false;
+    _this.rootPath = new ivipbase_core_1.PathInfo("");
+    _this.indexes = {};
+    _this.tree = {};
+    _this.applyNodes(_this.nodes).then(function () {
+      _this._ready = true;
+      _this.emit("ready");
+    });
+    return _this;
+  }
+  _inherits(NTree, _ivipbase_core_1$Simp);
+  return _createClass(NTree, [{
+    key: "once",
+    value: function once(event, callback) {
+      return _get(_getPrototypeOf(NTree.prototype), "once", this).call(this, event, callback);
+    }
+  }, {
+    key: "on",
+    value: function on(event, callback) {
+      return _get(_getPrototypeOf(NTree.prototype), "on", this).call(this, event, callback);
+    }
+  }, {
+    key: "emit",
+    value: function emit(event, data) {
+      var _a;
+      if (event === "remove" || event === "change" || event === "add") {
+        data = {
+          dbName: this.database,
+          name: event,
+          path: data.path,
+          content: (0, utils_2.removeNulls)(data.content),
+          value: (0, utils_2.removeNulls)(data.content.value),
+          previous: event === "change" ? (0, utils_2.removeNulls)((_a = data === null || data === void 0 ? void 0 : data.previous_content) === null || _a === void 0 ? void 0 : _a.value) : undefined
+        };
+        if (event === "change" && JSON.stringify(data.value) === JSON.stringify(data.previous)) {
+          return this;
+        }
+      }
+      return _get(_getPrototypeOf(NTree.prototype), "emit", this).call(this, event, data);
+    }
+  }, {
+    key: "ready",
+    value: function () {
+      var _ready = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(callback) {
+        var _this2 = this;
+        return _regeneratorRuntime().wrap(function _callee$(_context) {
+          while (1) switch (_context.prev = _context.next) {
+            case 0:
+              if (this._ready) {
+                _context.next = 3;
+                break;
+              }
+              _context.next = 3;
+              return new Promise(function (resolve) {
+                return _this2.once("ready", resolve);
+              });
+            case 3:
+              callback === null || callback === void 0 ? void 0 : callback();
+            case 4:
+            case "end":
+              return _context.stop();
+          }
+        }, _callee, this);
+      }));
+      function ready(_x) {
+        return _ready.apply(this, arguments);
+      }
+      return ready;
+    }()
+  }, {
+    key: "path",
+    get: function get() {
+      return this.rootPath.path;
+    }
+  }, {
+    key: "pushIndex",
+    value: function pushIndex(node) {
+      var pathInfo = new ivipbase_core_1.PathInfo(node.path);
+      this.indexes[pathInfo.path] = node;
+      if (!(this.tree[pathInfo.path] instanceof Node)) {
+        this.tree[pathInfo.path] = new Node(pathInfo.path);
+      }
+      var parent = pathInfo.parent,
+        childPath = pathInfo.path;
+      while (parent !== null) {
+        if (this.tree[parent.path] instanceof Node) {
+          this.tree[parent.path].pushChild(childPath);
+          break;
+        } else {
+          this.tree[parent.path] = new Node(parent.path).pushChild(childPath);
+          childPath = parent.path;
+          parent = parent.parent;
+        }
+      }
+    }
+  }, {
+    key: "applyNodes",
+    value: function () {
+      var _applyNodes = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(nodes) {
+        var _this3 = this;
+        return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+          while (1) switch (_context2.prev = _context2.next) {
+            case 0:
+              _context2.next = 2;
+              return (0, utils_2.allowEventLoop)(nodes, function (node) {
+                var pathInfo = new ivipbase_core_1.PathInfo(node.path);
+                if (_this3.rootPath.path === "" || !_this3.rootPath.path) {
+                  _this3.rootPath = pathInfo;
+                } else if (_this3.rootPath.isChildOf(pathInfo)) {
+                  _this3.rootPath = pathInfo;
+                }
+                _this3.pushIndex(node);
+              }, {
+                length_cycles: 1000
+              });
+            case 2:
+              return _context2.abrupt("return", this);
+            case 3:
+            case "end":
+              return _context2.stop();
+          }
+        }, _callee2, this);
+      }));
+      function applyNodes(_x2) {
+        return _applyNodes.apply(this, arguments);
+      }
+      return applyNodes;
+    }()
+  }, {
+    key: "hasNode",
+    value: function hasNode(path) {
+      var pathInfo = new ivipbase_core_1.PathInfo(path);
+      return pathInfo.path in this.indexes;
+    }
+  }, {
+    key: "getNodeBy",
+    value: function getNodeBy(path) {
+      var pathInfo = new ivipbase_core_1.PathInfo(path);
+      var nodeInfo;
+      if (this.hasNode(pathInfo.path)) {
+        nodeInfo = this.indexes[pathInfo.path];
+      } else if (pathInfo.parentPath && this.hasNode(pathInfo.parentPath)) {
+        nodeInfo = this.indexes[pathInfo.parentPath];
+      }
+      return nodeInfo;
+    }
+  }, {
+    key: "getChildPathsBy",
+    value: function () {
+      var _getChildPathsBy = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3(path) {
+        var pathInfo, list;
+        return _regeneratorRuntime().wrap(function _callee3$(_context3) {
+          while (1) switch (_context3.prev = _context3.next) {
+            case 0:
+              pathInfo = new ivipbase_core_1.PathInfo(path);
+              list = [];
+              _context3.next = 4;
+              return (0, utils_2.allowEventLoop)(this.tree, function (_, path) {
+                if (pathInfo.isParentOf(path)) {
+                  list.push(path);
+                }
+              }, {
+                length_cycles: 1000
+              });
+            case 4:
+              return _context3.abrupt("return", list);
+            case 5:
+            case "end":
+              return _context3.stop();
+          }
+        }, _callee3, this);
+      }));
+      function getChildPathsBy(_x3) {
+        return _getChildPathsBy.apply(this, arguments);
+      }
+      return getChildPathsBy;
+    }()
+  }, {
+    key: "getChildNodesBy",
+    value: function () {
+      var _getChildNodesBy = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4(path) {
+        var _this4 = this;
+        var pathInfo, list;
+        return _regeneratorRuntime().wrap(function _callee4$(_context4) {
+          while (1) switch (_context4.prev = _context4.next) {
+            case 0:
+              pathInfo = new ivipbase_core_1.PathInfo(path);
+              list = [];
+              _context4.next = 4;
+              return (0, utils_2.allowEventLoop)(this.tree, function (_, path) {
+                if (pathInfo.isParentOf(path)) {
+                  list.push(_this4.indexes[path]);
+                }
+              }, {
+                length_cycles: 1000
+              });
+            case 4:
+              return _context4.abrupt("return", list);
+            case 5:
+            case "end":
+              return _context4.stop();
+          }
+        }, _callee4, this);
+      }));
+      function getChildNodesBy(_x4) {
+        return _getChildNodesBy.apply(this, arguments);
+      }
+      return getChildNodesBy;
+    }()
+  }, {
+    key: "get",
+    value: function () {
+      var _get2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee6(path) {
+        var _this5 = this;
+        var options,
+          _a,
+          pathInfo,
+          nodeInfo,
+          value,
+          _nodeInfo,
+          nodePath,
+          content,
+          tree,
+          _args6 = arguments;
+        return _regeneratorRuntime().wrap(function _callee6$(_context6) {
+          while (1) switch (_context6.prev = _context6.next) {
+            case 0:
+              options = _args6.length > 1 && _args6[1] !== undefined ? _args6[1] : {};
+              pathInfo = new ivipbase_core_1.PathInfo(path);
+              options.main_path = !options.main_path ? pathInfo.path : options.main_path;
+              nodeInfo = this.indexes[pathInfo.path];
+              if (!nodeInfo && pathInfo.parentPath && this.hasNode(pathInfo.parentPath)) {
+                nodeInfo = this.indexes[pathInfo.parentPath];
+              }
+              if (nodeInfo) {
+                _context6.next = 7;
+                break;
+              }
+              return _context6.abrupt("return", null);
+            case 7:
+              value = undefined;
+              _nodeInfo = nodeInfo, nodePath = _nodeInfo.path, content = _nodeInfo.content;
+              content = (0, utils_1.processReadNodeValue)(content);
+              if (!pathInfo.isChildOf(nodePath)) {
+                _context6.next = 15;
+                break;
+              }
+              if ((content.type === utils_1.nodeValueTypes.OBJECT || content.type === utils_1.nodeValueTypes.ARRAY) && _typeof(content.value) === "object" && content.value !== null && pathInfo.key && pathInfo.key in content.value) {
+                value = (_a = content.value[pathInfo.key]) !== null && _a !== void 0 ? _a : undefined;
+              }
+              return _context6.abrupt("return", (0, utils_2.removeNulls)(value));
+            case 15:
+              value = content.value;
+            case 16:
+              if (!(content.type === utils_1.nodeValueTypes.OBJECT || content.type === utils_1.nodeValueTypes.ARRAY)) {
+                _context6.next = 22;
+                break;
+              }
+              value = (0, utils_2.removeNulls)(resolveObjetByIncluded(nodePath, content.type === utils_1.nodeValueTypes.ARRAY ? Array.isArray(content.value) ? content.value : [] : content.value, options));
+              tree = this.tree[nodePath];
+              if (!(tree instanceof Node)) {
+                _context6.next = 22;
+                break;
+              }
+              _context6.next = 22;
+              return (0, utils_2.allowEventLoop)(tree.childrens, /*#__PURE__*/function () {
+                var _ref5 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5(child) {
+                  var pathInfo;
+                  return _regeneratorRuntime().wrap(function _callee5$(_context5) {
+                    while (1) switch (_context5.prev = _context5.next) {
+                      case 0:
+                        pathInfo = ivipbase_core_1.PathInfo.get(child);
+                        if (!(pathInfo.key !== null && checkIncludedPath(child, options))) {
+                          _context5.next = 5;
+                          break;
+                        }
+                        _context5.next = 4;
+                        return _this5.get(pathInfo.path, options);
+                      case 4:
+                        value[pathInfo.key] = _context5.sent;
+                      case 5:
+                      case "end":
+                        return _context5.stop();
+                    }
+                  }, _callee5);
+                }));
+                return function (_x6) {
+                  return _ref5.apply(this, arguments);
+                };
+              }());
+            case 22:
+              return _context6.abrupt("return", value);
+            case 23:
+            case "end":
+              return _context6.stop();
+          }
+        }, _callee6, this);
+      }));
+      function get(_x5) {
+        return _get2.apply(this, arguments);
+      }
+      return get;
+    }()
+  }, {
+    key: "remove",
+    value: function () {
+      var _remove = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee8(path) {
+        var _this6 = this;
+        var pathInfo, nodeInfo, key, previous_content, childrens;
+        return _regeneratorRuntime().wrap(function _callee8$(_context8) {
+          while (1) switch (_context8.prev = _context8.next) {
+            case 0:
+              pathInfo = new ivipbase_core_1.PathInfo(path);
+              nodeInfo = this.indexes[pathInfo.path];
+              if (!nodeInfo && pathInfo.parentPath && this.hasNode(pathInfo.parentPath)) {
+                nodeInfo = this.indexes[pathInfo.parentPath];
+              }
+              if (nodeInfo) {
+                _context8.next = 5;
+                break;
+              }
+              return _context8.abrupt("return");
+            case 5:
+              key = pathInfo.key;
+              if (pathInfo.isChildOf(nodeInfo.path) && key !== null && _typeof(nodeInfo.content.value) === "object" && nodeInfo.content.value !== null && key in nodeInfo.content.value) {
+                previous_content = JSON.parse(JSON.stringify(nodeInfo.content));
+                delete nodeInfo.content.value[key];
+                this.emit("change", Object.assign(Object.assign({}, nodeInfo), {
+                  previous_content: previous_content
+                }));
+              }
+              if (!pathInfo.equals(nodeInfo.path)) {
+                _context8.next = 14;
+                break;
+              }
+              childrens = this.tree[nodeInfo.path].childrens;
+              this.emit("remove", nodeInfo);
+              delete this.indexes[nodeInfo.path];
+              delete this.tree[nodeInfo.path];
+              _context8.next = 14;
+              return (0, utils_2.allowEventLoop)(childrens, /*#__PURE__*/function () {
+                var _ref6 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee7(child) {
+                  return _regeneratorRuntime().wrap(function _callee7$(_context7) {
+                    while (1) switch (_context7.prev = _context7.next) {
+                      case 0:
+                        _context7.next = 2;
+                        return _this6.remove(child);
+                      case 2:
+                      case "end":
+                        return _context7.stop();
+                    }
+                  }, _callee7);
+                }));
+                return function (_x8) {
+                  return _ref6.apply(this, arguments);
+                };
+              }());
+            case 14:
+            case "end":
+              return _context8.stop();
+          }
+        }, _callee8, this);
+      }));
+      function remove(_x7) {
+        return _remove.apply(this, arguments);
+      }
+      return remove;
+    }()
+  }, {
+    key: "verifyParents",
+    value: function () {
+      var _verifyParents = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee10(path, options) {
+        var _this7 = this;
+        var _a, pathInfo, revision, keys;
+        return _regeneratorRuntime().wrap(function _callee10$(_context10) {
+          while (1) switch (_context10.prev = _context10.next) {
+            case 0:
+              pathInfo = new ivipbase_core_1.PathInfo(path).parent;
+              revision = (_a = options === null || options === void 0 ? void 0 : options.assert_revision) !== null && _a !== void 0 ? _a : ivipbase_core_1.ID.generate();
+              if (pathInfo) {
+                _context10.next = 4;
+                break;
+              }
+              return _context10.abrupt("return");
+            case 4:
+              keys = pathInfo.keys;
+              _context10.next = 7;
+              return (0, utils_2.allowEventLoop)(new Array(keys.length).fill(null), /*#__PURE__*/function () {
+                var _ref7 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee9(_, i) {
+                  var parentPath, node;
+                  return _regeneratorRuntime().wrap(function _callee9$(_context9) {
+                    while (1) switch (_context9.prev = _context9.next) {
+                      case 0:
+                        parentPath = ivipbase_core_1.PathInfo.get(keys.slice(0, i + 1));
+                        if (!_this7.hasNode(parentPath.path)) {
+                          node = {
+                            path: parentPath.path,
+                            content: {
+                              type: typeof parentPath.key === "number" ? utils_1.nodeValueTypes.ARRAY : utils_1.nodeValueTypes.OBJECT,
+                              value: {},
+                              revision: revision,
+                              revision_nr: 1,
+                              created: Date.now(),
+                              modified: Date.now()
+                            }
+                          };
+                          _this7.pushIndex(node);
+                          _this7.emit("add", node);
+                        }
+                      case 2:
+                      case "end":
+                        return _context9.stop();
+                    }
+                  }, _callee9);
+                }));
+                return function (_x11, _x12) {
+                  return _ref7.apply(this, arguments);
+                };
+              }());
+            case 7:
+            case "end":
+              return _context10.stop();
+          }
+        }, _callee10);
+      }));
+      function verifyParents(_x9, _x10) {
+        return _verifyParents.apply(this, arguments);
+      }
+      return verifyParents;
+    }()
+  }, {
+    key: "set",
+    value: function () {
+      var _set = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee11(path, data) {
+        var options,
+          _args11 = arguments;
+        return _regeneratorRuntime().wrap(function _callee11$(_context11) {
+          while (1) switch (_context11.prev = _context11.next) {
+            case 0:
+              options = _args11.length > 2 && _args11[2] !== undefined ? _args11[2] : {
+                maxInlineValueSize: 200
+              };
+              _context11.next = 3;
+              return this.destructure("SET", path, data, options);
+            case 3:
+            case "end":
+              return _context11.stop();
+          }
+        }, _callee11, this);
+      }));
+      function set(_x13, _x14) {
+        return _set.apply(this, arguments);
+      }
+      return set;
+    }()
+  }, {
+    key: "update",
+    value: function () {
+      var _update = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee12(path, data) {
+        var options,
+          _args12 = arguments;
+        return _regeneratorRuntime().wrap(function _callee12$(_context12) {
+          while (1) switch (_context12.prev = _context12.next) {
+            case 0:
+              options = _args12.length > 2 && _args12[2] !== undefined ? _args12[2] : {
+                maxInlineValueSize: 200
+              };
+              _context12.next = 3;
+              return this.destructure("UPDATE", path, data, options);
+            case 3:
+            case "end":
+              return _context12.stop();
+          }
+        }, _callee12, this);
+      }));
+      function update(_x15, _x16) {
+        return _update.apply(this, arguments);
+      }
+      return update;
+    }()
+  }, {
+    key: "destructure",
+    value: function () {
+      var _destructure = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee20(type, path, data) {
+        var _this8 = this;
+        var options,
+          _a,
+          pathInfo,
+          parentPath,
+          revision,
+          val,
+          isArray,
+          node,
+          fitsInlineKeys,
+          mainNode,
+          previous_content,
+          _mainNode,
+          _previous_content,
+          childs,
+          _args20 = arguments;
+        return _regeneratorRuntime().wrap(function _callee20$(_context20) {
+          while (1) switch (_context20.prev = _context20.next) {
+            case 0:
+              options = _args20.length > 3 && _args20[3] !== undefined ? _args20[3] : {
+                maxInlineValueSize: 200
+              };
+              pathInfo = new ivipbase_core_1.PathInfo(path);
+              parentPath = pathInfo.parent;
+              revision = (_a = options === null || options === void 0 ? void 0 : options.assert_revision) !== null && _a !== void 0 ? _a : ivipbase_core_1.ID.generate();
+              options.assert_revision = revision;
+              options.include_checks = typeof options.include_checks === "boolean" ? options.include_checks : true;
+              if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(data)) !== true) {
+                type = "UPDATE";
+                if (typeof pathInfo.key === "number") {
+                  val = data;
+                  data = new Array();
+                  data[pathInfo.key] = val;
+                } else {
+                  data = _defineProperty({}, pathInfo.key, data);
+                }
+                pathInfo = pathInfo.parent;
+              }
+              if (options.include_checks) {
+                this.verifyParents(pathInfo.path, options);
+              }
+              isArray = Object.prototype.toString.call(data) === "[object Array]" || Array.isArray(data);
+              node = {
+                path: pathInfo.path,
+                content: {
+                  type: isArray ? utils_1.nodeValueTypes.ARRAY : utils_1.nodeValueTypes.OBJECT,
+                  value: {},
+                  revision: revision,
+                  revision_nr: 1,
+                  created: Date.now(),
+                  modified: Date.now()
+                }
+              };
+              fitsInlineKeys = [];
+              _context20.next = 13;
+              return (0, utils_2.allowEventLoop)(data, /*#__PURE__*/function () {
+                var _ref8 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee13(val, key) {
+                  var fitsInline;
+                  return _regeneratorRuntime().wrap(function _callee13$(_context13) {
+                    while (1) switch (_context13.prev = _context13.next) {
+                      case 0:
+                        fitsInline = (0, utils_1.valueFitsInline)(val, options);
+                        if (fitsInline) {
+                          fitsInlineKeys.push(key);
+                        }
+                      case 2:
+                      case "end":
+                        return _context13.stop();
+                    }
+                  }, _callee13);
+                }));
+                return function (_x20, _x21) {
+                  return _ref8.apply(this, arguments);
+                };
+              }());
+            case 13:
+              if (parentPath && !parentPath.equals(pathInfo) && this.hasNode(parentPath.path) && pathInfo.key !== null) {
+                mainNode = this.indexes[parentPath.path];
+                if (mainNode.content.type === utils_1.nodeValueTypes.OBJECT || mainNode.content.type === utils_1.nodeValueTypes.ARRAY) {
+                  previous_content = JSON.parse(JSON.stringify(mainNode.content));
+                  if (pathInfo.key in mainNode.content.value) {
+                    delete mainNode.content.value[pathInfo.key];
+                    mainNode.content.modified = Date.now();
+                    mainNode.content.revision_nr = mainNode.content.revision_nr + 1;
+                    this.emit("change", Object.assign(Object.assign({}, mainNode), {
+                      previous_content: previous_content
+                    }));
+                  }
+                }
+              }
+              if (!this.hasNode(pathInfo.path)) {
+                _context20.next = 39;
+                break;
+              }
+              _mainNode = this.indexes[pathInfo.path];
+              _previous_content = JSON.parse(JSON.stringify(_mainNode.content));
+              _context20.next = 19;
+              return this.getChildPathsBy(pathInfo.path);
+            case 19:
+              childs = _context20.sent;
+              if (!(_mainNode.content.type !== node.content.type)) {
+                _context20.next = 24;
+                break;
+              }
+              type = "SET";
+              _context20.next = 24;
+              return (0, utils_2.allowEventLoop)(childs, /*#__PURE__*/function () {
+                var _ref9 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee14(path) {
+                  return _regeneratorRuntime().wrap(function _callee14$(_context14) {
+                    while (1) switch (_context14.prev = _context14.next) {
+                      case 0:
+                        _context14.next = 2;
+                        return _this8.remove(path);
+                      case 2:
+                      case "end":
+                        return _context14.stop();
+                    }
+                  }, _callee14);
+                }));
+                return function (_x22) {
+                  return _ref9.apply(this, arguments);
+                };
+              }());
+            case 24:
+              if (!(type === "UPDATE")) {
+                _context20.next = 28;
+                break;
+              }
+              node.content.value = Array.isArray(_mainNode.content.value) ? _mainNode.content.value.reduce(function (acc, curr, index) {
+                acc[index] = curr;
+                return acc;
+              }, {}) : _mainNode.content.value;
+              _context20.next = 30;
+              break;
+            case 28:
+              _context20.next = 30;
+              return (0, utils_2.allowEventLoop)(childs, /*#__PURE__*/function () {
+                var _ref10 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee15(path) {
+                  var pathInfo;
+                  return _regeneratorRuntime().wrap(function _callee15$(_context15) {
+                    while (1) switch (_context15.prev = _context15.next) {
+                      case 0:
+                        pathInfo = new ivipbase_core_1.PathInfo(path);
+                        if (!(pathInfo.key !== null && !(pathInfo.key in data))) {
+                          _context15.next = 4;
+                          break;
+                        }
+                        _context15.next = 4;
+                        return _this8.remove(path);
+                      case 4:
+                      case "end":
+                        return _context15.stop();
+                    }
+                  }, _callee15);
+                }));
+                return function (_x23) {
+                  return _ref10.apply(this, arguments);
+                };
+              }());
+            case 30:
+              _context20.next = 32;
+              return (0, utils_2.allowEventLoop)(data, /*#__PURE__*/function () {
+                var _ref11 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee16(val, key) {
+                  var newPath;
+                  return _regeneratorRuntime().wrap(function _callee16$(_context16) {
+                    while (1) switch (_context16.prev = _context16.next) {
+                      case 0:
+                        newPath = ivipbase_core_1.PathInfo.get([pathInfo.path, key]);
+                        if (!fitsInlineKeys.includes(key)) {
+                          _context16.next = 8;
+                          break;
+                        }
+                        if (!_this8.hasNode(newPath.path)) {
+                          _context16.next = 5;
+                          break;
+                        }
+                        _context16.next = 5;
+                        return _this8.remove(newPath.path);
+                      case 5:
+                        node.content.value[key] = (0, utils_1.getTypedChildValue)(val);
+                        _context16.next = 9;
+                        break;
+                      case 8:
+                        if (key in node.content.value) {
+                          delete node.content.value[key];
+                        }
+                      case 9:
+                      case "end":
+                        return _context16.stop();
+                    }
+                  }, _callee16);
+                }));
+                return function (_x24, _x25) {
+                  return _ref11.apply(this, arguments);
+                };
+              }());
+            case 32:
+              node.content.created = _mainNode.content.created;
+              node.content.modified = Date.now();
+              node.content.revision_nr = _mainNode.content.revision_nr + 1;
+              this.pushIndex(node);
+              this.emit("change", Object.assign(Object.assign({}, node), {
+                previous_content: _previous_content
+              }));
+              _context20.next = 43;
+              break;
+            case 39:
+              _context20.next = 41;
+              return (0, utils_2.allowEventLoop)(fitsInlineKeys, /*#__PURE__*/function () {
+                var _ref12 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee17(key) {
+                  var newPath;
+                  return _regeneratorRuntime().wrap(function _callee17$(_context17) {
+                    while (1) switch (_context17.prev = _context17.next) {
+                      case 0:
+                        newPath = ivipbase_core_1.PathInfo.get([pathInfo.path, key]);
+                        if (!_this8.hasNode(newPath.path)) {
+                          _context17.next = 4;
+                          break;
+                        }
+                        _context17.next = 4;
+                        return _this8.remove(newPath.path);
+                      case 4:
+                        node.content.value[key] = (0, utils_1.getTypedChildValue)(data[key]);
+                      case 5:
+                      case "end":
+                        return _context17.stop();
+                    }
+                  }, _callee17);
+                }));
+                return function (_x26) {
+                  return _ref12.apply(this, arguments);
+                };
+              }());
+            case 41:
+              this.pushIndex(node);
+              this.emit("add", node);
+            case 43:
+              _context20.next = 45;
+              return (0, utils_2.allowEventLoop)(data, /*#__PURE__*/function () {
+                var _ref13 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee19(val, key) {
+                  var newPath, typeValue, _node, _mainNode2, _previous_content2, _childs;
+                  return _regeneratorRuntime().wrap(function _callee19$(_context19) {
+                    while (1) switch (_context19.prev = _context19.next) {
+                      case 0:
+                        newPath = ivipbase_core_1.PathInfo.get([pathInfo.path, key]);
+                        if (fitsInlineKeys.includes(key)) {
+                          _context19.next = 27;
+                          break;
+                        }
+                        typeValue = (0, utils_1.getValueType)(val);
+                        if (!(typeValue === utils_1.nodeValueTypes.ARRAY || typeValue === utils_1.nodeValueTypes.OBJECT)) {
+                          _context19.next = 8;
+                          break;
+                        }
+                        _context19.next = 6;
+                        return _this8.destructure(type, newPath.path, val, options);
+                      case 6:
+                        _context19.next = 27;
+                        break;
+                      case 8:
+                        _node = {
+                          path: newPath.path,
+                          content: {
+                            type: typeValue,
+                            value: val,
+                            revision: revision,
+                            revision_nr: 1,
+                            created: Date.now(),
+                            modified: Date.now()
+                          }
+                        };
+                        if (!_this8.hasNode(newPath.path)) {
+                          _context19.next = 25;
+                          break;
+                        }
+                        _mainNode2 = _this8.indexes[newPath.path];
+                        _previous_content2 = JSON.parse(JSON.stringify(_mainNode2.content));
+                        if (!(_mainNode2.content.type !== _node.content.type)) {
+                          _context19.next = 18;
+                          break;
+                        }
+                        _context19.next = 15;
+                        return _this8.getChildPathsBy(newPath.path);
+                      case 15:
+                        _childs = _context19.sent;
+                        _context19.next = 18;
+                        return (0, utils_2.allowEventLoop)(_childs, /*#__PURE__*/function () {
+                          var _ref14 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee18(path) {
+                            return _regeneratorRuntime().wrap(function _callee18$(_context18) {
+                              while (1) switch (_context18.prev = _context18.next) {
+                                case 0:
+                                  _context18.next = 2;
+                                  return _this8.remove(path);
+                                case 2:
+                                case "end":
+                                  return _context18.stop();
+                              }
+                            }, _callee18);
+                          }));
+                          return function (_x29) {
+                            return _ref14.apply(this, arguments);
+                          };
+                        }());
+                      case 18:
+                        _node.content.created = _mainNode2.content.created;
+                        _node.content.modified = Date.now();
+                        _node.content.revision_nr = _mainNode2.content.revision_nr + 1;
+                        _this8.pushIndex(_node);
+                        _this8.emit("change", Object.assign(Object.assign({}, _node), {
+                          previous_content: _previous_content2
+                        }));
+                        _context19.next = 27;
+                        break;
+                      case 25:
+                        _this8.pushIndex(_node);
+                        _this8.emit("add", _node);
+                      case 27:
+                      case "end":
+                        return _context19.stop();
+                    }
+                  }, _callee19);
+                }));
+                return function (_x27, _x28) {
+                  return _ref13.apply(this, arguments);
+                };
+              }());
+            case 45:
+            case "end":
+              return _context20.stop();
+          }
+        }, _callee20, this);
+      }));
+      function destructure(_x17, _x18, _x19) {
+        return _destructure.apply(this, arguments);
+      }
+      return destructure;
+    }()
+  }, {
+    key: "findChildsBy",
+    value: function () {
+      var _findChildsBy = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee21(path, query) {
+        var _a, _b, queryFilters, querySort, compare, childs;
+        return _regeneratorRuntime().wrap(function _callee21$(_context21) {
+          while (1) switch (_context21.prev = _context21.next) {
+            case 0:
+              queryFilters = (_a = query.filters) !== null && _a !== void 0 ? _a : [];
+              querySort = (_b = query.order) !== null && _b !== void 0 ? _b : [];
+              compare = function compare(a, b, i) {
+                var o = querySort[i];
+                if (!o) {
+                  return 0;
+                }
+                var trailKeys = ivipbase_core_1.PathInfo.get(typeof o.key === "number" ? "[".concat(o.key, "]") : o.key).keys;
+                var left = trailKeys.reduce(function (val, key) {
+                  return val !== null && _typeof(val) === "object" && key && key in val ? val[key] : null;
+                }, a.val);
+                var right = trailKeys.reduce(function (val, key) {
+                  return val !== null && _typeof(val) === "object" && key && key in val ? val[key] : null;
+                }, b.val);
+                left = (0, utils_2.isDate)(left) ? new Date(left).getTime() : left;
+                right = (0, utils_2.isDate)(right) ? new Date(right).getTime() : right;
+                if (left === null) {
+                  return right === null ? 0 : o.ascending ? -1 : 1;
+                }
+                if (right === null) {
+                  return o.ascending ? 1 : -1;
+                }
+                if (left == right) {
+                  if (i < querySort.length - 1) {
+                    return compare(a, b, i + 1);
+                  } else {
+                    return a.path < b.path ? -1 : 1;
+                  }
+                } else if (left < right) {
+                  return o.ascending ? -1 : 1;
+                }
+                // else if (left > right) {
+                return o.ascending ? 1 : -1;
+                // }
+              };
+              _context21.next = 5;
+              return this.getChildNodesBy(path);
+            case 5:
+              childs = _context21.sent.sort(function (a, b) {
+                return compare({
+                  path: a.path,
+                  val: (0, utils_1.processReadNodeValue)(a.content).value
+                }, {
+                  path: b.path,
+                  val: (0, utils_1.processReadNodeValue)(b.content).value
+                }, 0);
+              });
+            case 6:
+            case "end":
+              return _context21.stop();
+          }
+        }, _callee21, this);
+      }));
+      function findChildsBy(_x30, _x31) {
+        return _findChildsBy.apply(this, arguments);
+      }
+      return findChildsBy;
+    }()
+  }], [{
+    key: "createBy",
+    value: function createBy(database, nodes) {
+      return new NTree(database, nodes);
+    }
+  }]);
+}(ivipbase_core_1.SimpleEventEmitter);
+exports.NTree = NTree;
+exports["default"] = NTree;
+
+},{"../../../utils":37,"./utils":18,"ivipbase-core":152}],15:[function(require,module,exports){
+"use strict";
+
 function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
 function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
 function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
@@ -3727,443 +4724,6 @@ var CustomStorageNodeInfo = /*#__PURE__*/function (_NodeInfo) {
 }(NodeInfo);
 exports.CustomStorageNodeInfo = CustomStorageNodeInfo;
 
-},{"./utils":18,"ivipbase-core":152}],15:[function(require,module,exports){
-"use strict";
-
-function _defineProperty(e, r, t) { return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, { value: t, enumerable: !0, configurable: !0, writable: !0 }) : e[r] = t, e; }
-function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
-function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return e; }; var t, e = {}, r = Object.prototype, n = r.hasOwnProperty, o = Object.defineProperty || function (t, e, r) { t[e] = r.value; }, i = "function" == typeof Symbol ? Symbol : {}, a = i.iterator || "@@iterator", c = i.asyncIterator || "@@asyncIterator", u = i.toStringTag || "@@toStringTag"; function define(t, e, r) { return Object.defineProperty(t, e, { value: r, enumerable: !0, configurable: !0, writable: !0 }), t[e]; } try { define({}, ""); } catch (t) { define = function define(t, e, r) { return t[e] = r; }; } function wrap(t, e, r, n) { var i = e && e.prototype instanceof Generator ? e : Generator, a = Object.create(i.prototype), c = new Context(n || []); return o(a, "_invoke", { value: makeInvokeMethod(t, r, c) }), a; } function tryCatch(t, e, r) { try { return { type: "normal", arg: t.call(e, r) }; } catch (t) { return { type: "throw", arg: t }; } } e.wrap = wrap; var h = "suspendedStart", l = "suspendedYield", f = "executing", s = "completed", y = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var p = {}; define(p, a, function () { return this; }); var d = Object.getPrototypeOf, v = d && d(d(values([]))); v && v !== r && n.call(v, a) && (p = v); var g = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(p); function defineIteratorMethods(t) { ["next", "throw", "return"].forEach(function (e) { define(t, e, function (t) { return this._invoke(e, t); }); }); } function AsyncIterator(t, e) { function invoke(r, o, i, a) { var c = tryCatch(t[r], t, o); if ("throw" !== c.type) { var u = c.arg, h = u.value; return h && "object" == _typeof(h) && n.call(h, "__await") ? e.resolve(h.__await).then(function (t) { invoke("next", t, i, a); }, function (t) { invoke("throw", t, i, a); }) : e.resolve(h).then(function (t) { u.value = t, i(u); }, function (t) { return invoke("throw", t, i, a); }); } a(c.arg); } var r; o(this, "_invoke", { value: function value(t, n) { function callInvokeWithMethodAndArg() { return new e(function (e, r) { invoke(t, n, e, r); }); } return r = r ? r.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(e, r, n) { var o = h; return function (i, a) { if (o === f) throw Error("Generator is already running"); if (o === s) { if ("throw" === i) throw a; return { value: t, done: !0 }; } for (n.method = i, n.arg = a;;) { var c = n.delegate; if (c) { var u = maybeInvokeDelegate(c, n); if (u) { if (u === y) continue; return u; } } if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) { if (o === h) throw o = s, n.arg; n.dispatchException(n.arg); } else "return" === n.method && n.abrupt("return", n.arg); o = f; var p = tryCatch(e, r, n); if ("normal" === p.type) { if (o = n.done ? s : l, p.arg === y) continue; return { value: p.arg, done: n.done }; } "throw" === p.type && (o = s, n.method = "throw", n.arg = p.arg); } }; } function maybeInvokeDelegate(e, r) { var n = r.method, o = e.iterator[n]; if (o === t) return r.delegate = null, "throw" === n && e.iterator["return"] && (r.method = "return", r.arg = t, maybeInvokeDelegate(e, r), "throw" === r.method) || "return" !== n && (r.method = "throw", r.arg = new TypeError("The iterator does not provide a '" + n + "' method")), y; var i = tryCatch(o, e.iterator, r.arg); if ("throw" === i.type) return r.method = "throw", r.arg = i.arg, r.delegate = null, y; var a = i.arg; return a ? a.done ? (r[e.resultName] = a.value, r.next = e.nextLoc, "return" !== r.method && (r.method = "next", r.arg = t), r.delegate = null, y) : a : (r.method = "throw", r.arg = new TypeError("iterator result is not an object"), r.delegate = null, y); } function pushTryEntry(t) { var e = { tryLoc: t[0] }; 1 in t && (e.catchLoc = t[1]), 2 in t && (e.finallyLoc = t[2], e.afterLoc = t[3]), this.tryEntries.push(e); } function resetTryEntry(t) { var e = t.completion || {}; e.type = "normal", delete e.arg, t.completion = e; } function Context(t) { this.tryEntries = [{ tryLoc: "root" }], t.forEach(pushTryEntry, this), this.reset(!0); } function values(e) { if (e || "" === e) { var r = e[a]; if (r) return r.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) { var o = -1, i = function next() { for (; ++o < e.length;) if (n.call(e, o)) return next.value = e[o], next.done = !1, next; return next.value = t, next.done = !0, next; }; return i.next = i; } } throw new TypeError(_typeof(e) + " is not iterable"); } return GeneratorFunction.prototype = GeneratorFunctionPrototype, o(g, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), o(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, u, "GeneratorFunction"), e.isGeneratorFunction = function (t) { var e = "function" == typeof t && t.constructor; return !!e && (e === GeneratorFunction || "GeneratorFunction" === (e.displayName || e.name)); }, e.mark = function (t) { return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, define(t, u, "GeneratorFunction")), t.prototype = Object.create(g), t; }, e.awrap = function (t) { return { __await: t }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, c, function () { return this; }), e.AsyncIterator = AsyncIterator, e.async = function (t, r, n, o, i) { void 0 === i && (i = Promise); var a = new AsyncIterator(wrap(t, r, n, o), i); return e.isGeneratorFunction(r) ? a : a.next().then(function (t) { return t.done ? t.value : a.next(); }); }, defineIteratorMethods(g), define(g, u, "Generator"), define(g, a, function () { return this; }), define(g, "toString", function () { return "[object Generator]"; }), e.keys = function (t) { var e = Object(t), r = []; for (var n in e) r.push(n); return r.reverse(), function next() { for (; r.length;) { var t = r.pop(); if (t in e) return next.value = t, next.done = !1, next; } return next.done = !0, next; }; }, e.values = values, Context.prototype = { constructor: Context, reset: function reset(e) { if (this.prev = 0, this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(resetTryEntry), !e) for (var r in this) "t" === r.charAt(0) && n.call(this, r) && !isNaN(+r.slice(1)) && (this[r] = t); }, stop: function stop() { this.done = !0; var t = this.tryEntries[0].completion; if ("throw" === t.type) throw t.arg; return this.rval; }, dispatchException: function dispatchException(e) { if (this.done) throw e; var r = this; function handle(n, o) { return a.type = "throw", a.arg = e, r.next = n, o && (r.method = "next", r.arg = t), !!o; } for (var o = this.tryEntries.length - 1; o >= 0; --o) { var i = this.tryEntries[o], a = i.completion; if ("root" === i.tryLoc) return handle("end"); if (i.tryLoc <= this.prev) { var c = n.call(i, "catchLoc"), u = n.call(i, "finallyLoc"); if (c && u) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } else if (c) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); } else { if (!u) throw Error("try statement without catch or finally"); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } } } }, abrupt: function abrupt(t, e) { for (var r = this.tryEntries.length - 1; r >= 0; --r) { var o = this.tryEntries[r]; if (o.tryLoc <= this.prev && n.call(o, "finallyLoc") && this.prev < o.finallyLoc) { var i = o; break; } } i && ("break" === t || "continue" === t) && i.tryLoc <= e && e <= i.finallyLoc && (i = null); var a = i ? i.completion : {}; return a.type = t, a.arg = e, i ? (this.method = "next", this.next = i.finallyLoc, y) : this.complete(a); }, complete: function complete(t, e) { if ("throw" === t.type) throw t.arg; return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && e && (this.next = e), y; }, finish: function finish(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.finallyLoc === t) return this.complete(r.completion, r.afterLoc), resetTryEntry(r), y; } }, "catch": function _catch(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.tryLoc === t) { var n = r.completion; if ("throw" === n.type) { var o = n.arg; resetTryEntry(r); } return o; } } throw Error("illegal catch attempt"); }, delegateYield: function delegateYield(e, r, n) { return this.delegate = { iterator: values(e), resultName: r, nextLoc: n }, "next" === this.method && (this.arg = t), y; } }, e; }
-function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
-function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
-function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
-function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
-function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
-function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-var ivipbase_core_1 = require("ivipbase-core");
-var utils_1 = require("./utils");
-var modifyRevision = function modifyRevision(revision) {
-  revision = revision !== null && revision !== void 0 ? revision : ivipbase_core_1.ID.generate();
-  return function (node) {
-    if (node.previous_content) {
-      node.content.created = node.previous_content.created;
-      node.content.revision_nr = node.previous_content.revision_nr;
-    }
-    if (node.type === "SET" || node.type === "UPDATE") {
-      node.content.modified = Date.now();
-    }
-    node.content.revision = revision;
-    node.content.revision_nr = node.content.revision_nr + 1;
-    return node;
-  };
-};
-var extactNodes = /*#__PURE__*/function () {
-  var _ref = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(type, obj) {
-    var path,
-      controllers,
-      options,
-      parentValue,
-      _a,
-      revision,
-      pathInfo,
-      fitsInline,
-      currentNode,
-      k,
-      _fitsInline,
-      value,
-      _args = arguments;
-    return _regeneratorRuntime().wrap(function _callee$(_context) {
-      while (1) switch (_context.prev = _context.next) {
-        case 0:
-          path = _args.length > 2 && _args[2] !== undefined ? _args[2] : [];
-          controllers = _args.length > 3 ? _args[3] : undefined;
-          options = _args.length > 4 ? _args[4] : undefined;
-          parentValue = _args.length > 5 && _args[5] !== undefined ? _args[5] : undefined;
-          if (!(Math.random() > 0.4)) {
-            _context.next = 7;
-            break;
-          }
-          _context.next = 7;
-          return new Promise(function (resolve) {
-            return setTimeout(resolve, 0);
-          });
-        case 7:
-          revision = (_a = options === null || options === void 0 ? void 0 : options.assert_revision) !== null && _a !== void 0 ? _a : ivipbase_core_1.ID.generate();
-          pathInfo = ivipbase_core_1.PathInfo.get(path);
-          fitsInline = (0, utils_1.valueFitsInline)(obj, options);
-          if (parentValue) {
-            parentValue.type = parentValue.type === "VERIFY" ? "UPDATE" : type;
-            if (parentValue.content.value === null) {
-              parentValue.content.value = parentValue.content.type === utils_1.nodeValueTypes.ARRAY ? [] : {};
-            }
-            parentValue.content.value[pathInfo.key] = fitsInline ? (0, utils_1.getTypedChildValue)(obj) : null;
-          }
-          currentNode = {
-            path: pathInfo.path,
-            type: type,
-            content: {
-              type: (0, utils_1.getValueType)(obj),
-              value: _typeof(obj) === "object" ? Array.isArray(obj) ? [] : {} : obj,
-              revision: revision,
-              revision_nr: 1,
-              created: Date.now(),
-              modified: Date.now()
-            }
-          };
-          _context.t0 = _regeneratorRuntime().keys(obj);
-        case 13:
-          if ((_context.t1 = _context.t0()).done) {
-            _context.next = 26;
-            break;
-          }
-          k = _context.t1.value;
-          _fitsInline = (0, utils_1.valueFitsInline)(obj[k], options);
-          if (currentNode && _fitsInline) {
-            if (currentNode.type === "VERIFY") {
-              currentNode.type = "UPDATE";
-            }
-            if (currentNode.content.value === null) {
-              currentNode.content.value = {};
-            }
-            currentNode.content.value[k] = (0, utils_1.getTypedChildValue)(obj[k]);
-          }
-          if (!(["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(obj[k])) && !_fitsInline)) {
-            _context.next = 22;
-            break;
-          }
-          _context.next = 20;
-          return extactNodes(type, obj[k], [].concat(_toConsumableArray(path), [k]), controllers, options, currentNode);
-        case 20:
-          _context.next = 24;
-          break;
-        case 22:
-          value = _fitsInline ? null : _typeof(obj[k]) === "object" ? Array.isArray(obj[k]) ? [] : {} : obj[k];
-          controllers.resolveNodesConflict([{
-            path: ivipbase_core_1.PathInfo.get([].concat(_toConsumableArray(path), [k])).path,
-            type: type,
-            content: {
-              type: (0, utils_1.getValueType)(value),
-              value: value,
-              revision: revision,
-              revision_nr: 1,
-              created: Date.now(),
-              modified: Date.now()
-            }
-          }]);
-        case 24:
-          _context.next = 13;
-          break;
-        case 26:
-          controllers.resolveNodesConflict([currentNode]);
-        case 27:
-        case "end":
-          return _context.stop();
-      }
-    }, _callee);
-  }));
-  return function extactNodes(_x, _x2) {
-    return _ref.apply(this, arguments);
-  };
-}();
-function destructureData(_x3, _x4, _x5) {
-  return _destructureData.apply(this, arguments);
-}
-function _destructureData() {
-  _destructureData = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5(type, path, data) {
-    var options,
-      byNodes,
-      _a,
-      _b,
-      result,
-      pathInfo,
-      revision,
-      added,
-      modified,
-      removed,
-      editedNodes,
-      removeNodes,
-      controllers,
-      parentPath,
-      node,
-      currentNode,
-      _loop,
-      i,
-      sortNodes,
-      _args6 = arguments;
-    return _regeneratorRuntime().wrap(function _callee5$(_context6) {
-      while (1) switch (_context6.prev = _context6.next) {
-        case 0:
-          options = _args6.length > 3 && _args6[3] !== undefined ? _args6[3] : {
-            maxInlineValueSize: 200
-          };
-          byNodes = _args6.length > 4 ? _args6[4] : undefined;
-          result = (_a = options === null || options === void 0 ? void 0 : options.previous_result) !== null && _a !== void 0 ? _a : [];
-          pathInfo = ivipbase_core_1.PathInfo.get(path);
-          revision = (_b = options === null || options === void 0 ? void 0 : options.assert_revision) !== null && _b !== void 0 ? _b : ivipbase_core_1.ID.generate();
-          options.assert_revision = revision;
-          options.include_checks = typeof options.include_checks === "boolean" ? options.include_checks : true;
-          added = [];
-          modified = [];
-          removed = [];
-          byNodes = byNodes.map(function (node) {
-            node.path = node.path.replace(/\/+$/g, "");
-            return node;
-          });
-          if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(data)) !== true) {
-            type = "UPDATE";
-            data = _defineProperty({}, pathInfo.key, data);
-            pathInfo = pathInfo.parent;
-          }
-          editedNodes = [];
-          removeNodes = [];
-          controllers = {
-            appendEditedNode: function appendEditedNode(path) {
-              var p = path instanceof ivipbase_core_1.PathInfo ? path : ivipbase_core_1.PathInfo.get(path);
-              editedNodes.push(p);
-              editedNodes = editedNodes.filter(function (p) {
-                return !(p.isChildOf(path) || p.isDescendantOf(path));
-              });
-            },
-            appendRemoveNode: function appendRemoveNode(path) {
-              var p = path instanceof ivipbase_core_1.PathInfo ? path : ivipbase_core_1.PathInfo.get(path);
-              removeNodes.push(p);
-              removeNodes = removeNodes.filter(function (p) {
-                return !(p.isChildOf(path) || p.isDescendantOf(path));
-              });
-            },
-            findNode: function findNode(path) {
-              if (!path) {
-                return undefined;
-              }
-              var p = path instanceof ivipbase_core_1.PathInfo ? path : ivipbase_core_1.PathInfo.get(path);
-              var isRemove = editedNodes.findIndex(function (path) {
-                return p.isChildOf(path) || p.isDescendantOf(path);
-              }) >= 0 || removeNodes.findIndex(function (path) {
-                return p.equals(path) || p.isChildOf(path) || p.isDescendantOf(path);
-              }) >= 0;
-              var index = isRemove ? -1 : byNodes.findIndex(function (_ref2) {
-                var path = _ref2.path;
-                return p.equals(path);
-              });
-              return index >= 0 ? byNodes[index] : undefined;
-            },
-            pushAddedNode: function pushAddedNode(node) {
-              return _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
-                return _regeneratorRuntime().wrap(function _callee2$(_context2) {
-                  while (1) switch (_context2.prev = _context2.next) {
-                    case 0:
-                      result.push(node);
-                      added.push(node);
-                    case 2:
-                    case "end":
-                      return _context2.stop();
-                  }
-                }, _callee2);
-              }))();
-            },
-            pushRemovedNode: function pushRemovedNode(node) {
-              var _this = this;
-              return _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
-                return _regeneratorRuntime().wrap(function _callee3$(_context3) {
-                  while (1) switch (_context3.prev = _context3.next) {
-                    case 0:
-                      _this.appendRemoveNode(node.path);
-                    case 1:
-                    case "end":
-                      return _context3.stop();
-                  }
-                }, _callee3);
-              }))();
-            },
-            pushModifiedNode: function pushModifiedNode(node) {
-              var _arguments = arguments;
-              return _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
-                var isModified;
-                return _regeneratorRuntime().wrap(function _callee4$(_context4) {
-                  while (1) switch (_context4.prev = _context4.next) {
-                    case 0:
-                      isModified = _arguments.length > 1 && _arguments[1] !== undefined ? _arguments[1] : true;
-                      if (isModified) {
-                        modified.push(node);
-                      }
-                      result.push(node);
-                    case 3:
-                    case "end":
-                      return _context4.stop();
-                  }
-                }, _callee4);
-              }))();
-            },
-            resolveNodesConflict: function resolveNodesConflict(nodes) {
-              var _a, _b, _c;
-              for (var i = 0; i < nodes.length; i++) {
-                var node = nodes[i];
-                if (node.type !== "VERIFY" && (node.content.type === utils_1.nodeValueTypes.EMPTY || node.content.value === null || node.content.value === undefined)) {
-                  removeNodes.push(ivipbase_core_1.PathInfo.get(node.path));
-                  removeNodes = removeNodes.filter(function (p) {
-                    return !(p.isChildOf(path) || p.isDescendantOf(path));
-                  });
-                  continue;
-                }
-                if (node.type === "SET") {
-                  editedNodes.push(ivipbase_core_1.PathInfo.get(node.path));
-                  editedNodes = editedNodes.filter(function (p) {
-                    return !(p.isChildOf(path) || p.isDescendantOf(path));
-                  });
-                }
-                var currentNode = this.findNode(node.path);
-                if (node.type === "VERIFY") {
-                  if (!currentNode) {
-                    this.pushAddedNode(node);
-                  }
-                  continue;
-                } else {
-                  if (currentNode) {
-                    var n = void 0;
-                    if (node.type === "SET") {
-                      n = Object.assign(Object.assign({}, node), {
-                        previous_content: currentNode.content
-                      });
-                    } else {
-                      n = {
-                        path: node.path,
-                        type: "UPDATE",
-                        content: {
-                          type: node.content.type,
-                          value: null,
-                          created: node.content.created,
-                          modified: Date.now(),
-                          revision: revision,
-                          revision_nr: node.content.revision_nr + 1
-                        },
-                        previous_content: currentNode.content
-                      };
-                      if (n.content.type === utils_1.nodeValueTypes.OBJECT || n.content.type === utils_1.nodeValueTypes.ARRAY) {
-                        n.content.value = Object.assign(Object.assign({}, _typeof(currentNode.content.value) === "object" ? (_a = currentNode.content.value) !== null && _a !== void 0 ? _a : {} : {}), _typeof(node.content.value) === "object" ? (_b = node.content.value) !== null && _b !== void 0 ? _b : {} : {});
-                        if (n.content.type === utils_1.nodeValueTypes.ARRAY) {
-                          n.content.value = Object.values(n.content.value);
-                        }
-                      } else {
-                        n.content.value = node.content.value;
-                      }
-                    }
-                    if (n) {
-                      this.pushModifiedNode(n, JSON.stringify(n.content.value) !== JSON.stringify((_c = n.previous_content) === null || _c === void 0 ? void 0 : _c.value));
-                    }
-                  } else {
-                    this.pushAddedNode(node);
-                  }
-                }
-              }
-            }
-          };
-          if (options.include_checks) {
-            parentPath = pathInfo.parent;
-            while (parentPath && parentPath.path.trim() !== "") {
-              node = {
-                path: parentPath.path,
-                type: "VERIFY",
-                content: {
-                  type: typeof parentPath.key === "number" ? utils_1.nodeValueTypes.ARRAY : utils_1.nodeValueTypes.OBJECT,
-                  value: {},
-                  revision: revision,
-                  revision_nr: 1,
-                  created: Date.now(),
-                  modified: Date.now()
-                }
-              };
-              currentNode = controllers.findNode(node.path);
-              if (!currentNode) {
-                controllers.resolveNodesConflict([node]);
-              }
-              parentPath = parentPath.parent;
-            }
-          }
-          _context6.next = 18;
-          return extactNodes(type, data, pathInfo.keys, controllers, options, controllers.findNode(pathInfo.parent));
-        case 18:
-          _loop = /*#__PURE__*/_regeneratorRuntime().mark(function _loop() {
-            var node, p, isRemove;
-            return _regeneratorRuntime().wrap(function _loop$(_context5) {
-              while (1) switch (_context5.prev = _context5.next) {
-                case 0:
-                  node = byNodes[i];
-                  p = ivipbase_core_1.PathInfo.get(node.path);
-                  isRemove = editedNodes.findIndex(function (path) {
-                    return p.isChildOf(path) || p.isDescendantOf(path);
-                  }) >= 0 || removeNodes.findIndex(function (path) {
-                    return p.equals(path) || p.isChildOf(path) || p.isDescendantOf(path);
-                  }) >= 0;
-                  if (!isRemove) {
-                    _context5.next = 7;
-                    break;
-                  }
-                  _context5.next = 6;
-                  return new Promise(function (resolve) {
-                    return setTimeout(resolve, 0);
-                  });
-                case 6:
-                  removed.push(node);
-                case 7:
-                case "end":
-                  return _context5.stop();
-              }
-            }, _loop);
-          });
-          i = 0;
-        case 20:
-          if (!(i < byNodes.length)) {
-            _context6.next = 25;
-            break;
-          }
-          return _context6.delegateYield(_loop(), "t0", 22);
-        case 22:
-          i++;
-          _context6.next = 20;
-          break;
-        case 25:
-          sortNodes = function sortNodes(a, b) {
-            var aPath = ivipbase_core_1.PathInfo.get(a.path);
-            var bPath = ivipbase_core_1.PathInfo.get(b.path);
-            return aPath.isAncestorOf(bPath) || aPath.isParentOf(bPath) ? -1 : aPath.isDescendantOf(bPath) || aPath.isChildOf(bPath) ? 1 : 0;
-          };
-          result = result
-          // .filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
-          .map(modifyRevision(revision)).sort(sortNodes);
-          added = added
-          // .filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
-          .map(modifyRevision(revision)).sort(sortNodes);
-          modified = modified
-          // .filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
-          .map(modifyRevision(revision)).sort(sortNodes);
-          removed = removed
-          // .filter((n, i, l) => l.findIndex(({ path: p }) => PathInfo.get(p).equals(n.path)) === i)
-          .map(modifyRevision(revision)).sort(sortNodes);
-          // console.log("removed:", JSON.stringify(removed, null, 4));
-          // console.log("RESULT:", path, JSON.stringify(result, null, 4));
-          // console.log(path, JSON.stringify({ result, added, modified, removed }, null, 4));
-          return _context6.abrupt("return", {
-            result: result,
-            added: added,
-            modified: modified,
-            removed: removed
-          });
-        case 31:
-        case "end":
-          return _context6.stop();
-      }
-    }, _callee5);
-  }));
-  return _destructureData.apply(this, arguments);
-}
-exports["default"] = destructureData;
-
 },{"./utils":18,"ivipbase-core":152}],16:[function(require,module,exports){
 "use strict";
 
@@ -4212,9 +4772,8 @@ Object.defineProperty(exports, "VALUE_TYPES", {
     return utils_1.VALUE_TYPES;
   }
 });
-var structureNodes_1 = __importDefault(require("./structureNodes"));
-var destructureData_1 = __importDefault(require("./destructureData"));
 var utils_2 = require("../../../utils");
+var NTree_1 = __importDefault(require("./NTree"));
 var DEBUG_MODE = false;
 var NOOP = function NOOP() {};
 /**
@@ -4489,38 +5048,40 @@ var MDE = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
           return pathsRegex.push("".concat(exp, "(((/([^\\/\\[\\]]*))|(\\[([0-9]*)\\])){1})"));
         });
         pathsLike.forEach(function (exp) {
-          return querys.push("LIKE '".concat(exp, "/%'"));
+          querys.push("LIKE '".concat(exp, "/%'"));
+          querys.push("LIKE '".concat(exp, "[%]'"));
         });
         pathsLike.forEach(function (exp) {
-          return pathsLike.push("".concat(exp, "/%"));
+          pathsLike.push("".concat(exp, "/%"));
+          pathsLike.push("".concat(exp, "[%]"));
         });
       } else if (allHeirs === true) {
         pathsRegex.forEach(function (exp) {
           return pathsRegex.push("".concat(exp, "(((/([^\\/\\[\\]]*))|(\\[([0-9]*)\\])){1,})"));
         });
         pathsLike.forEach(function (exp) {
-          return querys.push("LIKE '".concat(exp, "/%'"));
+          return querys.push("LIKE '".concat(exp, "%'"));
         });
         pathsLike.forEach(function (exp) {
-          return pathsLike.push("".concat(exp, "/%"));
+          return pathsLike.push("".concat(exp, "%"));
         });
       } else if (typeof allHeirs === "number") {
         pathsRegex.forEach(function (exp) {
           return pathsRegex.push("".concat(exp, "(((/([^\\/\\[\\]]*))|(\\[([0-9]*)\\])){1,").concat(allHeirs, "})"));
         });
-        // pathsLike.forEach((exp) => querys.push(`LIKE '${exp}/%'`));
-        // pathsLike.forEach((exp) => pathsLike.push(`${exp}/%`));
-        var p = pathsLike;
-        var m = "/%";
-        for (var i = 0; i < allHeirs; i++) {
-          p.forEach(function (exp) {
-            return querys.push("LIKE '".concat(exp).concat(m, "'"));
-          });
-          p.forEach(function (exp) {
-            return pathsLike.push("".concat(exp).concat(m));
-          });
-          m += "/%";
-        }
+        pathsLike.forEach(function (exp) {
+          return querys.push("LIKE '".concat(exp, "%'"));
+        });
+        pathsLike.forEach(function (exp) {
+          return pathsLike.push("".concat(exp, "%"));
+        });
+        // const p = pathsLike;
+        // let m = "/%";
+        // for (let i = 0; i < allHeirs; i++) {
+        // 	p.forEach((exp) => querys.push(`LIKE '${exp}${m}'`));
+        // 	p.forEach((exp) => pathsLike.push(`${exp}${m}`));
+        // 	m += "/%";
+        // }
       }
       var parent = ivipbase_core_1.PathInfo.get(path).parent;
       // Obtém o caminho pai e adiciona a expressão regular correspondente ao array.
@@ -5018,32 +5579,35 @@ var MDE = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
     key: "get",
     value: function () {
       var _get = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee10(database, path, options) {
-        var _a, _b, include_info_node, onlyChildren, _options, nodes, main_node, value;
+        var _a, include_info_node, onlyChildren, _options, nodes, nodesTree, main_node, value;
         return _regeneratorRuntime().wrap(function _callee10$(_context10) {
           while (1) switch (_context10.prev = _context10.next) {
             case 0:
-              _b = options !== null && options !== void 0 ? options : {}, include_info_node = _b.include_info_node, onlyChildren = _b.onlyChildren, _options = __rest(_b, ["include_info_node", "onlyChildren"]);
+              _a = options !== null && options !== void 0 ? options : {}, include_info_node = _a.include_info_node, onlyChildren = _a.onlyChildren, _options = __rest(_a, ["include_info_node", "onlyChildren"]);
               path = ivipbase_core_1.PathInfo.get([this.settings.prefix, path]).path;
               _context10.next = 4;
               return this.getNodesBy(database, path, onlyChildren, true);
             case 4:
               nodes = _context10.sent;
-              main_node = nodes.find(function (_ref18) {
-                var p = _ref18.path;
-                return ivipbase_core_1.PathInfo.get(p).equals(path) || ivipbase_core_1.PathInfo.get(p).isParentOf(path);
-              });
+              nodesTree = NTree_1["default"].createBy(database, nodes);
+              _context10.next = 8;
+              return nodesTree.ready();
+            case 8:
+              main_node = nodesTree.getNodeBy(path);
               if (main_node) {
-                _context10.next = 8;
+                _context10.next = 11;
                 break;
               }
               return _context10.abrupt("return", undefined);
-            case 8:
-              // console.log(JSON.stringify(nodes, null, 4));
-              value = (_a = (0, utils_2.removeNulls)((0, structureNodes_1["default"])(path, nodes, _options))) !== null && _a !== void 0 ? _a : null;
+            case 11:
+              _context10.next = 13;
+              return nodesTree.get(path, _options);
+            case 13:
+              value = _context10.sent;
               return _context10.abrupt("return", !include_info_node ? value : Object.assign(Object.assign({}, main_node.content), {
                 value: value
               }));
-            case 10:
+            case 15:
             case "end":
               return _context10.stop();
           }
@@ -5071,290 +5635,152 @@ var MDE = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
         var _this4 = this;
         var options,
           type,
-          _a,
           suppress_events,
           batchError,
           promises,
           byNodes,
-          _yield,
-          added,
-          modified,
-          removed,
-          result,
-          _iterator2,
-          _step2,
-          _loop,
-          _iterator3,
-          _step3,
-          _loop2,
-          _iterator4,
-          _step4,
-          _loop3,
-          _i,
-          _promises,
-          p,
-          _args17 = arguments;
-        return _regeneratorRuntime().wrap(function _callee14$(_context17) {
-          while (1) switch (_context17.prev = _context17.next) {
+          nodesTree,
+          _args14 = arguments;
+        return _regeneratorRuntime().wrap(function _callee14$(_context14) {
+          while (1) switch (_context14.prev = _context14.next) {
             case 0:
-              options = _args17.length > 3 && _args17[3] !== undefined ? _args17[3] : {};
-              type = _args17.length > 4 && _args17[4] !== undefined ? _args17[4] : "SET";
-              type = _typeof(value) !== "object" || value instanceof Array || value instanceof ArrayBuffer || value instanceof Date ? "UPDATE" : type;
+              options = _args14.length > 3 && _args14[3] !== undefined ? _args14[3] : {};
+              type = _args14.length > 4 && _args14[4] !== undefined ? _args14[4] : "SET";
+              // type = typeof value !== "object" || value instanceof Array || value instanceof ArrayBuffer || value instanceof Date ? "UPDATE" : type;
               path = ivipbase_core_1.PathInfo.get([this.settings.prefix, path]).path;
               suppress_events = options.suppress_events === true;
               batchError = [];
               promises = [];
-              _context17.next = 9;
+              _context14.next = 8;
               return this.getNodesBy(database, path, false, true, true);
-            case 9:
-              byNodes = _context17.sent;
-              _context17.next = 12;
-              return (0, destructureData_1["default"])(type, path, value, Object.assign(Object.assign({}, options !== null && options !== void 0 ? options : {}), this.settings), byNodes);
+            case 8:
+              byNodes = _context14.sent;
+              // console.log(JSON.stringify(byNodes, null, 4));
+              //console.log("olt", JSON.stringify(byNodes.find((node) => node.path === "root/test") ?? {}, null, 4));
+              nodesTree = NTree_1["default"].createBy(database, byNodes);
+              _context14.next = 12;
+              return nodesTree.ready();
             case 12:
-              _yield = _context17.sent;
-              added = _yield.added;
-              modified = _yield.modified;
-              removed = _yield.removed;
-              result = _yield.result;
-              //console.log("now", JSON.stringify(nodes.find((node) => node.path === "root/test") ?? {}, null, 4));
-              // const { added, modified, removed } = await prepareMergeNodes(path, byNodes, nodes);
-              // console.log(JSON.stringify(modified, null, 4));
-              // console.log(type, JSON.stringify(result, null, 4));
-              // console.log("set-added", JSON.stringify(added, null, 4));
-              // console.log("set-modified", JSON.stringify(modified, null, 4));
-              // console.log("set-removed", JSON.stringify(removed, null, 4));
-              _iterator2 = _createForOfIteratorHelper(removed);
-              _context17.prev = 18;
-              _loop = /*#__PURE__*/_regeneratorRuntime().mark(function _loop() {
-                var node;
-                return _regeneratorRuntime().wrap(function _loop$(_context12) {
-                  while (1) switch (_context12.prev = _context12.next) {
-                    case 0:
-                      node = _step2.value;
-                      if (!suppress_events) {
-                        _this4.emit("remove", {
-                          dbName: database,
-                          name: "remove",
-                          path: ivipbase_core_1.PathInfo.get(ivipbase_core_1.PathInfo.get(node.path).keys.slice(1)).path,
-                          value: (0, utils_2.removeNulls)(node.content.value)
+              nodesTree.on("remove", function (node) {
+                if (!suppress_events) {
+                  _this4.emit("remove", {
+                    dbName: node.dbName,
+                    name: "remove",
+                    path: node.path.replace(new RegExp("^".concat(_this4.settings.prefix.replace(/\//gi, "\\/"))), "").replace(/^(\/)+/gi, ""),
+                    value: node.value
+                  });
+                }
+                promises.push(_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee11() {
+                  return _regeneratorRuntime().wrap(function _callee11$(_context11) {
+                    while (1) switch (_context11.prev = _context11.next) {
+                      case 0:
+                        _context11.prev = 0;
+                        _context11.next = 3;
+                        return Promise.race([_this4.settings.removeNode(node.dbName, node.path, node.content, node)])["catch"](function (e) {
+                          batchError.push({
+                            path: node.path,
+                            content: Object.assign(Object.assign({}, node.content), {
+                              type: 0,
+                              value: null
+                            })
+                          });
                         });
-                      }
-                      promises.push( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee11() {
-                        return _regeneratorRuntime().wrap(function _callee11$(_context11) {
-                          while (1) switch (_context11.prev = _context11.next) {
-                            case 0:
-                              _context11.prev = 0;
-                              _context11.next = 3;
-                              return Promise.race([_this4.settings.removeNode(database, node.path, node.content, node)])["catch"](function (e) {
-                                batchError.push({
-                                  path: node.path,
-                                  content: Object.assign(Object.assign({}, node.content), {
-                                    type: 0,
-                                    value: null
-                                  })
-                                });
-                              });
-                            case 3:
-                              _context11.next = 7;
-                              break;
-                            case 5:
-                              _context11.prev = 5;
-                              _context11.t0 = _context11["catch"](0);
-                            case 7:
-                            case "end":
-                              return _context11.stop();
-                          }
-                        }, _callee11, null, [[0, 5]]);
-                      })));
-                    case 3:
-                    case "end":
-                      return _context12.stop();
-                  }
-                }, _loop);
+                      case 3:
+                        _context11.next = 7;
+                        break;
+                      case 5:
+                        _context11.prev = 5;
+                        _context11.t0 = _context11["catch"](0);
+                      case 7:
+                      case "end":
+                        return _context11.stop();
+                    }
+                  }, _callee11, null, [[0, 5]]);
+                }))());
               });
-              _iterator2.s();
-            case 21:
-              if ((_step2 = _iterator2.n()).done) {
-                _context17.next = 25;
-                break;
-              }
-              return _context17.delegateYield(_loop(), "t0", 23);
-            case 23:
-              _context17.next = 21;
-              break;
-            case 25:
-              _context17.next = 30;
-              break;
-            case 27:
-              _context17.prev = 27;
-              _context17.t1 = _context17["catch"](18);
-              _iterator2.e(_context17.t1);
-            case 30:
-              _context17.prev = 30;
-              _iterator2.f();
-              return _context17.finish(30);
-            case 33:
-              _iterator3 = _createForOfIteratorHelper(modified);
-              _context17.prev = 34;
-              _loop2 = /*#__PURE__*/_regeneratorRuntime().mark(function _loop2() {
-                var node;
-                return _regeneratorRuntime().wrap(function _loop2$(_context14) {
-                  while (1) switch (_context14.prev = _context14.next) {
-                    case 0:
-                      node = _step3.value;
-                      if (!suppress_events) {
-                        _this4.emit("change", {
-                          dbName: database,
-                          name: "change",
-                          path: ivipbase_core_1.PathInfo.get(ivipbase_core_1.PathInfo.get(node.path).keys.slice(1)).path,
-                          value: (0, utils_2.removeNulls)(node.content.value),
-                          previous: (0, utils_2.removeNulls)((_a = node.previous_content) === null || _a === void 0 ? void 0 : _a.value)
+              nodesTree.on("change", function (node) {
+                if (!suppress_events) {
+                  _this4.emit("change", {
+                    dbName: node.dbName,
+                    name: "change",
+                    path: node.path.replace(new RegExp("^".concat(_this4.settings.prefix.replace(/\//gi, "\\/"))), "").replace(/^(\/)+/gi, ""),
+                    value: node.value,
+                    previous: node.previous
+                  });
+                }
+                promises.push(_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee12() {
+                  return _regeneratorRuntime().wrap(function _callee12$(_context12) {
+                    while (1) switch (_context12.prev = _context12.next) {
+                      case 0:
+                        _context12.prev = 0;
+                        _context12.next = 3;
+                        return Promise.race([_this4.settings.setNode(node.dbName, node.path, (0, utils_2.removeNulls)(node.content), (0, utils_2.removeNulls)(node))])["catch"](function (e) {
+                          batchError.push(node);
                         });
-                      }
-                      promises.push( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee12() {
-                        return _regeneratorRuntime().wrap(function _callee12$(_context13) {
-                          while (1) switch (_context13.prev = _context13.next) {
-                            case 0:
-                              _context13.prev = 0;
-                              _context13.next = 3;
-                              return Promise.race([_this4.settings.setNode(database, node.path, (0, utils_2.removeNulls)(node.content), (0, utils_2.removeNulls)(node))])["catch"](function (e) {
-                                batchError.push(node);
-                              });
-                            case 3:
-                              _context13.next = 7;
-                              break;
-                            case 5:
-                              _context13.prev = 5;
-                              _context13.t0 = _context13["catch"](0);
-                            case 7:
-                            case "end":
-                              return _context13.stop();
-                          }
-                        }, _callee12, null, [[0, 5]]);
-                      })));
-                    case 3:
-                    case "end":
-                      return _context14.stop();
-                  }
-                }, _loop2);
+                      case 3:
+                        _context12.next = 7;
+                        break;
+                      case 5:
+                        _context12.prev = 5;
+                        _context12.t0 = _context12["catch"](0);
+                      case 7:
+                      case "end":
+                        return _context12.stop();
+                    }
+                  }, _callee12, null, [[0, 5]]);
+                }))());
               });
-              _iterator3.s();
-            case 37:
-              if ((_step3 = _iterator3.n()).done) {
-                _context17.next = 41;
-                break;
-              }
-              return _context17.delegateYield(_loop2(), "t2", 39);
-            case 39:
-              _context17.next = 37;
-              break;
-            case 41:
-              _context17.next = 46;
-              break;
-            case 43:
-              _context17.prev = 43;
-              _context17.t3 = _context17["catch"](34);
-              _iterator3.e(_context17.t3);
-            case 46:
-              _context17.prev = 46;
-              _iterator3.f();
-              return _context17.finish(46);
-            case 49:
-              _iterator4 = _createForOfIteratorHelper(added);
-              _context17.prev = 50;
-              _loop3 = /*#__PURE__*/_regeneratorRuntime().mark(function _loop3() {
-                var node;
-                return _regeneratorRuntime().wrap(function _loop3$(_context16) {
-                  while (1) switch (_context16.prev = _context16.next) {
-                    case 0:
-                      node = _step4.value;
-                      if (!suppress_events) {
-                        _this4.emit("add", {
-                          dbName: database,
-                          name: "add",
-                          path: ivipbase_core_1.PathInfo.get(ivipbase_core_1.PathInfo.get(node.path).keys.slice(1)).path,
-                          value: (0, utils_2.removeNulls)(node.content.value)
+              nodesTree.on("add", function (node) {
+                if (!suppress_events) {
+                  _this4.emit("add", {
+                    dbName: node.dbName,
+                    name: "add",
+                    path: node.path.replace(new RegExp("^".concat(_this4.settings.prefix.replace(/\//gi, "\\/"))), "").replace(/^(\/)+/gi, ""),
+                    value: node.value
+                  });
+                }
+                promises.push(_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee13() {
+                  return _regeneratorRuntime().wrap(function _callee13$(_context13) {
+                    while (1) switch (_context13.prev = _context13.next) {
+                      case 0:
+                        _context13.prev = 0;
+                        _context13.next = 3;
+                        return Promise.race([_this4.settings.setNode(node.dbName, node.path, (0, utils_2.removeNulls)(node.content), (0, utils_2.removeNulls)(node))])["catch"](function (e) {
+                          batchError.push(node);
                         });
-                      }
-                      promises.push( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee13() {
-                        return _regeneratorRuntime().wrap(function _callee13$(_context15) {
-                          while (1) switch (_context15.prev = _context15.next) {
-                            case 0:
-                              _context15.prev = 0;
-                              _context15.next = 3;
-                              return Promise.race([_this4.settings.setNode(database, node.path, (0, utils_2.removeNulls)(node.content), (0, utils_2.removeNulls)(node))])["catch"](function (e) {
-                                batchError.push(node);
-                              });
-                            case 3:
-                              _context15.next = 7;
-                              break;
-                            case 5:
-                              _context15.prev = 5;
-                              _context15.t0 = _context15["catch"](0);
-                            case 7:
-                            case "end":
-                              return _context15.stop();
-                          }
-                        }, _callee13, null, [[0, 5]]);
-                      })));
-                    case 3:
-                    case "end":
-                      return _context16.stop();
-                  }
-                }, _loop3);
+                      case 3:
+                        _context13.next = 7;
+                        break;
+                      case 5:
+                        _context13.prev = 5;
+                        _context13.t0 = _context13["catch"](0);
+                      case 7:
+                      case "end":
+                        return _context13.stop();
+                    }
+                  }, _callee13, null, [[0, 5]]);
+                }))());
               });
-              _iterator4.s();
-            case 53:
-              if ((_step4 = _iterator4.n()).done) {
-                _context17.next = 57;
+              if (!(type === "SET")) {
+                _context14.next = 20;
                 break;
               }
-              return _context17.delegateYield(_loop3(), "t4", 55);
-            case 55:
-              _context17.next = 53;
+              _context14.next = 18;
+              return nodesTree.set(path, value, this.settings);
+            case 18:
+              _context14.next = 22;
               break;
-            case 57:
-              _context17.next = 62;
-              break;
-            case 59:
-              _context17.prev = 59;
-              _context17.t5 = _context17["catch"](50);
-              _iterator4.e(_context17.t5);
-            case 62:
-              _context17.prev = 62;
-              _iterator4.f();
-              return _context17.finish(62);
-            case 65:
-              _i = 0, _promises = promises;
-            case 66:
-              if (!(_i < _promises.length)) {
-                _context17.next = 80;
-                break;
-              }
-              p = _promises[_i];
-              _context17.next = 70;
-              return new Promise(function (resolve) {
-                return setTimeout(resolve, 0);
-              });
-            case 70:
-              _context17.prev = 70;
-              _context17.next = 73;
-              return p();
-            case 73:
-              _context17.next = 77;
-              break;
-            case 75:
-              _context17.prev = 75;
-              _context17.t6 = _context17["catch"](70);
-            case 77:
-              _i++;
-              _context17.next = 66;
-              break;
-            case 80:
+            case 20:
+              _context14.next = 22;
+              return nodesTree.update(path, value, this.settings);
+            case 22:
+              _context14.next = 24;
+              return Promise.all(promises);
+            case 24:
             case "end":
-              return _context17.stop();
+              return _context14.stop();
           }
-        }, _callee14, this, [[18, 27, 30, 33], [34, 43, 46, 49], [50, 59, 62, 65], [70, 75]]);
+        }, _callee14, this);
       }));
       function set(_x24, _x25, _x26) {
         return _set.apply(this, arguments);
@@ -5366,16 +5792,16 @@ var MDE = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
     value: function () {
       var _update = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee15(database, path, value) {
         var options,
-          _args18 = arguments;
-        return _regeneratorRuntime().wrap(function _callee15$(_context18) {
-          while (1) switch (_context18.prev = _context18.next) {
+          _args15 = arguments;
+        return _regeneratorRuntime().wrap(function _callee15$(_context15) {
+          while (1) switch (_context15.prev = _context15.next) {
             case 0:
-              options = _args18.length > 3 && _args18[3] !== undefined ? _args18[3] : {};
-              _context18.next = 3;
+              options = _args15.length > 3 && _args15[3] !== undefined ? _args15[3] : {};
+              _context15.next = 3;
               return this.set(database, path, value, options, "UPDATE");
             case 3:
             case "end":
-              return _context18.stop();
+              return _context15.stop();
           }
         }, _callee15, this);
       }));
@@ -5409,11 +5835,11 @@ var MDE = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
           checkRevision,
           newValue,
           cursor,
-          _args19 = arguments;
-        return _regeneratorRuntime().wrap(function _callee16$(_context19) {
-          while (1) switch (_context19.prev = _context19.next) {
+          _args16 = arguments;
+        return _regeneratorRuntime().wrap(function _callee16$(_context16) {
+          while (1) switch (_context16.prev = _context16.next) {
             case 0:
-              options = _args19.length > 3 && _args19[3] !== undefined ? _args19[3] : {
+              options = _args16.length > 3 && _args16[3] !== undefined ? _args16[3] : {
                 no_lock: false,
                 suppress_events: false,
                 context: undefined
@@ -5426,35 +5852,35 @@ var MDE = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
                 tid: tid,
                 release: NOOP
               };
-              _context19.prev = 4;
-              _context19.next = 7;
+              _context16.prev = 4;
+              _context16.next = 7;
               return this.get(database, path, {
                 include_info_node: true
               });
             case 7:
-              node = _context19.sent;
+              node = _context16.sent;
               checkRevision = (_a = node === null || node === void 0 ? void 0 : node.revision) !== null && _a !== void 0 ? _a : ivipbase_core_1.ID.generate();
-              _context19.prev = 9;
-              _context19.next = 12;
+              _context16.prev = 9;
+              _context16.next = 12;
               return Promise.race([callback((_b = node === null || node === void 0 ? void 0 : node.value) !== null && _b !== void 0 ? _b : null)])["catch"](function (err) {
                 _this5.debug.error("Error in transaction callback: ".concat(err.message));
               });
             case 12:
-              newValue = _context19.sent;
-              _context19.next = 18;
+              newValue = _context16.sent;
+              _context16.next = 18;
               break;
             case 15:
-              _context19.prev = 15;
-              _context19.t0 = _context19["catch"](9);
-              this.debug.error("Error in transaction callback: ".concat(_context19.t0.message));
+              _context16.prev = 15;
+              _context16.t0 = _context16["catch"](9);
+              this.debug.error("Error in transaction callback: ".concat(_context16.t0.message));
             case 18:
               if (!(typeof newValue === "undefined")) {
-                _context19.next = 20;
+                _context16.next = 20;
                 break;
               }
-              return _context19.abrupt("return");
+              return _context16.abrupt("return");
             case 20:
-              _context19.next = 22;
+              _context16.next = 22;
               return this.update(database, path, newValue, {
                 assert_revision: checkRevision,
                 tid: lock.tid,
@@ -5462,19 +5888,19 @@ var MDE = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
                 context: options.context
               });
             case 22:
-              cursor = _context19.sent;
-              return _context19.abrupt("return", cursor);
+              cursor = _context16.sent;
+              return _context16.abrupt("return", cursor);
             case 26:
-              _context19.prev = 26;
-              _context19.t1 = _context19["catch"](4);
-              throw _context19.t1;
+              _context16.prev = 26;
+              _context16.t1 = _context16["catch"](4);
+              throw _context16.t1;
             case 29:
-              _context19.prev = 29;
+              _context16.prev = 29;
               lock.release();
-              return _context19.finish(29);
+              return _context16.finish(29);
             case 32:
             case "end":
-              return _context19.stop();
+              return _context16.stop();
           }
         }, _callee16, this, [[4, 26, 29, 32], [9, 15]]);
       }));
@@ -5685,7 +6111,7 @@ var MDE = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
 }(ivipbase_core_1.SimpleEventEmitter);
 exports["default"] = MDE;
 
-},{"../../../utils":37,"./NodeInfo":14,"./destructureData":15,"./structureNodes":17,"./utils":18,"ivipbase-core":152}],17:[function(require,module,exports){
+},{"../../../utils":37,"./NTree":14,"./NodeInfo":15,"./utils":18,"ivipbase-core":152}],17:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
@@ -6119,12 +6545,19 @@ function processReadNodeValue(node) {
   switch (node.type) {
     case exports.VALUE_TYPES.ARRAY:
       {
-        node.value = (Array.isArray(node.value) ? node.value : Object.entries((_a = node.value) !== null && _a !== void 0 ? _a : {}).map(function (_ref) {
+        var val = new Array();
+        node.value = (Array.isArray(node.value) ? node.value.reduce(function (a, c, i) {
+          a[i] = c;
+          return a;
+        }, val) : Object.entries((_a = node.value) !== null && _a !== void 0 ? _a : {}).reduce(function (a, _ref) {
           var _ref2 = _slicedToArray(_ref, 2),
-            key = _ref2[0],
-            val = _ref2[1];
-          return val;
-        })).map(function (item) {
+            i = _ref2[0],
+            c = _ref2[1];
+          if (/^\d+$/gi.test(i) || typeof i === "number") {
+            a[i] = c;
+          }
+          return a;
+        }, val)).map(function (item) {
           if (item !== null && _typeof(item) === "object" && "type" in item) {
             return getTypedChildValue(item);
           }
@@ -12162,6 +12595,9 @@ exports["default"] = {
 },{}],37:[function(require,module,exports){
 "use strict";
 
+function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return e; }; var t, e = {}, r = Object.prototype, n = r.hasOwnProperty, o = Object.defineProperty || function (t, e, r) { t[e] = r.value; }, i = "function" == typeof Symbol ? Symbol : {}, a = i.iterator || "@@iterator", c = i.asyncIterator || "@@asyncIterator", u = i.toStringTag || "@@toStringTag"; function define(t, e, r) { return Object.defineProperty(t, e, { value: r, enumerable: !0, configurable: !0, writable: !0 }), t[e]; } try { define({}, ""); } catch (t) { define = function define(t, e, r) { return t[e] = r; }; } function wrap(t, e, r, n) { var i = e && e.prototype instanceof Generator ? e : Generator, a = Object.create(i.prototype), c = new Context(n || []); return o(a, "_invoke", { value: makeInvokeMethod(t, r, c) }), a; } function tryCatch(t, e, r) { try { return { type: "normal", arg: t.call(e, r) }; } catch (t) { return { type: "throw", arg: t }; } } e.wrap = wrap; var h = "suspendedStart", l = "suspendedYield", f = "executing", s = "completed", y = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var p = {}; define(p, a, function () { return this; }); var d = Object.getPrototypeOf, v = d && d(d(values([]))); v && v !== r && n.call(v, a) && (p = v); var g = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(p); function defineIteratorMethods(t) { ["next", "throw", "return"].forEach(function (e) { define(t, e, function (t) { return this._invoke(e, t); }); }); } function AsyncIterator(t, e) { function invoke(r, o, i, a) { var c = tryCatch(t[r], t, o); if ("throw" !== c.type) { var u = c.arg, h = u.value; return h && "object" == _typeof(h) && n.call(h, "__await") ? e.resolve(h.__await).then(function (t) { invoke("next", t, i, a); }, function (t) { invoke("throw", t, i, a); }) : e.resolve(h).then(function (t) { u.value = t, i(u); }, function (t) { return invoke("throw", t, i, a); }); } a(c.arg); } var r; o(this, "_invoke", { value: function value(t, n) { function callInvokeWithMethodAndArg() { return new e(function (e, r) { invoke(t, n, e, r); }); } return r = r ? r.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(e, r, n) { var o = h; return function (i, a) { if (o === f) throw Error("Generator is already running"); if (o === s) { if ("throw" === i) throw a; return { value: t, done: !0 }; } for (n.method = i, n.arg = a;;) { var c = n.delegate; if (c) { var u = maybeInvokeDelegate(c, n); if (u) { if (u === y) continue; return u; } } if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) { if (o === h) throw o = s, n.arg; n.dispatchException(n.arg); } else "return" === n.method && n.abrupt("return", n.arg); o = f; var p = tryCatch(e, r, n); if ("normal" === p.type) { if (o = n.done ? s : l, p.arg === y) continue; return { value: p.arg, done: n.done }; } "throw" === p.type && (o = s, n.method = "throw", n.arg = p.arg); } }; } function maybeInvokeDelegate(e, r) { var n = r.method, o = e.iterator[n]; if (o === t) return r.delegate = null, "throw" === n && e.iterator["return"] && (r.method = "return", r.arg = t, maybeInvokeDelegate(e, r), "throw" === r.method) || "return" !== n && (r.method = "throw", r.arg = new TypeError("The iterator does not provide a '" + n + "' method")), y; var i = tryCatch(o, e.iterator, r.arg); if ("throw" === i.type) return r.method = "throw", r.arg = i.arg, r.delegate = null, y; var a = i.arg; return a ? a.done ? (r[e.resultName] = a.value, r.next = e.nextLoc, "return" !== r.method && (r.method = "next", r.arg = t), r.delegate = null, y) : a : (r.method = "throw", r.arg = new TypeError("iterator result is not an object"), r.delegate = null, y); } function pushTryEntry(t) { var e = { tryLoc: t[0] }; 1 in t && (e.catchLoc = t[1]), 2 in t && (e.finallyLoc = t[2], e.afterLoc = t[3]), this.tryEntries.push(e); } function resetTryEntry(t) { var e = t.completion || {}; e.type = "normal", delete e.arg, t.completion = e; } function Context(t) { this.tryEntries = [{ tryLoc: "root" }], t.forEach(pushTryEntry, this), this.reset(!0); } function values(e) { if (e || "" === e) { var r = e[a]; if (r) return r.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) { var o = -1, i = function next() { for (; ++o < e.length;) if (n.call(e, o)) return next.value = e[o], next.done = !1, next; return next.value = t, next.done = !0, next; }; return i.next = i; } } throw new TypeError(_typeof(e) + " is not iterable"); } return GeneratorFunction.prototype = GeneratorFunctionPrototype, o(g, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), o(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, u, "GeneratorFunction"), e.isGeneratorFunction = function (t) { var e = "function" == typeof t && t.constructor; return !!e && (e === GeneratorFunction || "GeneratorFunction" === (e.displayName || e.name)); }, e.mark = function (t) { return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, define(t, u, "GeneratorFunction")), t.prototype = Object.create(g), t; }, e.awrap = function (t) { return { __await: t }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, c, function () { return this; }), e.AsyncIterator = AsyncIterator, e.async = function (t, r, n, o, i) { void 0 === i && (i = Promise); var a = new AsyncIterator(wrap(t, r, n, o), i); return e.isGeneratorFunction(r) ? a : a.next().then(function (t) { return t.done ? t.value : a.next(); }); }, defineIteratorMethods(g), define(g, u, "Generator"), define(g, a, function () { return this; }), define(g, "toString", function () { return "[object Generator]"; }), e.keys = function (t) { var e = Object(t), r = []; for (var n in e) r.push(n); return r.reverse(), function next() { for (; r.length;) { var t = r.pop(); if (t in e) return next.value = t, next.done = !1, next; } return next.done = !0, next; }; }, e.values = values, Context.prototype = { constructor: Context, reset: function reset(e) { if (this.prev = 0, this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(resetTryEntry), !e) for (var r in this) "t" === r.charAt(0) && n.call(this, r) && !isNaN(+r.slice(1)) && (this[r] = t); }, stop: function stop() { this.done = !0; var t = this.tryEntries[0].completion; if ("throw" === t.type) throw t.arg; return this.rval; }, dispatchException: function dispatchException(e) { if (this.done) throw e; var r = this; function handle(n, o) { return a.type = "throw", a.arg = e, r.next = n, o && (r.method = "next", r.arg = t), !!o; } for (var o = this.tryEntries.length - 1; o >= 0; --o) { var i = this.tryEntries[o], a = i.completion; if ("root" === i.tryLoc) return handle("end"); if (i.tryLoc <= this.prev) { var c = n.call(i, "catchLoc"), u = n.call(i, "finallyLoc"); if (c && u) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } else if (c) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); } else { if (!u) throw Error("try statement without catch or finally"); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } } } }, abrupt: function abrupt(t, e) { for (var r = this.tryEntries.length - 1; r >= 0; --r) { var o = this.tryEntries[r]; if (o.tryLoc <= this.prev && n.call(o, "finallyLoc") && this.prev < o.finallyLoc) { var i = o; break; } } i && ("break" === t || "continue" === t) && i.tryLoc <= e && e <= i.finallyLoc && (i = null); var a = i ? i.completion : {}; return a.type = t, a.arg = e, i ? (this.method = "next", this.next = i.finallyLoc, y) : this.complete(a); }, complete: function complete(t, e) { if ("throw" === t.type) throw t.arg; return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && e && (this.next = e), y; }, finish: function finish(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.finallyLoc === t) return this.complete(r.completion, r.afterLoc), resetTryEntry(r), y; } }, "catch": function _catch(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.tryLoc === t) { var n = r.completion; if ("throw" === n.type) { var o = n.arg; resetTryEntry(r); } return o; } } throw Error("illegal catch attempt"); }, delegateYield: function delegateYield(e, r, n) { return this.delegate = { iterator: values(e), resultName: r, nextLoc: n }, "next" === this.method && (this.arg = t), y; } }, e; }
+function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
+function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
 function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
@@ -12211,7 +12647,7 @@ var __importStar = void 0 && (void 0).__importStar || function (mod) {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.isDate = exports.getExtension = exports.sanitizeEmailPrefix = exports.replaceUndefined = exports.joinObjects = exports.removeNulls = exports.pathValueToObject = exports.assert = exports.Mime = void 0;
+exports.allowEventLoop = exports.isDate = exports.getExtension = exports.sanitizeEmailPrefix = exports.replaceUndefined = exports.joinObjects = exports.removeNulls = exports.pathValueToObject = exports.assert = exports.Mime = void 0;
 var ivipbase_core_1 = require("ivipbase-core");
 __exportStar(require("./base64"), exports);
 exports.Mime = __importStar(require("./Mime"));
@@ -12353,6 +12789,107 @@ var isDate = function isDate(value) {
   return false;
 };
 exports.isDate = isDate;
+function allowEventLoop(_x, _x2) {
+  return _allowEventLoop.apply(this, arguments);
+}
+function _allowEventLoop() {
+  _allowEventLoop = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(itens, callback) {
+    var options,
+      _ref,
+      _ref$length_cycles,
+      length_cycles,
+      currency_index,
+      i,
+      callbackResult,
+      key,
+      _callbackResult,
+      _args = arguments;
+    return _regeneratorRuntime().wrap(function _callee$(_context) {
+      while (1) switch (_context.prev = _context.next) {
+        case 0:
+          options = _args.length > 2 && _args[2] !== undefined ? _args[2] : {};
+          _ref = options !== null && options !== void 0 ? options : {}, _ref$length_cycles = _ref.length_cycles, length_cycles = _ref$length_cycles === void 0 ? 1 : _ref$length_cycles;
+          currency_index = 0;
+          if (!Array.isArray(itens)) {
+            _context.next = 20;
+            break;
+          }
+          i = 0;
+        case 5:
+          if (!(i < itens.length)) {
+            _context.next = 18;
+            break;
+          }
+          _context.next = 8;
+          return Promise.race([callback(itens[i], i)]);
+        case 8:
+          callbackResult = _context.sent;
+          if (!(callbackResult === true)) {
+            _context.next = 11;
+            break;
+          }
+          return _context.abrupt("break", 18);
+        case 11:
+          if (!(currency_index % length_cycles === 0)) {
+            _context.next = 14;
+            break;
+          }
+          _context.next = 14;
+          return new Promise(function (resolve) {
+            return setTimeout(resolve, 0);
+          });
+        case 14:
+          currency_index++;
+        case 15:
+          i++;
+          _context.next = 5;
+          break;
+        case 18:
+          _context.next = 35;
+          break;
+        case 20:
+          if (!(_typeof(itens) === "object" && itens !== null)) {
+            _context.next = 35;
+            break;
+          }
+          _context.t0 = _regeneratorRuntime().keys(itens);
+        case 22:
+          if ((_context.t1 = _context.t0()).done) {
+            _context.next = 35;
+            break;
+          }
+          key = _context.t1.value;
+          _context.next = 26;
+          return Promise.race([callback(itens[key], key)]);
+        case 26:
+          _callbackResult = _context.sent;
+          if (!(_callbackResult === true)) {
+            _context.next = 29;
+            break;
+          }
+          return _context.abrupt("break", 35);
+        case 29:
+          if (!(currency_index % length_cycles === 0)) {
+            _context.next = 32;
+            break;
+          }
+          _context.next = 32;
+          return new Promise(function (resolve) {
+            return setTimeout(resolve, 0);
+          });
+        case 32:
+          currency_index++;
+          _context.next = 22;
+          break;
+        case 35:
+        case "end":
+          return _context.stop();
+      }
+    }, _callee);
+  }));
+  return _allowEventLoop.apply(this, arguments);
+}
+exports.allowEventLoop = allowEventLoop;
 
 },{"./Mime":35,"./base64":36,"ivipbase-core":152}],38:[function(require,module,exports){
 "use strict";

@@ -1,7 +1,7 @@
 import { ID, PathInfo, SimpleEventEmitter, Types } from "ivipbase-core";
 import { NodesPending, StorageNodeInfo } from "./NodeInfo";
 import { getTypedChildValue, getValueType, nodeValueTypes, processReadNodeValue, valueFitsInline } from "./utils";
-import { allowEventLoop, removeNulls } from "src/utils";
+import { allowEventLoop, isDate, removeNulls } from "../../../utils";
 
 const checkIncludedPath = (
 	from: string,
@@ -89,9 +89,18 @@ export class NTree extends SimpleEventEmitter {
 		return super.once(event, callback);
 	}
 
-	on<d = { dbName: string; name: "remove"; path: string; value: any; previous: undefined }>(event: "remove", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
-	on<d = { dbName: string; name: "change"; path: string; value: any; previous: any }>(event: "change", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
-	on<d = { dbName: string; name: "add"; path: string; value: any; previous: undefined }>(event: "add", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
+	on<d = { dbName: string; name: "remove"; path: string; content: StorageNodeInfo["content"]; value: any; previous: undefined }>(
+		event: "remove",
+		callback: (data: d) => void,
+	): Types.SimpleEventEmitterProperty;
+	on<d = { dbName: string; name: "change"; path: string; content: StorageNodeInfo["content"]; value: any; previous: any }>(
+		event: "change",
+		callback: (data: d) => void,
+	): Types.SimpleEventEmitterProperty;
+	on<d = { dbName: string; name: "add"; path: string; content: StorageNodeInfo["content"]; value: any; previous: undefined }>(
+		event: "add",
+		callback: (data: d) => void,
+	): Types.SimpleEventEmitterProperty;
 	on<d = undefined>(event: "ready", callback: (data: d) => void): Types.SimpleEventEmitterProperty;
 	on(event: string, callback: any) {
 		return super.on(event, callback);
@@ -107,10 +116,16 @@ export class NTree extends SimpleEventEmitter {
 				dbName: this.database,
 				name: event,
 				path: data.path,
+				content: removeNulls(data.content),
 				value: removeNulls(data.content.value),
 				previous: event === "change" ? removeNulls(data?.previous_content?.value) : undefined,
 			};
+
+			if (event === "change" && JSON.stringify(data.value) === JSON.stringify(data.previous)) {
+				return this;
+			}
 		}
+
 		return super.emit(event, data);
 	}
 
@@ -253,6 +268,7 @@ export class NTree extends SimpleEventEmitter {
 
 		let value: any = undefined;
 		let { path: nodePath, content } = nodeInfo;
+
 		content = processReadNodeValue(content);
 
 		if (pathInfo.isChildOf(nodePath)) {
@@ -265,11 +281,13 @@ export class NTree extends SimpleEventEmitter {
 			) {
 				value = (content.value as any)[pathInfo.key as any] ?? undefined;
 			}
-			return value;
+			return removeNulls(value);
+		} else {
+			value = content.value;
 		}
 
 		if (content.type === nodeValueTypes.OBJECT || content.type === nodeValueTypes.ARRAY) {
-			value = resolveObjetByIncluded(nodePath, content.type === nodeValueTypes.ARRAY ? (Array.isArray(content.value) ? content.value : []) : content.value, options as any);
+			value = removeNulls(resolveObjetByIncluded(nodePath, content.type === nodeValueTypes.ARRAY ? (Array.isArray(content.value) ? content.value : []) : content.value, options as any));
 
 			const tree = this.tree[nodePath];
 
@@ -393,15 +411,24 @@ export class NTree extends SimpleEventEmitter {
 		},
 	) {
 		let pathInfo = new PathInfo(path);
+		const parentPath = pathInfo.parent;
 		const revision = options?.assert_revision ?? ID.generate();
 		options.assert_revision = revision;
 		options.include_checks = typeof options.include_checks === "boolean" ? options.include_checks : true;
 
 		if (["[object Object]", "[object Array]"].includes(Object.prototype.toString.call(data)) !== true) {
 			type = "UPDATE";
-			data = {
-				[pathInfo.key as any]: data,
-			};
+
+			if (typeof pathInfo.key === "number") {
+				const val = data;
+				data = new Array();
+				data[pathInfo.key] = val;
+			} else {
+				data = {
+					[pathInfo.key as any]: data,
+				};
+			}
+
 			pathInfo = pathInfo.parent as any;
 		}
 
@@ -409,11 +436,13 @@ export class NTree extends SimpleEventEmitter {
 			this.verifyParents(pathInfo.path, options);
 		}
 
+		const isArray = Object.prototype.toString.call(data) === "[object Array]" || Array.isArray(data);
+
 		const node: StorageNodeInfo = {
 			path: pathInfo.path,
 			content: {
-				type: (typeof pathInfo.key === "number" ? nodeValueTypes.ARRAY : nodeValueTypes.OBJECT) as any,
-				value: typeof pathInfo.key === "number" ? [] : {},
+				type: (isArray ? nodeValueTypes.ARRAY : nodeValueTypes.OBJECT) as any,
+				value: {},
 				revision,
 				revision_nr: 1,
 				created: Date.now(),
@@ -431,6 +460,23 @@ export class NTree extends SimpleEventEmitter {
 			}
 		});
 
+		if (parentPath && !parentPath.equals(pathInfo) && this.hasNode(parentPath.path) && pathInfo.key !== null) {
+			const mainNode = this.indexes[parentPath.path];
+
+			if (mainNode.content.type === nodeValueTypes.OBJECT || mainNode.content.type === nodeValueTypes.ARRAY) {
+				const previous_content = JSON.parse(JSON.stringify(mainNode.content));
+
+				if (pathInfo.key in (mainNode.content.value as any)) {
+					delete (mainNode.content.value as any)[pathInfo.key];
+
+					mainNode.content.modified = Date.now();
+					mainNode.content.revision_nr = mainNode.content.revision_nr + 1;
+
+					this.emit("change", { ...mainNode, previous_content });
+				}
+			}
+		}
+
 		if (this.hasNode(pathInfo.path)) {
 			const mainNode = this.indexes[pathInfo.path];
 			const previous_content = JSON.parse(JSON.stringify(mainNode.content));
@@ -444,7 +490,12 @@ export class NTree extends SimpleEventEmitter {
 			}
 
 			if (type === "UPDATE") {
-				node.content.value = mainNode.content.value;
+				node.content.value = Array.isArray(mainNode.content.value)
+					? mainNode.content.value.reduce((acc, curr, index) => {
+							acc[index] = curr;
+							return acc;
+					  }, {})
+					: mainNode.content.value;
 			} else {
 				await allowEventLoop(childs, async (path) => {
 					const pathInfo = new PathInfo(path);
@@ -454,13 +505,21 @@ export class NTree extends SimpleEventEmitter {
 				});
 			}
 
-			await allowEventLoop(fitsInlineKeys, async (key) => {
+			await allowEventLoop(data, async (val, key: number | string) => {
 				const newPath = PathInfo.get([pathInfo.path, key]);
-				if (this.hasNode(newPath.path)) {
-					await this.remove(newPath.path);
+				if (fitsInlineKeys.includes(key)) {
+					if (this.hasNode(newPath.path)) {
+						await this.remove(newPath.path);
+					}
+					(node.content.value as any)[key] = getTypedChildValue(val);
+				} else if (key in (node.content.value as any)) {
+					delete (node.content.value as any)[key];
 				}
-				(node.content.value as any)[key] = getTypedChildValue(data[key]);
 			});
+
+			node.content.created = mainNode.content.created;
+			node.content.modified = Date.now();
+			node.content.revision_nr = mainNode.content.revision_nr + 1;
 
 			this.pushIndex(node);
 			this.emit("change", { ...node, previous_content });
@@ -508,6 +567,10 @@ export class NTree extends SimpleEventEmitter {
 							});
 						}
 
+						node.content.created = mainNode.content.created;
+						node.content.modified = Date.now();
+						node.content.revision_nr = mainNode.content.revision_nr + 1;
+
 						this.pushIndex(node);
 						this.emit("change", { ...node, previous_content });
 					} else {
@@ -517,6 +580,60 @@ export class NTree extends SimpleEventEmitter {
 				}
 			}
 		});
+	}
+
+	async findChildsBy(path: string | (string | number | PathInfo)[], query: Types.Query) {
+		const queryFilters: Array<Types.QueryFilter> = query.filters ?? [];
+		const querySort: Array<Types.QueryOrder> = query.order ?? [];
+
+		const compare = (a: { path: string; val: any }, b: { path: string; val: any }, i: number): number => {
+			const o = querySort[i];
+			if (!o) {
+				return 0;
+			}
+			const trailKeys = PathInfo.get(typeof o.key === "number" ? `[${o.key}]` : o.key).keys;
+
+			let left = trailKeys.reduce((val, key) => (val !== null && typeof val === "object" && key && key in val ? val[key] : null), a.val);
+
+			let right = trailKeys.reduce((val, key) => (val !== null && typeof val === "object" && key && key in val ? val[key] : null), b.val);
+
+			left = isDate(left) ? new Date(left).getTime() : left;
+			right = isDate(right) ? new Date(right).getTime() : right;
+
+			if (left === null) {
+				return right === null ? 0 : o.ascending ? -1 : 1;
+			}
+			if (right === null) {
+				return o.ascending ? 1 : -1;
+			}
+
+			if (left == right) {
+				if (i < querySort.length - 1) {
+					return compare(a, b, i + 1);
+				} else {
+					return a.path < b.path ? -1 : 1;
+				}
+			} else if (left < right) {
+				return o.ascending ? -1 : 1;
+			}
+			// else if (left > right) {
+			return o.ascending ? 1 : -1;
+			// }
+		};
+
+		const childs = (await this.getChildNodesBy(path)).sort((a, b) =>
+			compare(
+				{
+					path: a.path,
+					val: processReadNodeValue(a.content).value,
+				},
+				{
+					path: b.path,
+					val: processReadNodeValue(b.content).value,
+				},
+				0,
+			),
+		);
 	}
 }
 
