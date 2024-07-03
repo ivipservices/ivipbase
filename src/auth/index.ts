@@ -131,7 +131,7 @@ export class AuthUser {
 	 * @throws auth/invalid-photo-url Lançado se a URL da foto for inválida.
 	 */
 	async updateProfile(profile: { displayName?: string; photoURL?: string }): Promise<void> {
-		const result = await this.auth.app.request({ method: "POST", route: `/auth/${this.auth.database}/update`, data: profile });
+		const result = await this.auth.app.request({ method: "POST", route: `/auth/${this.auth.database}/update`, data: profile, accessToken: this.accessToken });
 		Object.assign(this, result.user ?? {});
 	}
 
@@ -150,6 +150,7 @@ export class AuthUser {
 			data: {
 				email,
 			},
+			accessToken: this.accessToken,
 		});
 		Object.assign(this, result.user ?? {});
 	}
@@ -169,6 +170,7 @@ export class AuthUser {
 			data: {
 				username,
 			},
+			accessToken: this.accessToken,
 		});
 		Object.assign(this, result.user ?? {});
 	}
@@ -190,6 +192,7 @@ export class AuthUser {
 			method: "POST",
 			route: `/auth/${this.auth.database}/change_password`,
 			data: { uid: this.uid, password: currentPassword, new_password: newPassword },
+			accessToken: this.accessToken,
 		});
 
 		this._accessToken = result.access_token;
@@ -215,6 +218,7 @@ export class AuthUser {
 			method: "POST",
 			route: `/auth/${this.auth.database}/send_email_verification`,
 			data: { username: this.username, email: this.email },
+			accessToken: this.accessToken,
 		});
 	}
 
@@ -224,9 +228,9 @@ export class AuthUser {
 	 * @throws auth/requires-recent-login Lançado se o último tempo de login do usuário não atender ao limite de segurança. Use reauthenticateWithCredential para resolver. Isso não se aplica se o usuário for anônimo.
 	 */
 	async delete(): Promise<void> {
-		const result = await this.auth.app.request({ method: "POST", route: `/auth/${this.auth.database}/delete`, data: { uid: this.uid } });
+		const access_token = this._accessToken;
+		const result = await this.auth.app.request({ method: "POST", route: `/auth/${this.auth.database}/delete`, data: { uid: this.uid }, accessToken: access_token });
 		if (result) {
-			const access_token = this._accessToken;
 			this._accessToken = undefined;
 			this._lastAccessTokenRefresh = 0;
 			this.auth.emit("signout", access_token);
@@ -529,6 +533,7 @@ export class Auth extends SimpleEventEmitter {
 	 * @throws auth/weak-password Lançado se a senha não for forte o suficiente.
 	 */
 	async createUserWithEmailAndPassword(email: string, password: string, signIn = true): Promise<AuthUser> {
+		const accessToken = this.currentUser?.accessToken;
 		const result = await this.app.request({
 			method: "POST",
 			route: `/auth/${this.database}/signup`,
@@ -540,6 +545,7 @@ export class Auth extends SimpleEventEmitter {
 				display_name: email,
 				settings: {},
 			},
+			accessToken,
 		});
 		if (signIn) {
 			return this.handleSignInResult(result);
@@ -574,6 +580,7 @@ export class Auth extends SimpleEventEmitter {
 	 * @throws auth/username-email-require-recent-login Lançado se o último tempo de login do usuário não atender ao limite de segurança. Use reauthenticateWithCredential para resolver. Isso não se aplica se o usuário for anônimo.
 	 */
 	async createUserWithUsernameAndPassword(username: string, email: string, password: string, signIn = true): Promise<AuthUser> {
+		const accessToken = this.currentUser?.accessToken;
 		const result = await this.app.request({
 			method: "POST",
 			route: `/auth/${this.database}/signup`,
@@ -585,6 +592,7 @@ export class Auth extends SimpleEventEmitter {
 				display_name: email,
 				settings: {},
 			},
+			accessToken,
 		});
 		if (signIn) {
 			return this.handleSignInResult(result);
@@ -683,9 +691,8 @@ export class Auth extends SimpleEventEmitter {
 			return Promise.resolve();
 		}
 
-		const result = await this.app.request({ method: "POST", route: `/auth/${this.database}/signout`, data: { client_id: this.app.socket && this.app.socket.id } });
-
 		const access_token = this.user.accessToken;
+		const result = await this.app.request({ method: "POST", route: `/auth/${this.database}/signout`, data: { client_id: this.app.socket && this.app.socket.id }, accessToken: access_token });
 		this.user = null;
 		localStorage.removeItem(`[${this.database}][auth_user]`);
 
@@ -767,7 +774,8 @@ export class Auth extends SimpleEventEmitter {
 	 * @throws auth/user-not-found Lançado se não houver usuário correspondente ao endereço de e-mail.
 	 */
 	async sendPasswordResetEmail(email: string): Promise<void> {
-		const result = await this.app.request({ method: "POST", route: `/auth/${this.database}/forgot_password`, data: { email } });
+		const accessToken = this.currentUser?.accessToken;
+		const result = await this.app.request({ method: "POST", route: `/auth/${this.database}/forgot_password`, data: { email }, accessToken });
 	}
 
 	/**
@@ -780,7 +788,8 @@ export class Auth extends SimpleEventEmitter {
 	 * @throws auth/user-not-found Lançado se o usuário correspondente ao código de ação não for encontrado.
 	 */
 	async applyActionCode(code: string): Promise<string> {
-		const result = await this.app.request({ method: "POST", route: `/auth/${this.database}/verify_email`, data: { code } });
+		const accessToken = this.currentUser?.accessToken;
+		const result = await this.app.request({ method: "POST", route: `/auth/${this.database}/verify_email`, data: { code }, accessToken });
 		return result.email;
 	}
 
@@ -808,7 +817,8 @@ export class Auth extends SimpleEventEmitter {
 	 * @throws auth/weak-password Lançado se o novo e-mail for inválido.
 	 */
 	async confirmPasswordReset(code: string, newPassword: string): Promise<void> {
-		const result = await this.app.request({ method: "POST", route: `/auth/${this.database}/reset_password`, data: { code, password: newPassword } });
+		const accessToken = this.currentUser?.accessToken;
+		const result = await this.app.request({ method: "POST", route: `/auth/${this.database}/reset_password`, data: { code, password: newPassword }, accessToken });
 	}
 
 	/**

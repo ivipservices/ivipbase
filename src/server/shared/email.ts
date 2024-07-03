@@ -1,12 +1,13 @@
 export interface IvipBaseEmailRequest {
 	/** email request type */
-	type: string;
+	type: "user_signup" | "user_signin" | "user_reset_password" | "user_reset_password_success";
 }
 
 export interface IvipBaseUserEmailRequest extends IvipBaseEmailRequest {
 	user: { uid: string; email: string; username?: string; displayName?: string; settings?: any };
 	ip: string;
 	date: Date;
+	database: string;
 }
 
 export interface IvipBaseUserSignupEmailRequest extends IvipBaseUserEmailRequest {

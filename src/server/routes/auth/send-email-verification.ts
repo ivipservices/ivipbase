@@ -88,6 +88,7 @@ export const addRoutes = (env: LocalServer) => {
 				provider: "ivipbase",
 				activationCode: createSignedPublicToken({ uid: user.uid }, tokenSalt),
 				emailVerified: false,
+				database: dbName,
 			};
 
 			LOG_DETAILS.uid = user.uid;

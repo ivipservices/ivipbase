@@ -70,6 +70,7 @@ export const addRoutes = (env: LocalServer) => {
 				displayName: user.display_name,
 				settings: user.settings,
 			},
+			database: dbName,
 		};
 
 		env.send_email(dbName, request);
