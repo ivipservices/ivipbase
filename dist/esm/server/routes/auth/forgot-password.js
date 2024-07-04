@@ -51,6 +51,7 @@ export const addRoutes = (env) => {
                     settings: user.settings,
                     displayName: user.display_name,
                 },
+                database: dbName,
             };
             await snap.ref.update({ password_reset_code: user.password_reset_code });
             await env.send_email(dbName, request).catch((err) => {

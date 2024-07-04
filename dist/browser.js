@@ -1074,7 +1074,8 @@ var AuthUser = /*#__PURE__*/function () {
               return this.auth.app.request({
                 method: "POST",
                 route: "/auth/".concat(this.auth.database, "/update"),
-                data: profile
+                data: profile,
+                accessToken: this.accessToken
               });
             case 2:
               result = _context.sent;
@@ -1113,7 +1114,8 @@ var AuthUser = /*#__PURE__*/function () {
                 route: "/auth/".concat(this.auth.database, "/update"),
                 data: {
                   email: email
-                }
+                },
+                accessToken: this.accessToken
               });
             case 2:
               result = _context2.sent;
@@ -1152,7 +1154,8 @@ var AuthUser = /*#__PURE__*/function () {
                 route: "/auth/".concat(this.auth.database, "/update"),
                 data: {
                   username: username
-                }
+                },
+                accessToken: this.accessToken
               });
             case 2:
               result = _context3.sent;
@@ -1199,7 +1202,8 @@ var AuthUser = /*#__PURE__*/function () {
                   uid: this.uid,
                   password: currentPassword,
                   new_password: newPassword
-                }
+                },
+                accessToken: this.accessToken
               });
             case 4:
               result = _context4.sent;
@@ -1248,7 +1252,8 @@ var AuthUser = /*#__PURE__*/function () {
                 data: {
                   username: this.username,
                   email: this.email
-                }
+                },
+                accessToken: this.accessToken
               });
             case 4:
               result = _context5.sent;
@@ -1273,27 +1278,28 @@ var AuthUser = /*#__PURE__*/function () {
     key: "delete",
     value: (function () {
       var _delete2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee6() {
-        var result, access_token;
+        var access_token, result;
         return _regeneratorRuntime().wrap(function _callee6$(_context6) {
           while (1) switch (_context6.prev = _context6.next) {
             case 0:
-              _context6.next = 2;
+              access_token = this._accessToken;
+              _context6.next = 3;
               return this.auth.app.request({
                 method: "POST",
                 route: "/auth/".concat(this.auth.database, "/delete"),
                 data: {
                   uid: this.uid
-                }
+                },
+                accessToken: access_token
               });
-            case 2:
+            case 3:
               result = _context6.sent;
               if (result) {
-                access_token = this._accessToken;
                 this._accessToken = undefined;
                 this._lastAccessTokenRefresh = 0;
                 this.auth.emit("signout", access_token);
               }
-            case 4:
+            case 5:
             case "end":
               return _context6.stop();
           }
@@ -1682,13 +1688,16 @@ var Auth = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
     value: (function () {
       var _createUserWithEmailAndPassword = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee12(email, password) {
         var signIn,
+          _a,
+          accessToken,
           result,
           _args12 = arguments;
         return _regeneratorRuntime().wrap(function _callee12$(_context12) {
           while (1) switch (_context12.prev = _context12.next) {
             case 0:
               signIn = _args12.length > 2 && _args12[2] !== undefined ? _args12[2] : true;
-              _context12.next = 3;
+              accessToken = (_a = this.currentUser) === null || _a === void 0 ? void 0 : _a.accessToken;
+              _context12.next = 4;
               return this.app.request({
                 method: "POST",
                 route: "/auth/".concat(this.database, "/signup"),
@@ -1699,18 +1708,19 @@ var Auth = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
                   displayName: email,
                   display_name: email,
                   settings: {}
-                }
+                },
+                accessToken: accessToken
               });
-            case 3:
+            case 4:
               result = _context12.sent;
               if (!signIn) {
-                _context12.next = 6;
+                _context12.next = 7;
                 break;
               }
               return _context12.abrupt("return", this.handleSignInResult(result));
-            case 6:
-              return _context12.abrupt("return", new AuthUser(this, result.user, result.access_token));
             case 7:
+              return _context12.abrupt("return", new AuthUser(this, result.user, result.access_token));
+            case 8:
             case "end":
               return _context12.stop();
           }
@@ -1753,13 +1763,16 @@ var Auth = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
     value: (function () {
       var _createUserWithUsernameAndPassword = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee13(username, email, password) {
         var signIn,
+          _a,
+          accessToken,
           result,
           _args13 = arguments;
         return _regeneratorRuntime().wrap(function _callee13$(_context13) {
           while (1) switch (_context13.prev = _context13.next) {
             case 0:
               signIn = _args13.length > 3 && _args13[3] !== undefined ? _args13[3] : true;
-              _context13.next = 3;
+              accessToken = (_a = this.currentUser) === null || _a === void 0 ? void 0 : _a.accessToken;
+              _context13.next = 4;
               return this.app.request({
                 method: "POST",
                 route: "/auth/".concat(this.database, "/signup"),
@@ -1770,18 +1783,19 @@ var Auth = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
                   displayName: email,
                   display_name: email,
                   settings: {}
-                }
+                },
+                accessToken: accessToken
               });
-            case 3:
+            case 4:
               result = _context13.sent;
               if (!signIn) {
-                _context13.next = 6;
+                _context13.next = 7;
                 break;
               }
               return _context13.abrupt("return", this.handleSignInResult(result));
-            case 6:
-              return _context13.abrupt("return", new AuthUser(this, result.user, result.access_token));
             case 7:
+              return _context13.abrupt("return", new AuthUser(this, result.user, result.access_token));
+            case 8:
             case "end":
               return _context13.stop();
           }
@@ -1963,7 +1977,7 @@ var Auth = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
     key: "signOut",
     value: (function () {
       var _signOut = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee17() {
-        var result, access_token;
+        var access_token, result;
         return _regeneratorRuntime().wrap(function _callee17$(_context17) {
           while (1) switch (_context17.prev = _context17.next) {
             case 0:
@@ -1973,17 +1987,18 @@ var Auth = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
               }
               return _context17.abrupt("return", Promise.resolve());
             case 2:
-              _context17.next = 4;
+              access_token = this.user.accessToken;
+              _context17.next = 5;
               return this.app.request({
                 method: "POST",
                 route: "/auth/".concat(this.database, "/signout"),
                 data: {
                   client_id: this.app.socket && this.app.socket.id
-                }
+                },
+                accessToken: access_token
               });
-            case 4:
+            case 5:
               result = _context17.sent;
-              access_token = this.user.accessToken;
               this.user = null;
               localStorage_1["default"].removeItem("[".concat(this.database, "][auth_user]"));
               this.emit("signout", access_token);
@@ -2074,21 +2089,23 @@ var Auth = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
     key: "sendPasswordResetEmail",
     value: (function () {
       var _sendPasswordResetEmail = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee18(email) {
-        var result;
+        var _a, accessToken, result;
         return _regeneratorRuntime().wrap(function _callee18$(_context18) {
           while (1) switch (_context18.prev = _context18.next) {
             case 0:
-              _context18.next = 2;
+              accessToken = (_a = this.currentUser) === null || _a === void 0 ? void 0 : _a.accessToken;
+              _context18.next = 3;
               return this.app.request({
                 method: "POST",
                 route: "/auth/".concat(this.database, "/forgot_password"),
                 data: {
                   email: email
-                }
+                },
+                accessToken: accessToken
               });
-            case 2:
-              result = _context18.sent;
             case 3:
+              result = _context18.sent;
+            case 4:
             case "end":
               return _context18.stop();
           }
@@ -2113,22 +2130,24 @@ var Auth = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
     key: "applyActionCode",
     value: (function () {
       var _applyActionCode = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee19(code) {
-        var result;
+        var _a, accessToken, result;
         return _regeneratorRuntime().wrap(function _callee19$(_context19) {
           while (1) switch (_context19.prev = _context19.next) {
             case 0:
-              _context19.next = 2;
+              accessToken = (_a = this.currentUser) === null || _a === void 0 ? void 0 : _a.accessToken;
+              _context19.next = 3;
               return this.app.request({
                 method: "POST",
                 route: "/auth/".concat(this.database, "/verify_email"),
                 data: {
                   code: code
-                }
+                },
+                accessToken: accessToken
               });
-            case 2:
+            case 3:
               result = _context19.sent;
               return _context19.abrupt("return", result.email);
-            case 4:
+            case 5:
             case "end":
               return _context19.stop();
           }
@@ -2168,22 +2187,24 @@ var Auth = /*#__PURE__*/function (_ivipbase_core_1$Simp) {
     key: "confirmPasswordReset",
     value: (function () {
       var _confirmPasswordReset = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee20(code, newPassword) {
-        var result;
+        var _a, accessToken, result;
         return _regeneratorRuntime().wrap(function _callee20$(_context20) {
           while (1) switch (_context20.prev = _context20.next) {
             case 0:
-              _context20.next = 2;
+              accessToken = (_a = this.currentUser) === null || _a === void 0 ? void 0 : _a.accessToken;
+              _context20.next = 3;
               return this.app.request({
                 method: "POST",
                 route: "/auth/".concat(this.database, "/reset_password"),
                 data: {
                   code: code,
                   password: newPassword
-                }
+                },
+                accessToken: accessToken
               });
-            case 2:
-              result = _context20.sent;
             case 3:
+              result = _context20.sent;
+            case 4:
             case "end":
               return _context20.stop();
           }

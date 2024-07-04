@@ -59,6 +59,7 @@ const addRoutes = (env) => {
                 displayName: user.display_name,
                 settings: user.settings,
             },
+            database: dbName,
         };
         env.send_email(dbName, request);
         return user;

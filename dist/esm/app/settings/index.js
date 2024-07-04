@@ -47,7 +47,11 @@ class ServerEmailSettings extends BrowserEmailSettings {
     }
     /** Função a ser chamada quando um e-mail precisa ser enviado */
     async send(request) {
-        const { title, subject, message } = this.prepareModel(request);
+        const { title, subject, message } = this.prepareModel(request) ?? {
+            title: "iVipBase",
+            subject: "",
+            message: "",
+        };
         await this.transporter.sendMail({
             priority: "high",
             from: `${title} <${this.server.user}>`,

@@ -16,7 +16,7 @@ class SignupError extends Error {
 exports.SignupError = SignupError;
 const addRoutes = (env) => {
     env.router.post(`/auth/:dbName/signup`, async (req, res) => {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
         const { dbName } = req.params;
         if (!env.hasDatabase(dbName)) {
             return (0, error_1.sendError)(res, {
@@ -30,7 +30,7 @@ const addRoutes = (env) => {
         }
         const LOG_ACTION = "auth.signup";
         const LOG_DETAILS = { ip: (_a = req.ip) !== null && _a !== void 0 ? _a : "0.0.0.0", uid: (_c = (_b = req.user) === null || _b === void 0 ? void 0 : _b.uid) !== null && _c !== void 0 ? _c : null };
-        if (!env.settings.auth.allowUserSignup && ((_d = req.user) === null || _d === void 0 ? void 0 : _d.uid) !== "admin") {
+        if (!env.settings.auth.allowUserSignup && ((_e = (_d = req.user) === null || _d === void 0 ? void 0 : _d.permission_level) !== null && _e !== void 0 ? _e : 0) < 2) {
             env.log.error(LOG_ACTION, "user_signup_disabled", LOG_DETAILS);
             return (0, error_1.sendUnauthorizedError)(res, "admin_only", "Only admin is allowed to create users");
         }
@@ -77,7 +77,7 @@ const addRoutes = (env) => {
         }
         else if (err) {
             // Log failure
-            env.log.error(LOG_ACTION, (_e = err.code) !== null && _e !== void 0 ? _e : "unexpected", LOG_DETAILS);
+            env.log.error(LOG_ACTION, (_f = err.code) !== null && _f !== void 0 ? _f : "unexpected", LOG_DETAILS);
             res.statusCode = 422; // Unprocessable Entity
             return res.send(err);
         }
@@ -86,8 +86,8 @@ const addRoutes = (env) => {
             const pwd = (0, password_1.createPasswordHash)(details.password);
             const user = {
                 uid: "",
-                username: (_f = details.username) !== null && _f !== void 0 ? _f : null,
-                email: (_g = details.email) !== null && _g !== void 0 ? _g : null,
+                username: (_g = details.username) !== null && _g !== void 0 ? _g : null,
+                email: (_h = details.email) !== null && _h !== void 0 ? _h : null,
                 email_verified: false,
                 display_name: details.displayName,
                 password: pwd.hash,
@@ -98,8 +98,8 @@ const addRoutes = (env) => {
                 access_token_created: new Date(),
                 last_signin: new Date(),
                 last_signin_ip: req.ip,
-                photoURL: (_h = details.photoURL) !== null && _h !== void 0 ? _h : undefined,
-                settings: (_j = details.settings) !== null && _j !== void 0 ? _j : {},
+                photoURL: (_j = details.photoURL) !== null && _j !== void 0 ? _j : undefined,
+                settings: (_k = details.settings) !== null && _k !== void 0 ? _k : {},
                 permission_level: 0,
             };
             const userRef = await env.authRef(dbName).push(user);
@@ -115,15 +115,16 @@ const addRoutes = (env) => {
                 user: {
                     uid: user.uid,
                     username: user.username,
-                    email: (_k = user.email) !== null && _k !== void 0 ? _k : "",
+                    email: (_l = user.email) !== null && _l !== void 0 ? _l : "",
                     displayName: user.display_name,
                     settings: user.settings,
                 },
                 date: user.created,
-                ip: (_m = (_l = user.created_ip) !== null && _l !== void 0 ? _l : req.ip) !== null && _m !== void 0 ? _m : "0.0.0.0",
+                ip: (_o = (_m = user.created_ip) !== null && _m !== void 0 ? _m : req.ip) !== null && _o !== void 0 ? _o : "0.0.0.0",
                 provider: "ivipbase",
                 activationCode: (0, tokens_1.createSignedPublicToken)({ uid: user.uid }, tokenSalt),
                 emailVerified: false,
+                database: dbName,
             };
             env.send_email(dbName, request).catch((err) => {
                 env.log.error(LOG_ACTION + ".email", "unexpected", Object.assign(Object.assign({}, LOG_DETAILS), { request }), err);
@@ -131,7 +132,7 @@ const addRoutes = (env) => {
             // Return the positive news
             const isAdmin = req.user && req.user.uid === "admin";
             res.send({
-                access_token: isAdmin ? "" : (0, tokens_1.createPublicAccessToken)(dbName, user.uid, (_o = req.ip) !== null && _o !== void 0 ? _o : "0.0.0.0", (_p = user.access_token) !== null && _p !== void 0 ? _p : "", tokenSalt),
+                access_token: isAdmin ? "" : (0, tokens_1.createPublicAccessToken)(dbName, user.uid, (_p = req.ip) !== null && _p !== void 0 ? _p : "0.0.0.0", (_q = user.access_token) !== null && _q !== void 0 ? _q : "", tokenSalt),
                 user: (0, user_1.getPublicAccountDetails)(user),
             });
         }

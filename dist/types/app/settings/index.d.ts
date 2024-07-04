@@ -7,7 +7,7 @@ declare class ServerEmailSettings extends BrowserEmailSettings {
         title: string;
         subject: string;
         message: string;
-    };
+    } | undefined;
     constructor(options: InitialServerEmailSettings);
     /** Função a ser chamada quando um e-mail precisa ser enviado */
     send(request: EmailRequest): Promise<void>;
@@ -15,7 +15,7 @@ declare class ServerEmailSettings extends BrowserEmailSettings {
 interface AppServerSettings extends ServerInitialSettings<LocalServer> {
     email: InitialServerEmailSettings;
 }
-export type IvipBaseSettingsOptions = Partial<IvipBaseSettings & ServerInitialSettings<LocalServer> & AppServerSettings>;
+export type IvipBaseSettingsOptions = Partial<Omit<IvipBaseSettings, "email"> & ServerInitialSettings<LocalServer> & AppServerSettings>;
 export declare class IvipBaseSettings extends BrowserSettings {
     readonly options: IvipBaseSettingsOptions;
     isServer: boolean;

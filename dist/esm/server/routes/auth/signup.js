@@ -25,7 +25,7 @@ export const addRoutes = (env) => {
         }
         const LOG_ACTION = "auth.signup";
         const LOG_DETAILS = { ip: req.ip ?? "0.0.0.0", uid: req.user?.uid ?? null };
-        if (!env.settings.auth.allowUserSignup && req.user?.uid !== "admin") {
+        if (!env.settings.auth.allowUserSignup && (req.user?.permission_level ?? 0) < 2) {
             env.log.error(LOG_ACTION, "user_signup_disabled", LOG_DETAILS);
             return sendUnauthorizedError(res, "admin_only", "Only admin is allowed to create users");
         }
@@ -119,6 +119,7 @@ export const addRoutes = (env) => {
                 provider: "ivipbase",
                 activationCode: createSignedPublicToken({ uid: user.uid }, tokenSalt),
                 emailVerified: false,
+                database: dbName,
             };
             env.send_email(dbName, request).catch((err) => {
                 env.log.error(LOG_ACTION + ".email", "unexpected", { ...LOG_DETAILS, request }, err);

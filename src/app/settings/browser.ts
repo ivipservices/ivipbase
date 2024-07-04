@@ -71,20 +71,24 @@ export interface InitialServerEmailSettings {
 	server: ServerEmailServerSettings;
 
 	/** Função opcional para preparar o modelo de e-mail antes do envio. */
-	prepareModel?: (request: EmailRequest) => {
-		title: string;
-		subject: string;
-		message: string;
-	};
+	prepareModel?: (request: EmailRequest) =>
+		| {
+				title: string;
+				subject: string;
+				message: string;
+		  }
+		| undefined;
 }
 
 export class ServerEmailSettings {
 	readonly server: ServerEmailServerSettings;
-	readonly prepareModel: (request: EmailRequest) => {
-		title: string;
-		subject: string;
-		message: string;
-	} = () => ({
+	readonly prepareModel: (request: EmailRequest) =>
+		| {
+				title: string;
+				subject: string;
+				message: string;
+		  }
+		| undefined = () => ({
 		title: "",
 		subject: "",
 		message: "",

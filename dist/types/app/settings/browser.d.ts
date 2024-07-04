@@ -3,7 +3,7 @@ import { ServerAuthenticationSettings } from "../../server/browser";
 import { StorageSettings } from "../verifyStorage";
 export interface EmailRequestType {
     /** email request type */
-    type: string;
+    type: "user_signup" | "user_signin" | "user_reset_password" | "user_reset_password_success";
 }
 export interface UserEmailRequest extends EmailRequestType {
     user: {
@@ -15,6 +15,7 @@ export interface UserEmailRequest extends EmailRequestType {
     };
     ip: string;
     date: Date;
+    database: string;
 }
 export interface UserSignupEmailRequest extends UserEmailRequest {
     type: "user_signup";
@@ -58,7 +59,7 @@ export interface InitialServerEmailSettings {
         title: string;
         subject: string;
         message: string;
-    };
+    } | undefined;
 }
 export declare class ServerEmailSettings {
     readonly server: ServerEmailServerSettings;
@@ -66,7 +67,7 @@ export declare class ServerEmailSettings {
         title: string;
         subject: string;
         message: string;
-    };
+    } | undefined;
     constructor(options: InitialServerEmailSettings);
     /** Função a ser chamada quando um e-mail precisa ser enviado */
     send(request: EmailRequest): Promise<void>;

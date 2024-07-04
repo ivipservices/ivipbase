@@ -840,7 +840,7 @@ export function getAuth(app: string | IvipBaseApp | undefined): Auth;
 export function getAuth(database: string): Auth;
 export function getAuth(database: string, app: string | IvipBaseApp | undefined): Auth;
 export function getAuth(...args: any[]) {
-	let app: IvipBaseApp = args.find((a) => a instanceof IvipBaseApp),
+	let app: IvipBaseApp | undefined = args.find((a) => a instanceof IvipBaseApp),
 		dbName: string | undefined;
 	const appNames = getAppsName();
 

@@ -36,11 +36,13 @@ const getTemplateValueBy = (str: string, actions: TemplateMailerActions): string
 
 class ServerEmailSettings extends BrowserEmailSettings {
 	protected transporter: NodeMailer.Transporter;
-	readonly prepareModel: (request: EmailRequest) => {
-		title: string;
-		subject: string;
-		message: string;
-	} = (request) => {
+	readonly prepareModel: (request: EmailRequest) =>
+		| {
+				title: string;
+				subject: string;
+				message: string;
+		  }
+		| undefined = (request) => {
 		let title: string = "iVipBase";
 		let subject: string = "";
 		let message: string = "";
@@ -71,7 +73,11 @@ class ServerEmailSettings extends BrowserEmailSettings {
 
 	/** Função a ser chamada quando um e-mail precisa ser enviado */
 	async send(request: EmailRequest): Promise<void> {
-		const { title, subject, message } = this.prepareModel(request);
+		const { title, subject, message } = this.prepareModel(request) ?? {
+			title: "iVipBase",
+			subject: "",
+			message: "",
+		};
 
 		await this.transporter.sendMail({
 			priority: "high",
@@ -88,7 +94,7 @@ interface AppServerSettings extends ServerInitialSettings<LocalServer> {
 	email: InitialServerEmailSettings;
 }
 
-export type IvipBaseSettingsOptions = Partial<IvipBaseSettings & ServerInitialSettings<LocalServer> & AppServerSettings>;
+export type IvipBaseSettingsOptions = Partial<Omit<IvipBaseSettings, "email"> & ServerInitialSettings<LocalServer> & AppServerSettings>;
 
 export class IvipBaseSettings extends BrowserSettings {
 	public isServer: boolean = false;

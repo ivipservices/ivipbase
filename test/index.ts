@@ -94,6 +94,7 @@ import path from "path";
 		authentication: {
 			enabled: true,
 			defaultAdminPassword: "admin",
+			allowUserSignup: true,
 		},
 		defineRules: {
 			rules: {

@@ -84,7 +84,7 @@ export const addRoutes = (env: LocalServer) => {
 			uid?: string | null;
 		} = { ip: req.ip ?? "0.0.0.0", uid: req.user?.uid ?? null };
 
-		if (!env.settings.auth.allowUserSignup && req.user?.uid !== "admin") {
+		if (!env.settings.auth.allowUserSignup && (req.user?.permission_level ?? 0) < 2) {
 			env.log.error(LOG_ACTION, "user_signup_disabled", LOG_DETAILS);
 			return sendUnauthorizedError(res, "admin_only", "Only admin is allowed to create users");
 		}

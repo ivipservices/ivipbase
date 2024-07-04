@@ -65,6 +65,7 @@ export const addRoutes = (env) => {
                 provider: "ivipbase",
                 activationCode: createSignedPublicToken({ uid: user.uid }, tokenSalt),
                 emailVerified: false,
+                database: dbName,
             };
             LOG_DETAILS.uid = user.uid;
             env.send_email(dbName, request).catch((err) => {

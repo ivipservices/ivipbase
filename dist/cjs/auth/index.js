@@ -61,7 +61,7 @@ class AuthUser {
      */
     async updateProfile(profile) {
         var _a;
-        const result = await this.auth.app.request({ method: "POST", route: `/auth/${this.auth.database}/update`, data: profile });
+        const result = await this.auth.app.request({ method: "POST", route: `/auth/${this.auth.database}/update`, data: profile, accessToken: this.accessToken });
         Object.assign(this, (_a = result.user) !== null && _a !== void 0 ? _a : {});
     }
     /**
@@ -80,6 +80,7 @@ class AuthUser {
             data: {
                 email,
             },
+            accessToken: this.accessToken,
         });
         Object.assign(this, (_a = result.user) !== null && _a !== void 0 ? _a : {});
     }
@@ -99,6 +100,7 @@ class AuthUser {
             data: {
                 username,
             },
+            accessToken: this.accessToken,
         });
         Object.assign(this, (_a = result.user) !== null && _a !== void 0 ? _a : {});
     }
@@ -118,6 +120,7 @@ class AuthUser {
             method: "POST",
             route: `/auth/${this.auth.database}/change_password`,
             data: { uid: this.uid, password: currentPassword, new_password: newPassword },
+            accessToken: this.accessToken,
         });
         this._accessToken = result.access_token;
         this._lastAccessTokenRefresh = Date.now();
@@ -140,6 +143,7 @@ class AuthUser {
             method: "POST",
             route: `/auth/${this.auth.database}/send_email_verification`,
             data: { username: this.username, email: this.email },
+            accessToken: this.accessToken,
         });
     }
     /**
@@ -148,9 +152,9 @@ class AuthUser {
      * @throws auth/requires-recent-login Lançado se o último tempo de login do usuário não atender ao limite de segurança. Use reauthenticateWithCredential para resolver. Isso não se aplica se o usuário for anônimo.
      */
     async delete() {
-        const result = await this.auth.app.request({ method: "POST", route: `/auth/${this.auth.database}/delete`, data: { uid: this.uid } });
+        const access_token = this._accessToken;
+        const result = await this.auth.app.request({ method: "POST", route: `/auth/${this.auth.database}/delete`, data: { uid: this.uid }, accessToken: access_token });
         if (result) {
-            const access_token = this._accessToken;
             this._accessToken = undefined;
             this._lastAccessTokenRefresh = 0;
             this.auth.emit("signout", access_token);
@@ -379,6 +383,8 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
      * @throws auth/weak-password Lançado se a senha não for forte o suficiente.
      */
     async createUserWithEmailAndPassword(email, password, signIn = true) {
+        var _a;
+        const accessToken = (_a = this.currentUser) === null || _a === void 0 ? void 0 : _a.accessToken;
         const result = await this.app.request({
             method: "POST",
             route: `/auth/${this.database}/signup`,
@@ -390,6 +396,7 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
                 display_name: email,
                 settings: {},
             },
+            accessToken,
         });
         if (signIn) {
             return this.handleSignInResult(result);
@@ -423,6 +430,8 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
      * @throws auth/username-email-require-recent-login Lançado se o último tempo de login do usuário não atender ao limite de segurança. Use reauthenticateWithCredential para resolver. Isso não se aplica se o usuário for anônimo.
      */
     async createUserWithUsernameAndPassword(username, email, password, signIn = true) {
+        var _a;
+        const accessToken = (_a = this.currentUser) === null || _a === void 0 ? void 0 : _a.accessToken;
         const result = await this.app.request({
             method: "POST",
             route: `/auth/${this.database}/signup`,
@@ -434,6 +443,7 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
                 display_name: email,
                 settings: {},
             },
+            accessToken,
         });
         if (signIn) {
             return this.handleSignInResult(result);
@@ -533,8 +543,8 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
         if (!this.user || !this.user.accessToken) {
             return Promise.resolve();
         }
-        const result = await this.app.request({ method: "POST", route: `/auth/${this.database}/signout`, data: { client_id: this.app.socket && this.app.socket.id } });
         const access_token = this.user.accessToken;
+        const result = await this.app.request({ method: "POST", route: `/auth/${this.database}/signout`, data: { client_id: this.app.socket && this.app.socket.id }, accessToken: access_token });
         this.user = null;
         localStorage_1.default.removeItem(`[${this.database}][auth_user]`);
         this.emit("signout", access_token);
@@ -603,7 +613,9 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
      * @throws auth/user-not-found Lançado se não houver usuário correspondente ao endereço de e-mail.
      */
     async sendPasswordResetEmail(email) {
-        const result = await this.app.request({ method: "POST", route: `/auth/${this.database}/forgot_password`, data: { email } });
+        var _a;
+        const accessToken = (_a = this.currentUser) === null || _a === void 0 ? void 0 : _a.accessToken;
+        const result = await this.app.request({ method: "POST", route: `/auth/${this.database}/forgot_password`, data: { email }, accessToken });
     }
     /**
      * Aplica um código de verificação enviado ao usuário por e-mail ou outro mecanismo fora de banda.
@@ -615,7 +627,9 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
      * @throws auth/user-not-found Lançado se o usuário correspondente ao código de ação não for encontrado.
      */
     async applyActionCode(code) {
-        const result = await this.app.request({ method: "POST", route: `/auth/${this.database}/verify_email`, data: { code } });
+        var _a;
+        const accessToken = (_a = this.currentUser) === null || _a === void 0 ? void 0 : _a.accessToken;
+        const result = await this.app.request({ method: "POST", route: `/auth/${this.database}/verify_email`, data: { code }, accessToken });
         return result.email;
     }
     /**
@@ -641,7 +655,9 @@ class Auth extends ivipbase_core_1.SimpleEventEmitter {
      * @throws auth/weak-password Lançado se o novo e-mail for inválido.
      */
     async confirmPasswordReset(code, newPassword) {
-        const result = await this.app.request({ method: "POST", route: `/auth/${this.database}/reset_password`, data: { code, password: newPassword } });
+        var _a;
+        const accessToken = (_a = this.currentUser) === null || _a === void 0 ? void 0 : _a.accessToken;
+        const result = await this.app.request({ method: "POST", route: `/auth/${this.database}/reset_password`, data: { code, password: newPassword }, accessToken });
     }
     /**
      * Verifica um código de redefinição de senha enviado ao usuário por e-mail ou outro mecanismo fora de banda.
