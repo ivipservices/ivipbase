@@ -52,6 +52,9 @@ class ServerEmailSettings extends BrowserEmailSettings {
             subject: "",
             message: "",
         };
+        if (message.trim() === "") {
+            return;
+        }
         await this.transporter.sendMail({
             priority: "high",
             from: `${title} <${this.server.user}>`,
