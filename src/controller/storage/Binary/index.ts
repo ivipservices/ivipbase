@@ -4,6 +4,7 @@ import * as os from "os";
 import * as fs from "fs";
 import * as _path from "path";
 import { Worker } from "worker_threads";
+import { StorageNode, StorageNodeInfo } from "../MDE";
 
 export interface WorkerData {
 	filePath: string;
@@ -47,7 +48,7 @@ export default class Binary extends _Binary {
 					value,
 				};
 
-				const worker = new Worker(_path.resolve(__dirname, "./worker.ts"), {
+				const worker = new Worker(_path.resolve(__dirname, "./worker.js"), {
 					workerData: data,
 				});
 
@@ -76,19 +77,19 @@ export default class Binary extends _Binary {
 		});
 	}
 
-	async get<T = any>(path: string | Array<string | number | PathInfo> | PathInfo): Promise<T | null> {
-		return Promise.resolve(null);
+	async get(path: string | Array<string | number | PathInfo> | PathInfo): Promise<StorageNodeInfo[]> {
+		return Promise.resolve([]);
 	}
 
 	async remove(path: string | Array<string | number | PathInfo> | PathInfo): Promise<void> {
 		return Promise.resolve();
 	}
 
-	async set<T = any>(path: string | Array<string | number | PathInfo> | PathInfo, value: T): Promise<void> {
+	async set(path: string | Array<string | number | PathInfo> | PathInfo, content: StorageNode): Promise<void> {
 		return Promise.resolve();
 	}
 
-	async query<T = any>(path: string | Array<string | number | PathInfo> | PathInfo, query: Types.Query, options: Types.QueryOptions): Promise<Array<T | null>> {
+	async query(path: string | Array<string | number | PathInfo> | PathInfo, query: Types.Query, options: Types.QueryOptions): Promise<StorageNodeInfo[]> {
 		return Promise.resolve([]);
 	}
 }
