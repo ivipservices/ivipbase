@@ -223,6 +223,7 @@ import Node from "../src/server/services/database/Node";
 	await data.synchronize(path, true);
 
 	//console.log(new Date().toLocaleString("pt-BR"));
+	//console.log(new Date().toLocaleString("pt-BR"));
 
 	// data.setNode("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788/currency_id", "USD- test");
 	// data.setNode("ivipcoin-db::__movement_wallet__/000523147298669313/history/1677138655788/currency_id_olt", "BRL- test");
