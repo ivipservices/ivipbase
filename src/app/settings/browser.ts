@@ -1,201 +1,217 @@
 import type { RulesData } from "../../database/services/rules";
+import { isPossiblyServer } from "../../server";
 import { ServerAuthenticationSettings } from "../../server/browser";
 import { DEFAULT_ENTRY_NAME } from "../internal";
-import { DataStorageSettings, StorageSettings, validSettings } from "../verifyStorage";
-
-class NotImplementedError extends Error {
-	constructor(name: string) {
-		super(`${name} is not implemented`);
-	}
-}
-
-export interface EmailRequestType {
-	/** email request type */
-	type: "user_signup" | "user_signin" | "user_reset_password" | "user_reset_password_success";
-}
-
-export interface UserEmailRequest extends EmailRequestType {
-	user: { uid: string; email: string; username?: string; displayName?: string; settings?: any };
-	ip: string;
-	date: Date;
-	database: string;
-}
-
-export interface UserSignupEmailRequest extends UserEmailRequest {
-	type: "user_signup";
-	activationCode: string;
-	emailVerified: boolean;
-	provider: string;
-}
-
-export interface UserSignInEmailRequest extends UserEmailRequest {
-	type: "user_signin";
-	activationCode: string;
-	emailVerified: boolean;
-	provider: string;
-}
-
-export interface UserResetPasswordEmailRequest extends UserEmailRequest {
-	type: "user_reset_password";
-	resetCode: string;
-}
-
-export interface UserResetPasswordSuccessEmailRequest extends UserEmailRequest {
-	type: "user_reset_password_success";
-}
-
-export type EmailRequest = UserSignupEmailRequest | UserSignInEmailRequest | UserResetPasswordEmailRequest | UserResetPasswordSuccessEmailRequest;
-
-export interface ServerEmailServerSettings {
-	/** É o nome do host ou endereço IP ao qual se conectar (o padrão é ‘localhost’) */
-	host: string;
-
-	/** É a porta à qual se conectar (o padrão é 587 se for seguro for falso ou 465 se for verdadeiro) */
-	port: number;
-
-	/** Indica o tipo de autenticação, o padrão é ‘login’, outra opção é ‘oauth2’ */
-	type?: "login" | "oauth2";
-
-	/** É o nome de usuário de login */
-	user: string;
-
-	/** É a senha do usuário se o login normal for usado */
-	pass: string;
-
-	/** Se for verdade, a conexão usará TLS ao conectar-se ao servidor. Se for falso (o padrão), então o TLS será usado se o servidor suportar a extensão STARTTLS. Na maioria dos casos, defina esse valor como verdadeiro se você estiver se conectando à porta 465. Para a porta 587 ou 25, mantenha-o falso */
-	secure?: boolean;
-}
-
-export interface InitialServerEmailSettings {
-	/** Use a propriedade "send" para a sua própria implementação */
-	server: ServerEmailServerSettings;
-
-	/** Função opcional para preparar o modelo de e-mail antes do envio. */
-	prepareModel?: (request: EmailRequest) =>
-		| {
-				title: string;
-				subject: string;
-				message: string;
-		  }
-		| undefined;
-}
-
-export class ServerEmailSettings {
-	readonly server: ServerEmailServerSettings;
-	readonly prepareModel: (request: EmailRequest) =>
-		| {
-				title: string;
-				subject: string;
-				message: string;
-		  }
-		| undefined = () => ({
-		title: "",
-		subject: "",
-		message: "",
-	});
-
-	constructor(options: InitialServerEmailSettings) {
-		this.server = options.server;
-	}
-
-	/** Função a ser chamada quando um e-mail precisa ser enviado */
-	send(request: EmailRequest): Promise<void> {
-		throw new NotImplementedError("ServerEmail");
-	}
-}
+import { StorageSettings, validSettings } from "../verifyStorage";
 
 const hostnameRegex = /^((https?):\/\/)?(localhost|([\da-z\.-]+\.[a-z\.]{2,6}|[\d\.]+))(\:{1}(\d+))?$/;
 
 export interface DatabaseSettings {
 	name: string;
+	title?: string;
 	description?: string;
 	defineRules?: RulesData;
 	authentication?: Partial<ServerAuthenticationSettings>;
 }
 
-export class IvipBaseSettings {
-	public name: string = DEFAULT_ENTRY_NAME;
+export interface IvipBaseSettingsBrowser {
+	name?: string;
+	dbname: string | string[];
+	logLevel?: "log" | "warn" | "error";
+	protocol?: "http" | "https";
+	host?: string;
+	port: number | undefined;
+	storage: StorageSettings | undefined;
+}
 
-	public dbname: string | string[] = "root";
-	public database: DatabaseSettings | DatabaseSettings[] = {
-		name: "root",
-		description: "iVipBase database",
+export interface IvipBaseSettingsServer {
+	protocol?: "http" | "https";
+	host: string;
+	port: number;
+	localPath: string;
+	name?: string;
+	logLevel?: "log" | "warn" | "error";
+	storage: StorageSettings | undefined;
+	maxPayloadSize?: string;
+	allowOrigin?: string;
+	trustProxy?: boolean;
+	authentication?: {
+		allowUserSignup?: boolean;
+		newUserRateLimit?: number;
+		tokensExpire?: number;
+		defaultAccessRule?: "deny" | "allow" | "auth";
+		defaultAdminPassword?: string;
 	};
+	defineRules?: RulesData;
+}
 
-	public description: string = "";
-	public logLevel: "log" | "warn" | "error" = "log";
-	public storage?: StorageSettings;
+export type IvipBaseSettingsOptions = (IvipBaseSettingsBrowser & { isServer: false }) | (IvipBaseSettingsServer & { isServer: true });
 
-	public protocol: "http" | "https" = "http";
-	public host: string = "localhost";
-	public port?: number;
+const randomPassword = (length = 24) => {
+	const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+	return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+};
 
-	public isServer: boolean = false;
-	public isValidClient: boolean = true;
-	public isConnectionDefined: boolean = false;
-	public bootable: boolean = true;
+const passwordDefault = randomPassword();
 
-	public defaultRules: RulesData = { rules: {} };
+type BrowserOptions = Required<
+	Omit<IvipBaseSettingsBrowser, "dbname"> & {
+		isConnectionDefined: boolean;
+		dbname: string[];
+	}
+>;
 
-	constructor(readonly options: Partial<Omit<IvipBaseSettings, "isServer" | "isValidClient">> = {}) {
+type ServerOptions = Required<
+	IvipBaseSettingsServer & {
+		isConnectionDefined: boolean;
+		databaseNames: string[];
+		bootable: boolean;
+	}
+>;
+
+export class IvipBaseSettings {
+	private _browserOptions: BrowserOptions | undefined;
+	private _serverOptions: ServerOptions | undefined;
+
+	constructor(public options: Partial<IvipBaseSettingsOptions> = {}) {
 		this.reset(options);
+	}
+
+	get isServer() {
+		return this.options?.isServer && isPossiblyServer;
+	}
+
+	get browserOptions() {
+		if (this.options.isServer) return;
+
+		if (this._browserOptions) {
+			return this._browserOptions;
+		}
+
+		const options: BrowserOptions = {
+			name: DEFAULT_ENTRY_NAME,
+			dbname: ["root"],
+			logLevel: "log",
+			storage: undefined,
+			protocol: "http",
+			host: "localhost",
+			port: undefined,
+			isConnectionDefined: false,
+		};
+
+		options.name = this.options.name ?? options.name;
+		const dbname = (this.options as IvipBaseSettingsBrowser).dbname;
+		options.dbname = typeof dbname === "string" ? [dbname] : dbname ?? options.dbname;
+
+		options.logLevel = this.options.logLevel ?? options.logLevel;
+
+		if (validSettings(this.options.storage)) {
+			options.storage = this.options.storage;
+		}
+
+		const [_, _protocol, protocol, host, _host, _port, port] = (typeof this.options.host === "string" ? this.options.host : "").match(hostnameRegex) ?? [];
+
+		options.isConnectionDefined = !!host;
+
+		options.protocol = ["https", "http"].includes(protocol) ? (protocol as any) : this.options.protocol === "https" ? "https" : "http";
+		options.host = host ?? "localhost";
+		options.port = port ? parseInt(port) : this.options.port ?? options.port;
+
+		this._browserOptions = options;
+		return options;
+	}
+
+	get serverOptions() {
+		if (!this.options.isServer) return;
+
+		if (this._serverOptions) {
+			return this._serverOptions;
+		}
+
+		const options: ServerOptions = {
+			protocol: "http",
+			host: "localhost",
+			port: 8080,
+			localPath: "",
+			name: DEFAULT_ENTRY_NAME,
+			logLevel: "log",
+			storage: undefined,
+			maxPayloadSize: "30mb",
+			allowOrigin: "*",
+			trustProxy: false,
+			authentication: {
+				allowUserSignup: true,
+				newUserRateLimit: 5000,
+				tokensExpire: 86400,
+				defaultAccessRule: "auth",
+				defaultAdminPassword: passwordDefault,
+			},
+			defineRules: { rules: {} },
+			isConnectionDefined: false,
+			databaseNames: [],
+			bootable: true,
+		};
+
+		options.name = this.options.name ?? options.name;
+		options.localPath = (this.options as IvipBaseSettingsServer).localPath ?? options.localPath;
+
+		const [_, _protocol, protocol, host, _host, _port, port] = (typeof this.options.host === "string" ? this.options.host : "").match(hostnameRegex) ?? [];
+
+		options.isConnectionDefined = !!host;
+
+		options.protocol = ["https", "http"].includes(protocol) ? (protocol as any) : this.options.protocol === "https" ? "https" : "http";
+		options.host = host ?? "localhost";
+		options.port = port ? parseInt(port) : this.options.port ?? options.port;
+
+		if (validSettings(this.options.storage)) {
+			options.storage = this.options.storage;
+		}
+
+		options.maxPayloadSize = (this.options as IvipBaseSettingsServer).maxPayloadSize ?? options.maxPayloadSize;
+		options.allowOrigin = (this.options as IvipBaseSettingsServer).allowOrigin ?? options.allowOrigin;
+		options.trustProxy = (this.options as IvipBaseSettingsServer).trustProxy ?? options.trustProxy;
+
+		const authentication = (this.options as IvipBaseSettingsServer).authentication;
+
+		if (typeof authentication === "object") {
+			options.authentication = {
+				allowUserSignup: authentication.allowUserSignup ?? options.authentication.allowUserSignup,
+				newUserRateLimit: authentication.newUserRateLimit ?? options.authentication.newUserRateLimit,
+				tokensExpire: authentication.tokensExpire ?? options.authentication.tokensExpire,
+				defaultAccessRule: authentication.defaultAccessRule ?? options.authentication.defaultAccessRule,
+				defaultAdminPassword: authentication.defaultAdminPassword ?? options.authentication.defaultAdminPassword,
+			};
+		}
+
+		options.defineRules = (this.options as IvipBaseSettingsServer).defineRules ?? options.defineRules;
+
+		this._serverOptions = options;
+		return options;
+	}
+
+	get definitions(): BrowserOptions | ServerOptions {
+		return (this.options.isServer ? this.serverOptions : this.browserOptions)!!;
 	}
 
 	get isPossiplyServer() {
 		return false;
 	}
 
-	reset(options: Partial<Omit<IvipBaseSettings, "isServer" | "isValidClient">> = {}) {
-		if (typeof options.name === "string") {
-			this.name = options.name;
-		}
+	get databaseNames() {
+		return "dbname" in this.definitions ? this.definitions.dbname : [];
+	}
 
-		if (typeof options.dbname === "string" || Array.isArray(options.dbname)) {
-			this.dbname = (Array.isArray(options.dbname) ? options.dbname : [options.dbname]).filter((n) => typeof n === "string" && n.trim() !== "");
-			this.dbname = this.dbname.length > 0 ? this.dbname : "root";
-		}
+	get bootable() {
+		return "bootable" in this.definitions ? this.definitions.bootable : true;
+	}
 
-		if (Array.isArray(options.database) || typeof options.database === "object") {
-			this.database = (Array.isArray(options.database) ? options.database : [options.database]).filter((o) => {
-				return typeof o === "object" && typeof o.name === "string" && o.name.trim() !== "";
-			});
+	get storage() {
+		return this.definitions.storage;
+	}
 
-			this.dbname = Array.isArray(this.dbname) ? this.dbname : typeof this.dbname === "string" ? [this.dbname] : [];
-			this.dbname = this.dbname.concat(this.database.map(({ name }) => name));
-			this.dbname = this.dbname.length > 0 ? this.dbname : "root";
-		}
-
-		const databases = Array.isArray(this.dbname) ? this.dbname : [this.dbname];
-
-		this.database = Array.isArray(this.database) ? this.database : [this.database];
-
-		databases.forEach((name) => {
-			const index = (this.database as DatabaseSettings[]).findIndex((db) => db.name === name);
-			if (index === -1) {
-				(this.database as DatabaseSettings[]).push({ name, description: `IvipBase database` });
-			}
-		});
-
-		this.description = options.description ?? `IvipBase database`;
-
-		if (typeof options.logLevel === "string" && ["log", "warn", "error"].includes(options.logLevel)) {
-			this.logLevel = options.logLevel;
-		}
-
-		if (validSettings(options.storage)) {
-			this.storage = options.storage;
-		}
-
-		const [_, _protocol, protocol, host, _host, _port, port] = (typeof options.host === "string" ? options.host : "").match(hostnameRegex) ?? [];
-
-		this.isConnectionDefined = !!host;
-
-		this.protocol = ["https", "http"].includes(protocol) ? (protocol as any) : options.protocol === "https" ? "https" : "http";
-		this.host = host ?? "localhost";
-		this.port = port ? parseInt(port) : options.port;
-
-		this.bootable = options.bootable ?? true;
-
-		this.defaultRules = options.defaultRules ?? { rules: {} };
+	reset(options: Partial<IvipBaseSettingsOptions> = {}) {
+		this._browserOptions = undefined;
+		this._serverOptions = undefined;
+		this.options = options;
 	}
 }

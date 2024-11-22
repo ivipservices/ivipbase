@@ -27,7 +27,7 @@ export function validSettings(options: any): options is StorageSettings {
 }
 
 export function applySettings(app: IvipBaseApp) {
-	const dbname: string | string[] = app.settings.dbname;
+	const dbname: string | string[] = app.settings.databaseNames;
 	const options: StorageSettings = app.settings.storage as any;
 	if (options instanceof DataStorageSettings) {
 		return new DataStorage(dbname, options, app);

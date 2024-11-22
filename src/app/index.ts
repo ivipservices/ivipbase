@@ -2,9 +2,9 @@ import { ID, SimpleEventEmitter, Types, Utils } from "ivipbase-core";
 import { DEFAULT_ENTRY_NAME, _apps } from "./internal";
 import { AppError, ERROR_FACTORY } from "../controller/erros";
 
-import { LocalServer } from "../server";
+import { isPossiblyServer, LocalServer } from "../server";
 import { CustomStorage, applySettings } from "./verifyStorage";
-import { IvipBaseSettings, IvipBaseSettingsOptions } from "./settings";
+import { IvipBaseSettings } from "./settings";
 import { DataBase } from "../database";
 import { Auth } from "../auth";
 import _request from "../controller/request";
@@ -14,6 +14,8 @@ import { RequestError } from "../controller/request/error";
 import { IPCPeer, getIPCPeer } from "../ipc";
 import { Storage } from "../storage";
 import { AxiosProgressEvent } from "axios";
+import { Local } from "../local";
+import { IvipBaseSettingsBrowser, IvipBaseSettingsServer, IvipBaseSettingsOptions } from "./settings/browser";
 
 type IOWebSocket = ReturnType<typeof connectSocket>;
 
@@ -34,6 +36,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 	readonly databases: Map<string, DataBase> = new Map();
 	readonly auth: Map<string, Auth> = new Map();
 	readonly storageFile: Map<string, Storage> = new Map();
+	public local?: Local;
 
 	private _connectionState:
 		| typeof CONNECTION_STATE_DISCONNECTED
@@ -62,7 +65,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 
 		this.storage = applySettings(this);
 
-		this.isServer = typeof this.settings.server === "object" && this.settings.server !== null && this.settings.isServer;
+		this.isServer = Boolean(typeof this.settings.server === "object" && this.settings.server !== null && this.settings.isServer);
 
 		if (this.settings.isPossiplyServer) {
 			this._ipc = getIPCPeer(this.name);
@@ -104,7 +107,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 		if (!this._ready) {
 			const id = this.id;
 
-			if (this.settings.bootable && !this.isServer && (typeof this.settings.database === "string" || (Array.isArray(this.settings.database) && this.settings.database.length > 0))) {
+			if (this.settings.bootable && !this.isServer && this.settings.databaseNames.length > 0) {
 				await new Promise<void>((resolve) => {
 					if (this._socket) {
 						this.disconnect();
@@ -130,8 +133,6 @@ export class IvipBaseApp extends SimpleEventEmitter {
 			}
 
 			if (this.settings.bootable && this.id === id) {
-				const dbList: string[] = Array.isArray(this.settings.dbname) ? this.settings.dbname : [this.settings.dbname];
-
 				await this.storage.ready();
 
 				if (this.isServer) {
@@ -142,7 +143,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 					await this.server.ready();
 				}
 
-				for (const dbName of dbList) {
+				for (const dbName of this.settings.databaseNames) {
 					const db = this.databases.get(dbName) ?? new DataBase(dbName, this);
 					await db.ready();
 					if (!this.databases.has(dbName)) {
@@ -237,7 +238,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 			}
 		};
 
-		if (!this.isServer && (typeof this.settings.database === "string" || (Array.isArray(this.settings.database) && this.settings.database.length > 0))) {
+		if (!this.isServer && this.settings.databaseNames.length > 0) {
 			this.on("connect", event);
 		}
 
@@ -265,7 +266,8 @@ export class IvipBaseApp extends SimpleEventEmitter {
 	}
 
 	get url(): string {
-		return `${this.settings.protocol}://${this.settings.host ?? "localhost"}${typeof this.settings.port === "number" ? `:${this.settings.port}` : ""}`;
+		const { protocol, host, port } = this.settings.definitions;
+		return `${protocol}://${host ?? "localhost"}${typeof port === "number" ? `:${port}` : ""}`;
 	}
 
 	async request(options: {
@@ -414,8 +416,6 @@ export class IvipBaseApp extends SimpleEventEmitter {
 		if (this._connectionState === CONNECTION_STATE_DISCONNECTED) {
 			this._connectionState = CONNECTION_STATE_CONNECTING;
 
-			const dbNames = Array.isArray(this.settings.dbname) ? this.settings.dbname : [this.settings.dbname];
-
 			this._socket = connectSocket(this.url.replace(/^http(s?)/gi, "ws$1"), {
 				// Use default socket.io connection settings:
 				path: `/socket.io`,
@@ -426,7 +426,7 @@ export class IvipBaseApp extends SimpleEventEmitter {
 				randomizationFactor: 0.5,
 				transports: ["websocket"], // Override default setting of ['polling', 'websocket']
 				query: {
-					dbNames: JSON.stringify(dbNames),
+					dbNames: JSON.stringify(this.settings.databaseNames),
 					id: this.id,
 				},
 			});
@@ -505,28 +505,53 @@ export class IvipBaseApp extends SimpleEventEmitter {
 	}
 }
 
-export function initializeApp(options: IvipBaseSettingsOptions): IvipBaseApp {
-	const settings = new IvipBaseSettings(options);
-
-	const newApp: IvipBaseApp = new IvipBaseApp({
-		name: settings.name,
-		settings,
-	});
-
-	const existingApp = _apps.get(newApp.name);
+function appendNewApp(app: IvipBaseApp) {
+	const existingApp = _apps.get(app.name);
 	if (existingApp) {
-		if (Utils.deepEqual(newApp.settings, existingApp.settings)) {
+		if (Utils.deepEqual(app.settings, existingApp.settings)) {
 			return existingApp;
 		} else {
-			throw ERROR_FACTORY.create(AppError.DUPLICATE_APP, { appName: newApp.name });
+			throw ERROR_FACTORY.create(AppError.DUPLICATE_APP, { appName: app.name });
 		}
 	}
 
-	_apps.set(newApp.name, newApp);
+	_apps.set(app.name, app);
 
-	newApp.initialize();
+	app.initialize();
 
-	return newApp;
+	return app;
+}
+
+export function initializeApp(options: IvipBaseSettingsBrowser): IvipBaseApp {
+	const settings = new IvipBaseSettings({
+		isServer: false,
+		...(options as any),
+	});
+
+	const newApp: IvipBaseApp = new IvipBaseApp({
+		name: settings.definitions.name,
+		settings,
+	});
+
+	return appendNewApp(newApp);
+}
+
+export function initializeAppServer(options: IvipBaseSettingsServer): IvipBaseApp {
+	if (!isPossiblyServer) {
+		throw ERROR_FACTORY.create(AppError.INVALID_ARGUMENT, { message: "" });
+	}
+
+	const settings = new IvipBaseSettings({
+		isServer: true,
+		...(options as any),
+	});
+
+	const newApp: IvipBaseApp = new IvipBaseApp({
+		name: settings.definitions.name,
+		settings,
+	});
+
+	return appendNewApp(newApp);
 }
 
 export function appExists(name?: string): boolean {

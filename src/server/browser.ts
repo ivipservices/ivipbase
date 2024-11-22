@@ -2,11 +2,12 @@ import { DataReference, DebugLogger, SimpleEventEmitter } from "ivipbase-core";
 import { DataBase, getDatabase, getDatabasesNames, hasDatabase } from "../database";
 import type { IvipBaseApp } from "../app";
 import { DbUserAccountDetails } from "./schema/user";
-import { DatabaseSettings, EmailRequest } from "../app/settings/browser";
+import { DatabaseSettings } from "../app/settings/browser";
 import type { RulesData } from "../database/services/rules";
 import { PathBasedRules } from "../database/services/rules";
 import { joinObjects } from "../utils";
 import { Storage, getStorage } from "../storage";
+import { getLocal, EmailRequest } from "../local";
 
 export class ServerNotReadyError extends Error {
 	constructor() {
@@ -310,7 +311,7 @@ export abstract class AbstractLocalServer<LocalServer = any> extends SimpleEvent
 				if (!this.hasDatabase(dbName)) {
 					throw new Error(`Database '${dbName}' not found`);
 				}
-				const send_email = this.db(dbName).app.settings.email;
+				const send_email = getLocal(this.localApp).emailSettings(dbName);
 
 				if (!send_email || !send_email.send) {
 					throw new Error("Email not configured");

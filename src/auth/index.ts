@@ -852,7 +852,7 @@ export function getAuth(...args: any[]) {
 	let database: string | string[] = args.find((d) => typeof d === "string" && appNames.includes(d) !== true);
 
 	if (typeof database !== "string") {
-		database = app.settings.dbname;
+		database = app.settings.databaseNames;
 	}
 
 	dbName = (Array.isArray(database) ? database : [database])[0];
